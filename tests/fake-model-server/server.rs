@@ -1,6 +1,3 @@
-//! Loopback stand-in for llama-server and Ollama. Fixed delay, fixed completion.
-//! Speaks `POST /completion` and `POST /api/generate` and nothing else.
-
 use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -100,9 +97,6 @@ fn handle(mut stream: TcpStream, hits: Arc<Mutex<Vec<Hit>>>, script: Arc<Script>
         push(&hits, &path, &body_text, false);
         return;
     }
-    // Record the request before the response. The client sends the next
-    // keystroke as soon as it has read the reply, which can be before this
-    // thread reaches a push that follows the write.
     push(&hits, &path, &body_text, true);
     let _ = stream.write_all(&response(&path, script.as_ref()));
 }

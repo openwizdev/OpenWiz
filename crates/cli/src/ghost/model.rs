@@ -1,13 +1,3 @@
-//! Small-model tier for ghost text.
-//!
-//! Talks to a local llama-server or Ollama over plain loopback HTTP (raw
-//! completion, no chat template). The context pack is rendered once, in stable
-//! order, and only the typed prefix changes per keystroke, so the server's
-//! prefix cache can survive. GS2's engine declares `pub mod blend;` and
-//! `pub mod model;` in `ghost/mod.rs` (a file this ticket does not own) and
-//! calls [`answer`] from `complete`. The interface tests compile the two
-//! modules as siblings, which is the same layout.
-
 use std::io::{ErrorKind, Read, Write};
 use std::net::{Ipv4Addr, SocketAddr, TcpStream};
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -51,8 +41,6 @@ impl Settings {
         Self::with_backend(base_url.into(), Backend::Ollama)
     }
 
-    /// Ghost settings JSON. A missing server, a non-loopback URL, or a body
-    /// that is not JSON yields settings that never dial out.
     pub fn from_json(text: &str) -> Self {
         let Ok(value) = serde_json::from_str::<Value>(text) else {
             return Self::off();
@@ -152,7 +140,6 @@ impl ContextPack {
     }
 }
 
-/// The bytes that stay identical across keystrokes of one message.
 pub fn cached_prefix(pack: &ContextPack) -> String {
     let mut out = String::new();
     out.push_str("skill\n");
@@ -215,8 +202,6 @@ impl Session {
         }
     }
 
-    /// Record that the user has typed `prefix` without starting a completion.
-    /// A reply still in flight for an older prefix is then stale.
     pub fn note_typed(&self, prefix: &str) {
         let mut state = lock(&self.state);
         state.prefix = prefix.to_owned();
@@ -259,14 +244,10 @@ pub struct Suggestion {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Answer {
     Suggestion(Suggestion),
-    /// The gate held both tiers back. Not an error.
     None,
-    /// A newer seq superseded this call, or the user has typed past its prefix.
     Dropped,
 }
 
-/// One keystroke. Never errors when the model server is absent: the reply is
-/// recall, or [`Answer::None`] when recall is not confident either.
 pub fn answer(
     session: &Session,
     settings: &Settings,
@@ -287,7 +268,7 @@ pub fn answer(
     }
     let draft = draft.and_then(|mut draft| {
         draft.text = continuation(&draft.text, stripped_space);
-        draft.text = finish_text(&draft.text, draft.stopped_limit)?;
+        draft.text = trim_completion_at_boundary(&draft.text, draft.stopped_limit)?;
         Some(ModelDraft {
             text: draft.text,
             mean_logprob: draft.mean_logprob,
@@ -343,9 +324,7 @@ fn continuation(raw: &str, stripped_space: bool) -> String {
     }
 }
 
-/// Cut at a newline or sentence end, drop a length-capped partial last word,
-/// and keep at most eight words. A single leading space is part of the suffix.
-fn finish_text(raw: &str, stopped_limit: bool) -> Option<String> {
+fn trim_completion_at_boundary(raw: &str, stopped_limit: bool) -> Option<String> {
     let (cut_nl, newline_cut) = match raw.split_once('\n') {
         Some((head, _)) => (head, true),
         None => (raw, false),
@@ -397,14 +376,12 @@ fn fetch(settings: &Settings, prompt: &str, mut cancel: impl FnMut() -> bool) ->
 
 fn request_body(settings: &Settings, prompt: &str) -> String {
     let predict = settings.max_tokens.clamp(1, MAX_PREDICT);
-    let stop = ["\n", ".", "!", "?"];
     let value = match settings.backend {
         Backend::LlamaServer => json!({
             "prompt": prompt,
             "n_predict": predict,
             "temperature": 0,
             "cache_prompt": true,
-            "stop": stop,
             "n_probs": 1,
             "stream": false,
         }),
@@ -416,7 +393,6 @@ fn request_body(settings: &Settings, prompt: &str) -> String {
             "options": {
                 "num_predict": predict,
                 "temperature": 0,
-                "stop": stop,
             },
         }),
     };

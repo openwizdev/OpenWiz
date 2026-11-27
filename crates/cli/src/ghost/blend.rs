@@ -1,8 +1,3 @@
-//! Blend a small-model completion with a recall hit.
-//!
-//! GS2 passes the recall hit (including whether it is a fixed code such as a
-//! grill answer). This module does not look up records.
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Tier {
     Recall,
@@ -18,9 +13,6 @@ impl Tier {
     }
 }
 
-/// A recall-tier hit the engine already scored. `fixed_code` is set for grill
-/// answers, ticket and spec numbers, and other phrases that must not lose to
-/// a fluent guess.
 #[derive(Clone, Debug, PartialEq)]
 pub struct RecallHit {
     pub text: String,
@@ -28,7 +20,6 @@ pub struct RecallHit {
     pub fixed_code: bool,
 }
 
-/// One scored completion, already trimmed to a ghost suffix.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ModelDraft {
     pub text: String,
@@ -42,7 +33,6 @@ pub struct Blended {
     pub confidence: f64,
 }
 
-/// Length-normalised token log-probability, as a confidence in `[0, 1]`.
 pub fn confidence(mean_logprob: f64) -> f64 {
     if !mean_logprob.is_finite() {
         return 0.0;
@@ -50,9 +40,6 @@ pub fn confidence(mean_logprob: f64) -> f64 {
     mean_logprob.exp().clamp(0.0, 1.0)
 }
 
-/// Pick at most one ghost. A fixed-code recall hit wins. Otherwise a model
-/// draft whose mean log-probability passes the gate wins, and recall is the
-/// fallback. Nothing is returned when both are below the confidence threshold.
 pub fn blend(
     model: Option<&ModelDraft>,
     recall: Option<&RecallHit>,
