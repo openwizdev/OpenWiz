@@ -25,14 +25,23 @@ curl -sS --proto '=https' -o /dev/null -w '%{redirect_url}\n' https://github.com
 The printed URL ends in `/tag/<tag>`. `<version>` is `<tag>` without the leading `v`. With no `/tag/` in the URL, GitHub has no Latest release: stop and say so. Use `<tag>` only when the whole value matches `v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)`. Use `<commit>` only when the whole value matches `[0-9a-f]{40}`. Any other value stops the install, including one that starts with `-`.
 
 2. Read that release's install skill and follow it from the top in this session. Run the commands yourself.
-   - `0.1.0`: the skill is https://github.com/openwizdev/WizSkills/blob/33eef93ba30cd8db256f6fe270e3ed28747a79bd/skills/install/SKILL.md and the command reference is [the 0.1.0 steps](docs/install.md#openwiz-010). Clone tag `v0.1.0`. When the skill cannot be read, follow those steps. This release's skill is that commit, not the `commit` in that tag's `wizskills.lock`.
+   - `0.1.0`: the skill is https://github.com/openwizdev/WizSkills/blob/33eef93ba30cd8db256f6fe270e3ed28747a79bd/skills/install/SKILL.md and the command reference is [the 0.1.0 steps](docs/install.md#openwiz-010). Clone tag `v0.1.0`. This release's skill is that commit, not the `commit` in that tag's `wizskills.lock`. When the skill URL cannot be read directly, recover the pinned skill by commit into a new private temporary directory (`wizskills=$(mktemp -d)`):
+
+```sh
+wizskills=$(mktemp -d)
+git init -q -- "$wizskills"
+git -C "$wizskills" fetch -q --depth 1 -- https://github.com/openwizdev/WizSkills 33eef93ba30cd8db256f6fe270e3ed28747a79bd
+git -C "$wizskills" switch -q --detach FETCH_HEAD
+```
+
+     Verify `git -C "$wizskills" rev-parse HEAD` equals `33eef93ba30cd8db256f6fe270e3ed28747a79bd` and `git -C "$wizskills" rev-parse HEAD:skills/install` equals `30d1eaf27658efd8f781f98703fbbdb81bcd705d`, then follow `"$wizskills"/skills/install/SKILL.md` and [the 0.1.0 steps](docs/install.md#openwiz-010). If that fetch fails or either hash mismatches, stop and say so: never proceed to a restart on the 0.1.0 archive's packaged `install` skill (`version: 0.2.0`, which tells a restarted agent to run `install open`).
    - Any other `<tag>`, including `v0.1.1`: set `$openwiz` to a new private temporary directory (`openwiz=$(mktemp -d)`), then clone that tag:
 
 ```sh
 git clone --depth 1 --branch "$tag" -- https://github.com/openwizdev/OpenWiz "$openwiz"
 ```
 
-     Read `wizskills.lock` in that clone. The skill is `https://github.com/openwizdev/WizSkills/blob/<commit>/skills/install/SKILL.md`, where `<commit>` is the lock's `commit`. The lock's `version` is that WizSkills release. The command reference is `docs/install.md` in the clone. When the skill cannot be read, follow that file and run each command yourself. The clone is already at `<tag>`. When the clone has no `wizskills.lock`, or the lock has no `commit`, stop and say so. The numbered steps in that guide expect build identity `0.1.1`. When `<version>` is not `0.1.1`, stop unless that guide expects `<version>`.
+     Read `wizskills.lock` in that clone. The skill is `https://github.com/openwizdev/WizSkills/blob/<commit>/skills/install/SKILL.md`, where `<commit>` is the lock's `commit`. The lock's `version` is that WizSkills release. The command reference is `docs/install.md` in the clone. When the skill cannot be read, follow that file and run each command yourself. The clone is already at `<tag>`. When the clone has no `wizskills.lock`, or the lock has no `commit`, stop and say so. The numbered steps in that guide expect build identity `0.1.1`. When `<version>` is not `0.1.1`, stop unless that guide expects `<version>`. Check that selected `<version>` before downloading or activating anything, pass `--version "$tag"` to `install download` so it fetches `<tag>` rather than GitHub's Latest release, and verify `download`'s reported `"version"` matches `<version>` before running `install install` to activate it.
 
 CloudRoom is optional. Its install and sign-in run only when the person picks CloudRoom.
 
