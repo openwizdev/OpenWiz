@@ -12,11 +12,17 @@ STATE = os.environ.get('OPENWIZ_WARP_OZ_STATE') or os.path.expanduser('~/.local/
 VERSION = {'driver': 'warp-oz', 'records': ['openwiz:records v1'], 'can': ['start', 'wake', 'stop', 'effort']}
 START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
          'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'claude|codex',
-         'model': r'[A-Za-z0-9][A-Za-z0-9._:-]{0,59}'}
+         'model': r'(?=.{1,100}$)[A-Za-z0-9][A-Za-z0-9 ._:@+-]*(/[A-Za-z0-9][A-Za-z0-9 ._:@+-]*)*'}
 WARP_RUN_UUID = r'[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}'
 RUN = {'run': WARP_RUN_UUID}
 EFFORT = r'[a-z][a-z0-9-]{0,19}'
 REASONING_LEVELS = {'codex': ('low', 'medium', 'high', 'xhigh')}
+UNCERTAIN_CREATE = ('look in Warp for a new run on this ticket and cancel it there (or keep it and track it by hand), '
+                    'then start again: retrying now can start a second run')
+REFUSED_BEFORE_SENDING = ('no key in either ', 'the key in ', "the kit's fake host gave no test key",
+                          'OPENWIZ_HOSTKEY_TEST_ORIGIN is not', 'the helper runs only in', 'native TLS loaded',
+                          'kernel/driver-kit/hosts.json is not', 'host is not in kernel/driver-kit/hosts.json',
+                          'the request holds the key')
 CANT_SET_EFFORT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster to "
                    "run it at the host's default")
 LOGIN = {'claude': 'OPENWIZ_WARP_CLAUDE_LOGIN', 'codex': 'OPENWIZ_WARP_CODEX_LOGIN'}
@@ -86,7 +92,11 @@ def config(req):
     return out
 
 
-def ask(method, path, body=None):
+def unknown_create(why):
+    return Refused('the new run\'s outcome is unknown: ' + why, UNCERTAIN_CREATE)
+
+
+def ask(method, path, body=None, creating=False):
     request = {'host': HOST, 'method': method, 'path': path}
     if body is not None:
         request['body'] = body
@@ -95,11 +105,18 @@ def ask(method, path, body=None):
                            text=True, timeout=120)
         out = json.loads(p.stdout, object_pairs_hook=unique)
     except (OSError, subprocess.TimeoutExpired, ValueError, Refused):
+        if creating:
+            raise unknown_create('the key helper gave no answer')
         raise Refused('the key helper kernel/driver-kit/hostkey.py gave no answer', 'run it by hand to see why')
-    if p.returncode == 1 and isinstance(out, dict) and set(out) == {'error', 'next'}:
-        raise Refused(('the key helper refused: ' + str(out['error']))[:300], str(out['next'])[:300])
+    if (p.returncode == 1 and isinstance(out, dict) and set(out) == {'error', 'next'}
+            and isinstance(out['error'], str) and out['error'] and isinstance(out['next'], str) and out['next']):
+        if creating and not out['error'].startswith(REFUSED_BEFORE_SENDING):
+            raise unknown_create('Warp may have started it, but the key helper got no answer it could pass on')
+        raise Refused(('the key helper refused: ' + out['error'])[:300], out['next'][:300])
     if p.returncode or not (isinstance(out, dict) and set(out) == {'status', 'body'} and type(out['status']) is int
                             and 100 <= out['status'] <= 599):
+        if creating:
+            raise unknown_create('the key helper gave an answer the driver cannot read')
         raise Refused('the key helper kernel/driver-kit/hostkey.py gave an answer the driver cannot read',
                       'run it by hand to see why')
     status, answer = out['status'], out['body']
@@ -175,7 +192,10 @@ def cancel(run):
         if read == 200 and isinstance(item, dict) and item.get('run_id') == run and item.get('state') in ENDED:
             return True
         if status == read == 404 and problem(404, item):
-            return True
+            raise Refused('Warp answered 404 to run %s, so this key cannot see it and it may still run under '
+                          'another team or account' % run,
+                          'check that your Warp API key is for the team or account that started run %s, check it '
+                          'in Warp, then run `driver stop` again' % run)
     elif status == 409:
         raise failed('the cancel of run ' + run, status)
     raise Refused('Warp\'s answer to the cancel of run %s does not show it ended, so it may still run' % run,
@@ -192,13 +212,15 @@ def start():
     except OSError:
         raise Refused('the driver cannot save runs in its state folder; nothing was started', SAVE)
     try:
-        status, answer = ask('POST', RUNS, body)
+        status, answer = ask('POST', RUNS, body, creating=True)
+        if 400 <= status < 500 and status != 408:
+            raise Refused('Warp refused the new run (%d), so nothing was started' % status,
+                          'check your Warp harness login, model, environment and account limits, then start again')
         if not 200 <= status < 300:
-            raise failed('the new run', status)
+            raise unknown_create('Warp answered %d' % status)
         run = answer.get('run_id') if isinstance(answer, dict) else None
         if not (isinstance(run, str) and re.fullmatch(WARP_RUN_UUID, run)):
-            raise Refused('Warp answered no run id the driver can keep, so the outcome is unknown',
-                          'look for a new run in Warp and cancel it there before you start again')
+            raise unknown_create('Warp answered no run id the driver can keep')
     finally:
         try:
             os.remove(pending)

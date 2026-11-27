@@ -48,9 +48,10 @@ class Warp(http.server.BaseHTTPRequestHandler):
 
     def answer(self, body):
         create, one, read = CREATE.fullmatch(self.path), ONE.fullmatch(self.path), READ.fullmatch(self.path)
+        auth = self.headers.get('Authorization')
         if self.command == 'GET' and read:
             run = RUNS.get(read.group(1))
-            if run is None:
+            if run is None or run['auth'] != auth:
                 return problem(404, 'run not found')
             return 200, {'run_id': read.group(1), 'task_id': read.group(1), 'title': 'synthetic run',
                          'state': run['state'], 'prompt': run['prompt'], 'created_at': '2026-01-01T00:00:00Z',
@@ -65,11 +66,11 @@ class Warp(http.server.BaseHTTPRequestHandler):
                 return problem(400, 'a run needs a prompt, a harness and its auth secret name')
             run = str(uuid.uuid4())
             RUNS[run] = {'prompt': body['prompt'], 'harness': harness['type'],
-                         'model': harness.get('model_id', 'default'), 'state': 'QUEUED'}
+                         'model': harness.get('model_id', 'default'), 'state': 'QUEUED', 'auth': auth}
             note(RUNS[run], False)
             return 200, {'run_id': run, 'task_id': run, 'state': 'QUEUED'}
         run = RUNS.get(one.group(1))
-        if run is None:
+        if run is None or run['auth'] != auth:
             return problem(404, 'run not found')
         if one.group(2) == 'followups':
             note(run, True)
@@ -80,7 +81,12 @@ class Warp(http.server.BaseHTTPRequestHandler):
         return 200, one.group(1)
 
     def handle_one(self):
+        with open(FAULTS) as f:
+            faults = json.load(f)
         if self.command == 'GET' and self.path == KEY_PATH:
+            fault = faults.get('GET key')
+            if fault:
+                return self.reply(fault['status'], fault.get('body'), fault.get('raw'))
             return self.reply(200, {'key': TEST_KEY})
         raw = self.rfile.read(int(self.headers.get('Content-Length') or 0))
         body = json.loads(raw) if raw else None
@@ -89,8 +95,11 @@ class Warp(http.server.BaseHTTPRequestHandler):
                                 'authorization': self.headers.get('Authorization')}) + '\n')
         kind = ('create' if CREATE.fullmatch(self.path) else 'run' if READ.fullmatch(self.path) else
                 (ONE.fullmatch(self.path) or [None] * 3)[2])
-        with open(FAULTS) as f:
-            fault = json.load(f).get('%s %s' % (self.command, kind))
+        fault = faults.get('%s %s' % (self.command, kind))
+        if fault and fault.get('drop'):
+            self.answer(body or {})
+            self.close_connection = True
+            return
         if fault:
             return self.reply(fault['status'], fault.get('body'), fault.get('raw'))
         self.reply(*self.answer(body or {}))

@@ -21,6 +21,8 @@ START = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'ha
 RUNS = '/api/v1/agent/runs'
 REFUSAL = ("this host can't set effort: remove the effort for this harness in your Models table or Roster to run it "
            "at the host's default")
+UNCERTAIN_CREATE = ('look in Warp for a new run on this ticket and cancel it there (or keep it and track it by hand), '
+                    'then start again: retrying now can start a second run')
 LOGINS = {'OPENWIZ_WARP_CLAUDE_LOGIN': 'SYN_CLAUDE_LOGIN', 'OPENWIZ_WARP_CODEX_LOGIN': 'SYN_CODEX_LOGIN'}
 
 
@@ -205,7 +207,9 @@ class Driver(unittest.TestCase):
                        {'POST cancel': {'status': 400, 'body': problem}, 'GET run': {'status': 404, 'body': gone}},
                        {'POST cancel': {'status': 404, 'body': gone}},
                        {'POST cancel': {'status': 404, 'body': gone}, 'GET run': {'status': 404, 'body': None}},
-                       {'POST cancel': {'status': 404, 'body': gone}, 'GET run': {'status': 500, 'body': gone}}):
+                       {'POST cancel': {'status': 404, 'body': gone}, 'GET run': {'status': 500, 'body': gone}},
+                       {'POST cancel': {'status': 404, 'body': dict(gone, instance='/x')},
+                        'GET run': {'status': 404, 'body': gone}}):
             with self.subTest(stop=faults):
                 self.fault(faults)
                 before = len(self.calls())
@@ -220,26 +224,89 @@ class Driver(unittest.TestCase):
         before = len(self.calls())
         self.assertEqual(self.call('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
         self.assertEqual(len(self.calls()), before, 'an ended run reached Warp again')
-        absent = self.call('start', START)[1]['run']
-        self.fault({'POST cancel': {'status': 404, 'body': dict(gone, instance='/x')},
-                    'GET run': {'status': 404, 'body': gone}})
-        self.assertEqual(self.call('stop', {'run': absent}), (0, {'run': absent, 'stopped': True}))
 
     def test_a_run_saved_but_not_cancelled_says_so(self):
         run = '2' * 8 + '-2222-2222-2222-' + '2' * 12
         state = self.env['OPENWIZ_WARP_OZ_STATE']
         os.makedirs(os.path.join(state, run + '.json'))
-        for cancel, said in (({'status': 200, 'body': None}, 'could not cancel'),
-                             ({'status': 200, 'body': '3' * 8 + '-3333-3333-3333-' + '3' * 12}, 'could not cancel'),
-                             ({'status': 400, 'body': {'error': 'bad request'}}, 'could not cancel'),
-                             ({'status': 200, 'body': run}, 'so it cancelled it')):
-            with self.subTest(cancel=cancel):
-                self.fault({'POST create': {'status': 200, 'body': {'run_id': run, 'state': 'QUEUED'}},
-                            'POST cancel': cancel})
+        gone = {'type': 'https://example.invalid/errors', 'title': 'Not Found', 'status': 404,
+                'error': 'run not found'}
+        for extra, said in (({'POST cancel': {'status': 200, 'body': None}}, 'could not cancel'),
+                            ({'POST cancel': {'status': 200, 'body': '3' * 8 + '-3333-3333-3333-' + '3' * 12}},
+                             'could not cancel'),
+                            ({'POST cancel': {'status': 400, 'body': {'error': 'bad request'}}}, 'could not cancel'),
+                            ({'POST cancel': {'status': 404, 'body': gone}, 'GET run': {'status': 404, 'body': gone}},
+                             'could not cancel'),
+                            ({'POST cancel': {'status': 200, 'body': run}}, 'so it cancelled it')):
+            with self.subTest(extra=extra):
+                self.fault(dict({'POST create': {'status': 200, 'body': {'run_id': run, 'state': 'QUEUED'}}}, **extra))
                 code, out = self.call('start', START)
                 self.assertEqual(code, 1, out)
                 self.assertIn(run, out['error'])
                 self.assertIn(said, out['error'])
+
+    def test_an_uncertain_create_is_never_retried_and_a_confirmed_refusal_is_told_apart(self):
+        for fault in ({'drop': True}, {'status': 503, 'body': {}}, {'status': 408, 'body': {}},
+                      {'status': 200, 'body': {'state': 'QUEUED'}}):
+            with self.subTest(fault=fault):
+                self.fault({'POST create': fault})
+                code, out = self.call('start', START)
+                self.assertEqual(code, 1, out)
+                self.assertIn('outcome is unknown', out['error'])
+                self.assertEqual(out['next'], UNCERTAIN_CREATE)
+        with open(self.tracker) as f:
+            self.assertEqual(len(json.load(f)['comments']), 1, 'the dropped create never ran on the fake host')
+        self.fault({'POST create': {'status': 422, 'body': {}}})
+        code, out = self.call('start', START)
+        self.assertEqual((code, out['error']), (1, 'Warp refused the new run (422), so nothing was started'))
+        self.fault({'GET key': {'status': 200, 'body': {'key': ''}}})
+        code, out = self.call('start', START)
+        self.assertEqual(code, 1, out)
+        self.assertNotIn('outcome is unknown', out['error'])
+        self.assertTrue(out['error'].startswith("the key helper refused: the kit's fake host gave no test key"), out)
+        state = self.env['OPENWIZ_WARP_OZ_STATE']
+        self.assertEqual(os.listdir(state) if os.path.isdir(state) else [], [], 'an unsaved start left a run')
+        self.assertEqual([c['method'] for c in self.calls()], ['POST'] * 5)
+
+    def test_a_404_on_stop_stays_retryable_when_another_team_key_cannot_see_the_run(self):
+        run = self.call('start', START)[1]['run']
+        other_key = 'syn-other-team-' + secrets.token_hex(12)
+        self.fault({'GET key': {'status': 200, 'body': {'key': other_key}}})
+        before = len(self.calls())
+        code, out = self.call('stop', {'run': run})
+        self.assertEqual(code, 1, out)
+        self.assertIn(run, out['error'])
+        self.assertIn('404', out['error'])
+        self.assertIn('team or account', out['next'])
+        self.assertEqual([(c['method'], c['path'], c['authorization']) for c in self.calls()[before:]],
+                         [('POST', '%s/%s/cancel' % (RUNS, run), 'Bearer ' + other_key),
+                          ('GET', '%s/%s' % (RUNS, run), 'Bearer ' + other_key)])
+        before = len(self.calls())
+        self.assertEqual(self.call('wake', {'run': run})[0], 1, 'a run being stopped took a wake')
+        self.assertEqual(len(self.calls()), before, 'a wake after a 404 stop reached Warp')
+        self.fault({})
+        self.assertEqual(self.call('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
+        self.assertEqual([(c['method'], c['path'], c['authorization']) for c in self.calls()[before:]],
+                         [('POST', '%s/%s/cancel' % (RUNS, run), 'Bearer ' + self.key)])
+        before = len(self.calls())
+        self.assertEqual(self.call('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
+        self.assertEqual(len(self.calls()), before, 'an ended run reached Warp again')
+
+    def test_a_provider_qualified_model_within_the_schema_reaches_warp(self):
+        for model in ('kimi-code/kimi-for-coding', 'openrouter/anthropic/claude-sonnet-4.6',
+                      'anthropic/claude-sonnet-4@20250514', 'a/' + 'b' * 98):
+            with self.subTest(model=model):
+                code, out = self.call('start', dict(START, model=model))
+                self.assertEqual(code, 0, out)
+                self.assertEqual(self.calls()[-1]['body']['config']['harness']['model_id'], model)
+                run = out['run']
+        self.assertEqual(self.call('wake', {'run': run}), (0, {'run': run, 'woke': True}))
+        self.assertEqual(self.call('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
+        before = len(self.calls())
+        for bad in ('/leading-slash', 'trailing/', 'a//b', 'a' * 101, ''):
+            with self.subTest(bad_model=bad):
+                self.assertEqual(self.call('start', dict(START, model=bad))[0], 1)
+        self.assertEqual(len(self.calls()), before)
 
     def test_a_saved_run_is_read_only_in_its_exact_shape(self):
         run = self.call('start', START)[1]['run']
