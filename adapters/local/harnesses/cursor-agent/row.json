@@ -36,7 +36,7 @@
   "login": "Cursor CLI's own login: agent login stores it in the system keyring, or an owner-only file when no keyring is available, or the user sets CURSOR_API_KEY; the driver never reads or passes it",
   "daemon": "none",
   "signed_out": [
-    "Not authenticated"
+    "^[ \\t]*(?:error:[ \\t]*)?Not authenticated\\b"
   ],
   "login_command": "agent login",
   "login_env": "CURSOR_API_KEY"

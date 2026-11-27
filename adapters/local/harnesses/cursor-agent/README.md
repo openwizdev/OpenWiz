@@ -40,6 +40,6 @@ Print mode cannot stop to ask. Without `--force`, writes outside the workspace a
 
 ## Signed out
 
-The authentication reference's troubleshooting line for a missing login is `Not authenticated`. `start` then fails with `the harness is not signed in`. Its `next` names `agent login` and `CURSOR_API_KEY`. The driver never reads the variable. The fake prints `Not authenticated` when told it is signed out, and exits 2 on `--api-key`.
+The authentication reference's troubleshooting line for a missing login is `Not authenticated`. The row matches it only at the start of a line, after an optional `Error:`, so a successful JSON answer that mentions the error is not read as signed out. `start` then fails with `the harness is not signed in`. Its `next` names `agent login` and `CURSOR_API_KEY`. The driver never reads the variable. The fake prints `Not authenticated` when told it is signed out, and exits 2 on `--api-key`.
 
 No test starts the real `agent` or `cursor-agent` program. The runner puts a refusing stub for each known agent CLI on `PATH`, with only this folder's `fake` ahead of them.
