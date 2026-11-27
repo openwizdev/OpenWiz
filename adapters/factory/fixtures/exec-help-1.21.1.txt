@@ -334,4 +334,3 @@ Examples:
 
   # In ephemeral CI/CD runner:
   droid exec --skip-permissions-unsafe "Modify /etc/hosts, install kernel modules, reset network"
-

@@ -1,10 +1,12 @@
 # Green (openwizdev/OpenWiz#2609): adapters/factory/test_driver.py after the driver
-# passes --reasoning-effort and the README declares it. PATH is the synthetic
-# droid in adapters/factory/fixtures/bin, then a folder holding only python3.
-# No Factory host. Run: env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/factory/test_driver.py
+# validates effort per model against `droid exec --help`, passes --reasoning-effort,
+# and the README declares it. PATH is the synthetic droid in adapters/factory/fixtures/bin,
+# then a folder holding only python3. No Factory host.
+# Run: env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/factory/test_driver.py
 
 test_a_custom_model_with_no_effort_still_starts_at_the_host_default ... ok
 test_a_listed_effort_reaches_droid_on_start_and_wake ... ok
+test_a_start_whose_levels_cannot_be_read_starts_nothing ... ok
 test_an_effort_droid_cannot_take_is_refused_and_nothing_starts ... ok
 test_an_effort_word_outside_the_schema_is_refused_as_input ... ok
 test_kit_passes_all_five ... ok
@@ -17,11 +19,12 @@ test_state_others_can_read_is_refused_before_anything_runs ... ok
 test_stop_and_wake_refuse_a_run_they_cannot_trust ... ok
 test_stop_on_a_tampered_folder_ends_nothing_and_says_so ... ok
 test_stop_on_a_tampered_folder_never_signals_a_process_matched_by_its_command_line ... ok
+test_the_driver_reads_the_level_list_droid_1_21_1_prints ... ok
 test_turn_inherits_the_callers_environment_unchanged ... ok
 test_version_lists_effort ... ok
 test_wake_without_a_session_starts_nothing ... ok
 
-Ran 17 tests in 6.932s
+Ran 19 tests in 10.494s
 
 OK
 
