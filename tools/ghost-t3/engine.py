@@ -1,9 +1,3 @@
-"""Loopback client for the ghost.v1 complete and feedback routes.
-
-The request goes to 127.0.0.1 only, with no Origin header and no proxy.
-A repeated JSON key is refused. The response body is not logged.
-"""
-
 import json
 from urllib.error import HTTPError, URLError
 from urllib.request import ProxyHandler, Request, build_opener

@@ -1,8 +1,5 @@
 "use strict";
 
-/* Relays complete and feedback from the content script to the loopback engine.
-   The URL host is fixed. Redirects are errors, so a response cannot leave loopback. */
-
 var ROUTES = { complete: true, feedback: true };
 
 chrome.runtime.onMessage.addListener(function (message, _sender, sendResponse) {

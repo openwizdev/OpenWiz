@@ -1,11 +1,3 @@
-"""Ghost text in a T3 Code composer element, driven in Chrome.
-
-The page is the composer element T3 Code renders (data-testid composer-editor,
-contenteditable, class composer-tiptap). The engine is a loopback stand-in for
-the ghost.v1 routes, answering the golden recall fixtures. Catches a sidecar
-that never shows those ghosts, accepts with the wrong key, or sends Origin.
-"""
-
 import json
 import os
 import socket
@@ -182,18 +174,15 @@ class Handler(BaseHTTPRequestHandler):
 
 class GuardTests(unittest.TestCase):
     def test_non_loopback_host_is_refused_before_connect(self):
-        # catches: a client that dials example.com or 0.0.0.0
         for host in ("example.com", "0.0.0.0", "localhost"):
             with self.assertRaises(ValueError):
                 engine.call(host, 9, TOKEN, "complete", {"prefix": "J1"})
 
     def test_unknown_route_is_refused_before_connect(self):
-        # catches: a relay that forwards pair or a path outside the two routes
         with self.assertRaises(ValueError):
             engine.build_url("127.0.0.1", 17417, "pair")
 
     def test_duplicate_key_is_refused(self):
-        # catches: a parser that keeps the last repeated key
         server = EngineServer()
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
@@ -207,7 +196,6 @@ class GuardTests(unittest.TestCase):
             server.server_close()
 
     def test_proxy_env_is_not_used_for_loopback(self):
-        # catches: HTTP_PROXY sending the pairing token off the machine
         server = EngineServer()
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
@@ -231,7 +219,6 @@ class GuardTests(unittest.TestCase):
             server.server_close()
 
     def test_bad_route_payload_does_not_call_the_engine(self):
-        # catches: a page binding that can choose pair or another host
         called = []
         result = inject.handle_payload({"route": "pair", "body": {}}, lambda route, body: called.append(route))
         self.assertFalse(result["ok"])
@@ -360,8 +347,6 @@ class BrowserTests(unittest.TestCase):
         self.wait_until(lambda: self.settled() > before)
 
     def test_golden_recall_cases_show_in_the_composer(self):
-        # catches: ghosts that do not match the fixture, a second complete while
-        # typing through, or a key that accepts the wrong span
         recorded = []
         for case in CASES["cases"]:
             self.reload()
@@ -394,14 +379,12 @@ class BrowserTests(unittest.TestCase):
         print("recorded " + json.dumps(recorded, separators=(",", ":")))
 
     def test_server_text_is_what_shows(self):
-        # catches: a sidecar that hardcodes the golden ghosts
         self.insert("syn")
         self.wait_until(lambda: self.ghost() == " thetic")
         self.assertEqual(self.composer(), "syn")
         self.assertEqual(len(self.server.completes), 1)
 
     def test_stale_reply_is_dropped(self):
-        # catches: applying an older complete after a newer prefix
         self.insert("slow")
         self.wait_until(lambda: self.server.slow_waiting.is_set())
         self.insert("x")
@@ -412,7 +395,6 @@ class BrowserTests(unittest.TestCase):
         self.assertEqual(self.composer(), "slowx")
 
     def test_bad_suggestion_shape_shows_nothing(self):
-        # catches: showing a suggestion whose full_text is not prefix + text
         before = self.settled()
         self.insert("bad-shape")
         self.wait_until(lambda: self.settled() > before)
@@ -420,7 +402,6 @@ class BrowserTests(unittest.TestCase):
         self.assertIsNone(self.ghost())
 
     def test_duplicate_response_key_shows_nothing(self):
-        # catches: a client that accepts a repeated schema key
         before = self.settled()
         self.insert("dup")
         self.wait_until(lambda: self.settled() > before)
@@ -428,13 +409,11 @@ class BrowserTests(unittest.TestCase):
         self.assertEqual(self.composer(), "dup")
 
     def test_tab_without_a_ghost_moves_focus(self):
-        # catches: Tab being swallowed when nothing is suggested
         self.eval("document.querySelector('[data-testid=\"composer-editor\"]').focus()")
         self.key("Tab", 9)
         self.wait_until(lambda: self.eval("document.activeElement && document.activeElement.id") == "after")
 
     def test_shift_tab_is_not_taken(self):
-        # catches: Shift+Tab accepting a ghost or being cancelled
         before = self.settled()
         self.insert("J1")
         self.wait_until(lambda: self.settled() > before and self.ghost() == " all recs")
@@ -443,7 +422,6 @@ class BrowserTests(unittest.TestCase):
         self.assertEqual(self.composer(), "J1")
 
     def test_enter_does_not_accept(self):
-        # catches: Enter inserting the ghost
         before = self.settled()
         self.insert("J1")
         self.wait_until(lambda: self.settled() > before and self.ghost() == " all recs")
@@ -456,7 +434,6 @@ class BrowserTests(unittest.TestCase):
         self.assertNotIn("accepted_all", [item["outcome"] for item in self.server.events])
 
     def test_composing_tab_is_not_taken(self):
-        # catches: accepting a ghost during IME composition
         before = self.settled()
         self.insert("J1")
         self.wait_until(lambda: self.settled() > before and self.ghost() == " all recs")
@@ -469,7 +446,6 @@ class BrowserTests(unittest.TestCase):
         self.assertEqual(self.ghost(), " all recs")
 
     def test_word_accept_keeps_the_leading_space(self):
-        # catches: accepting "all " from " all recs" and gluing it to J1
         before = self.settled()
         self.insert("J1")
         self.wait_until(lambda: self.settled() > before and self.ghost() == " all recs")
@@ -482,7 +458,6 @@ class BrowserTests(unittest.TestCase):
         self.assertEqual(self.server.events[-1]["chars_accepted"], 5)
 
     def test_tap_accepts_a_word_and_long_press_accepts_all(self):
-        # catches: a pointer on the ghost doing nothing, or a tap taking every word
         before = self.settled()
         self.insert("approve #4")
         self.wait_until(lambda: self.settled() > before and self.ghost() == "2 and merge")

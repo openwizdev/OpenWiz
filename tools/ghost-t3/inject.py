@@ -1,11 +1,3 @@
-"""Inject the T3 Code ghost sidecar through Chrome's remote debugging port.
-
-The page script never calls the engine. This process does, on 127.0.0.1,
-with the pairing token and with no Origin header.
-
-  python3 -I tools/ghost-t3/inject.py --debug-port PORT --engine-port PORT --token-file PATH
-"""
-
 import argparse
 import json
 import sys

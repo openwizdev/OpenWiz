@@ -1,9 +1,5 @@
 "use strict";
 
-/* OpenWiz ghost text for T3 Code's composer (contracts/ghost.v1.md).
-   The script draws the ghost in an open shadow root and inserts accepted
-   text with the editor's own insertText command. Engine calls go through
-   the injector binding or the extension background, never a page fetch. */
 (function () {
   if (document.documentElement.dataset.openwizGhost === "on") return;
   var sessionId = globalThis.__openwizGhostSession;

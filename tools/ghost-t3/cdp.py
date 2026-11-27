@@ -1,5 +1,3 @@
-"""A small Chrome DevTools Protocol client. One reader thread, no extra packages."""
-
 import base64
 import hashlib
 import json
