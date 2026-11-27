@@ -1,0 +1,125 @@
+.FFFFFFFF
+======================================================================
+FAIL: test_record_shapes_accept_good_and_refuse_one_field (__main__.DriverPackageFixtures.test_record_shapes_accept_good_and_refuse_one_field) (kind='package', error=['commit', 'pattern'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/driver-package/test_fixtures.py", line 116, in test_record_shapes_accept_good_and_refuse_one_field
+    self.assertEqual([tuple(case["error"])], self.errors(case["kind"], case["value"]))
+AssertionError: Lists differ: [('commit', 'pattern')] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+('commit', 'pattern')
+
+- [('commit', 'pattern')]
++ []
+
+======================================================================
+FAIL: test_record_shapes_accept_good_and_refuse_one_field (__main__.DriverPackageFixtures.test_record_shapes_accept_good_and_refuse_one_field) (kind='package', error=['asset_url', 'pattern'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/driver-package/test_fixtures.py", line 116, in test_record_shapes_accept_good_and_refuse_one_field
+    self.assertEqual([tuple(case["error"])], self.errors(case["kind"], case["value"]))
+AssertionError: Lists differ: [('asset_url', 'pattern')] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+('asset_url', 'pattern')
+
+- [('asset_url', 'pattern')]
++ []
+
+======================================================================
+FAIL: test_record_shapes_accept_good_and_refuse_one_field (__main__.DriverPackageFixtures.test_record_shapes_accept_good_and_refuse_one_field) (kind='package', error=['', 'additionalProperties'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/driver-package/test_fixtures.py", line 116, in test_record_shapes_accept_good_and_refuse_one_field
+    self.assertEqual([tuple(case["error"])], self.errors(case["kind"], case["value"]))
+AssertionError: Lists differ: [('', 'additionalProperties')] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+('', 'additionalProperties')
+
+- [('', 'additionalProperties')]
++ []
+
+======================================================================
+FAIL: test_record_shapes_accept_good_and_refuse_one_field (__main__.DriverPackageFixtures.test_record_shapes_accept_good_and_refuse_one_field) (kind='key_host', error=['origin', 'pattern'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/driver-package/test_fixtures.py", line 116, in test_record_shapes_accept_good_and_refuse_one_field
+    self.assertEqual([tuple(case["error"])], self.errors(case["kind"], case["value"]))
+AssertionError: Lists differ: [('origin', 'pattern')] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+('origin', 'pattern')
+
+- [('origin', 'pattern')]
++ []
+
+======================================================================
+FAIL: test_record_shapes_accept_good_and_refuse_one_field (__main__.DriverPackageFixtures.test_record_shapes_accept_good_and_refuse_one_field) (kind='key_host', error=['variable', 'pattern'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/driver-package/test_fixtures.py", line 116, in test_record_shapes_accept_good_and_refuse_one_field
+    self.assertEqual([tuple(case["error"])], self.errors(case["kind"], case["value"]))
+AssertionError: Lists differ: [('variable', 'pattern')] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+('variable', 'pattern')
+
+- [('variable', 'pattern')]
++ []
+
+======================================================================
+FAIL: test_record_shapes_accept_good_and_refuse_one_field (__main__.DriverPackageFixtures.test_record_shapes_accept_good_and_refuse_one_field) (kind='manifest', error=['driver_contract', 'const'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/driver-package/test_fixtures.py", line 116, in test_record_shapes_accept_good_and_refuse_one_field
+    self.assertEqual([tuple(case["error"])], self.errors(case["kind"], case["value"]))
+AssertionError: Lists differ: [('driver_contract', 'const')] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+('driver_contract', 'const')
+
+- [('driver_contract', 'const')]
++ []
+
+======================================================================
+FAIL: test_record_shapes_accept_good_and_refuse_one_field (__main__.DriverPackageFixtures.test_record_shapes_accept_good_and_refuse_one_field) (kind='pin', error=['pins', 'type'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/driver-package/test_fixtures.py", line 116, in test_record_shapes_accept_good_and_refuse_one_field
+    self.assertEqual([tuple(case["error"])], self.errors(case["kind"], case["value"]))
+AssertionError: Lists differ: [('pins', 'type')] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+('pins', 'type')
+
+- [('pins', 'type')]
++ []
+
+======================================================================
+FAIL: test_record_shapes_accept_good_and_refuse_one_field (__main__.DriverPackageFixtures.test_record_shapes_accept_good_and_refuse_one_field) (kind='approval', error=['sha256', 'pattern'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/driver-package/test_fixtures.py", line 116, in test_record_shapes_accept_good_and_refuse_one_field
+    self.assertEqual([tuple(case["error"])], self.errors(case["kind"], case["value"]))
+AssertionError: Lists differ: [('sha256', 'pattern')] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+('sha256', 'pattern')
+
+- [('sha256', 'pattern')]
++ []
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.007s
+
+FAILED (failures=8)

@@ -19,7 +19,7 @@ HOST_KEYS = ('host', 'driver', 'needs', 'signed_in', 'cost', 'runs', 'wait')
 NAME = r'[A-Za-z0-9][A-Za-z0-9._-]{0,59}'
 PROGRAM = r'[A-Za-z0-9][A-Za-z0-9._+-]{0,59}'
 KIT_HARNESS = r'[a-z0-9][a-z0-9._-]{0,59}'
-KIT_MODEL = r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'
+KIT_MODEL = r'(?=.{1,100}$)[A-Za-z0-9][A-Za-z0-9 ._:@+-]*(/[A-Za-z0-9][A-Za-z0-9 ._:@+-]*)*'
 REPO = r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}'
 STATUS_SECONDS = 30
 CHECK_LINE = re.compile(r'(pass|fail) (version|start|wake|stop|token): ')
@@ -90,15 +90,26 @@ def _inside(path):
 
 
 def load_hosts(folder, only):
-    given = os.path.abspath(folder)
+    parts = os.path.join(os.getcwd(), folder).split(os.sep)
+    try:
+        if not stat.S_ISDIR(os.stat(folder).st_mode):
+            raise Refused('--hosts is not a folder')
+    except OSError as e:
+        raise Refused('cannot read --hosts as written: %s' % e.strerror)
     folder = os.path.realpath(folder)
     if os.path.commonpath([folder, ROOT]) != ROOT:
         raise Refused('--hosts is not a folder inside this checkout, so its host configs are not reviewed code')
-    while given != os.path.dirname(given):
-        if os.path.islink(given) and _inside(os.path.dirname(given)):
+    for i in range(2, len(parts) + 1):
+        given = os.sep.join(parts[:i])
+        if parts[i - 1] in ('', '.', '..'):
+            continue
+        try:
+            link = stat.S_ISLNK(os.lstat(given).st_mode)
+        except OSError as e:
+            raise Refused('cannot look up a step of --hosts: %s' % e.strerror)
+        if link and _inside(os.path.dirname(given)):
             raise Refused('--hosts goes through a symlink inside the checkout, so its host configs are not '
                           'reviewed code')
-        given = os.path.dirname(given)
     try:
         names = sorted(n for n in os.listdir(folder) if n.endswith('.json'))
     except OSError as e:
@@ -167,11 +178,19 @@ def check_host(host):
     for program in host['needs']:
         if shutil.which(program) is None:
             return 'not installed: ' + program
-    for command in host['signed_in']:
-        if not signed_in(command):
-            return 'not signed in: ' + command[0]
     if host['cost'] != 'none':
         return 'cost'
+    for command in host['signed_in']:
+        if not signed_in(command):
+            program = command[0]
+            if program == 'env':
+                for word in command[1:]:
+                    if re.match(r'[A-Za-z_][A-Za-z0-9_]*=', word):
+                        continue
+                    if _text(word, PROGRAM):
+                        program = word
+                    break
+            return 'not signed in: ' + program
     return None
 
 
@@ -190,7 +209,7 @@ def kit_shapes():
 def signed_in_login():
     try:
         p = subprocess.run(['gh', 'api', 'user', '--jq', '.login'], stdin=subprocess.DEVNULL, capture_output=True,
-                           text=True, timeout=STATUS_SECONDS)
+                           text=True, timeout=STATUS_SECONDS, env=dict(os.environ, GH_TELEMETRY='0'))
     except (OSError, subprocess.TimeoutExpired):
         return None
     login = p.stdout.strip()

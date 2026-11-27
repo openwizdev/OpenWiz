@@ -1,0 +1,25 @@
+# R7 red at origin/main's bootstrap.sh (unchanged), the two new tests:
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/vps/test_bootstrap.py BootstrapTest.test_corrupt_cached_wheel_is_never_imported BootstrapTest.test_failed_recovery_from_a_corrupt_cache_keeps_the_working_tool   # 37 agent-CLI refusal stubs first on PATH
+test_corrupt_cached_wheel_is_never_imported (__main__.BootstrapTest.test_corrupt_cached_wheel_is_never_imported) ... FAIL
+test_failed_recovery_from_a_corrupt_cache_keeps_the_working_tool (__main__.BootstrapTest.test_failed_recovery_from_a_corrupt_cache_keeps_the_working_tool) ... FAIL
+
+======================================================================
+FAIL: test_corrupt_cached_wheel_is_never_imported (__main__.BootstrapTest.test_corrupt_cached_wheel_is_never_imported)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 363, in test_corrupt_cached_wheel_is_never_imported
+    self.assertNotIn('runpane:corrupt', read(self.fx.calls))
+AssertionError: 'runpane:corrupt' unexpectedly found in 'curl --version\ngh --version\nfakedroid --version\nrunpane --version\nfakeagent --version\nrunpane:corrupt --version\n'
+
+======================================================================
+FAIL: test_failed_recovery_from_a_corrupt_cache_keeps_the_working_tool (__main__.BootstrapTest.test_failed_recovery_from_a_corrupt_cache_keeps_the_working_tool)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/vps/test_bootstrap.py", line 378, in test_failed_recovery_from_a_corrupt_cache_keeps_the_working_tool
+    self.assertNotIn('runpane:corrupt', read(self.fx.calls))
+AssertionError: 'runpane:corrupt' unexpectedly found in 'curl --version\ngh --version\nfakedroid --version\nrunpane --version\nfakeagent --version\nrunpane:corrupt --version\n'
+
+----------------------------------------------------------------------
+Ran 2 tests in <t>s
+
+FAILED (failures=2)

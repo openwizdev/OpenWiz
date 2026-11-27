@@ -1,0 +1,11 @@
+# Red R2: test_row.py before the fix: a configured provider with its key missing is reported as a generic failure
+# Command: env -u OPENWIZ_GITHUB_APP_KEY python3 -I test_row.py (in the row folder)
+# 31 refusing no-op stubs for the known agent CLIs were first on PATH. No real goose ran. All values are synthetic.
+fail goose row: a first turn that says "Configuration value not found: ANTHROPIC_API_KEY" fails start as not signed in, naming goose configure
+fail goose row: a first turn that says "Configuration value not found: OPENROUTER_API_KEY" fails start as not signed in, naming goose configure
+fail goose row: a first turn that says "Configuration value not found: DATABRICKS_TOKEN" fails start as not signed in, naming goose configure
+pass goose row: a first turn that says "Configuration value not found: DATABRICKS_HOST" stays a generic failure, not a sign-in one
+pass goose row: a first turn that says "Failed to access keyring: synthetic keyring failure" stays a generic failure, not a sign-in one
+exit=1
+# The driver's answer to the ANTHROPIC_API_KEY case (temp path shortened):
+start exit=1 error=run run-<id>: the first turn ended at once: the harness failed (exit 1) | next=read <tmp>/state/run-<id>.log, fix what it says there, then start again

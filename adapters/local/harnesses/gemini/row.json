@@ -1,0 +1,47 @@
+{
+  "harness": "gemini",
+  "program": "gemini",
+  "start": [
+    "-p",
+    "{prompt}",
+    "-o",
+    "stream-json",
+    "--session-id",
+    "{session}",
+    "-m",
+    "{model}",
+    "{mode}"
+  ],
+  "wake": [
+    "-p",
+    "{prompt}",
+    "-o",
+    "stream-json",
+    "--resume",
+    "{session}",
+    "-m",
+    "{model}",
+    "{mode}"
+  ],
+  "session": {
+    "chosen": "uuid"
+  },
+  "modes": {
+    "yolo": [
+      "--approval-mode",
+      "yolo",
+      "--skip-trust"
+    ]
+  },
+  "env": {},
+  "effort": "none: Gemini CLI v0.70.0 has no effort flag or environment setting; thinking is set only in settings.json modelConfigs (docs/cli/generation-settings.md, packages/cli/src/config/config.ts)",
+  "login": "Gemini CLI's own login: the cached Google sign-in under ~/.gemini, or the GEMINI_API_KEY the user set; the driver never reads or passes it",
+  "daemon": "the LiteRT-LM server (its `serve` command), which Gemini CLI auto-starts detached when the user's Gemma router and its autoStartServer are on and the binary is installed; Linux stop ends it through the driver's subreaper; on macOS it can outlive stop, so this row holds on Linux only",
+  "signed_out": [
+    "Please set an Auth method in your",
+    "When using Gemini API, you must specify the",
+    "When using Vertex AI, you must specify either",
+    "Manual authorization is required but the current session is non-interactive"
+  ],
+  "login_command": "gemini"
+}

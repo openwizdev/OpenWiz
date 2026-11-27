@@ -1,0 +1,68 @@
+# Red run for review findings R2 to R5 (and R6's test change): python3 -I adapters/factory/test_driver.py at the reviewed driver (ff188d5b), with the new tests, before the fix. PATH is fixtures/bin plus a folder holding only python3: the synthetic droid, never Factory. Temporary paths, pids and ids are replaced.
+test_kit_passes_all_five (__main__.Factory.test_kit_passes_all_five) ... ok
+test_other_harness_is_refused_before_anything_runs (__main__.Factory.test_other_harness_is_refused_before_anything_runs) ... ok
+test_relative_state_still_runs_the_turn (__main__.Factory.test_relative_state_still_runs_the_turn) ... FAIL
+test_state_is_owner_only (__main__.Factory.test_state_is_owner_only) ... FAIL
+test_state_keeps_only_the_session_id (__main__.Factory.test_state_keeps_only_the_session_id) ... FAIL
+test_state_others_can_read_is_refused_before_anything_runs (__main__.Factory.test_state_others_can_read_is_refused_before_anything_runs) ... FAIL
+test_turn_inherits_the_callers_environment_unchanged (__main__.Factory.test_turn_inherits_the_callers_environment_unchanged) ... FAIL
+test_wake_without_a_session_starts_nothing (__main__.Factory.test_wake_without_a_session_starts_nothing) ... ok
+
+======================================================================
+FAIL: test_relative_state_still_runs_the_turn (__main__.Factory.test_relative_state_still_runs_the_turn)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/factory/test_driver.py", line 189, in test_relative_state_still_runs_the_turn
+    self.assertTrue(self.until(lambda: len(self.logged()) == 1), 'droid never ran its turn')
+AssertionError: False is not true : droid never ran its turn
+
+======================================================================
+FAIL: test_state_is_owner_only (__main__.Factory.test_state_is_owner_only)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/factory/test_driver.py", line 174, in test_state_is_owner_only
+    self.assertEqual({p: m for p, m in modes.items() if m}, {})
+AssertionError: {'<tmp>/state/work': 45, '<tmp>[40 chars]: 36} != {}
++ {}
+- {'<tmp>/state/run-0123456789ab.json': 36,
+-  '<tmp>/state/work': 45}
+
+======================================================================
+FAIL: test_state_keeps_only_the_session_id (__main__.Factory.test_state_keeps_only_the_session_id)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/factory/test_driver.py", line 161, in test_state_keeps_only_the_session_id
+    self.assertNotIn(b'FAKE-STDOUT-MARKER', kept)
+AssertionError: b'FAKE-STDOUT-MARKER' unexpectedly found in b'{"request": {"repository": "example/site", "ticket": 7, "skill": "build-ticket", "harness": "droid", "model": "synthetic-model-1"}, "turns": [{"pid": 0, "since": 0, "supervisor": 0, "supervisor_since": 0}, {"pid": 0, "since": 0, "supervisor": 0, "supervisor_since": 0}], "stopped": false, "starting": false, "session": "00000000-0000-4000-8000-000000000000"}Synthetic droid progress: FAKE-STDOUT-MARKER\nSynthetic droid diagnostic: FAKE-STDERR-MARKER\n{"type": "result", "subtype": "success", "is_error": false, "duration_ms": 5, "num_turns": 1, "result": "Synthetic turn.", "session_id": "00000000-0000-4000-8000-000000000000"}\nSynthetic droid progress: FAKE-STDOUT-MARKER\nSynthetic droid diagnostic: FAKE-STDERR-MARKER\n{"type": "result", "subtype": "success", "is_error": false, "duration_ms": 5, "num_turns": 1, "result": "Synthetic turn.", "session_id": "00000000-0000-4000-8000-000000000000"}\n'
+
+======================================================================
+FAIL: test_state_others_can_read_is_refused_before_anything_runs (__main__.Factory.test_state_others_can_read_is_refused_before_anything_runs)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/factory/test_driver.py", line 181, in test_state_others_can_read_is_refused_before_anything_runs
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'run-0123456789ab'}
+
+======================================================================
+FAIL: test_turn_inherits_the_callers_environment_unchanged (__main__.Factory.test_turn_inherits_the_callers_environment_unchanged)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/factory/test_driver.py", line 146, in test_turn_inherits_the_callers_environment_unchanged
+    self.assertEqual(json.load(f), dict(self.env, FAKE_ENV_LOG=seen))
+AssertionError: {'HOM[451 chars]<tmp>/turn-env.json', 'OPENWIZ_RUN': 'run-0123456789ab'} != {'HOM[451 chars]<tmp>/turn-env.json'}
+  {'FACTORY_API_KEY': '<synthetic Factory-key-shaped value>',
+   'FAKE_ENV_LOG': '<tmp>/turn-env.json',
+   'FAKE_FACTORY_HOME': '<tmp>/factory',
+   'FAKE_TURNS': '<tmp>/turns',
+   'GH_TOKEN': '<synthetic GitHub-token-shaped value>',
+   'HOME': '<tmp>',
+   'KIT_TRACKER': '<tmp>/tracker.json',
+   'LANG': 'C.UTF-8',
+   'OPENWIZ_FACTORY_STATE': '<tmp>/state',
+-  'OPENWIZ_RUN': 'run-0123456789ab',
+   'PATH': 'adapters/factory/fixtures/bin:<tmp>/python-only'}
+
+----------------------------------------------------------------------
+Ran 8 tests in N.NNNs
+
+FAILED (failures=5)

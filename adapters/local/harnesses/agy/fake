@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+import json, os, re, sys
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.environ['FAKE_CLI_LIB'])
+import fake_cli
+
+HELP = '''The fake agy: it allows only the headless forms Antigravity CLI 1.5.14 documents
+(antigravity.google/docs/cli/headless, antigravity.google/docs/cli/reference), in the row's order:
+  agy -p <prompt> [--conversation <id>] --output-format stream-json --model <m>
+      [--mode=auto|--mode=accept-edits|--mode=plan|--dangerously-skip-permissions]
+      [--effort low|medium|high|xhigh|max]
+with AGY_CLI_DISABLE_AUTO_UPDATE=true. It prints its conversation id in the stream's init event and starts a
+language-server stand-in under the turn. -p, --print and --prompt are aliases.'''
+MODES = ('--mode=auto', '--mode=accept-edits', '--mode=plan', '--dangerously-skip-permissions')
+EFFORTS = ('low', 'medium', 'high', 'xhigh', 'max')
+SIGNED_OUT = "Error: authentication required. Run 'agy' to log in."
+
+if sys.argv[1:] == ['--help']:
+    print(HELP)
+    sys.exit(0)
+a = sys.argv[1:]
+if os.environ.get('AGY_CLI_DISABLE_AUTO_UPDATE') != 'true':
+    fake_cli.refuse()
+if a[:1] not in (['-p'], ['--print'], ['--prompt']) or len(a) < 2 or not a[1]:
+    fake_cli.refuse()
+prompt, a, session = a[1], a[2:], None
+if a[:1] == ['--conversation']:
+    if len(a) < 2 or not re.fullmatch(r'[A-Za-z0-9._:-]{1,100}', a[1]):
+        fake_cli.refuse()
+    session, a = a[1], a[2:]
+if a[:2] != ['--output-format', 'stream-json']:
+    fake_cli.refuse()
+a = a[2:]
+if a[:1] != ['--model'] or len(a) < 2 or not a[1] or a[1].startswith('-'):
+    fake_cli.refuse()
+model, a = a[1], a[2:]
+if a[:1] and a[0] in MODES:
+    a = a[1:]
+if a[:1] == ['--effort'] and len(a) == 2 and a[1] in EFFORTS:
+    a = a[2:]
+if a or (session is not None) != prompt.startswith('You were woken'):
+    fake_cli.refuse()
+fake_cli.turn(prompt, model, session,
+              lambda sid: json.dumps({'event': 'init', 'conversation_id': sid,
+                                      'init': {'cwd': os.getcwd(), 'permission_mode': 'request-review'}},
+                                     separators=(',', ':')),
+              daemon='tree', signed_out=SIGNED_OUT)

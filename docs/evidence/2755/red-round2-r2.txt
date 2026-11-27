@@ -1,0 +1,25 @@
+test_an_edited_comment_after_a_lost_answer_is_refused_and_a_skewed_clock_never_hides_one_on_page_two (__main__.Heads.test_an_edited_comment_after_a_lost_answer_is_refused_and_a_skewed_clock_never_hides_one_on_page_two) ... FAIL
+
+======================================================================
+FAIL: test_an_edited_comment_after_a_lost_answer_is_refused_and_a_skewed_clock_never_hides_one_on_page_two (__main__.Heads.test_an_edited_comment_after_a_lost_answer_is_refused_and_a_skewed_clock_never_hides_one_on_page_two)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/kernel/live-rig/test_heads.py", line 425, in test_an_edited_comment_after_a_lost_answer_is_refused_and_a_skewed_clock_never_hides_one_on_page_two
+    self.assertEqual((comment_posts(), code), (1, 2), out)
+AssertionError: Tuples differ: (2, 0) != (1, 2)
+
+First differing element 0:
+2
+1
+
+- (2, 0)
++ (1, 2) : finishing the publish an earlier --post left unfinished
+posted https://github.com/openwizdev/OpenWiz/pull/201#issuecomment-902
+posted https://github.com/openwizdev/WizMarket/pull/41
+
+
+----------------------------------------------------------------------
+Ran 1 test in 12.666s
+
+FAILED (failures=1)
+exit 1

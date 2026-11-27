@@ -1,0 +1,20 @@
+# After the R7 fix (hash the cached wheel before reuse), the whole file:
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/vps/test_bootstrap.py    # 37 agent-CLI refusal stubs first on PATH
+test_checksum_mismatch_is_refused_and_nothing_from_it_runs (__main__.BootstrapTest.test_checksum_mismatch_is_refused_and_nothing_from_it_runs) ... ok
+test_corrupt_cached_wheel_is_never_imported (__main__.BootstrapTest.test_corrupt_cached_wheel_is_never_imported) ... ok
+test_dry_run_prints_every_step_and_writes_nothing (__main__.BootstrapTest.test_dry_run_prints_every_step_and_writes_nothing) ... ok
+test_existing_launcher_is_never_replaced (__main__.BootstrapTest.test_existing_launcher_is_never_replaced) ... ok
+test_failed_recovery_from_a_corrupt_cache_keeps_the_working_tool (__main__.BootstrapTest.test_failed_recovery_from_a_corrupt_cache_keeps_the_working_tool) ... ok
+test_fixture_install_into_home_prefix (__main__.BootstrapTest.test_fixture_install_into_home_prefix) ... ok
+test_home_only_installer_is_refused_under_another_prefix (__main__.BootstrapTest.test_home_only_installer_is_refused_under_another_prefix) ... ok
+test_real_tools_plan_offline_on_refusing_downloads (__main__.BootstrapTest.test_real_tools_plan_offline_on_refusing_downloads) ... ok
+test_same_version_repin_that_fails_keeps_the_working_wheel (__main__.BootstrapTest.test_same_version_repin_that_fails_keeps_the_working_wheel) ... ok
+test_second_run_installs_nothing (__main__.BootstrapTest.test_second_run_installs_nothing) ... ok
+test_too_old_system_tool_is_left_out_with_its_reason (__main__.BootstrapTest.test_too_old_system_tool_is_left_out_with_its_reason) ... ok
+test_wrong_version_keeps_the_working_tool (__main__.BootstrapTest.test_wrong_version_keeps_the_working_tool) ... ok
+test_every_tool_names_its_source_exact_version_checksum_and_why (__main__.ToolsJsonTest.test_every_tool_names_its_source_exact_version_checksum_and_why) ... ok
+
+----------------------------------------------------------------------
+Ran 13 tests in <t>s
+
+OK

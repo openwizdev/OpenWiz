@@ -1,0 +1,20 @@
+{
+  "contract": "openwiz.driver-package.v1",
+  "pins": [
+    {
+      "package": {
+        "driver": "synthetic-host",
+        "repository": "example-publisher/example-driver",
+        "version": "1.2.3",
+        "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "asset_url": "https://github.com/example-publisher/example-driver/releases/download/v1.2.3/driver.tar.gz",
+        "kit_commit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "sha256": "a8705d3afdacc8ba582a072e80e166adebb32db5d2e9671181af919c8bf57bf5"
+      },
+      "publisher": "example-publisher",
+      "evidence": {
+        "receipt": "https://github.com/openwizdev/WizMarket/blob/dddddddddddddddddddddddddddddddddddddddd/receipts/synthetic-host/2030-01-02-aaaaaaaaaaaa.txt"
+      }
+    }
+  ]
+}

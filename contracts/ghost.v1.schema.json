@@ -1,0 +1,547 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:openwiz:schema:ghost:v1",
+  "title": "openwiz.ghost.v1",
+  "description": "Contract only (#3149, GS1). See contracts/ghost.v1.md for transport, Host/Origin/token rules, refusal order and semantics. Fixtures prove no live behaviour.",
+  "$defs": {
+    "schema_id": {
+      "const": "openwiz.ghost.v1"
+    },
+    "non_empty_string": {
+      "type": "string",
+      "minLength": 1
+    },
+    "time": {
+      "type": "string",
+      "pattern": "^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]Z$"
+    },
+    "surface": {
+      "enum": ["openwiz-app", "t3-code", "bb-plugin", "cli", "other"]
+    },
+    "tier": {
+      "enum": ["recall", "small_model", "draft"]
+    },
+    "outcome": {
+      "enum": ["shown", "accepted_all", "accepted_word", "typed_through", "dismissed", "typed_over"]
+    },
+    "bench_source": {
+      "enum": ["fixtures", "log", "sent"]
+    },
+    "route_name": {
+      "enum": ["pair", "health", "context", "turns", "complete", "draft", "feedback", "bench"]
+    },
+    "stdio_route_name": {
+      "enum": ["health", "context", "turns", "complete", "draft", "feedback", "bench"]
+    },
+    "refusal_code": {
+      "enum": [
+        "invalid_request",
+        "missing_token",
+        "invalid_token",
+        "invalid_pairing_code",
+        "host_not_allowed",
+        "origin_not_allowed",
+        "unknown_route",
+        "method_not_allowed",
+        "payload_too_large",
+        "not_implemented",
+        "unavailable"
+      ]
+    },
+    "refusal": {
+      "type": "object",
+      "required": ["refusal"],
+      "additionalProperties": false,
+      "properties": {
+        "refusal": {
+          "type": "object",
+          "required": ["code", "message"],
+          "additionalProperties": false,
+          "properties": {
+            "code": { "$ref": "#/$defs/refusal_code" },
+            "message": { "$ref": "#/$defs/non_empty_string" }
+          }
+        }
+      }
+    },
+    "stdio_request": {
+      "type": "object",
+      "required": ["id", "route", "body"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/non_empty_string" },
+        "route": { "$ref": "#/$defs/stdio_route_name" },
+        "body": { "type": "object" }
+      }
+    },
+    "stdio_response": {
+      "type": "object",
+      "required": ["id", "status", "body"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": ["string", "null"], "minLength": 1 },
+        "status": { "type": "integer", "minimum": 100, "maximum": 599 },
+        "body": { "type": "object" }
+      }
+    },
+    "turn": {
+      "type": "object",
+      "required": ["role", "text", "asks_user"],
+      "additionalProperties": false,
+      "properties": {
+        "role": { "enum": ["user", "agent"] },
+        "text": { "type": "string" },
+        "asks_user": { "type": "boolean" }
+      }
+    },
+    "context_pack": {
+      "type": "object",
+      "required": ["schema", "kind", "revision", "skill", "glossary", "open_work", "conversation"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": { "$ref": "#/$defs/schema_id" },
+        "kind": { "const": "context_pack" },
+        "revision": { "$ref": "#/$defs/non_empty_string" },
+        "skill": {
+          "type": "object",
+          "required": ["phrases", "tone", "never_suggest"],
+          "additionalProperties": false,
+          "properties": {
+            "phrases": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/non_empty_string" }
+            },
+            "tone": { "type": "string" },
+            "never_suggest": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/non_empty_string" }
+            }
+          }
+        },
+        "glossary": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["term", "meaning"],
+            "additionalProperties": false,
+            "properties": {
+              "term": { "$ref": "#/$defs/non_empty_string" },
+              "meaning": { "$ref": "#/$defs/non_empty_string" }
+            }
+          }
+        },
+        "open_work": {
+          "type": "object",
+          "required": ["specs", "tickets", "grills"],
+          "additionalProperties": false,
+          "properties": {
+            "specs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["number", "title"],
+                "additionalProperties": false,
+                "properties": {
+                  "number": { "type": "integer", "minimum": 1 },
+                  "title": { "$ref": "#/$defs/non_empty_string" }
+                }
+              }
+            },
+            "tickets": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["number", "title", "action"],
+                "additionalProperties": false,
+                "properties": {
+                  "number": { "type": "integer", "minimum": 1 },
+                  "title": { "$ref": "#/$defs/non_empty_string" },
+                  "action": { "$ref": "#/$defs/non_empty_string" }
+                }
+              }
+            },
+            "grills": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["code", "question", "recommended"],
+                "additionalProperties": false,
+                "properties": {
+                  "code": { "$ref": "#/$defs/non_empty_string" },
+                  "question": { "$ref": "#/$defs/non_empty_string" },
+                  "recommended": { "$ref": "#/$defs/non_empty_string" }
+                }
+              }
+            }
+          }
+        },
+        "conversation": {
+          "type": "object",
+          "required": ["session_id", "agent", "turns"],
+          "additionalProperties": false,
+          "properties": {
+            "session_id": { "$ref": "#/$defs/non_empty_string" },
+            "agent": { "$ref": "#/$defs/non_empty_string" },
+            "turns": {
+              "type": "array",
+              "maxItems": 3,
+              "items": { "$ref": "#/$defs/turn" }
+            }
+          }
+        }
+      }
+    },
+    "event": {
+      "type": "object",
+      "required": [
+        "schema",
+        "kind",
+        "at",
+        "suggestion_id",
+        "session_id",
+        "surface",
+        "outcome",
+        "tier",
+        "confidence",
+        "latency_ms",
+        "chars_accepted"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema": { "$ref": "#/$defs/schema_id" },
+        "kind": { "const": "event" },
+        "at": { "$ref": "#/$defs/time" },
+        "suggestion_id": { "$ref": "#/$defs/non_empty_string" },
+        "session_id": { "$ref": "#/$defs/non_empty_string" },
+        "surface": { "$ref": "#/$defs/surface" },
+        "outcome": { "$ref": "#/$defs/outcome" },
+        "tier": { "$ref": "#/$defs/tier" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "latency_ms": { "type": "number", "minimum": 0 },
+        "chars_accepted": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "bench_metrics": {
+      "type": "object",
+      "required": [
+        "shown",
+        "accepted",
+        "acceptance_rate",
+        "chars_saved_per_message",
+        "suggestions_per_message",
+        "p50_latency_ms",
+        "p90_latency_ms"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "shown": { "type": "integer", "minimum": 0 },
+        "accepted": { "type": "integer", "minimum": 0 },
+        "acceptance_rate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "chars_saved_per_message": { "type": "number", "minimum": 0 },
+        "suggestions_per_message": { "type": "number", "minimum": 0 },
+        "p50_latency_ms": { "type": ["number", "null"], "minimum": 0 },
+        "p90_latency_ms": { "type": ["number", "null"], "minimum": 0 }
+      }
+    },
+    "tier_metrics": {
+      "type": "object",
+      "required": ["tier", "metrics"],
+      "additionalProperties": false,
+      "properties": {
+        "tier": { "$ref": "#/$defs/tier" },
+        "metrics": { "$ref": "#/$defs/bench_metrics" }
+      }
+    },
+    "surface_metrics": {
+      "type": "object",
+      "required": ["surface", "metrics"],
+      "additionalProperties": false,
+      "properties": {
+        "surface": { "$ref": "#/$defs/surface" },
+        "metrics": { "$ref": "#/$defs/bench_metrics" }
+      }
+    },
+    "bench_report": {
+      "type": "object",
+      "required": ["schema", "kind", "source", "messages", "overall", "per_tier", "per_surface"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": { "$ref": "#/$defs/schema_id" },
+        "kind": { "const": "bench_report" },
+        "source": { "$ref": "#/$defs/bench_source" },
+        "messages": { "type": "integer", "minimum": 0 },
+        "overall": { "$ref": "#/$defs/bench_metrics" },
+        "per_tier": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/tier_metrics" }
+        },
+        "per_surface": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/surface_metrics" }
+        }
+      }
+    },
+    "pair_request": {
+      "type": "object",
+      "required": ["code", "surface"],
+      "additionalProperties": false,
+      "properties": {
+        "code": { "$ref": "#/$defs/non_empty_string" },
+        "surface": { "$ref": "#/$defs/surface" }
+      }
+    },
+    "pair_response": {
+      "type": "object",
+      "required": ["schema", "token", "surface"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": { "$ref": "#/$defs/schema_id" },
+        "token": { "$ref": "#/$defs/non_empty_string" },
+        "surface": { "$ref": "#/$defs/surface" }
+      }
+    },
+    "health_request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {}
+    },
+    "health_response": {
+      "type": "object",
+      "required": ["schema", "status", "version", "tiers", "logging_enabled", "context_revision"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": { "$ref": "#/$defs/schema_id" },
+        "status": { "const": "ok" },
+        "version": { "$ref": "#/$defs/non_empty_string" },
+        "tiers": {
+          "type": "object",
+          "required": ["recall", "small_model", "draft"],
+          "additionalProperties": false,
+          "properties": {
+            "recall": { "type": "boolean" },
+            "small_model": { "type": "boolean" },
+            "draft": { "type": "boolean" }
+          }
+        },
+        "logging_enabled": { "type": "boolean" },
+        "context_revision": { "$ref": "#/$defs/non_empty_string" }
+      }
+    },
+    "context_request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "if_revision": { "type": ["string", "null"], "minLength": 1 }
+      }
+    },
+    "context_response": {
+      "type": "object",
+      "required": ["schema", "revision", "unchanged", "pack"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": { "$ref": "#/$defs/schema_id" },
+        "revision": { "$ref": "#/$defs/non_empty_string" },
+        "unchanged": { "type": "boolean" },
+        "pack": {
+          "oneOf": [
+            { "$ref": "#/$defs/context_pack" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "turns_request": {
+      "type": "object",
+      "required": ["session_id", "agent", "turns"],
+      "additionalProperties": false,
+      "properties": {
+        "session_id": { "$ref": "#/$defs/non_empty_string" },
+        "agent": { "$ref": "#/$defs/non_empty_string" },
+        "turns": {
+          "type": "array",
+          "maxItems": 3,
+          "items": { "$ref": "#/$defs/turn" }
+        }
+      }
+    },
+    "turns_response": {
+      "type": "object",
+      "required": ["schema", "revision", "draft_queued"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": { "$ref": "#/$defs/schema_id" },
+        "revision": { "$ref": "#/$defs/non_empty_string" },
+        "draft_queued": { "type": "boolean" }
+      }
+    },
+    "suggestion": {
+      "type": "object",
+      "required": ["id", "text", "full_text", "tier", "confidence", "latency_ms"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/non_empty_string" },
+        "text": { "$ref": "#/$defs/non_empty_string" },
+        "full_text": { "$ref": "#/$defs/non_empty_string" },
+        "tier": { "$ref": "#/$defs/tier" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "latency_ms": { "type": "number", "minimum": 0 }
+      }
+    },
+    "complete_request": {
+      "type": "object",
+      "required": ["session_id", "surface", "prefix", "seq"],
+      "additionalProperties": false,
+      "properties": {
+        "session_id": { "$ref": "#/$defs/non_empty_string" },
+        "surface": { "$ref": "#/$defs/surface" },
+        "prefix": { "type": "string" },
+        "seq": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "complete_response": {
+      "type": "object",
+      "required": ["schema", "seq", "suggestion"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": { "$ref": "#/$defs/schema_id" },
+        "seq": { "type": "integer", "minimum": 0 },
+        "suggestion": {
+          "oneOf": [
+            { "$ref": "#/$defs/suggestion" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "draft": {
+      "type": "object",
+      "required": ["id", "text", "precomputed", "latency_ms"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/non_empty_string" },
+        "text": { "$ref": "#/$defs/non_empty_string" },
+        "precomputed": { "type": "boolean" },
+        "latency_ms": { "type": "number", "minimum": 0 }
+      }
+    },
+    "draft_request": {
+      "type": "object",
+      "required": ["session_id", "surface"],
+      "additionalProperties": false,
+      "properties": {
+        "session_id": { "$ref": "#/$defs/non_empty_string" },
+        "surface": { "$ref": "#/$defs/surface" }
+      }
+    },
+    "draft_response": {
+      "type": "object",
+      "required": ["schema", "draft"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": { "$ref": "#/$defs/schema_id" },
+        "draft": {
+          "oneOf": [
+            { "$ref": "#/$defs/draft" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "feedback_request": {
+      "$ref": "#/$defs/event"
+    },
+    "feedback_response": {
+      "type": "object",
+      "required": ["schema", "recorded", "logged"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": { "$ref": "#/$defs/schema_id" },
+        "recorded": { "type": "boolean" },
+        "logged": { "type": "boolean" }
+      }
+    },
+    "bench_request": {
+      "type": "object",
+      "required": ["source", "surface"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "$ref": "#/$defs/bench_source" },
+        "surface": { "$ref": "#/$defs/surface" },
+        "replay_path": { "type": ["string", "null"], "minLength": 1 }
+      }
+    },
+    "bench_response": {
+      "$ref": "#/$defs/bench_report"
+    },
+    "recall_step": {
+      "type": "object",
+      "required": ["action", "input", "expected_text", "expected_ghost", "expected_request", "expected_events"],
+      "additionalProperties": false,
+      "properties": {
+        "action": { "enum": ["type", "accept_word", "accept_all", "dismiss"] },
+        "input": { "type": "string" },
+        "expected_text": { "type": "string" },
+        "expected_ghost": { "type": ["string", "null"], "minLength": 1 },
+        "expected_request": { "type": "boolean" },
+        "expected_events": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/outcome" }
+        }
+      }
+    },
+    "recall_case": {
+      "type": "object",
+      "required": ["name", "steps"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/non_empty_string" },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/recall_step" }
+        }
+      }
+    },
+    "recall_fixture_set": {
+      "type": "object",
+      "required": ["schema", "kind", "context_fixture", "cases"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": { "$ref": "#/$defs/schema_id" },
+        "kind": { "const": "recall_fixtures" },
+        "context_fixture": { "$ref": "#/$defs/non_empty_string" },
+        "cases": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/recall_case" }
+        }
+      }
+    },
+    "replay_message": {
+      "type": "object",
+      "required": ["id", "surface", "session_id", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/non_empty_string" },
+        "surface": { "$ref": "#/$defs/surface" },
+        "session_id": { "$ref": "#/$defs/non_empty_string" },
+        "text": { "$ref": "#/$defs/non_empty_string" }
+      }
+    },
+    "replay_fixture_set": {
+      "type": "object",
+      "required": ["schema", "kind", "context_fixture", "messages"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": { "$ref": "#/$defs/schema_id" },
+        "kind": { "const": "replay_fixtures" },
+        "context_fixture": { "$ref": "#/$defs/non_empty_string" },
+        "messages": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/replay_message" }
+        }
+      }
+    }
+  }
+}

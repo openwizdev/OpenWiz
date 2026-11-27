@@ -1,0 +1,11 @@
+$ python3 -I tools/line-budget/test_check.py
+test_a_ceiling_change_needs_its_pointer (__main__.Ceiling.test_a_ceiling_change_needs_its_pointer) ... ok
+test_exception_lines (__main__.Ceiling.test_exception_lines) ... ok
+test_lockfiles_binaries_and_symlinks_do_not_count (__main__.Ceiling.test_lockfiles_binaries_and_symlinks_do_not_count) ... ok
+test_queue_ref_names_its_pull_request (__main__.Ceiling.test_queue_ref_names_its_pull_request) ... ok
+test_total_always_passes (__main__.Ceiling.test_total_always_passes) ... ok
+test_under_and_at_pass_over_fails_naming_the_numbers (__main__.Ceiling.test_under_and_at_pass_over_fails_naming_the_numbers) ... ok
+test_unreadable_input_exits_2 (__main__.Ceiling.test_unreadable_input_exits_2) ... ok
+test_matches_the_reference_pipeline (__main__.Counter.test_matches_the_reference_pipeline) ... ok
+Ran 8 tests in 1.576s
+OK

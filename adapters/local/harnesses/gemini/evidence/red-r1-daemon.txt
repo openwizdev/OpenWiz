@@ -1,0 +1,3 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/local/test_harnesses.py --rows adapters/local/harnesses   # 31 refusing stubs first on PATH
+fail gemini: daemon: the fake started a background process, but the row declares none
+exit 1

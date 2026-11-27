@@ -1,0 +1,92 @@
+# Red run: python3 -I adapters/hermes/test_driver.py with fixtures/bin/hermes, against adapters/hermes/driver still the copied template (commit 13bf6d30). PATH is fixtures/bin, /usr/bin and /bin only.
+test_a_start_it_cannot_run_starts_nothing (__main__.Hermes.test_a_start_it_cannot_run_starts_nothing) ... FAIL
+test_a_start_without_a_session_starts_nothing_wakeable (__main__.Hermes.test_a_start_without_a_session_starts_nothing_wakeable) ... FAIL
+test_kit_passes_all_five (__main__.Hermes.test_kit_passes_all_five) ... FAIL
+test_stop_interrupts_the_turn_then_ends_everything (__main__.Hermes.test_stop_interrupts_the_turn_then_ends_everything) ... FAIL
+test_wake_resumes_the_session_its_start_reported (__main__.Hermes.test_wake_resumes_the_session_its_start_reported) ... 
+  test_wake_resumes_the_session_its_start_reported (__main__.Hermes.test_wake_resumes_the_session_its_start_reported) (harness='claude') ... FAIL
+  test_wake_resumes_the_session_its_start_reported (__main__.Hermes.test_wake_resumes_the_session_its_start_reported) (harness='codex') ... FAIL
+test_wake_resumes_the_session_its_start_reported (__main__.Hermes.test_wake_resumes_the_session_its_start_reported) ... FAIL
+
+======================================================================
+FAIL: test_a_start_it_cannot_run_starts_nothing (__main__.Hermes.test_a_start_it_cannot_run_starts_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/hermes/test_driver.py", line 164, in test_a_start_it_cannot_run_starts_nothing
+    self.assertEqual((code, out['next']), (1, 'use one of: claude, codex, hermes'))
+AssertionError: Tuples differ: (1, 'install pi and sign in to it yourself, then start again') != (1, 'use one of: claude, codex, hermes')
+
+First differing element 1:
+'install pi and sign in to it yourself, then start again'
+'use one of: claude, codex, hermes'
+
+- (1, 'install pi and sign in to it yourself, then start again')
++ (1, 'use one of: claude, codex, hermes')
+
+======================================================================
+FAIL: test_a_start_without_a_session_starts_nothing_wakeable (__main__.Hermes.test_a_start_without_a_session_starts_nothing_wakeable)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/hermes/test_driver.py", line 154, in test_a_start_without_a_session_starts_nothing_wakeable
+    self.assertIn('did not report a session', out['error'])
+AssertionError: 'did not report a session' not found in 'harness claude is not installed here'
+
+======================================================================
+FAIL: test_kit_passes_all_five (__main__.Hermes.test_kit_passes_all_five)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/hermes/test_driver.py", line 84, in test_kit_passes_all_five
+    self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[206 chars]er']) != (0, ['pass version: openwiz:records v1, an[245 chars]er'])
+
+First differing element 0:
+1
+0
+
+- (1,
++ (0,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+-   'fail start: harness claude is not installed here',
+-   'fail wake: not run: start failed',
+-   'fail stop: not run: start failed',
++   'pass start: the run posted builder status note 1',
++   'pass wake: the run edited builder status note 1',
++   'pass stop: the run ended, and a wake after it is refused',
+    'pass token: no login or token passed through the driver']) : 
+
+======================================================================
+FAIL: test_stop_interrupts_the_turn_then_ends_everything (__main__.Hermes.test_stop_interrupts_the_turn_then_ends_everything)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/hermes/test_driver.py", line 141, in test_stop_interrupts_the_turn_then_ends_everything
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'harness claude is not installed here', 'next': 'install claude and sign in to it yourself, then start again'}
+
+======================================================================
+FAIL: test_wake_resumes_the_session_its_start_reported (__main__.Hermes.test_wake_resumes_the_session_its_start_reported) (harness='claude')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/hermes/test_driver.py", line 116, in test_wake_resumes_the_session_its_start_reported
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'harness claude is not installed here', 'next': 'install claude and sign in to it yourself, then start again'}
+
+======================================================================
+FAIL: test_wake_resumes_the_session_its_start_reported (__main__.Hermes.test_wake_resumes_the_session_its_start_reported) (harness='codex')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/hermes/test_driver.py", line 116, in test_wake_resumes_the_session_its_start_reported
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'harness codex is not installed here', 'next': 'install codex and sign in to it yourself, then start again'}
+
+======================================================================
+FAIL: test_wake_resumes_the_session_its_start_reported (__main__.Hermes.test_wake_resumes_the_session_its_start_reported)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/hermes/test_driver.py", line 128, in test_wake_resumes_the_session_its_start_reported
+    self.assertEqual(len(self.notes()), 2, 'a wake posted a second note')
+AssertionError: 0 != 2 : a wake posted a second note
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.292s
+
+FAILED (failures=7)

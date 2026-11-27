@@ -72,10 +72,6 @@ impl SendRecord {
         }
     }
 
-    pub fn attachments_agree(&self) -> bool {
-        crate::prompt::attachments_digest(&self.attachments) == self.binding.attachments_digest
-    }
-
     pub fn dispatching(&self, now: Timestamp) -> Self {
         Self {
             state: RecordState::Dispatching,

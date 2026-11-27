@@ -1,0 +1,40 @@
+Red run, before the gate: python3 tools/release/test_candidate.py Rehearsal
+
+ERROR: test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish (__main__.Rehearsal.test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish)
+FileNotFoundError: [Errno 2] No such file or directory: '<tmp>
+FAIL: test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish (__main__.Rehearsal.test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish) (case='no Packages run at the commit')
+AssertionError: 0 != 1 : {'candidate_sha256': '431394b88e838fa7fb7c3a9fdcf4ba7249db961e9ed9f0af5383f1621a3f2bd0', 'status': 'ready'}
+FAIL: test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish (__main__.Rehearsal.test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish) (case='a run from another workflow path')
+AssertionError: 0 != 1 : {'candidate_sha256': '431394b88e838fa7fb7c3a9fdcf4ba7249db961e9ed9f0af5383f1621a3f2bd0', 'status': 'ready'}
+FAIL: test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish (__main__.Rehearsal.test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish) (case='a rehearsal check run from another app')
+AssertionError: 0 != 1 : {'candidate_sha256': '431394b88e838fa7fb7c3a9fdcf4ba7249db961e9ed9f0af5383f1621a3f2bd0', 'status': 'ready'}
+FAIL: test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish (__main__.Rehearsal.test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish) (case='a red rehearsal check run')
+AssertionError: 0 != 1 : {'candidate_sha256': '431394b88e838fa7fb7c3a9fdcf4ba7249db961e9ed9f0af5383f1621a3f2bd0', 'status': 'ready'}
+FAIL: test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish (__main__.Rehearsal.test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish) (case='a missing rehearsal check run')
+AssertionError: 0 != 1 : {'candidate_sha256': '431394b88e838fa7fb7c3a9fdcf4ba7249db961e9ed9f0af5383f1621a3f2bd0', 'status': 'ready'}
+FAIL: test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish (__main__.Rehearsal.test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish) (case='a missing target receipt')
+AssertionError: 0 != 1 : {'candidate_sha256': '431394b88e838fa7fb7c3a9fdcf4ba7249db961e9ed9f0af5383f1621a3f2bd0', 'status': 'ready'}
+FAIL: test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish (__main__.Rehearsal.test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish) (case='an expired target receipt')
+AssertionError: 0 != 1 : {'candidate_sha256': '431394b88e838fa7fb7c3a9fdcf4ba7249db961e9ed9f0af5383f1621a3f2bd0', 'status': 'ready'}
+FAIL: test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish (__main__.Rehearsal.test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish) (case='a fail receipt')
+AssertionError: 0 != 1 : {'candidate_sha256': '431394b88e838fa7fb7c3a9fdcf4ba7249db961e9ed9f0af5383f1621a3f2bd0', 'status': 'ready'}
+FAIL: test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish (__main__.Rehearsal.test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish) (case='a receipt for other bytes')
+AssertionError: 0 != 1 : {'candidate_sha256': '431394b88e838fa7fb7c3a9fdcf4ba7249db961e9ed9f0af5383f1621a3f2bd0', 'status': 'ready'}
+FAIL: test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish (__main__.Rehearsal.test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish) (case='a receipt for another commit')
+AssertionError: 0 != 1 : {'candidate_sha256': '431394b88e838fa7fb7c3a9fdcf4ba7249db961e9ed9f0af5383f1621a3f2bd0', 'status': 'ready'}
+FAIL: test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish (__main__.Rehearsal.test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish) (case='a receipt for another version')
+AssertionError: 0 != 1 : {'candidate_sha256': '431394b88e838fa7fb7c3a9fdcf4ba7249db961e9ed9f0af5383f1621a3f2bd0', 'status': 'ready'}
+FAIL: test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish (__main__.Rehearsal.test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish) (case='a receipt for another target')
+AssertionError: 0 != 1 : {'candidate_sha256': '431394b88e838fa7fb7c3a9fdcf4ba7249db961e9ed9f0af5383f1621a3f2bd0', 'status': 'ready'}
+FAIL: test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish (__main__.Rehearsal.test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish) (case='a zip that is not its listed digest')
+AssertionError: 0 != 1 : {'candidate_sha256': '431394b88e838fa7fb7c3a9fdcf4ba7249db961e9ed9f0af5383f1621a3f2bd0', 'status': 'ready'}
+FAIL: test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish (__main__.Rehearsal.test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish) (case='a listing without a digest')
+AssertionError: 0 != 1 : {'candidate_sha256': '431394b88e838fa7fb7c3a9fdcf4ba7249db961e9ed9f0af5383f1621a3f2bd0', 'status': 'ready'}
+FAIL: test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish (__main__.Rehearsal.test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish) (case='a pass without its six steps')
+AssertionError: 0 != 1 : {'candidate_sha256': '431394b88e838fa7fb7c3a9fdcf4ba7249db961e9ed9f0af5383f1621a3f2bd0', 'status': 'ready'}
+FAIL: test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish (__main__.Rehearsal.test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish) (case='a receipt that is not JSON')
+AssertionError: 0 != 1 : {'candidate_sha256': '431394b88e838fa7fb7c3a9fdcf4ba7249db961e9ed9f0af5383f1621a3f2bd0', 'status': 'ready'}
+FAIL: test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish (__main__.Rehearsal.test_2451_a_red_missing_or_unbound_rehearsal_blocks_evaluate_and_publish) (case='an unreadable artifact listing')
+AssertionError: 0 != 1 : {'candidate_sha256': '431394b88e838fa7fb7c3a9fdcf4ba7249db961e9ed9f0af5383f1621a3f2bd0', 'status': 'ready'}
+Ran 1 test in 70.153s
+FAILED (failures=17, errors=1)

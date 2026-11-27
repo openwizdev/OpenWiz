@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+import json, os, re, sys
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.environ['FAKE_CLI_LIB'])
+import fake_cli
+
+HELP = '''The fake copilot (GitHub Copilot CLI v1.0.114): it allows only the row's two lines, and exits 2 on anything outside them,
+including documented copilot syntax this row doesn't use (such as --resume or text output):
+  copilot -p <prompt> --output-format json --session-id <uuid> --model <m> [MODE]
+  copilot -p <prompt> --session-id <uuid> [MODE]
+MODE is --allow-all-tools or --allow-all. No effort flag: the row's effort is none.
+The second line resumes the session that the first one created, keeping its model.'''
+UUID = r'[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}'
+MODES = ('--allow-all-tools', '--allow-all')
+
+
+def model_of(session):
+    try:
+        with open(os.environ['FAKE_CLI_RECORD']) as f:
+            first = [json.loads(line) for line in f if line.strip()]
+    except OSError:
+        fake_cli.refuse()
+    argv = next((t['argv'] for t in first if t['turn'] == 'first' and t['session'] == session), None)
+    return argv[argv.index('--model') + 1] if argv else fake_cli.refuse()
+
+
+if sys.argv[1:] == ['--help']:
+    print(HELP)
+    sys.exit(0)
+a = sys.argv[1:]
+if len(a) < 4 or a[0] != '-p' or a[1].startswith('-'):
+    fake_cli.refuse()
+prompt, a = a[1], a[2:]
+woken = a[:2] != ['--output-format', 'json']
+if not woken:
+    a = a[2:]
+if a[:1] != ['--session-id'] or len(a) < 2 or not re.fullmatch(UUID, a[1]):
+    fake_cli.refuse()
+session, a = a[1], a[2:]
+if not woken:
+    if a[:1] != ['--model'] or len(a) < 2 or a[1].startswith('-'):
+        fake_cli.refuse()
+    model, a = a[1], a[2:]
+if a[:1] and a[0] in MODES:
+    a = a[1:]
+if a or woken != prompt.startswith('You were woken'):
+    fake_cli.refuse()
+fake_cli.turn(prompt, model_of(session) if woken else model, session,
+              signed_out='Error: No authentication information found.')

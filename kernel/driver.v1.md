@@ -21,7 +21,7 @@ The driver is called as `driver <command>`. A command that takes input reads one
 - **D1. Exact shapes.** Every input and answer is exactly its schema: each field once, no other field. A driver refuses an input that isn't.
 - **D2. Plain names.** Fields are plain words. A run id is the driver's own string (1 to 100 letters, digits, `.`, `_`, `:` or `-`), and means nothing to anyone else.
 - **D3. Errors say what to do.** On any refusal or failure the driver exits 1 and prints `{"error": "<what went wrong>", "next": "<what to do next>"}`, each one line of 1 to 300 characters, so an agent can act on it without docs. Exit 0 means the answer is the command's answer. No other exit code.
-- **D4. Start runs one agent on one ticket.** The agent runs `skill` with `harness` and `model` on `repository#ticket`, and keeps one status note there ([records v1, section 2](records.v1.md#2-the-status-note)). `start` answers once the run exists; the note follows.
+- **D4. Start runs one agent on one ticket.** The agent runs `skill` with `harness` and `model` on `repository#ticket`, and keeps one status note there ([records v1, section 2](records.v1.md#2-the-status-note)). `start` answers once the run exists; the note follows. The `model` may be provider-qualified, as `/`-separated segments such as `kimi-code/kimi-for-coding` or `openrouter/anthropic/claude-sonnet-4.6`, up to 100 characters, as `schema.json` gives.
 - **D5. Wake reaches the same run.** The run's agent takes up its ticket again and edits its own status note; it posts no second one. A wake after `stop`, or for an unknown run, is an error.
 - **D6. Stop ends the run.** Everything the run started on the host ends. Stopping a stopped run answers again.
 

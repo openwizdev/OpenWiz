@@ -1,0 +1,129 @@
+red at da9193be (kit unfixed), the four reproductions of R10 to R13 as tests; no-op stubs for every agent CLI first on PATH
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_kit.py -k <the four tests>
+test_a_child_living_only_during_the_start_without_effort_after_a_wrong_next_is_watched (__main__.Kit.test_a_child_living_only_during_the_start_without_effort_after_a_wrong_next_is_watched) ... 
+  test_a_child_living_only_during_the_start_without_effort_after_a_wrong_next_is_watched (__main__.Kit.test_a_child_living_only_during_the_start_without_effort_after_a_wrong_next_is_watched) (python='/usr/bin/python3') ... FAIL
+  test_a_child_living_only_during_the_start_without_effort_after_a_wrong_next_is_watched (__main__.Kit.test_a_child_living_only_during_the_start_without_effort_after_a_wrong_next_is_watched) (python='kernel/driver-kit/../../kernel/driver-kit/fixtures/no-proc/python3') ... FAIL
+test_a_child_living_only_during_the_start_without_effort_after_a_wrong_next_is_watched (__main__.Kit.test_a_child_living_only_during_the_start_without_effort_after_a_wrong_next_is_watched) ... FAIL
+test_a_live_key_host_effort_start_with_a_wrong_next_gets_one_start_without_effort (__main__.Kit.test_a_live_key_host_effort_start_with_a_wrong_next_gets_one_start_without_effort) ... FAIL
+test_a_start_without_effort_whose_stop_is_refused_is_reported_on_the_stop_line (__main__.Kit.test_a_start_without_effort_whose_stop_is_refused_is_reported_on_the_stop_line) ... FAIL
+test_an_effort_refusal_that_may_have_left_a_run_starts_no_other (__main__.Kit.test_an_effort_refusal_that_may_have_left_a_run_starts_no_other) ... FAIL
+
+======================================================================
+FAIL: test_a_child_living_only_during_the_start_without_effort_after_a_wrong_next_is_watched (__main__.Kit.test_a_child_living_only_during_the_start_without_effort_after_a_wrong_next_is_watched) (python='/usr/bin/python3')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 586, in test_a_child_living_only_during_the_start_without_effort_after_a_wrong_next_is_watched
+    self.assertEqual((code, out), (1, [PASS[0], why] + NOT_RUN + ['fail token: ' + IN_ARGS]), err)
+AssertionError: Tuples differ: (1, [[252 chars]d', 'pass token: no login or token passed through the driver']) != (1, [[252 chars]d', 'fail token: a process the driver started [36 chars]ne'])
+
+First differing element 1:
+['pas[248 chars]d', 'pass token: no login or token passed through the driver']
+['pas[248 chars]d', 'fail token: a process the driver started [35 chars]ine']
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'fail start: effort: start refused medium without the refusal text: harness '
+    'fake-harness cannot run at effort medium',
+    'fail wake: not run: start failed',
+    'fail stop: not run: start failed',
+-   'pass token: no login or token passed through the driver'])
++   'fail token: a process the driver started holds a credential on its command '
++   'line']) : 
+
+======================================================================
+FAIL: test_a_child_living_only_during_the_start_without_effort_after_a_wrong_next_is_watched (__main__.Kit.test_a_child_living_only_during_the_start_without_effort_after_a_wrong_next_is_watched) (python='kernel/driver-kit/../../kernel/driver-kit/fixtures/no-proc/python3')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 586, in test_a_child_living_only_during_the_start_without_effort_after_a_wrong_next_is_watched
+    self.assertEqual((code, out), (1, [PASS[0], why] + NOT_RUN + ['fail token: ' + IN_ARGS]), err)
+AssertionError: Tuples differ: (1, [[252 chars]d', 'pass token: no login or token passed through the driver']) != (1, [[252 chars]d', 'fail token: a process the driver started [36 chars]ne'])
+
+First differing element 1:
+['pas[248 chars]d', 'pass token: no login or token passed through the driver']
+['pas[248 chars]d', 'fail token: a process the driver started [35 chars]ine']
+
+  (1,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+    'fail start: effort: start refused medium without the refusal text: harness '
+    'fake-harness cannot run at effort medium',
+    'fail wake: not run: start failed',
+    'fail stop: not run: start failed',
+-   'pass token: no login or token passed through the driver'])
++   'fail token: a process the driver started holds a credential on its command '
++   'line']) : 
+
+======================================================================
+FAIL: test_a_child_living_only_during_the_start_without_effort_after_a_wrong_next_is_watched (__main__.Kit.test_a_child_living_only_during_the_start_without_effort_after_a_wrong_next_is_watched)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 597, in test_a_child_living_only_during_the_start_without_effort_after_a_wrong_next_is_watched
+    self.assertEqual(json.load(f), [dict(main, effort=True), main, {'stop': 1}, dict(main, sampled=0, token=True)])
+AssertionError: Lists differ: [{'sa[68 chars]ed': 0, 'effort': False, 'token': False, 'cana[85 chars]lse}] != [{'sa[68 chars]ed': 1, 'effort': False, 'token': False, 'cana[85 chars]lse}]
+
+First differing element 1:
+{'sampled': 0, 'effort': False, 'token': False, 'canary': False}
+{'sampled': 1, 'effort': False, 'token': False, 'canary': False}
+
+  [{'canary': False, 'effort': True, 'sampled': 1, 'token': False},
+-  {'canary': False, 'effort': False, 'sampled': 0, 'token': False},
+?                                                ^
+
++  {'canary': False, 'effort': False, 'sampled': 1, 'token': False},
+?                                                ^
+
+-  {'stop': 0},
+?           ^
+
++  {'stop': 1},
+?           ^
+
+   {'canary': False, 'effort': False, 'sampled': 0, 'token': True}]
+
+======================================================================
+FAIL: test_a_live_key_host_effort_start_with_a_wrong_next_gets_one_start_without_effort (__main__.Kit.test_a_live_key_host_effort_start_with_a_wrong_next_gets_one_start_without_effort)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 608, in test_a_live_key_host_effort_start_with_a_wrong_next_gets_one_start_without_effort
+    self.assertEqual(out[:4], [PASS[0], 'fail start: effort: start refused medium without the refusal text: the '
+AssertionError: Lists differ: ['pas[69 chars]art: the host has no effort medium for harness[82 chars]led'] != ['pas[69 chars]art: effort: start refused medium without the [137 chars]led']
+
+First differing element 1:
+'fail start: the host has no effort medium for harness fake-harness'
+'fail start: effort: start refused medium without the [64 chars]ness'
+
+  ['pass version: openwiz:records v1, and the schema is driver v1',
++  'fail start: effort: start refused medium without the refusal text: the host '
+-  'fail start: the host has no effort medium for harness fake-harness',
+?   ---------------------
+
++  'has no effort medium for harness fake-harness',
+   'fail wake: not run: start failed',
+   'fail stop: not run: start failed'] : 
+
+======================================================================
+FAIL: test_a_start_without_effort_whose_stop_is_refused_is_reported_on_the_stop_line (__main__.Kit.test_a_start_without_effort_whose_stop_is_refused_is_reported_on_the_stop_line)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 570, in test_a_start_without_effort_whose_stop_is_refused_is_reported_on_the_stop_line
+    self.assertRegex(out[3], r"^fail stop: the kit's start without effort, run (run-\S+), may still run: "
+AssertionError: Regex didn't match: "^fail stop: the kit's start without effort, run (run-\\S+), may still run: Cloudroom did not stop run \\1: .*; next: stop it again: its thread still runs$" not found in 'fail stop: not run: start failed'
+
+======================================================================
+FAIL: test_an_effort_refusal_that_may_have_left_a_run_starts_no_other (__main__.Kit.test_an_effort_refusal_that_may_have_left_a_run_starts_no_other)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "kernel/driver-kit/test_kit.py", line 557, in test_an_effort_refusal_that_may_have_left_a_run_starts_no_other
+    self.assertEqual(calls, [['thread', 'spawn']], 'the kit started a second run')
+AssertionError: Lists differ: [['thread', 'spawn'], ['thread', 'spawn'], ['thread', 'archive']] != [['thread', 'spawn']]
+
+First list contains 2 additional elements.
+First extra element 1:
+['thread', 'spawn']
+
+- [['thread', 'spawn'], ['thread', 'spawn'], ['thread', 'archive']]
++ [['thread', 'spawn']] : the kit started a second run
+
+----------------------------------------------------------------------
+Ran 4 tests in 22.544s
+
+FAILED (failures=6)

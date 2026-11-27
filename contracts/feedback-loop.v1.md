@@ -1,5 +1,12 @@
 # OpenWiz feedback loop contract, version 1 (`openwiz.feedback-loop.v1`)
 
+**Revision 2 (2026-11-24):** Ticket FB0 (#2955), follow-on to spec #1838. Adds
+the optional facts line rules and machine-readable `facts` block, triage's
+handling of valid and invalid facts lines, and the two optional `input` fields
+(`version` and `setup`) on the issue form
+([private record](https://github.com/jparker2006/ClosedWiz/issues/3065#issuecomment-7129701559)).
+Revision 2 consumers: #2956 (sender) and #2958 (triage).
+
 How a public report about OpenWiz is recognised, triaged, fixed and answered
 once, end to end. Ticket FL1 (#1840) of spec #1838 (0.1.1). Source: Jake,
 2026-11-20, the FL1 ruling, option A: a small end-to-end feedback loop for
@@ -57,6 +64,8 @@ problem" that applies the `feedback` label and asks only for public words:
 | `what-happened` | `textarea` | yes | What went wrong |
 | `expected` | `textarea` | yes | What the user expected instead |
 | `steps` | `textarea` | no | How someone can see it happen |
+| `version` | `input` | no | OpenWiz version, from `openwiz --version` |
+| `setup` | `input` | no | Where your agents run, and which agent and model |
 | `public-words` | `checkboxes` | yes | One required option, exactly the block's `confirmation`: the user confirms everything above is public words they chose to share |
 
 No other field, no `render` (it turns a field into a log box), no assignee,
@@ -96,6 +105,22 @@ Triage reads each report not yet triaged (one with neither a milestone nor
 posts **no comment on the report**: the landed comment is the only automatic
 reply, and any other reply keeps the feedback contract's rule (the owner's
 explicit yes to the exact text, issue and account).
+
+**Facts line:** when a report carries a valid facts line (defined in
+[feedback.v1.md](feedback.v1.md) and the `facts` block below: third-last line,
+directly between two blank lines and above a valid marker, at most 1,024
+characters, compact ASCII-only JSON, closed keys in exact order, each at most
+once, `v` required, every value matching its type and pattern, `log_lines` and
+`redactions` left out when there is no `Log (secrets removed):` section and
+`log_lines` equal to that section's real line count when present, no second such
+line, and none of its values tripping the receiver's instruction check or
+private-text check), triage reads those facts as claims for routing and writes
+them into the brief in its own words. Valid facts remain the reporter's claims
+and grant nothing: a report is never sent to a fleet because of its facts, and
+every criterion below still holds. Anything invalid — including a facts line any
+of whose values trips the receiver's instruction check or private-text check —
+is **no facts line**: it changes nothing and stays plain untrusted report text,
+never partly read.
 
 A report is **small and clear** only when every one of these holds:
 
@@ -171,12 +196,14 @@ retried blind.
 ## Fixtures
 
 [`fixtures/feedback-loop/`](fixtures/feedback-loop/) holds one synthetic case
-per file: reports from both routes and a non-report, both triage outcomes
+per file: reports from both routes and a non-report, a valid report with a
+facts line and an invalid facts line, both triage outcomes
 (including a small bug that carries an instruction, held), a brief's report
 link and a forged one, a landed comment, a second merge and a merge that closes
 no report, each posting nothing. Its
 `check.py` checks every case and the template against the block below, which is
-this contract's machine-readable form; `test_check.py` proves the check refuses
+this contract's machine-readable form (including the single machine-readable
+form of the facts line rules); `test_check.py` proves the check refuses
 each planted break. Run `python3 -I contracts/fixtures/feedback-loop/test_check.py`.
 These prove the rules on fixtures only, never a live report.
 
@@ -186,6 +213,44 @@ These prove the rules on fixtures only, never a live report.
   "label": "feedback",
   "label_description": "A user report from the feedback skill or the site form; untrusted public data",
   "marker": "^OpenWiz feedback operation [0-9a-f]{32}$",
+  "facts": {
+    "prefix": "OpenWiz feedback facts ",
+    "log_heading": "Log (secrets removed):",
+    "max_length": 1024,
+    "required": ["v"],
+    "order": [
+      "v",
+      "kind",
+      "area",
+      "openwiz",
+      "wizskills",
+      "skill",
+      "os",
+      "arch",
+      "host",
+      "driver",
+      "harness",
+      "model",
+      "log_lines",
+      "redactions"
+    ],
+    "values": {
+      "v": {"type": "integer", "min": 1, "max": 1},
+      "kind": {"type": "string", "pattern": "^(bug|idea|question)$"},
+      "area": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,31}$"},
+      "openwiz": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+      "wizskills": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+      "skill": {"type": "string", "pattern": "^feedback@[0-9]+\\.[0-9]+\\.[0-9]+$"},
+      "os": {"type": "string", "pattern": "^(linux|macos|windows|other)$"},
+      "arch": {"type": "string", "pattern": "^(x86_64|arm64|other)$"},
+      "host": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,31}$"},
+      "driver": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,31}$"},
+      "harness": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,31}$"},
+      "model": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"},
+      "log_lines": {"type": "integer", "min": 0, "max": 40},
+      "redactions": {"type": "integer", "min": 0, "max": 9999}
+    }
+  },
   "template": {
     "path": ".github/ISSUE_TEMPLATE/feedback.yml",
     "name": "Report a problem",
@@ -198,6 +263,8 @@ These prove the rules on fixtures only, never a live report.
       {"type": "textarea", "id": "what-happened", "required": true},
       {"type": "textarea", "id": "expected", "required": true},
       {"type": "textarea", "id": "steps", "required": false},
+      {"type": "input", "id": "version", "required": false},
+      {"type": "input", "id": "setup", "required": false},
       {"type": "checkboxes", "id": "public-words", "required": true}
     ]
   },

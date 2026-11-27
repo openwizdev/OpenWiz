@@ -1,0 +1,8 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY PATH=<31 refusing stubs>:$PATH python3 -I adapters/local/test_harnesses.py --rows adapters/local/harnesses
+(run at 348d480a, fix round 1)
+pass kimi: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+exit 0
+
+$ env -u OPENWIZ_GITHUB_APP_KEY PATH=<31 refusing stubs>:$PATH python3 -I adapters/local/harnesses/kimi/test_row.py
+pass: the fake takes only the documented kimi command lines, and signed_out matches only kimi's missing login
+exit 0

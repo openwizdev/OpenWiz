@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+import json, os, re, sys
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.environ['FAKE_CLI_LIB'])
+import fake_cli
+
+HELP = '''The fake pi (1.6.0 forms): its synthetic --help allows only:
+  pi -p --mode json --session-id <id> --model <m> -- <prompt>
+  pi --session-id <id> -p -- <prompt>
+where <id> starts and ends with a letter or digit and holds only letters, digits, ".", "_" and "-",
+and <prompt> does not start with "@" (pi reads that as a file).
+<m> is not empty or blank, and a wake restores the model its session recorded at start.'''
+SESSION_ID = r'[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?'
+
+
+def restored(session):
+    try:
+        with open(os.environ['FAKE_CLI_RECORD']) as f:
+            first = [json.loads(line) for line in f if line.strip()]
+    except (KeyError, OSError, ValueError):
+        fake_cli.refuse()
+    first = [t['argv'] for t in first if t.get('turn') == 'first' and t.get('session') == session]
+    return first[0][first[0].index('--model') + 1] if len(first) == 1 else fake_cli.refuse()
+
+
+if sys.argv[1:] == ['--help']:
+    print(HELP)
+    sys.exit(0)
+a = sys.argv[1:]
+if len(a) == 9 and a[:4] == ['-p', '--mode', 'json', '--session-id'] and a[5] == '--model' and a[7] == '--':
+    session, model, prompt, woken = a[4], a[6], a[8], False
+elif len(a) == 5 and a[0] == '--session-id' and a[2:4] == ['-p', '--']:
+    session, model, prompt, woken = a[1], None, a[4], True
+else:
+    fake_cli.refuse()
+if not re.fullmatch(SESSION_ID, session) or prompt.startswith('@') or woken != prompt.startswith('You were woken') \
+        or (not woken and (not model.strip() or model.startswith('-'))):
+    fake_cli.refuse()
+model = restored(session) if woken else model
+fake_cli.turn(prompt, model, session, daemon='tree',
+              signed_out='No API key found for anthropic.\n\nUse /login to log into a provider via OAuth or API key.')

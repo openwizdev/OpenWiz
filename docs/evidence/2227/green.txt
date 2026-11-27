@@ -1,0 +1,2 @@
+ok: README.md and docs/install.md say CloudRoom is optional
+exit 0

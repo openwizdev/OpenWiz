@@ -1,0 +1,14 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/local/harnesses/junie/test_row.py   # against a fake that accepts everything
+fail fake accepted text output (exit 0)
+fail fake accepted no update-check skip (exit 0)
+fail fake accepted no model (exit 0)
+fail fake accepted empty task (exit 0)
+fail fake accepted a bare --resume, which resumes the last session, not this run's (exit 0)
+fail fake accepted a session id without --resume (exit 0)
+fail fake accepted a session id that is not one (exit 0)
+fail fake accepted --effort, which the row never sends (exit 0)
+fail fake accepted --brave, which is interactive only (exit 0)
+fail fake accepted a positional task (exit 0)
+fail fake signed out did not answer as Junie 26.9.7 does: one errors line, no sessionId, exit 0, and no turn
+fail junie test_row.py: 11 problem(s)
+exit 1

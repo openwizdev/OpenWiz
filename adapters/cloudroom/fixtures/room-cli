@@ -44,7 +44,10 @@ def mark(tid):
 
 def turn(thread, prompt):
     try:
-        p = subprocess.Popen([thread['provider'], '--model', thread['model'], '-p', prompt], start_new_session=True,
+        command = [thread['provider'], '--model', thread['model'], '-p', prompt]
+        if thread['provider'] == 'fake-harness' and thread.get('reasoning'):
+            command += ['--reasoning-level', thread['reasoning']]
+        p = subprocess.Popen(command, start_new_session=True,
                              env=dict(os.environ, FAKE_ROOM_THREAD=mark(thread['id']).partition('=')[2],
                                       **({'FAKE_ROOM_REASONING_LEVEL': thread['reasoning']} if thread.get('reasoning')
                                          else {})),
@@ -57,6 +60,10 @@ def turn(thread, prompt):
 LEVELS_BY_MODEL = {'Opus 5.5': ('low', 'medium', 'high'), 'Synthetic 1': ('medium', 'high', 'xhigh')}
 PROVIDERS_WITH_MODELS, PROVIDERS_WITH_A_NOTE = ('claude-code', 'codex', 'fake-harness'), ('pi',)
 if sub == 'models' and args[0] == 'provider':
+    if os.environ.get('FAKE_ROOM_MODELS_SAY') is not None:
+        sys.stdout.write(os.environ.get('FAKE_ROOM_MODELS_OUT', ''))
+        sys.stderr.write(os.environ['FAKE_ROOM_MODELS_SAY'])
+        sys.exit(int(os.environ.get('FAKE_ROOM_MODELS_EXIT', '1')))
     if not os.environ.get('FAKE_ROOM_MODELS') and args[2] not in PROVIDERS_WITH_MODELS + PROVIDERS_WITH_A_NOTE:
         sys.exit(print('Unknown provider %s. See room-cli provider list.' % os.environ.get('FAKE_ROOM_UNKNOWN', args[2]),
                        file=sys.stderr) or 1)

@@ -1,0 +1,23 @@
+# Red R1: test_row.py before the fix: the fake starts no shell background process and the row declares none
+# Command: env -u OPENWIZ_GITHUB_APP_KEY python3 -I test_row.py (in the row folder)
+# 31 refusing no-op stubs for the known agent CLIs were first on PATH. No real goose ran.
+pass goose row: the fake exits 2 on a session id without --resume
+pass goose row: the fake exits 2 on --no-session with a name
+pass goose row: the fake exits 2 on an output format goose does not have
+pass goose row: the fake exits 2 on -t and an instructions file together
+pass goose row: the fake exits 2 on no text at all
+pass goose row: the fake exits 2 on an effort flag goose does not have
+pass goose row: the fake exits 2 on a name that is not the driver's uuid
+pass goose row: the fake exits 2 on a wake prompt without --resume
+pass goose row: the fake exits 2 on a start prompt with --resume
+pass goose row: the fake exits 2 on a documented line without GOOSE_MODE=auto
+pass goose row: the driver chose a UUID session id and named the session with it at start and wake
+pass goose row: a turn runs the documented goose run lines exactly
+pass goose row: the row's GOOSE_MODE=auto wins over the user's own GOOSE_MODE=approve
+pass goose row: the row reads no login: no field names a key, a token or the keyring file
+fail goose row: the row declares the shell background process and claims Linux only
+fail goose row: a start leaves one background process, as a backgrounded shell command does
+fail goose row: it is in the shell's own process group, whose leader, the shell, has exited
+fail goose row: its stdin is closed and its stdout and stderr are the shell's own pipes
+fail goose row: stop ends it on Linux
+exit=1
