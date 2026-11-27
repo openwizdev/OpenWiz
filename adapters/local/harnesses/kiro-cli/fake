@@ -8,11 +8,14 @@ HELP = '''The fake kiro-cli, after the Kiro CLI headless reference
 (https://kiro.dev/docs/cli/headless/). It allows only:
   kiro-cli chat --v3 --no-interactive --model <model> --trust-all-tools <prompt>
   kiro-cli chat --v3 --no-interactive --resume-id <session> --model <model> --trust-all-tools <prompt>
-On exit it prints the session-management resume line. Signed out, it prints
+On exit it prints the session-management resume line with a full UUID: the
+library's session id as 00000000-0000-4000-8000-<its 12 hex digits>, which a
+resume maps back. Signed out, it prints
 the whoami troubleshooting line "Not logged in". It passes no --effort level:
 the headless reference names none that every model accepts. A login value on
 the command line is refused.'''
-SESSION = r'[A-Za-z0-9._:-]{1,100}'
+SESSION = r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+PRINTED = '00000000-0000-4000-8000-'
 SIGNED_OUT = 'Not logged in. Login with kiro-cli login.'
 
 
@@ -33,7 +36,8 @@ def parse(argv):
     if rest[:1] == ['--resume-id']:
         if len(rest) < 2 or not re.fullmatch(SESSION, rest[1]):
             fake_cli.refuse()
-        session, rest = rest[1], rest[2:]
+        session = 'fake-' + rest[1][len(PRINTED):] if rest[1].startswith(PRINTED) else rest[1]
+        rest = rest[2:]
     if len(rest) != 4 or rest[0] != '--model' or not rest[1] or rest[1].startswith('-') or \
             rest[2] != '--trust-all-tools' or not rest[3] or rest[3].startswith('-'):
         fake_cli.refuse()
@@ -46,4 +50,5 @@ if sys.argv[1:] == ['--help']:
 prompt, model, session = parse(sys.argv[1:])
 if prompt.startswith('You were woken') != (session is not None):
     fake_cli.refuse()
-fake_cli.turn(prompt, model, session, lambda sid: 'kiro-cli chat --resume-id ' + sid, signed_out=SIGNED_OUT)
+fake_cli.turn(prompt, model, session, lambda sid: 'kiro-cli chat --resume-id ' + PRINTED + sid[len('fake-'):],
+              signed_out=SIGNED_OUT)

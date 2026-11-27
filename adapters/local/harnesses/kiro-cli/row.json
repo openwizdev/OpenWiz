@@ -22,7 +22,7 @@
     "{prompt}"
   ],
   "session": {
-    "pattern": "kiro-cli chat --resume-id ([A-Za-z0-9._:-]{1,100})"
+    "pattern": "(?:^|\\s)kiro-cli chat --resume-id ([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\s*$"
   },
   "modes": {
     "trust-all-tools": [

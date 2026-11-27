@@ -1,0 +1,7 @@
+Driver probe: start with a line before the CLI's notice, then wake, on this row's fake, through adapters/local/driver.
+At 83f1885:
+prelude 'a normal response': wake --resume-id fake-d8cabb277055, start session fake-d8cabb277055, wake session fake-d8cabb277055
+prelude 'kiro-cli chat --resume-id abc123-def456': wake --resume-id abc123-def456, start session fake-97fc27729fcf, wake session abc123-def456
+After the fix:
+prelude 'a normal response': wake --resume-id 00000000-0000-4000-8000-92350a4c3cb3, start session fake-92350a4c3cb3, wake session fake-92350a4c3cb3
+prelude 'kiro-cli chat --resume-id abc123-def456': wake --resume-id 00000000-0000-4000-8000-a557285879f8, start session fake-a557285879f8, wake session fake-a557285879f8

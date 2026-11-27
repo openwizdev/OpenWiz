@@ -8,7 +8,7 @@ The `kiro-cli` harness row, under the [harness-row contract](../../harness-row.m
 
 ## Commands
 
-The CLI chooses the session id. When a session ends it prints that id with the command `kiro-cli chat --resume-id <id>` ([session management](https://kiro.dev/docs/cli/chat/session-management/)). The row reads the id from that line.
+The CLI chooses the session id, a UUID. When a session ends it prints that id with the command `kiro-cli chat --resume-id <id>` ([session management](https://kiro.dev/docs/cli/chat/session-management/)). The row reads the id only from a line that ends with that command and a complete lower-case UUID, with the command at the start of the line or after a space. So a sample the builder quotes before the notice, such as the [CLI commands](https://kiro.dev/docs/reference/cli-commands/) example `kiro-cli chat --resume-id abc123-def456`, the `<SESSION_ID>` placeholder or a backticked command, is passed over. A quoted line that is exactly the command and a full UUID would still be read; the live check records the CLI's own notice.
 
 | Turn | Command |
 | --- | --- |
@@ -32,7 +32,8 @@ A headless run has no user to approve a tool call. The reference's other flag, `
 
 1. When a session ends, Kiro CLI prints the session id with `kiro-cli chat --resume-id <SESSION_ID>` ([session management](https://kiro.dev/docs/cli/chat/session-management/)). Session ids are UUIDs.
 2. The headless flags table lists `--resume-id` as resume of a local or cloud session by that id ([headless](https://kiro.dev/docs/cli/headless/)).
-3. The row's `session` pattern is that printed line, and wake passes the captured id as its own `--resume-id` argument.
+3. The row's `session` pattern is that printed line with a complete UUID at its end, and wake passes the captured id as its own `--resume-id` argument.
+4. The fake prints the fake library's session id as the UUID `00000000-0000-4000-8000-<its 12 hex digits>`, and maps that UUID back on a wake. It refuses a `--resume-id` that is not a full UUID.
 
 ## Effort
 
