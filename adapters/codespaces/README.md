@@ -1,7 +1,9 @@
 # GitHub Codespaces driver
 Login: held by GitHub
 
-Effort: the host can't set it (driver v1 has no effort field yet, so every run uses the harness's default effort, and a `start` that names an effort is refused and creates nothing)
+Effort: the host can't set it (the driver doesn't take driver v1's optional `effort` field, so every run uses the harness's default effort, and a `start` that names an effort is refused and creates nothing)
+
+**Status:** not built yet. At main this folder holds only this README, with no `driver`, `test_driver.py` or `fixtures/`, so the commands below don't run yet.
 
 A [driver v1](../../kernel/driver.v1.md) that runs each builder in its own [GitHub Codespaces](https://docs.github.com/en/codespaces) codespace, on your own GitHub account, through your own signed-in `gh` CLI. One Python file, standard library only. **Platforms:** Linux and macOS, Python 3.9 or later. Runs are saved in `$OPENWIZ_CODESPACES_STATE` (default `~/.local/state/openwiz-codespaces`), owner-only. A run's id is the driver's own: `cs-` and a random hex id.
 
@@ -35,7 +37,7 @@ GitHub stops a codespace after 240 minutes without activity (the idle timeout se
 
 **Costs:** Codespaces bills compute, while a codespace runs, and storage, while it exists (stopped included), to your own GitHub account, or takes them from its monthly free quota. `stop` ends the compute; the storage lasts until the codespace is deleted, by the 72-hour retention period or by `gh codespace delete -c <name>`.
 
-**Effort:** runs use the harness's default effort, because driver v1's `start` has no effort field yet. A `start` that names an effort is refused, so an effort is never dropped silently. The refusal creates nothing, and its `next` is: `this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default`. Each prompt tells the agent to write its status note's model as `<model> default effort`. This line follows the driver: when the driver takes an effort, the `Effort:` line above names the flag.
+**Effort:** runs use the harness's default effort, because the driver doesn't take driver v1's optional `effort` field. A `start` that names an effort is refused, so an effort is never dropped silently. The refusal creates nothing, and its `next` is: `this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default`. Each prompt tells the agent to write its status note's model as `<model> default effort`. This line follows the driver: when the driver takes an effort, the `Effort:` line above names the flag.
 
 **Not yet checked live:** whether the codespace's own `GITHUB_TOKEN` lets the agent post its status note and push its branch, and whether an open `gh codespace ssh` turn keeps the codespace from idling out. The live check answers both.
 

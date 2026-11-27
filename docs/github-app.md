@@ -35,7 +35,7 @@ python3 tools/github-app/setup.py --state-dir "$HOME/.local/state/openwiz" --rep
 3. GitHub returns to the local `/installed` page. Setup asks GitHub to confirm the
    installation belongs to this App and the selected repository's owner, then records the
    App and installation ids (never a token) in `<state>/setup/state.json`.
-4. Run the setup check (`tools/install/setup/setup.py check`); the setup page shows the
+4. Run the setup check (`tools/install/setup/setup.py check`); it prints the
    result. Registration and an installation alone never mark the App ready.
 
 The App's setup URL is this loopback port, so keep the same `--port` when reconnecting.
@@ -94,7 +94,7 @@ and the pinned runtime by itself. No source checkout is needed.
 ## The setup check
 
 `python3 tools/install/setup/setup.py check --state-dir STATE` checks each connection
-independently and records one result code per component for the setup page:
+independently and records one result code per component:
 CloudRoom (a live read through the installed `openwiz`; an inventory read alone never verifies
 it, so even a complete read stays unknown until a current login source exists, and a partial
 read is unknown too), the chosen harness, model and effort (`openwiz models`: a catalogue that may be
@@ -163,12 +163,10 @@ App-counted live reads and contribution credit remain unverified until that chec
 
 ## The token service (GA2)
 
-**This replaces the Cloudroom-secret route below.** Under spec #1837 and
+**This replaces the legacy Cloudroom-secret route.** Under spec #1837 and
 [`token-service.v1`](../contracts/token-service.v1.md), the App's key stays on the
-owner's machine, cloud threads included. Don't follow "Agent tokens (G2)"'s
-`--from-secret` route or its rollout step 2. Put the key in no Cloudroom secret,
-secret store, sandbox or prompt. That section stays only as the record of the
-legacy flow.
+owner's machine, cloud threads included. Don't follow the legacy `--from-secret`
+route. Put the key in no Cloudroom secret, secret store, sandbox or prompt.
 
 The token service mints agents' one-hour `openwiz[bot]` installation tokens on the
 owner's machine, beside the key. It listens on no port. An agent runs it per token:
@@ -277,8 +275,9 @@ symlink. It holds exactly one of:
 (GA2)](#the-token-service-ga2) instead.** Put the App's key in no Cloudroom secret,
 secret store, sandbox or prompt, and don't follow the earlier `--from-secret` route.
 
-Agents read and write GitHub as the App (`<app slug>[bot]`), not as the person's
-login, so their API use comes out of the App's own allowance and their comments,
+Today the App identity is off for everyone (#2394): every agent acts as the person's
+login and never runs `agent-token.py`. Once it is on, agents read and write GitHub as
+the App (`<app slug>[bot]`), not as the person's login, so their API use comes out of the App's own allowance and their comments,
 reviews and pull requests are signed by the App. Since spec #1837 (GI6, option B),
 they get their tokens from the owner's **token service**, under [the token-service
 contract](../contracts/token-service.v1.md). This replaces the earlier route that
@@ -300,8 +299,8 @@ put the App's key in a Cloudroom secret for cloud threads.
   service is configured but gives no usable token, the agent uses the owner's login
   and says so in one standard-error line.
 - **The owner's own tools stay.** `refresh-token.py` and `mint-token.py` still mint on
-  the owner's machine from its key file. Their `--from-secret` route is not how agents
-  get tokens.
+  the owner's machine from its key file. `refresh-token.py`'s `--from-secret` route is
+  not how agents get tokens.
 - **Commits stay the person's.** Commits keep their author and committer (the
   person's GitHub noreply address); only the push and the GitHub records are the App's.
 
@@ -500,7 +499,7 @@ an HTTP endpoint on `127.0.0.1`, never GitHub or CloudRoom. (The setup page's br
 proofs went with the web view in #1264.) `--api-base` exists for
 this seam: only the fixed production API or explicit HTTP `127.0.0.1:PORT` is
 accepted, and redirects are refused. Never use real keys with the test endpoint.
-The `rust` CI job runs these fixtures in its "The skills' tests" step
+The `release` CI job runs these fixtures in its "The GitHub App" step
 (`.github/workflows/ci.yml`).
 
 Sources (GitHub documentation, read 2026-11-01):

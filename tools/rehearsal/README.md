@@ -3,12 +3,13 @@
 `rehearse.py` installs one built OpenWiz package the way a stranger's agent would, following the
 install skill's no-CloudRoom path ("This computer", Claude Code), and writes a receipt
 ([`openwiz.rehearsal.v1`](../../contracts/rehearsal.v1.md)). The Packages workflow runs it on
-all three targets' archives right after building them (spec #2437), so every release candidate's
+all four targets' archives right after building them (spec #2437), so every release candidate's
 run says whether a stranger could install exactly those bytes:
 
 | Job | Target | Machine |
 | --- | --- | --- |
 | `rehearse-linux` | `x86_64-unknown-linux-gnu` | a `debian:12` container on `ubuntu-24.04`, with only Python 3, Git and CA certificates installed |
+| `rehearse-linux` | `aarch64-unknown-linux-gnu` | the same `debian:12` container on `ubuntu-24.04-arm` |
 | `rehearse-macos` | `aarch64-apple-darwin` | `macos-15`, the system `/usr/bin/python3`, a fresh `HOME` |
 | `rehearse-macos` | `x86_64-apple-darwin` | `macos-15-intel`, the same |
 

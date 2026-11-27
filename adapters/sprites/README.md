@@ -1,9 +1,11 @@
 # Fly Sprites driver
 Login: held by Fly.io
 
-Effort: the host can't set it yet (driver v1 has no effort field yet, so every run uses the harness's default effort, and a `start` that names an effort is refused and creates nothing)
+Effort: the host can't set it yet (the driver doesn't take driver v1's optional `effort` field, so every run uses the harness's default effort, and a `start` that names an effort is refused and creates nothing)
 
 **Billing: Claude Code runs on an Anthropic API key, not a Claude subscription.** Claude Code goes through Fly's Anthropic connector, which holds an Anthropic API key and bills your Anthropic account for every request; a Claude Pro or Max subscription can't be used. Codex goes through Fly's OpenAI connector, which holds an OpenAI API key and bills your OpenAI project, or through Fly's Codex connector with your ChatGPT plan, where Fly offers it (it is rolling out, and availability varies by organization). Source: Fly's [connector catalog](https://fly.io/sprites/ecosystem/) (its Anthropic, OpenAI and Codex entries) and [connectors](https://docs.fly.io/sprites/concepts/connectors) docs.
+
+**Status:** not built yet. At main this folder holds only this README, with no `driver`, `test_driver.py` or `fixtures/`, so the commands below don't run yet.
 
 A [driver v1](../../kernel/driver.v1.md) that runs each builder in its own [Fly Sprite](https://docs.fly.io/sprites), through your own signed-in `sprite` CLI. One Python file, standard library only, built from [`adapters/template/`](../template/) with the [boat driver](../boat/README.md) as prior art. The harness's key stays in a Fly [connector](https://docs.fly.io/sprites/concepts/connectors), and the Sprites gateway attaches it to each request, so neither the driver nor the Sprite ever holds it.
 
@@ -37,7 +39,7 @@ Each `sprite` command and flag below is in Fly's [CLI reference](https://docs.fl
 
 **Costs:** Sprites bills compute by the second while a Sprite is active, and nothing for compute while it is paused, plus the storage it writes, to your Fly.io organization ([Sprites](https://docs.fly.io/sprites)). `stop` destroys the Sprite, which ends both. The provider bills the model: your Anthropic account for `claude`, your OpenAI project for `codex`, or your ChatGPT plan and its usage limits through the Codex connector.
 
-**Effort:** runs use the harness's default effort, because driver v1's `start` has no effort field yet. A `start` that names an effort is refused, so an effort is never dropped silently. The refusal creates nothing, and its `next` is: `this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default`. Each prompt tells the agent to write its status note's model as `<model> default effort`. This line follows the driver: once it takes the effort field (driver v1 after #2558), the `Effort:` line above names the flag.
+**Effort:** runs use the harness's default effort, because the driver doesn't take driver v1's optional `effort` field. A `start` that names an effort is refused, so an effort is never dropped silently. The refusal creates nothing, and its `next` is: `this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default`. Each prompt tells the agent to write its status note's model as `<model> default effort`. This line follows the driver: once it takes driver v1's `effort` field, the `Effort:` line above names the flag.
 
 **Not yet checked live:** how the agent pushes its branch through the GitHub connector (Fly documents the gateway for API calls, not a `git push`), whether Claude Code and Codex answer through the gateway with no key of their own, and whether `codex exec` runs on a ChatGPT plan through the Codex connector's gateway URL. The live check (#2642) answers each and records how the branch was pushed.
 

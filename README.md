@@ -49,7 +49,7 @@ OpenWiz never touches a login. Your agents use their own signed-in tools, and th
 
 ## Versions
 
-What each version adds is in the [changelog](CHANGELOG.md). A version has at most five outcomes, each one something a user can see or check, and claims nothing its evidence doesn't show; tests alone never prove live behaviour.
+What each version adds is in the [changelog](CHANGELOG.md); 0.0.16, 0.0.17 and 0.1.0 are so far only in [0.1.0's changelog](https://github.com/openwizdev/OpenWiz/blob/v0.1.0/CHANGELOG.md). A version has at most five outcomes, each one something a user can see or check, and claims nothing its evidence doesn't show; tests alone never prove live behaviour.
 
 ## Links
 
