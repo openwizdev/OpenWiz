@@ -365,9 +365,11 @@ def program(harness, effort):
         try:
             row = read_row(os.path.join(ROWS, harness, 'row.json'), harness)
         except Broken as e:
-            raise Refused('%s breaks the harness-row contract (%s: %s); nothing was started'
-                          % (row_file(harness), e.args[0], e.args[1]),
-                          'fix %s as adapters/local/harness-row.md says, then start again' % row_file(harness))
+            error = '%s breaks the harness-row contract (%s: %s); nothing was started' % (
+                row_file(harness), e.args[0], e.args[1])
+            if len(error) > 300:
+                error = '%s breaks the harness-row contract (%s); nothing was started' % (row_file(harness), e.args[0])
+            raise Refused(error, 'fix %s as adapters/local/harness-row.md says, then start again' % row_file(harness))
         if row is None and os.path.isdir(os.path.join(ROWS, harness)):
             raise Refused('%s is missing, so harness %s has no row; nothing was started' % (row_file(harness), harness),
                           'add %s as adapters/local/harness-row.md says, then start again' % row_file(harness))
