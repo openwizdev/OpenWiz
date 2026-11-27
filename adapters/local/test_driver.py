@@ -651,12 +651,23 @@ class Local(unittest.TestCase):
         os.chmod(program, 0o700)
         return dict(self.env, FAKE_CGROUP=folder), program
 
+    def oom_score_adj(self, level):
+        try:
+            with open('/proc/self/oom_score_adj', 'w') as f:
+                f.write(level)
+        except OSError:
+            return False
+        return True
+
     def test_on_linux_a_turns_shells_go_first_under_memory_pressure_and_the_harness_keeps_its_default(self):
-        with open('/proc/self/oom_score_adj') as f:
-            default = f.read().strip()
+        default = read('/proc/self/oom_score_adj').strip()
+        if int(default) >= 500:
+            self.addCleanup(self.oom_score_adj, default)
+            if self.oom_score_adj('0'):
+                default = '0'
         if int(default) >= 500 and not os.environ.get('CI'):
-            self.skipTest('this host already starts processes at oom_score_adj 500 or more')
-        self.assertLess(int(default), 500, 'this host already starts processes at 500 or more')
+            self.skipTest('this host starts processes at oom_score_adj 500 or more and the test cannot go lower')
+        self.assertLess(int(default), 500, 'this host starts processes at 500 or more and the test cannot go lower')
         owner = os.path.join(self.folder, 'owner-bash-env')
         with open(owner, 'w') as f:
             f.write('export FAKE_OWNER_MARK=owner-kept\n')
