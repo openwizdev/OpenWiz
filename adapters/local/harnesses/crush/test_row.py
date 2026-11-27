@@ -72,4 +72,19 @@ with machine() as env:
     check('stop leaves no process of the run', started and alive and code_stop == 0
           and stopped == {'run': out['run'], 'stopped': True} and gone)
 
+OPENROUTER_DEFAULT = 'anthropic/claude-sonnet-4.6'
+with machine() as env:
+    code, out = env.driver('start', {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket',
+                                     'harness': 'crush', 'model': OPENROUTER_DEFAULT})
+    started = code == 0 and 'run' in out
+    first = runner.until(lambda: len(env.records()) == 1) and env.records()[0]
+    woke = env.driver('wake', out) if started else (1, {})
+    second = runner.until(lambda: len(env.records()) == 2) and env.records()[1]
+    if started:
+        env.driver('stop', out)
+    check('a provider-qualified model, %s, reaches crush --model unchanged on start and wake' % OPENROUTER_DEFAULT,
+          started and bool(first) and woke[0] == 0 and bool(second)
+          and first['argv'][3:5] == ['--model', OPENROUTER_DEFAULT]
+          and second['argv'][5:7] == ['--model', OPENROUTER_DEFAULT])
+
 sys.exit(1 if failures else 0)

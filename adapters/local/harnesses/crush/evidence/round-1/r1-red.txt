@@ -1,0 +1,9 @@
+# R1 red at 3efaa80: test_row.py starts and wakes with OpenRouter's default model anthropic/claude-sonnet-4.6; the driver here refuses it with D3 `model is not valid` (before MG1, #2904); the row is unchanged
+# Command: python3 -I adapters/local/harnesses/crush/test_row.py. No-op stubs for every known agent CLI first on PATH; OPENWIZ_GITHUB_APP_KEY unset.
+pass crush row: not installed is a D3 error whose next says to install and sign in, and starts nothing
+pass crush row: not signed in is a D3 error whose next says to sign in with crush login
+pass crush row: a turn gets CRUSH_CLIENT_SERVER=0 over the user's own setting, and attaches to no outside server
+pass crush row: the wake gets the session id crush logged to stderr at start
+pass crush row: stop leaves no process of the run
+fail crush row: a provider-qualified model, anthropic/claude-sonnet-4.6, reaches crush --model unchanged on start and wake
+exit=1
