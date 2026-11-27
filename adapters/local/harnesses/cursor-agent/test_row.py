@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-import json, os, subprocess, sys, tempfile
+import importlib.machinery, importlib.util, json, os, subprocess, sys, tempfile
 
 sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.realpath(__file__))
 FAKE = os.path.join(HERE, 'fake')
 LIB = os.path.abspath(os.path.join(HERE, '..', '..', 'fixtures'))
+DRIVER = os.path.join(HERE, '..', '..', 'driver')
 START_PROMPT = 'Build the ticket: example/site#7, with the build-ticket skill. Keep one status note there.'
 WAKE_PROMPT = ('You were woken: take up example/site#7 again, with the build-ticket skill. '
                'Edit your own status note there; post no second one.')
@@ -24,10 +25,25 @@ REFUSED = {
     'a header flag': START + ['--header', 'Name: Value'],
     'a prompt that is a flag': START[:6] + ['--api-key'],
     'a wake prompt on a start': START[:6] + [WAKE_PROMPT],
-    'a start prompt on a wake': WAKE[:7] + [START_PROMPT],
+    'a start prompt on a wake': WAKE[:-1] + [START_PROMPT],
     'resume without a session': ['-p', '--output-format', 'json', '--resume', '--model', 'synthetic-1', '--force',
                                  WAKE_PROMPT],
     'nothing': [],
+}
+NOT_AUTHENTICATED = 'Not authenticated. Run agent login or set CURSOR_API_KEY.'
+SIGNED_OUT = {
+    'the sign-in error on its own line': NOT_AUTHENTICATED + '\n',
+    'the sign-in error after an Error: prefix': 'Error: ' + NOT_AUTHENTICATED + '\n',
+}
+
+
+def success(text):
+    return json.dumps({'type': 'result', 'subtype': 'success', 'is_error': False, 'result': text, 'session_id': SID})
+
+
+ACCEPTED = {
+    'a success whose answer mentions the error': success('Added a test for the "Not authenticated" error.'),
+    'a success whose answer starts with the error': success(NOT_AUTHENTICATED + ' is now tested.'),
 }
 
 
@@ -56,6 +72,21 @@ def allows(bad):
             bad.append('a signed-out start did not print Not authenticated and exit 1 before a session')
 
 
+def reads_sign_in(bad):
+    with open(os.path.join(HERE, 'row.json')) as f:
+        row = json.load(f)
+    local = importlib.util.module_from_spec(importlib.util.spec_from_loader(
+        'openwiz_local_driver', importlib.machinery.SourceFileLoader('openwiz_local_driver', DRIVER)))
+    local.__spec__.loader.exec_module(local)
+    signed_out = lambda log: bool(local.SIGNED_OUT.search(log) or local.signed_out_by_row(row, log))
+    for why, log in SIGNED_OUT.items():
+        if not signed_out(log):
+            bad.append("the driver's first-turn check did not read %s as signed out" % why)
+    for why, line in ACCEPTED.items():
+        if signed_out(line + '\n'):
+            bad.append("the driver's first-turn check read %s as signed out" % why)
+
+
 def main():
     bad = []
     with tempfile.TemporaryDirectory() as folder:
@@ -68,6 +99,7 @@ def main():
     if helped.returncode or 'cursor.com/docs/cli/reference/parameters' not in helped.stdout:
         bad.append('--help did not name the parameters reference')
     allows(bad)
+    reads_sign_in(bad)
     for line in bad:
         print('fail: ' + line)
     print('test_row.py: %d refusals checked, %d failed' % (len(REFUSED), len(bad)))

@@ -1,0 +1,3 @@
+fail: the driver's first-turn check read a success whose answer mentions the error as signed out
+fail: the driver's first-turn check read a success whose answer starts with the error as signed out
+test_row.py: 15 refusals checked, 2 failed
