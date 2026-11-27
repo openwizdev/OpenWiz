@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import fcntl, json, os, re, secrets, shlex, shutil, subprocess, sys
+import fcntl, json, os, re, secrets, shlex, shutil, subprocess, sys, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATE = os.environ.get('OPENWIZ_PANE_STATE') or os.path.expanduser('~/.local/state/openwiz-pane')
@@ -15,9 +15,10 @@ CREDENTIAL = re.compile(r'\b(?:[a-z_]*token|[a-z_]*key|secret|password|passwd|pw
                         r'|\b(?:password|passwd|secret|token|key)\s*[:=]\s*\S|\bbearer\s+\S'
                         r'|gh[pousr]_[A-Za-z0-9]{8,}|github_pat_|AKIA[0-9A-Z]{16}|xox[abposr]-|sk-[A-Za-z0-9_-]{16,}'
                         r'|AIza[0-9A-Za-z_-]{30,}', re.I)
-ORIGIN = re.compile(r'^(?:[a-z+]+://)?(?:[^@/]+@)?github\.com[:/]+([A-Za-z0-9_.-]{1,100})/([A-Za-z0-9_.-]{1,100}?)(?:\.git)?/*$')
+ORIGIN = re.compile(r'^(?:(?i:[a-z+]+)://)?(?:[^@/]+@)?(?i:github\.com)[:/]+([A-Za-z0-9_.-]{1,100})/([A-Za-z0-9_.-]{1,100}?)(?:\.git)?/*$')
 GIT_SETTINGS = ('PATH', 'HOME', 'XDG_CONFIG_HOME', 'LANG', 'LC_ALL')
 READY_MS = 60000
+POLL_SECONDS = 0.2
 UNWRITABLE = 'make OPENWIZ_PANE_STATE (or ~/.local/state/openwiz-pane) a folder you can write'
 
 
@@ -199,14 +200,127 @@ def archive_or_refuse(run, state):
                       'push or discard any work in it, then archive the Pane openwiz-%s in Pane yourself' % run)
 
 
-def created(out):
+def wait_ms():
+    return min(READY_MS, runpane_seconds() * 1000)
+
+
+def created_item(out):
     items = out.get('items') if isinstance(out, dict) else None
     item = items[0] if isinstance(items, list) and items and isinstance(items[0], dict) else None
-    return item if item and text_id(item.get('paneId')) and text_id(item.get('panelId')) else None
+    return item if item and text_id(item.get('paneId')) else None
 
 
 def close(state, then):
     runpane(then, 'panels', 'close', '--panel', state['panel'], '--force', '--source', 'agent', '--yes')
+
+
+def wait_code(out):
+    if not isinstance(out, dict):
+        return 'no code'
+    for key in ('reason', 'error'):
+        part = out.get(key)
+        if isinstance(part, dict) and code_of(part) != 'no code':
+            return code_of(part)
+    blocked = out.get('blocked')
+    if isinstance(blocked, dict) and isinstance(blocked.get('kind'), str):
+        kind = blocked['kind'].replace('_', '-')
+        if CODE.fullmatch(kind):
+            return kind
+    if out.get('stopped') is True:
+        return 'stopped'
+    return 'agent-not-ready' if out.get('timedOut') is True else 'no code'
+
+
+def cleanup_start(run, state, why, step):
+    failures = []
+    if not state['panel'] and state['pane']:
+        if archive(state):
+            state['archived'] = True
+            state['stopped'] = True
+        else:
+            try:
+                still_there = pane_listed('openwiz-' + run, state['pane'])
+            except Refused:
+                still_there = state['pane']
+            if still_there is None:
+                state['archived'] = True
+                state['stopped'] = True
+            else:
+                try:
+                    agents = list_agent_panels(state['pane'], 'stop run %s' % run)
+                except Refused:
+                    agents = []
+                if len(agents) == 1:
+                    state['panel'] = agents[0]
+                else:
+                    failures.append(Refused('Pane kept queued Pane openwiz-%s' % run,
+                                            'stop run %s once Pane finishes setup, then start again' % run))
+    if state['panel']:
+        try:
+            close(state, 'stop run %s' % run)
+            state['closed'] = True
+        except Refused as e:
+            failures.append(e)
+        if state['closed']:
+            state['stopped'] = True
+            try:
+                archive_or_refuse(run, state)
+                state['archived'] = True
+            except Refused as e:
+                failures.append(e)
+        else:
+            state['stopped'] = False
+    keep(run, state)
+    if failures:
+        raise Refused(line('; '.join([why] + [f.args[0] for f in failures])),
+                      line('; '.join([f.args[1] for f in failures])))
+    raise Refused(line(why), line(step))
+
+
+def wait_queued(run, name, req, state):
+    deadline = time.monotonic() + wait_ms() / 1000.0
+    while True:
+        try:
+            agents = list_agent_panels(state['pane'], 'stop run %s' % run)
+        except Unknown:
+            keep(run, state)
+            raise Refused('runpane panels list took too long while waiting for queued Pane %s; its outcome is unknown' % name,
+                          'stop run %s to close Pane %s if Pane started its agent, then start again' % (run, name))
+        except Refused as e:
+            cleanup_start(run, state, e.args[0], e.args[1])
+        if len(agents) == 1:
+            state['panel'] = agents[0]
+            try:
+                saved(run, state)
+            except OSError:
+                cleanup_start(run, state, 'the driver could not save run %s' % run, UNWRITABLE + ', then start again')
+            break
+        if len(agents) > 1:
+            keep(run, state)
+            raise Refused('queued Pane %s opened more than one agent tab; its outcome is unknown' % name,
+                          'close Pane %s in the Pane app, then stop run %s' % (name, run))
+        if time.monotonic() >= deadline:
+            cleanup_start(run, state, 'queued Pane %s did not open its agent tab in time' % name,
+                          'check Pane setup capacity, then start again')
+        time.sleep(min(POLL_SECONDS, max(0, deadline - time.monotonic())))
+    try:
+        waited = runpane('stop run %s' % run, 'panels', 'wait', '--panel', state['panel'],
+                         '--for', 'ready', '--timeout-ms', str(wait_ms()))
+    except Unknown:
+        keep(run, state)
+        raise Refused('runpane panels wait took too long; its outcome is unknown',
+                      'stop run %s to close Pane %s if Pane started its agent, then start again' % (run, name))
+    except Failed as e:
+        waited = e.out if isinstance(e.out, dict) else {}
+    if waited.get('ok') is True and waited.get('matched') is True:
+        try:
+            saved(run, dict(state, starting=False))
+            return {'run': run}
+        except OSError:
+            cleanup_start(run, state, 'the driver could not save run %s' % run, UNWRITABLE + ', then start again')
+    why = 'the %s agent in Pane %s did not get ready (%s)' % (req['harness'], name, wait_code(waited))
+    step = 'check that `%s` runs and is signed in on this machine, then start again' % PROGRAMS[req['harness']]
+    cleanup_start(run, state, why, step)
 
 
 def start(req):
@@ -233,40 +347,38 @@ def start(req):
         raise Refused('runpane panes create took too long; its outcome is unknown',
                       'stop run %s to close Pane %s if Pane started its agent, then start again' % (run, name))
     except Refused as e:
-        out = e.out if isinstance(e, Failed) and created(e.out) else None
+        out = e.out if isinstance(e, Failed) and created_item(e.out) else None
         if out is None:
             keep(run, dict(state, stopped=True))
             raise Refused(e.args[0], line(e.args[1] + '; if Pane shows a Pane named %s, archive it first' % name))
-    item = created(out)
+    item = created_item(out)
     if not item:
-        keep(run, dict(state, stopped=True))
-        raise Refused('Pane gave no Pane and tab id for %s; its outcome is unknown' % name,
-                      'archive the Pane named %s in Pane yourself, then start again' % name)
-    state.update(pane=item['paneId'], panel=item['panelId'])
+        keep(run, state)
+        raise Refused('Pane gave no Pane id for %s; its outcome is unknown' % name,
+                      'stop run %s to close Pane %s if Pane created it, then start again' % (run, name))
+    state['pane'] = item['paneId']
+    panel_id = text_id(item.get('panelId'))
+    if panel_id:
+        state['panel'] = panel_id
+    if out.get('ok') is True and item.get('ok') is True and not panel_id and isinstance(item.get('setupQueue'), dict):
+        try:
+            saved(run, state)
+        except OSError:
+            cleanup_start(run, state, 'the driver could not save run %s' % run, UNWRITABLE + ', then start again')
+        return wait_queued(run, name, req, state)
     readiness = item.get('readiness') if isinstance(item.get('readiness'), dict) else {}
-    if out.get('ok') is True and item.get('ok') is True and readiness.get('ok') is True:
+    if out.get('ok') is True and item.get('ok') is True and panel_id and readiness.get('ok') is True:
         try:
             saved(run, dict(state, starting=False))
             return {'run': run}
         except OSError:
             why, step = 'the driver could not save run %s' % run, UNWRITABLE + ', then start again'
     else:
-        reason = readiness.get('reason') or out.get('error')
+        reason = readiness.get('reason') or item.get('error') or out.get('error')
         why = 'the %s agent in Pane %s did not get ready (%s)' % (
             req['harness'], name, code_of(reason if isinstance(reason, dict) else {}))
         step = 'check that `%s` runs and is signed in on this machine, then start again' % PROGRAMS[req['harness']]
-    state['stopped'] = True
-    failures = []
-    for undo in (lambda: close(state, 'start again'), lambda: archive_or_refuse(run, state)):
-        try:
-            undo()
-        except Refused as e:
-            failures.append(e)
-    keep(run, state)
-    if failures:
-        raise Refused(line('; '.join([why] + [f.args[0] for f in failures])),
-                      line('; '.join([f.args[1] for f in failures])))
-    raise Refused(why, step)
+    cleanup_start(run, state, why, step)
 
 
 def rows(out, key):
@@ -274,11 +386,15 @@ def rows(out, key):
     return value if isinstance(value, list) else None
 
 
-def pane_named(name):
+def pane_listed(name, pane_id=None):
     panes = rows(runpane('stop the run again', 'panes', 'list'), 'panes')
     if panes is None:
         raise Refused('Pane gave no pane list, so whether %s is running is unknown' % name,
                       'check the Pane app, then stop the run again')
+    if pane_id:
+        active = [p['paneId'] for p in panes if isinstance(p, dict) and p.get('paneId') == pane_id
+                  and p.get('archived') is not True]
+        return active[0] if active else None
     found = [p['paneId'] for p in panes if isinstance(p, dict) and p.get('name') == name
              and p.get('archived') is not True and text_id(p.get('paneId'))]
     if len(found) > 1:
@@ -287,26 +403,26 @@ def pane_named(name):
     return found[0] if found else None
 
 
-def agent_panel(pane_id):
-    panels = rows(runpane('stop the run again', 'panels', 'list', '--pane', pane_id), 'panels')
+def list_agent_panels(pane_id, then):
+    panels = rows(runpane(then, 'panels', 'list', '--pane', pane_id), 'panels')
     if panels is None:
         raise Refused('Pane gave no tab list for %s, so whether its agent is running is unknown' % pane_id,
-                      'check the Pane app, then stop the run again')
-    agents = [p['panelId'] for p in panels if isinstance(p, dict) and text_id(p.get('panelId'))
-              and isinstance(p.get('openedBy'), dict) and p['openedBy'].get('source') == 'agent']
-    if len(agents) != 1:
-        raise Refused('Pane %s has no single agent tab to close, so whether its agent ended is unknown' % pane_id,
-                      'close that Pane in the Pane app, then stop the run again')
-    return agents[0]
+                      'check the Pane app, then ' + then)
+    return [p['panelId'] for p in panels if isinstance(p, dict) and text_id(p.get('panelId'))
+            and isinstance(p.get('openedBy'), dict) and p['openedBy'].get('source') == 'agent']
 
 
 def recover(run, state):
-    if state.get('panel') or state.get('absent'):
+    if state.get('panel') or state.get('absent') or state.get('archived'):
         return state
-    pane_id = pane_named('openwiz-' + run)
+    pane_id = pane_listed('openwiz-' + run, state.get('pane'))
     if pane_id is None:
-        return dict(state, absent=True)
-    return dict(state, pane=pane_id, panel=agent_panel(pane_id))
+        return dict(state, archived=True) if state.get('pane') else dict(state, absent=True)
+    agents = list_agent_panels(pane_id, 'stop the run again')
+    if len(agents) > 1:
+        raise Refused('Pane %s has more than one agent tab to close, so whether its agent ended is unknown' % pane_id,
+                      'close that Pane in the Pane app, then stop the run again')
+    return dict(state, pane=pane_id, panel=agents[0] if agents else None)
 
 
 def wake(run):
@@ -324,6 +440,17 @@ def wake(run):
 def stop(run):
     lock(run)
     state = recover(run, saved(run))
+    if state['pane'] and not state['panel'] and not state['archived']:
+        if archive(state):
+            state['archived'] = True
+        else:
+            keep(run, state)
+            agents = list_agent_panels(state['pane'], 'stop the run again')
+            if len(agents) == 1:
+                state['panel'] = agents[0]
+            else:
+                raise Refused('queued Pane openwiz-%s has no agent tab yet and could not be archived' % run,
+                              'wait for setup or check the Pane app, then stop run %s again' % run)
     try:
         saved(run, dict(state, stopped=True))
     except OSError:

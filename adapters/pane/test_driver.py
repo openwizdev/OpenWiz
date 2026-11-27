@@ -273,6 +273,78 @@ class Pane(unittest.TestCase):
                          (0, {'run': run, 'stopped': True}))
         self.assertFalse([c for c in self.called() if c[:2] in (['panels', 'close'], ['panes', 'archive'])])
 
+    def test_origin_matches_github_hostname_case_insensitively(self):
+        for i, host in enumerate(('GitHub.com', 'GITHUB.COM')):
+            with self.subTest(host=host):
+                code, out = self.driver('start', REQUEST, FAKE_PANE_HOST=host,
+                                        FAKE_PANE_STATE=os.path.join(self.folder, 'pane-host-%d.json' % i))
+                self.assertEqual(code, 0, out)
+        self.assertEqual(len([c for c in self.called() if c[:2] == ['panes', 'create']]), 2)
+
+    def test_a_queued_create_tracks_its_pane_until_ready_and_can_wake_and_stop(self):
+        code, out = self.driver('start', REQUEST, FAKE_PANE_QUEUE='2')
+        self.assertEqual(code, 0, out)
+        run = out['run']
+        state = self.saved_run(run)
+        self.assertEqual((state['pane'], state['panel'], state['starting'], state['stopped']),
+                         ('pane-1', 'panel-1', False, False))
+        agent = self.pane()['panels']['panel-1']['agent']
+        self.assertTrue(self.alive(agent))
+        self.assertTrue([c for c in self.called() if c[:2] == ['panels', 'list']])
+        self.assertTrue([c for c in self.called() if c[:2] == ['panels', 'wait']])
+        self.assertEqual(self.driver('wake', {'run': run}), (0, {'run': run, 'woke': True}))
+        self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
+        self.assertFalse(self.alive(agent))
+        self.assertEqual(self.pane()['panes']['pane-1']['archived'], True)
+
+    def test_a_queued_create_that_never_gets_ready_cleans_up_before_refusing(self):
+        code, out = self.driver('start', REQUEST, FAKE_PANE_QUEUE='1', FAKE_PANE_READY='no',
+                                FAKE_PANE_STATE=os.path.join(self.folder, 'pane-q-notready.json'))
+        self.assertEqual(code, 1, out)
+        self.assertIn('command-exited', out['error'])
+        self.assertNotIn('synthetic', out['error'] + out['next'])
+        [run] = self.runs()
+        state = self.saved_run(run)
+        self.assertEqual((state['pane'], state['panel'], state['closed'], state['archived'], state['stopped']),
+                         ('pane-1', 'panel-1', True, True, True))
+        with open(os.path.join(self.folder, 'pane-q-notready.json')) as f:
+            pstate = json.load(f)
+        self.assertEqual((pstate['panels']['panel-1']['closed'], pstate['panes']['pane-1']['archived']), (True, True))
+        code, out = self.driver('start', REQUEST, FAKE_PANE_QUEUE='never', OPENWIZ_PANE_RUNPANE_SECONDS='1',
+                                FAKE_PANE_STATE=os.path.join(self.folder, 'pane-q-timeout.json'))
+        self.assertEqual(code, 1, out)
+        self.assertNotIn('synthetic', out['error'] + out['next'])
+        run2 = [r for r in self.runs() if r != run][0]
+        state2 = self.saved_run(run2)
+        self.assertEqual((state2['pane'], state2['panel'], state2['archived'], state2['stopped']),
+                         ('pane-1', None, True, True))
+        with open(os.path.join(self.folder, 'pane-q-timeout.json')) as f:
+            pstate2 = json.load(f)
+        self.assertEqual(pstate2['panes']['pane-1']['archived'], True)
+
+    def test_a_queued_create_whose_cleanup_cannot_be_confirmed_stays_recoverable_for_stop(self):
+        code, out = self.driver('start', REQUEST, FAKE_PANE_QUEUE='never', FAKE_PANE_QUEUE_LOCK='1',
+                                OPENWIZ_PANE_RUNPANE_SECONDS='1')
+        self.assertEqual(code, 1, out)
+        self.assertNotIn('synthetic', out['error'] + out['next'])
+        [run] = self.runs()
+        self.assertIn(run, out['next'])
+        state = self.saved_run(run)
+        self.assertEqual((state['pane'], state['panel'], state['starting'], state['stopped'], state['archived']),
+                         ('pane-1', None, True, False, False))
+        code, woke = self.driver('wake', {'run': run})
+        self.assertEqual(code, 1, woke)
+        self.assertIn('never finished starting', woke['error'])
+        code, refused = self.driver('stop', {'run': run}, FAKE_PANE_QUEUE_LOCK='1')
+        self.assertEqual(code, 1, refused)
+        self.assertFalse(self.saved_run(run)['stopped'])
+        self.assertEqual(self.driver('stop', {'run': run}, FAKE_PANE_QUEUE_FINISH='1'),
+                         (0, {'run': run, 'stopped': True}))
+        agent = self.pane()['panels']['panel-1']['agent']
+        self.assertFalse(self.alive(agent))
+        self.assertEqual((self.pane()['panels']['panel-1']['closed'], self.pane()['panes']['pane-1']['archived']),
+                         (True, True))
+
     def test_git_sees_only_non_secret_settings(self):
         planted = dict(GITHUB_TOKEN='synthetic-github-value', EXAMPLE_API_KEY='synthetic-api-value', LANG='C.UTF-8',
                        XDG_CONFIG_HOME=os.path.join(self.folder, 'xdg'), GIT_DIR=os.path.join(self.folder, 'elsewhere'))
