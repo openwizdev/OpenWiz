@@ -15,6 +15,14 @@ START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket':
          'model': r'(?=.{1,100}$)[A-Za-z0-9][A-Za-z0-9 ._:@+-]*(/[A-Za-z0-9][A-Za-z0-9 ._:@+-]*)*'}
 WARP_RUN_UUID = r'[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}'
 RUN = {'run': WARP_RUN_UUID}
+# SECURITY: Apply the driver kit's credential shapes to model IDs without reading any credential value.
+MODEL_CREDENTIAL = re.compile(
+    r'\b(?:[a-z_]*token|[a-z_]*key|secret|password|passwd|pwd|sig|signature|auth|credentials?)\s*='
+    r'|\b(?:password|passwd|secret|token)\s*:\s*\S|\bbearer\s+\S'
+    r'|\bgh[pousr]_[A-Za-z0-9]{8,}|\bgithub_pat_|\bAKIA[0-9A-Z]{16}\b'
+    r'|\bxox[abprs]-|\bsk-[A-Za-z0-9_-]{16,}'
+    r'|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}'
+    r'|xox[abposr]-[A-Za-z0-9-]{10,}|sk-[A-Za-z0-9_-]{20,}', re.I)
 EFFORT = r'[a-z][a-z0-9-]{0,19}'
 REASONING_LEVELS = {'codex': ('low', 'medium', 'high', 'xhigh')}
 UNCERTAIN_CREATE = ('look in Warp for a new run on this ticket and cancel it there (or keep it and track it by hand), '
@@ -204,6 +212,9 @@ def cancel(run):
 
 def start():
     req = read(START, {'effort': EFFORT})
+    if MODEL_CREDENTIAL.search(req['model']):
+        raise Refused('the model looks like a credential',
+                      'choose a model id for this harness and keep credentials out of the request')
     body = {'prompt': prompt(req, False), 'config': config(req)}
     try:
         os.makedirs(STATE, mode=0o700, exist_ok=True)
