@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import os, re, sys
+import importlib.machinery, importlib.util, os, re, sys
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.environ['FAKE_CLI_LIB'])
 import fake_cli
@@ -7,20 +7,37 @@ import fake_cli
 HELP = '''The fake crush, for the non-interactive `crush run` command in charmbracelet/crush internal/cmd/run.go.
 It allows only the row's two lines, with CRUSH_CLIENT_SERVER=0, and exits 2 on any other command line:
   crush run --quiet --verbose --model <model> -y [--reasoning-effort low|medium|high] -- <prompt>
-  crush run --quiet --verbose --session <id> -y [--reasoning-effort low|medium|high] -- <prompt>
-A key flag or a key-shaped argument is refused. --session and --continue together are refused.
+  crush run --quiet --verbose --session <id> --model <model> -y [--reasoning-effort low|medium|high] -- <prompt>
+A key flag, or any argument the driver kit's credential check flags, is refused.
+--session and --continue together are refused.
 With FAKE_CLI_SIGNED_OUT=1 it prints the no-providers line and exits 1.'''
 LEVELS = ('low', 'medium', 'high')
 SESSION = r'[A-Za-z0-9._:-]{1,100}'
 SIGNED_OUT = "no providers configured - please run 'crush' to set up a provider interactively"
 
 
+KIT = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', '..', '..', '..', 'kernel', 'driver-kit',
+                   'kit.py')
+
+
+def holds_credential():
+    # The same check the local driver runs on a start's fields, so a bare key the driver refuses is refused here too.
+    try:
+        spec = importlib.util.spec_from_loader('openwiz_driver_kit', importlib.machinery.SourceFileLoader(
+            'openwiz_driver_kit', KIT))
+        kit = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(kit)
+        return kit.holds_credential
+    except Exception:
+        fake_cli.refuse()
+
+
 def carries_key(argv):
+    check = holds_credential()
     for arg in argv:
         low = arg.lower()
         if low in ('--api-key', '--token', '--password', '--secret') or low.startswith(
-                ('--api-key=', '--token=', '--password=', '--secret=')) or re.search(
-                r'(?i)(?:^|[^a-z0-9])(?:api[_-]?key|token|secret|password)=', arg):
+                ('--api-key=', '--token=', '--password=', '--secret=')) or check(arg):
             fake_cli.refuse()
 
 
@@ -37,15 +54,12 @@ def parse(argv):
     if argv[:3] != ['run', '--quiet', '--verbose']:
         fake_cli.refuse()
     argv = argv[3:]
-    model = session = None
-    if argv[:1] == ['--model']:
-        model, argv = take(argv, '--model')
-    elif argv[:1] == ['--session']:
+    session = None
+    if argv[:1] == ['--session']:
         session, argv = take(argv, '--session')
         if not re.fullmatch(SESSION, session):
             fake_cli.refuse()
-    else:
-        fake_cli.refuse()
+    model, argv = take(argv, '--model')
     if argv[:1] != ['-y']:
         fake_cli.refuse()
     argv = argv[1:]
@@ -69,6 +83,4 @@ if sys.argv[1:] == ['--help']:
     print(HELP)
     sys.exit(0)
 prompt, model, session = parse(sys.argv[1:])
-if session is not None:
-    model = model or 'the session model'
 fake_cli.turn(prompt, model, session, announce, signed_out=SIGNED_OUT)

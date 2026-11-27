@@ -18,6 +18,8 @@
     "--verbose",
     "--session",
     "{session}",
+    "--model",
+    "{model}",
     "{mode}",
     "{effort}",
     "--",
