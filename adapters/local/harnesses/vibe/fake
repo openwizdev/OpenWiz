@@ -13,9 +13,10 @@ pretty-printed JSON array whose entries carry session_id.'''
 MODES = (['--auto-approve'], ['--approval-policy', 'accept-edits'], ['--approval-policy', 'ask'])
 
 
-MISSING = 'Error: Missing MISTRAL_API_KEY environment variable for mistral provider'
-KEYRING = ("Error: Can't read MISTRAL_API_KEY from the system keyring for mistral provider (no keyring). "
-           'Unlock the system keyring or approve its prompt, or set the MISTRAL_API_KEY environment variable')
+PROVIDER = os.environ.get('FAKE_VIBE_PROVIDER') or 'mistral'
+MISSING = 'Error: Missing MISTRAL_API_KEY environment variable for %s provider' % PROVIDER
+KEYRING = ("Error: Can't read MISTRAL_API_KEY from the system keyring for %s provider (no keyring). "
+           'Unlock the system keyring or approve its prompt, or set the MISTRAL_API_KEY environment variable' % PROVIDER)
 
 
 def history(sid, prompt):

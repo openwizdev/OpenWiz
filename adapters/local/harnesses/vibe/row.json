@@ -13,8 +13,8 @@
   "effort": "none: vibe --thinking sends high, xhigh and max as one 32000-token thinking budget on budget-token models such as claude-haiku-4-5, without saying so (mistralai/mistral-vibe e76235b2, completion_profile/reasoning.py THINKING_BUDGET_TOKENS and known_models.py)",
   "login": "vibe's own sign-in: a Mistral account sign-in done once in vibe, or an API key you keep in the OS keyring or in your own MISTRAL_API_KEY; the row never reads, sets or stores a key",
   "signed_out": [
-    "^Error: Missing \\w+ environment variable for \\w+ provider$",
-    "^Error: Can't read \\w+ from the system keyring for \\w+ provider \\(.*\\)\\. Unlock the system keyring or approve its prompt, or set the \\w+ environment variable$"
+    "^Error: Missing \\w+ environment variable for .+ provider$",
+    "^Error: Can't read \\w+ from the system keyring for .+ provider \\(.*\\)\\. Unlock the system keyring or approve its prompt, or set the \\w+ environment variable$"
   ],
   "login_command": "vibe --setup",
   "daemon": "vibe -p starts its app-server process under the turn and exits only after it has; stop ends it with the process tree"

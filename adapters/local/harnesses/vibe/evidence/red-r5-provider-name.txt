@@ -1,0 +1,13 @@
+Red run for review finding R5: the row's signed_out patterns take the provider name as \w+, so Vibe's two sign-in lines for a provider named with a hyphen, a dot or a space read as a generic failure. Synthetic fake only; no-op stubs for the known agent CLIs were first on PATH; no real agent CLI ran.
+
+$ python3 -I adapters/local/harnesses/vibe/test_row.py
+pass not installed
+pass a history quoting the diagnostics still starts
+pass both diagnostic lines read as signed out
+pass a locked keyring reads as not signed in
+fail another providers name reads as not signed in
+pass every effort refused starting nothing
+pass pattern reads the entry id not a nested one
+exit 1
+
+The driver's answer to a start whose fake prints either line for the llama-cpp provider: run <id>: the first turn ended at once: the harness failed (exit 1)
