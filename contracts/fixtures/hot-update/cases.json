@@ -82,17 +82,17 @@
   "swap-mark-good": {
     "valid": {"schema": "openwiz.hot-update.v1", "record": "swap", "kind": "kernel", "id": "kernel", "version": "0.2.4", "rollback_window_minutes": 5, "health_result": "passed", "steps": ["stage-beside", "verify-sha256", "switch-atomically", "health-check", "mark-good"]},
     "broken": {"schema": "openwiz.hot-update.v1", "record": "swap", "kind": "kernel", "id": "kernel", "version": "0.2.4", "rollback_window_minutes": 5, "health_result": "passed", "steps": ["stage-beside", "verify-sha256", "switch-atomically", "health-check", "roll-back"]},
-    "path": ["steps", 4], "keyword": "contains"
+    "path": ["steps"], "keyword": "contains"
   },
   "swap-roll-back": {
     "valid": {"schema": "openwiz.hot-update.v1", "record": "swap", "kind": "kernel", "id": "kernel", "version": "0.2.4", "rollback_window_minutes": 5, "health_result": "failed", "steps": ["stage-beside", "verify-sha256", "switch-atomically", "health-check", "roll-back"]},
     "broken": {"schema": "openwiz.hot-update.v1", "record": "swap", "kind": "kernel", "id": "kernel", "version": "0.2.4", "rollback_window_minutes": 5, "health_result": "failed", "steps": ["stage-beside", "verify-sha256", "switch-atomically", "health-check", "mark-good"]},
-    "path": ["steps", 4], "keyword": "contains"
+    "path": ["steps"], "keyword": "contains"
   },
   "swap-timeout": {
     "valid": {"schema": "openwiz.hot-update.v1", "record": "swap", "kind": "kernel", "id": "kernel", "version": "0.2.4", "rollback_window_minutes": 5, "health_result": "timeout", "steps": ["stage-beside", "verify-sha256", "switch-atomically", "health-check", "roll-back"]},
     "broken": {"schema": "openwiz.hot-update.v1", "record": "swap", "kind": "kernel", "id": "kernel", "version": "0.2.4", "rollback_window_minutes": 5, "health_result": "timeout", "steps": ["stage-beside", "verify-sha256", "switch-atomically", "health-check", "mark-good"]},
-    "path": ["steps", 4], "keyword": "contains"
+    "path": ["steps"], "keyword": "contains"
   },
   "rollback-window": {
     "valid": {"schema": "openwiz.hot-update.v1", "record": "swap", "kind": "kernel", "id": "kernel", "version": "0.2.4", "rollback_window_minutes": 5, "health_result": "passed", "steps": ["stage-beside", "verify-sha256", "switch-atomically", "health-check", "mark-good"]},
