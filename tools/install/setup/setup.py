@@ -119,6 +119,16 @@ def github_com(path):
 
 
 UNAUTHENTICATED = re.compile(rb'gh: [^\n]* \(HTTP 401\)\n?')
+SIGNED_OUT_STATUS = re.compile(rb'not logged into (?:any GitHub hosts|github\.com)', re.IGNORECASE)
+
+
+def gh_signed_out(program):
+    try:
+        result = subprocess.run([program, 'auth', 'status', '--hostname', 'github.com'],
+                                stdin=subprocess.DEVNULL, capture_output=True, timeout=TIMEOUT)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return result.returncode != 0 and SIGNED_OUT_STATUS.search(result.stderr + result.stdout) is not None
 
 
 def github_com_read(path):
@@ -134,7 +144,10 @@ def github_com_read(path):
         value = json.loads(result.stdout, object_pairs_hook=store.unique) if len(result.stdout) <= 4 * 1024 * 1024 else None
     except (ValueError, store.Refused):
         value = None
-    return result.returncode, value, result.returncode == 1 and UNAUTHENTICATED.fullmatch(result.stderr) is not None
+    unauthenticated = result.returncode == 1 and UNAUTHENTICATED.fullmatch(result.stderr) is not None
+    if result.returncode == 1 and not unauthenticated and path == 'user':
+        unauthenticated = gh_signed_out(program)
+    return result.returncode, value, unauthenticated
 
 
 def not_found(code, value):
