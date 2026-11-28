@@ -15,6 +15,7 @@
   var state = {
     sessionId: sessionId,
     seq: 0,
+    editor: null,
     prefix: "",
     suggestion: null,
     ghost: "",
@@ -39,18 +40,21 @@
   }
 
   function activeEditor() {
+    var focused = composerFrom(document.activeElement);
+    if (!focused) return null;
     var sel = window.getSelection();
-    var fromSel = sel && sel.anchorNode ? composerFrom(sel.anchorNode) : null;
-    if (fromSel) return fromSel;
-    var focused = document.activeElement;
-    if (focused && focused.matches && focused.matches(SELECTOR)) return focused;
-    return document.querySelector(SELECTOR);
+    if (sel && sel.anchorNode) {
+      var fromSel = composerFrom(sel.anchorNode);
+      if (fromSel && fromSel !== focused) return null;
+    }
+    return focused;
   }
 
-  function prefixBeforeCaret(editor) {
+  function collapsedCaretPrefix(editor) {
+    if (!editor || !editor.isConnected) return null;
     var sel = window.getSelection();
-    if (!sel || !sel.isCollapsed || !sel.anchorNode || !editor.contains(sel.anchorNode)) {
-      return editorText(editor);
+    if (!sel || !sel.rangeCount || !sel.isCollapsed || !sel.anchorNode || !editor.contains(sel.anchorNode)) {
+      return null;
     }
     var range = document.createRange();
     range.selectNodeContents(editor);
@@ -65,7 +69,14 @@
   }
 
   function caretAtEnd(editor) {
-    return prefixBeforeCaret(editor) === editorText(editor);
+    var prefix = collapsedCaretPrefix(editor);
+    return prefix !== null && prefix === editorText(editor);
+  }
+
+  function canAccept(editor) {
+    if (!editor || !state.suggestion || !state.ghost || state.editor !== editor) return false;
+    var prefix = collapsedCaretPrefix(editor);
+    return prefix !== null && prefix === state.prefix;
   }
 
   function exactKeys(obj, keys) {
@@ -149,7 +160,7 @@
     root.textContent = "";
     if (!state.ghost) return;
     var editor = activeEditor();
-    if (!editor) return;
+    if (!canAccept(editor)) return;
     var rect = caretRect(editor);
     var style = getComputedStyle(editor);
     var span = document.createElement("span");
@@ -173,8 +184,8 @@
     render();
   }
 
-  function feedback(outcome, chars) {
-    var suggestion = state.suggestion;
+  function feedback(outcome, chars, target) {
+    var suggestion = target || state.suggestion;
     if (!suggestion) return Promise.resolve();
     return transport("feedback", {
       schema: "openwiz.ghost.v1",
@@ -198,8 +209,9 @@
     try {
       ok = document.execCommand("insertText", false, text);
     } finally {
+      var updated = collapsedCaretPrefix(editor);
+      state.prefix = updated === null ? "" : updated;
       state.applying = false;
-      state.prefix = prefixBeforeCaret(editor);
     }
     return ok;
   }
@@ -215,15 +227,22 @@
 
   async function accept(slice, outcome) {
     var editor = activeEditor();
-    if (!editor || !state.suggestion || !slice) return;
+    if (!canAccept(editor) || !slice) {
+      clearSuggestion();
+      return;
+    }
+    var suggestion = state.suggestion;
     if (!insertText(editor, slice)) {
       settle();
       return;
     }
-    state.ghost = state.ghost.slice(slice.length);
-    await feedback(outcome, slice.length);
-    if (!state.ghost) clearSuggestion();
-    else render();
+    var remaining = state.ghost.slice(slice.length);
+    if (!remaining) clearSuggestion();
+    else {
+      state.ghost = remaining;
+      render();
+    }
+    await feedback(outcome, slice.length, suggestion);
     settle();
   }
 
@@ -237,29 +256,36 @@
 
   async function dismiss() {
     var editor = activeEditor();
-    if (!state.suggestion || !editor) return;
-    state.suppress = prefixBeforeCaret(editor);
-    await feedback("dismissed", 0);
+    if (!canAccept(editor)) {
+      clearSuggestion();
+      return;
+    }
+    var prefix = collapsedCaretPrefix(editor);
+    var suggestion = state.suggestion;
+    state.seq += 1;
+    state.suppress = {
+      prefix: prefix,
+      afterSpace: prefix.length === 0 || /\s$/.test(prefix),
+    };
     clearSuggestion();
+    await feedback("dismissed", 0, suggestion);
     settle();
   }
 
   function suppressed(prefix) {
     if (state.suppress === null) return false;
-    if (!prefix.startsWith(state.suppress)) {
+    if (!prefix.startsWith(state.suppress.prefix)) {
       state.suppress = null;
       return false;
     }
-    var rest = prefix.slice(state.suppress.length);
-    if (rest === "" || /^\S*$/.test(rest) || /^\s+$/.test(rest)) return true;
-    if (/^\s+\S/.test(rest)) {
-      state.suppress = null;
-      return false;
-    }
-    return true;
+    var rest = prefix.slice(state.suppress.prefix.length);
+    var still = state.suppress.afterSpace ? /^\s*$/.test(rest) : /^\S*\s*$/.test(rest);
+    if (still) return true;
+    state.suppress = null;
+    return false;
   }
 
-  async function complete(prefix) {
+  async function complete(editor, prefix) {
     var my = ++state.seq;
     var body = null;
     try {
@@ -284,8 +310,8 @@
       settle();
       return;
     }
-    var editor = activeEditor();
-    if (!editor || prefixBeforeCaret(editor) !== prefix) {
+    if (!editor || !editor.isConnected || activeEditor() !== editor || collapsedCaretPrefix(editor) !== prefix) {
+      clearSuggestion();
       settle();
       return;
     }
@@ -294,18 +320,31 @@
       settle();
       return;
     }
+    state.editor = editor;
+    state.prefix = prefix;
     state.suggestion = suggestion;
     state.ghost = suggestion.text;
     render();
     if (!state.shown[suggestion.id]) {
       state.shown[suggestion.id] = true;
-      await feedback("shown", 0);
+      await feedback("shown", 0, suggestion);
     }
     settle();
   }
 
   async function handlePrefix(editor) {
-    var next = prefixBeforeCaret(editor);
+    if (state.editor && state.editor !== editor) {
+      clearSuggestion();
+      state.suppress = null;
+      state.prefix = "";
+    }
+    state.editor = editor;
+    var next = collapsedCaretPrefix(editor);
+    if (next === null) {
+      clearSuggestion();
+      settle();
+      return;
+    }
     var prev = state.prefix;
     if (next === prev) {
       settle();
@@ -314,23 +353,28 @@
     state.prefix = next;
     var consumed = next.slice(prev.length);
     if (state.ghost && next.startsWith(prev) && consumed.length > 0 && state.ghost.startsWith(consumed)) {
-      state.ghost = state.ghost.slice(consumed.length);
-      await feedback("typed_through", consumed.length);
-      if (!state.ghost) clearSuggestion();
-      else render();
+      var suggestion = state.suggestion;
+      var remaining = state.ghost.slice(consumed.length);
+      if (!remaining) clearSuggestion();
+      else {
+        state.ghost = remaining;
+        render();
+      }
+      await feedback("typed_through", consumed.length, suggestion);
       settle();
       return;
     }
     if (state.suggestion) {
-      await feedback("typed_over", 0);
+      var prevSuggestion = state.suggestion;
       clearSuggestion();
+      await feedback("typed_over", 0, prevSuggestion);
     }
     if (suppressed(next)) {
       render();
       settle();
       return;
     }
-    await complete(next);
+    await complete(editor, next);
   }
 
   function onInput(event) {
@@ -352,14 +396,20 @@
       || (event.target && event.target.nodeType === 1 && editor.contains(event.target));
     if (!inEditor) return;
     if (event.key === "Tab" && plainKey(event)) {
-      if (!state.ghost) return;
+      if (!canAccept(editor)) {
+        if (state.ghost || state.suggestion) clearSuggestion();
+        return;
+      }
       event.preventDefault();
       event.stopPropagation();
       void acceptAll();
       return;
     }
     if (event.key === "Escape" && plainKey(event)) {
-      if (!state.ghost) return;
+      if (!canAccept(editor)) {
+        if (state.ghost || state.suggestion) clearSuggestion();
+        return;
+      }
       event.preventDefault();
       event.stopPropagation();
       void dismiss();
@@ -367,7 +417,10 @@
     }
     if (event.key === "ArrowRight" && !event.shiftKey && !event.metaKey && !event.isComposing) {
       var chord = event.ctrlKey || event.altKey;
-      if (!state.ghost || (!chord && !caretAtEnd(editor))) return;
+      if (!canAccept(editor) || (!chord && !caretAtEnd(editor))) {
+        if ((state.ghost || state.suggestion) && !canAccept(editor)) clearSuggestion();
+        return;
+      }
       event.preventDefault();
       event.stopPropagation();
       void acceptWord();
@@ -376,6 +429,7 @@
 
   function onPointerDown(event) {
     if (event.button !== 0 && event.pointerType === "mouse") return;
+    event.preventDefault();
     var held = false;
     var span = event.currentTarget;
     var timer = setTimeout(function () {
@@ -396,6 +450,22 @@
     span.addEventListener("pointerleave", cancel);
   }
 
+  function onSelectionChange() {
+    if (state.applying) return;
+    var editor = activeEditor();
+    if (state.suggestion || state.ghost) {
+      if (!canAccept(editor)) clearSuggestion();
+      else render();
+    }
+    if (editor !== state.editor) {
+      state.editor = editor;
+      state.prefix = "";
+      state.suppress = null;
+    } else if (editor && collapsedCaretPrefix(editor) === null) {
+      state.prefix = "";
+    }
+  }
+
   document.addEventListener("keydown", onKeyDown, true);
   document.addEventListener("input", onInput, true);
   document.addEventListener("compositionstart", function () { state.composing = true; }, true);
@@ -404,7 +474,13 @@
     var editor = composerFrom(event.target) || activeEditor();
     if (editor) void handlePrefix(editor);
   }, true);
-  document.addEventListener("selectionchange", function () { if (!state.applying) render(); }, true);
+  document.addEventListener("selectionchange", onSelectionChange, true);
+  document.addEventListener("focusin", onSelectionChange, true);
+  document.addEventListener("blur", function (event) {
+    if (!state.applying && composerFrom(event.target) === state.editor) {
+      clearSuggestion();
+    }
+  }, true);
   window.addEventListener("scroll", render, true);
   window.addEventListener("resize", render, true);
   render();

@@ -1,6 +1,6 @@
 import json
 from urllib.error import HTTPError, URLError
-from urllib.request import ProxyHandler, Request, build_opener
+from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
 ROUTES = frozenset({"complete", "feedback"})
 MAX_BODY = 1024 * 1024
@@ -11,6 +11,11 @@ class EngineError(Exception):
         super().__init__(code or "engine refused")
         self.status = status
         self.code = code or "engine refused"
+
+
+class _NoRedirect(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
 
 
 def _unique(pairs):
@@ -42,14 +47,19 @@ def call(host, port, token, route, body):
     request = Request(url, data=raw, method="POST")
     request.add_header("Content-Type", "application/json")
     request.add_header("Authorization", "Bearer " + token)
-    opener = build_opener(ProxyHandler({}))
+    opener = build_opener(ProxyHandler({}), _NoRedirect())
     try:
         with opener.open(request, timeout=5) as response:
             status, payload = response.status, response.read(MAX_BODY + 1)
     except HTTPError as error:
-        status, payload = error.code, error.read(MAX_BODY + 1)
+        try:
+            status, payload = error.code, error.read(MAX_BODY + 1)
+        finally:
+            error.close()
     except (URLError, OSError) as error:
         raise EngineError(0, "unavailable") from error
+    if 300 <= status < 400:
+        raise EngineError(status, "redirect_refused")
     if len(payload) > MAX_BODY:
         raise EngineError(status, "payload_too_large")
     try:

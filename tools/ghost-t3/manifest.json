@@ -3,7 +3,7 @@
   "name": "OpenWiz ghost text for T3 Code",
   "version": "0.2.0",
   "description": "Shows OpenWiz ghost text in T3 Code's composer.",
-  "permissions": ["storage"],
+  "permissions": ["storage", "declarativeNetRequestWithHostAccess"],
   "host_permissions": ["http://127.0.0.1/*"],
   "background": {
     "service_worker": "background.js"
