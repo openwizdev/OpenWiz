@@ -1,0 +1,17 @@
+# Red run: a provider-qualified model is refused by the driver's own pattern.
+# Command: python3 -I adapters/cursor/test_driver.py Cursor.test_a_provider_qualified_model_reaches_cursor
+# Paths in the traceback read <repo>.
+test_a_provider_qualified_model_reaches_cursor (__main__.Cursor.test_a_provider_qualified_model_reaches_cursor) ... FAIL
+
+======================================================================
+FAIL: test_a_provider_qualified_model_reaches_cursor (__main__.Cursor.test_a_provider_qualified_model_reaches_cursor)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/cursor/test_driver.py", line 184, in test_a_provider_qualified_model_reaches_cursor
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'model is not valid', 'next': 'fix model as `driver schema` shows'}
+
+----------------------------------------------------------------------
+Ran 1 test in 0.124s
+
+FAILED (failures=1)

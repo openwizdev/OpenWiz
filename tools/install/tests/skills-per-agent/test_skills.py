@@ -113,6 +113,59 @@ class PerSkill(Skills):
         self.assertEqual(os.readlink(self.home / '.claude/skills/grill'), str(mine))
         self.assertEqual(list(mine.iterdir()), [])
 
+    def test_a_kept_folder_beside_skills_is_counted_apart_from_skills(self):
+        own = self.home / '.claude/.claude-plugin'
+        own.mkdir(parents=True)
+        (own / 'plugin.json').write_bytes(b'{"name":"mine"}\n')
+        kept = self.home / '.claude/skills/grill'
+        kept.mkdir(parents=True)
+        (kept / 'SKILL.md').write_bytes(b'The owner grill.\n')
+        code, result = self.skills()
+        self.assertEqual((code, result.get('outcome')), (0, 'partial'), result)
+        row = self.rows(result)['claude-code']
+        self.assertEqual([item['skill'] for item in row['skipped']], ['grill', '.claude-plugin'])
+        folder = next(item for item in row['skipped'] if item['skill'] == '.claude-plugin')
+        self.assertIn(f'{own} is your own folder, not OpenWiz\'s copy', folder['next'])
+        self.assertNotIn('.claude-plugin skill', folder['next'])
+        self.assertIn('did not get 1 skill(s)', row['next'])
+        self.assertIn('kept 1 folder(s)', row['next'])
+        self.assertNotIn('did not get 2 skill', row['next'])
+        self.assertEqual((own / 'plugin.json').read_bytes(), b'{"name":"mine"}\n')
+        self.assertEqual((kept / 'SKILL.md').read_bytes(), b'The owner grill.\n')
+        self.assertTrue((self.home / '.claude/skills/handoff/SKILL.md').is_file())
+
+    def test_a_marked_copy_names_extra_files_before_it_is_replaced(self):
+        files = bundled()
+        files['runtime/contracts/install.v1.md'] = b'Synthetic contract.\n'
+        manifest, archive, _ = self.bundle(override=files)
+        root, home = self.base / 'contracts-root', self.base / 'contracts-home'
+        (home / '.claude').mkdir(parents=True)
+        installed = subprocess.run([sys.executable, '-I', str(INSTALL / 'install.py'), '--manifest', str(manifest),
+                                    '--archive', str(archive), '--manifest-sha256',
+                                    base.sha(manifest.read_bytes()), '--root', str(root), '--target', base.TARGETS[2]],
+                                   capture_output=True, text=True)
+        self.assertEqual(installed.returncode, 0, installed.stdout + installed.stderr)
+
+        def skills():
+            result = subprocess.run([sys.executable, '-I', str(INSTALL / 'install'), 'skills', '--root', str(root)],
+                                    capture_output=True, text=True,
+                                    env={'PATH': os.environ['PATH'], 'HOME': str(home)})
+            return result.returncode, json.loads(result.stdout or '{}')
+
+        code, result = skills()
+        self.assertEqual(code, 0, result)
+        copied = home / '.claude/contracts/install.v1.md'
+        self.assertEqual(copied.read_bytes(), b'Synthetic contract.\n')
+        extra = home / '.claude/contracts/notes.md'
+        extra.write_bytes(b'Synthetic owner note.\n')
+        code, result = skills()
+        self.assertEqual(code, 0, result)
+        row = self.rows(result)['claude-code']
+        self.assertIn('notes.md', row['next'])
+        self.assertIn('replaced whole', row['next'])
+        self.assertFalse(extra.exists())
+        self.assertEqual(copied.read_bytes(), b'Synthetic contract.\n')
+
 
 
 class Truthful(Skills):

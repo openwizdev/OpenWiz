@@ -1,0 +1,89 @@
+# Red: env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/sprites/test_driver.py, against adapters/sprites/driver copied unchanged from the template (42 refusing agent-CLI stubs first on PATH); FAIL and ERROR lines with their assertion
+ERROR: test_a_branch_whose_remote_head_is_unknown_here_is_refused (__main__.Push.test_a_branch_whose_remote_head_is_unknown_here_is_refused)
+AttributeError: module 'driver' has no attribute 'PUSH_HELPER'
+ERROR: test_a_commit_github_would_write_with_another_sha_is_refused_before_the_ref_moves (__main__.Push.test_a_commit_github_would_write_with_another_sha_is_refused_before_the_ref_moves)
+AttributeError: module 'driver' has no attribute 'PUSH_HELPER'
+ERROR: test_a_fast_forward_moves_the_branch_and_uploads_only_the_new_commits (__main__.Push.test_a_fast_forward_moves_the_branch_and_uploads_only_the_new_commits)
+AttributeError: module 'driver' has no attribute 'PUSH_HELPER'
+ERROR: test_a_new_branch_is_published_with_the_same_commits_and_trees (__main__.Push.test_a_new_branch_is_published_with_the_same_commits_and_trees)
+AttributeError: module 'driver' has no attribute 'PUSH_HELPER'
+ERROR: test_anything_but_a_fast_forward_is_refused_before_any_write (__main__.Push.test_anything_but_a_fast_forward_is_refused_before_any_write)
+AttributeError: module 'driver' has no attribute 'PUSH_HELPER'
+ERROR: test_it_refuses_without_a_gateway_or_a_github_origin_or_a_branch (__main__.Push.test_it_refuses_without_a_gateway_or_a_github_origin_or_a_branch)
+AttributeError: module 'driver' has no attribute 'PUSH_HELPER'
+ERROR: test_a_stop_whose_destroy_did_not_take_says_so_and_a_later_stop_finishes (__main__.Sprites.test_a_stop_whose_destroy_did_not_take_says_so_and_a_later_stop_finishes)
+KeyError: 'run'
+FAIL: test_a_given_effort_reaches_the_harness_by_its_documented_flag (__main__.Sprites.test_a_given_effort_reaches_the_harness_by_its_documented_flag) (harness='claude')
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+FAIL: test_a_given_effort_reaches_the_harness_by_its_documented_flag (__main__.Sprites.test_a_given_effort_reaches_the_harness_by_its_documented_flag) (harness='codex')
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+FAIL: test_a_given_effort_reaches_the_harness_by_its_documented_flag (__main__.Sprites.test_a_given_effort_reaches_the_harness_by_its_documented_flag)
+AssertionError: 1 != 0 : {'error': 'harness claude is not installed here', 'next': 'install claude and sign in to it yourself, then start again'}
+FAIL: test_a_start_whose_cleanup_destroy_fails_names_the_run_to_stop (__main__.Sprites.test_a_start_whose_cleanup_destroy_fails_names_the_run_to_stop)
+AssertionError: 0 != 1
+FAIL: test_a_start_whose_harness_refuses_after_it_began_fails_and_destroys_the_sprite (__main__.Sprites.test_a_start_whose_harness_refuses_after_it_began_fails_and_destroys_the_sprite) (harness='claude')
+AssertionError: 'so the run did not start' not found in 'harness claude is not installed here'
+FAIL: test_a_start_whose_harness_refuses_after_it_began_fails_and_destroys_the_sprite (__main__.Sprites.test_a_start_whose_harness_refuses_after_it_began_fails_and_destroys_the_sprite) (harness='codex')
+AssertionError: 'so the run did not start' not found in 'harness codex is not installed here'
+FAIL: test_a_turn_inherits_the_environment_natively_and_reads_no_ambient_value (__main__.Sprites.test_a_turn_inherits_the_environment_natively_and_reads_no_ambient_value)
+AssertionError: 1 != 0 : {'error': 'harness claude is not installed here', 'next': 'install claude and sign in to it yourself, then start again'}
+FAIL: test_a_wake_after_stop_or_for_an_unknown_run_is_refused (__main__.Sprites.test_a_wake_after_stop_or_for_an_unknown_run_is_refused)
+AssertionError: 1 != 0 : {'error': 'harness claude is not installed here', 'next': 'install claude and sign in to it yourself, then start again'}
+FAIL: test_a_wake_of_a_sprite_that_lost_its_run_is_refused (__main__.Sprites.test_a_wake_of_a_sprite_that_lost_its_run_is_refused)
+AssertionError: 1 != 0 : {'error': 'harness claude is not installed here', 'next': 'install claude and sign in to it yourself, then start again'}
+FAIL: test_a_wake_resumes_the_same_session (__main__.Sprites.test_a_wake_resumes_the_same_session) (harness='claude')
+AssertionError: 1 != 0 : {'error': 'harness claude is not installed here', 'next': 'install claude and sign in to it yourself, then start again'}
+FAIL: test_a_wake_resumes_the_same_session (__main__.Sprites.test_a_wake_resumes_the_same_session) (harness='codex')
+AssertionError: 1 != 0 : {'error': 'harness codex is not installed here', 'next': 'install codex and sign in to it yourself, then start again'}
+FAIL: test_a_wake_resumes_the_same_session (__main__.Sprites.test_a_wake_resumes_the_same_session)
+AssertionError: 0 != 2
+FAIL: test_a_wake_while_the_turn_runs_starts_nothing (__main__.Sprites.test_a_wake_while_the_turn_runs_starts_nothing)
+AssertionError: 1 != 0 : {'error': 'harness claude is not installed here', 'next': 'install claude and sign in to it yourself, then start again'}
+FAIL: test_a_wake_whose_harness_refuses_to_resume_fails (__main__.Sprites.test_a_wake_whose_harness_refuses_to_resume_fails) (harness='claude')
+AssertionError: 1 != 0 : {'error': 'harness claude is not installed here', 'next': 'install claude and sign in to it yourself, then start again'}
+FAIL: test_a_wake_whose_harness_refuses_to_resume_fails (__main__.Sprites.test_a_wake_whose_harness_refuses_to_resume_fails) (harness='codex')
+AssertionError: 1 != 0 : {'error': 'harness codex is not installed here', 'next': 'install codex and sign in to it yourself, then start again'}
+FAIL: test_an_effort_the_harness_cannot_take_is_refused_before_anything_is_created (__main__.Sprites.test_an_effort_the_harness_cannot_take_is_refused_before_anything_is_created) (harness='claude', effort='ultra')
+AssertionError: 'send only those fields; never a login' != "this host can't set effort: remove the e[81 chars]ault"
+FAIL: test_an_effort_the_harness_cannot_take_is_refused_before_anything_is_created (__main__.Sprites.test_an_effort_the_harness_cannot_take_is_refused_before_anything_is_created) (harness='codex', effort='ultracode')
+AssertionError: 'send only those fields; never a login' != "this host can't set effort: remove the e[81 chars]ault"
+FAIL: test_an_effort_the_harness_cannot_take_is_refused_before_anything_is_created (__main__.Sprites.test_an_effort_the_harness_cannot_take_is_refused_before_anything_is_created) (harness='claude', effort='minimal')
+AssertionError: 'send only those fields; never a login' != "this host can't set effort: remove the e[81 chars]ault"
+FAIL: test_kit_passes_all_five_for_each_harness (__main__.Sprites.test_kit_passes_all_five_for_each_harness) (harness='claude')
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[206 chars]er']) != (0, ['pass version: openwiz:records v1, an[245 chars]er'])
+FAIL: test_kit_passes_all_five_for_each_harness (__main__.Sprites.test_kit_passes_all_five_for_each_harness) (harness='codex')
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[205 chars]er']) != (0, ['pass version: openwiz:records v1, an[245 chars]er'])
+FAIL: test_kit_passes_all_five_without_proc_as_on_macos (__main__.Sprites.test_kit_passes_all_five_without_proc_as_on_macos)
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[262 chars]ed']) != (0, ['pass version: openwiz:records v1, an[245 chars]er'])
+FAIL: test_no_real_key_or_github_token_reaches_the_sprite (__main__.Sprites.test_no_real_key_or_github_token_reaches_the_sprite)
+AssertionError: 1 != 0 : {'error': 'harness claude is not installed here', 'next': 'install claude and sign in to it yourself, then start again'}
+FAIL: test_sprite_text_never_reaches_an_answer_and_a_failed_start_step_destroys_the_sprite (__main__.Sprites.test_sprite_text_never_reaches_an_answer_and_a_failed_start_step_destroys_the_sprite)
+AssertionError: 0 != 3
+FAIL: test_start_creates_one_labelled_sprite_named_for_the_run (__main__.Sprites.test_start_creates_one_labelled_sprite_named_for_the_run)
+AssertionError: 1 != 0 : {'error': 'harness claude is not installed here', 'next': 'install claude and sign in to it yourself, then start again'}
+FAIL: test_start_refuses_a_credential_by_its_shape_and_never_imports_the_kit (__main__.Sprites.test_start_refuses_a_credential_by_its_shape_and_never_imports_the_kit)
+AssertionError: Tuples differ: (1, 'harness claude is not installed here') != (1, 'model looks like a credential, so nothing was saved or started')
+FAIL: test_start_refuses_before_any_create_without_its_connection_ids (__main__.Sprites.test_start_refuses_before_any_create_without_its_connection_ids) (case='no anthropic connection')
+AssertionError: 'OPENWIZ_SPRITES_ANTHROPIC' not found in 'harness claude is not installed hereinstall claude and sign in to it yourself, then start again'
+FAIL: test_start_refuses_before_any_create_without_its_connection_ids (__main__.Sprites.test_start_refuses_before_any_create_without_its_connection_ids) (case='no openai connection')
+AssertionError: 'OPENWIZ_SPRITES_OPENAI' not found in 'harness codex is not installed hereinstall codex and sign in to it yourself, then start again'
+FAIL: test_start_refuses_before_any_create_without_its_connection_ids (__main__.Sprites.test_start_refuses_before_any_create_without_its_connection_ids) (case='no github connection')
+AssertionError: 'OPENWIZ_SPRITES_GITHUB' not found in 'harness claude is not installed hereinstall claude and sign in to it yourself, then start again'
+FAIL: test_start_refuses_before_any_create_without_its_connection_ids (__main__.Sprites.test_start_refuses_before_any_create_without_its_connection_ids) (case='a connection id that is a key')
+AssertionError: 'OPENWIZ_SPRITES_ANTHROPIC' not found in 'harness claude is not installed hereinstall claude and sign in to it yourself, then start again'
+FAIL: test_start_refuses_before_any_create_without_its_connection_ids (__main__.Sprites.test_start_refuses_before_any_create_without_its_connection_ids) (case='a connection id with a slash')
+AssertionError: 'OPENWIZ_SPRITES_GITHUB' not found in 'harness claude is not installed hereinstall claude and sign in to it yourself, then start again'
+FAIL: test_start_refuses_before_any_create_without_its_connection_ids (__main__.Sprites.test_start_refuses_before_any_create_without_its_connection_ids) (case='a harness with no connector')
+AssertionError: 'nothing was created' not found in 'harness pi is not installed here'
+FAIL: test_stop_runs_sprite_destroy_and_confirms_the_sprite_is_gone (__main__.Sprites.test_stop_runs_sprite_destroy_and_confirms_the_sprite_is_gone)
+AssertionError: 1 != 0 : {'error': 'harness claude is not installed here', 'next': 'install claude and sign in to it yourself, then start again'}
+FAIL: test_the_only_connector_values_passed_are_gateway_urls (__main__.Sprites.test_the_only_connector_values_passed_are_gateway_urls)
+AssertionError: 1 != 0 : {'error': 'harness claude is not installed here', 'next': 'install claude and sign in to it yourself, then start again'}
+FAIL: test_the_prompt_sends_the_push_and_github_calls_through_the_gateway (__main__.Sprites.test_the_prompt_sends_the_push_and_github_calls_through_the_gateway)
+AssertionError: 1 != 0 : {'error': 'harness claude is not installed here', 'next': 'install claude and sign in to it yourself, then start again'}
+FAIL: test_the_state_folder_and_every_file_in_it_are_owner_only (__main__.Sprites.test_the_state_folder_and_every_file_in_it_are_owner_only)
+AssertionError: 1 != 0 : {'error': 'harness claude is not installed here', 'next': 'install claude and sign in to it yourself, then start again'}
+FAIL: test_version_lists_many_at_once_own_sandbox_and_effort (__main__.Sprites.test_version_lists_many_at_once_own_sandbox_and_effort)
+AssertionError: Tuples differ: (0, {'driver': 'template', 'records': ['openwiz:records v[34 chars]p']}) != (0, {'driver': 'sprites', 'records': ['openwiz:records v1[74 chars]t']})
+Ran 29 tests in 1.969s
+FAILED (failures=36, errors=7)

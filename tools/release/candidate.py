@@ -909,6 +909,12 @@ def verify_products(record, inputs, ctx):
                         or any(name != 'runtime/' + repo for repo, name in selection
                                if repo.startswith(RELEASED) or name.startswith(tuple('runtime/' + r for r in RELEASED)))):
                     return ['unverified']
+                import build_products
+                names = dict(build_products.RUNTIME_NAMES)
+                by_name = {name: repo for repo, name in names.items()}
+                if any(names.get(repo, 'runtime/' + repo) != name or by_name.get(name, repo) != repo
+                       for repo, name in selection):
+                    return ['unverified']
                 if 'install' not in installed:
                     installed['install'] = rl4.install_locked(ctx['work'], source, tempfile.mkdtemp(dir=scratch))
                 rl4.verify_runtime(ctx['work'], source, {repo: (build / name).read_bytes() for repo, name in selection},

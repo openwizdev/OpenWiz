@@ -1,0 +1,154 @@
+name: OpenWiz Token Service
+
+on:
+  workflow_dispatch:
+    inputs:
+      request:
+        description: Token-service request JSON with a one-time RSA-3072 answer_key
+        required: true
+        type: string
+      nonce:
+        description: Random hex id naming this run and its sealed-answer artifact
+        required: true
+        type: string
+
+run-name: openwiz-mint-${{ inputs.nonce }}
+
+permissions: {}
+
+jobs:
+  mint:
+    if: github.ref == 'refs/heads/main'
+    environment: token-service
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout pinned OpenWiz
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: openwizdev/OpenWiz
+          ref: fae200fc89303c2b4872db1164b42813e5b2e6a8
+          path: openwiz
+          persist-credentials: false
+
+      - name: Mint and seal installation token
+        env:
+          OPENWIZ_REQUEST: ${{ inputs.request }}
+          OPENWIZ_NONCE: ${{ inputs.nonce }}
+          OPENWIZ_GITHUB_APP_KEY: ${{ secrets.OPENWIZ_GITHUB_APP_KEY }}
+          OPENWIZ_GITHUB_APP_ID: ${{ vars.OPENWIZ_GITHUB_APP_ID }}
+          OPENWIZ_GITHUB_APP_MODE: ${{ vars.OPENWIZ_GITHUB_APP_MODE }}
+        run: |
+          python3 -I - <<'PY'
+          import base64
+          import importlib.util
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import shutil
+          import sys
+          import tempfile
+          import time
+
+          if os.environ.get("GITHUB_REF") != "refs/heads/main":
+              sys.stderr.write("Refused: token service runs on refs/heads/main only.\n")
+              sys.exit(1)
+
+          nonce = os.environ.get("OPENWIZ_NONCE", "")
+          if not re.fullmatch(r"[0-9a-f]{16,64}", nonce):
+              sys.stderr.write("Refused: invalid nonce.\n")
+              sys.exit(1)
+
+          raw_key = os.environ.pop("OPENWIZ_GITHUB_APP_KEY", "")
+          raw_id = os.environ.get("OPENWIZ_GITHUB_APP_ID", "")
+          raw_req = os.environ.get("OPENWIZ_REQUEST", "").encode("utf-8")
+          api_base_env = os.environ.get("OPENWIZ_GITHUB_API_BASE", "https://api.github.com")
+
+          tools_dir = Path("openwiz/tools/github-app").resolve()
+          sys.path.insert(0, str(tools_dir))
+          import app  # noqa: E402
+
+          spec = importlib.util.spec_from_file_location("token_service", tools_dir / "token-service.py")
+          token_service = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(token_service)
+
+          pem = None
+          if raw_key:
+              try:
+                  decoded = base64.b64decode(raw_key.strip().encode("ascii"), validate=True)
+                  if 0 < len(decoded) <= 16384 and decoded.startswith(b"-----BEGIN "):
+                      pem = decoded
+              except Exception:
+                  pem = None
+
+          def pipe_jwt(_directory, app_id):
+              app.require(pem is not None and type(app_id) is int and app_id > 0)
+              now = int(time.time())
+              header = app.encode(b'{"alg":"RS256","typ":"JWT"}')
+              payload = app.encode(json.dumps(
+                  {"iat": now - 60, "exp": now + 540, "iss": str(app_id)},
+                  separators=(",", ":")).encode())
+              msg = header + b"." + payload
+              r, w = os.pipe()
+              try:
+                  with os.fdopen(w, "wb") as pipe:
+                      pipe.write(pem)
+                  sig = app.openssl(["dgst", "-sha256", "-sign", f"/dev/fd/{r}"], msg, pass_fds=(r,))
+              finally:
+                  os.close(r)
+              return (msg + b"." + app.encode(sig)).decode("ascii")
+
+          app.jwt = pipe_jwt
+
+          tmp = tempfile.mkdtemp(prefix="openwiz-mint-")
+          try:
+              os.chmod(tmp, 0o700)
+              state = Path(tmp)
+              app_dir = app.app_directory(state, create=True)
+              try:
+                  if re.fullmatch(r"[1-9][0-9]*", raw_id):
+                      app.save_file(app_dir, "app.json", json.dumps({"app_id": int(raw_id)}).encode())
+              finally:
+                  os.close(app_dir)
+              svc_dir = token_service.folder(state, create=True)
+              try:
+                  log_fd = os.open(
+                      token_service.LOG,
+                      os.O_RDWR | os.O_APPEND | os.O_CREAT | os.O_NOFOLLOW,
+                      0o600,
+                      dir_fd=svc_dir,
+                  )
+                  try:
+                      setting = app.mode() if os.environ.get("OPENWIZ_GITHUB_APP_MODE") else "user"
+                      api = {"state": state, "base": app.api_base(api_base_env)}
+                      message, _code = token_service.serve(api, log_fd, raw_req, setting)
+                      os.lseek(log_fd, 0, os.SEEK_SET)
+                      log_raw = os.read(log_fd, 65536).decode("utf-8", "replace").strip()
+                  finally:
+                      os.close(log_fd)
+              finally:
+                  os.close(svc_dir)
+          finally:
+              shutil.rmtree(tmp, ignore_errors=True)
+
+          out_dir = Path("out")
+          out_dir.mkdir(mode=0o700, exist_ok=True)
+          (out_dir / "answer.json").write_text(json.dumps(message) + "\n", encoding="utf-8")
+
+          summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary_path and log_raw:
+              entry = json.loads(log_raw.splitlines()[-1])
+              allowed = ("at", "requester", "repositories", "permissions", "outcome", "expires_at")
+              fields = {k: entry[k] for k in allowed if k in entry}
+              with open(summary_path, "a", encoding="utf-8") as handle:
+                  handle.write("```json\n" + json.dumps(fields, sort_keys=True) + "\n```\n")
+          PY
+
+      - name: Upload sealed answer
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: ${{ inputs.nonce }}
+          path: out/answer.json
+          retention-days: 1
+          if-no-files-found: error

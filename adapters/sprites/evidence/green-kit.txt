@@ -1,0 +1,20 @@
+# Green, after the review at 50df0641 (R1: every sprite command pinned to OPENWIZ_SPRITES_ORG, the Sprite id saved and checked before destroy): kernel/driver-kit/kit.py against adapters/sprites/driver on the synthetic sprite fixtures, once per harness
+# Run through test_driver.py's own fixture setup (its PATH: synthetic sprite, then system tools; OPENWIZ_SPRITES_ORG=example-org); 42 refusing agent-CLI stubs first on the outer PATH; env -u OPENWIZ_GITHUB_APP_KEY
+# --harness claude --model claude-opus-5-5
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 1
+pass wake: the run edited builder status note 1
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+exit: 0
+# Sprites left after the kit: {}
+# sprite calls without -o example-org: 0
+# --harness codex --model gpt-6.2-sol
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 1
+pass wake: the run edited builder status note 1
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+exit: 0
+# Sprites left after the kit: {}
+# sprite calls without -o example-org: 0
