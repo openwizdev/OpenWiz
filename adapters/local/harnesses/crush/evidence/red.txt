@@ -1,0 +1,13 @@
+fail api key flag: exited 0, not 2
+fail api key equals: exited 0, not 2
+fail key-shaped model: exited 0, not 2
+fail unlisted reasoning effort: exited 0, not 2
+fail effort flag the command does not have: exited 0, not 2
+fail session and continue together: exited 0, not 2
+fail no prompt: exited 0, not 2
+fail unknown flag: exited 0, not 2
+fail missing run: exited 0, not 2
+fail allowed lines: start 0 wake 0
+fail without CRUSH_CLIENT_SERVER=0: exited 0
+fail signed out: exited 0
+test_row.py: 9 refusals checked, 12 failed

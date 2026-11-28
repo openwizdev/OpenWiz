@@ -1,0 +1,5 @@
+test_row.py: 11 refusals checked, 0 failed
+exit:0
+rows in adapters/local/harnesses: agy, amp, auggie, copilot, crush, gemini, goose, junie, kilo, kimi, oz, pi, qwen
+pass crush: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+exit:0

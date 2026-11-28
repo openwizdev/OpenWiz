@@ -1,0 +1,50 @@
+{
+  "harness": "crush",
+  "program": "crush",
+  "start": [
+    "run",
+    "--quiet",
+    "--verbose",
+    "--model",
+    "{model}",
+    "{mode}",
+    "{effort}",
+    "--",
+    "{prompt}"
+  ],
+  "wake": [
+    "run",
+    "--quiet",
+    "--verbose",
+    "--session",
+    "{session}",
+    "--model",
+    "{model}",
+    "{mode}",
+    "{effort}",
+    "--",
+    "{prompt}"
+  ],
+  "session": {
+    "pattern": "Created session for non-interactive run.*session_id=([A-Za-z0-9._:-]{1,100})"
+  },
+  "modes": {
+    "yolo": [
+      "-y"
+    ]
+  },
+  "env": {
+    "CRUSH_CLIENT_SERVER": "0"
+  },
+  "effort": {
+    "low": ["--reasoning-effort", "low"],
+    "medium": ["--reasoning-effort", "medium"],
+    "high": ["--reasoning-effort", "high"]
+  },
+  "login": "Crush's own sign-in, from crush login (Hyper, Copilot, OpenAI or Grok) or a provider key you set yourself; Crush keeps it in its config and ~/.local/share/crush/crush.json, and the driver never reads or passes it",
+  "daemon": "none",
+  "signed_out": [
+    "no providers configured - please run 'crush' to set up a provider interactively"
+  ],
+  "login_command": "crush login"
+}
