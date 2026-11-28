@@ -66,13 +66,16 @@ PLANTED_KEY = {
     'key-reads-itself': PASS[:4] + ["fail token: the driver's file driver " + SCRIPT],
     'key-in-args': PASS[:4] + ['fail token: ' + IN_ARGS],
     'key-unregistered-host': [PASS[0], 'fail start: the key helper refused: host is not in '
-                              'kernel/driver-kit/hosts.json'] + NOT_RUN + [NEVER],
-    'key-host-in-path': [PASS[0], 'fail start: the key helper refused: path has // (a host)'] + NOT_RUN + [NEVER],
+                              'kernel/driver-kit/hosts.json; next: use a registered host name; adding a host is a '
+                              'reviewed change to hosts.json'] + NOT_RUN + [NEVER],
+    'key-host-in-path': [PASS[0], 'fail start: the key helper refused: path has // (a host); next: send only the path '
+                         'below the host, such as /v1/things, never an address'] + NOT_RUN + [NEVER],
     'key-in-env': PASS[:4] + ['fail token: a process the driver started holds a credential in OPENWIZ_COPY, which '
                               'the kit never gave it'],
     'key-echoed': PASS[:4] + ['fail token: the driver printed a credential'],
     'key-in-body': [PASS[0], 'fail start: the key helper refused: the request holds the key, so the helper did not '
-                    'send it'] + NOT_RUN + [KEY_PASS],
+                    'send it; next: send the request without the key; the helper adds it to the header itself']
+    + NOT_RUN + [KEY_PASS],
     'key-calls-keychain': PASS[:4] + ["fail token: the driver's file driver calls the keychain tool secret-tool"],
     'key-env-name': PASS[:4] + ['fail token: a process the driver started holds a credential in a variable the kit '
                                 'does not name, which the kit never gave it'],
@@ -983,7 +986,8 @@ class Kit(unittest.TestCase):
         target = kit.FakeHost()
         self.addCleanup(target.close)
         code, out, host = self.keyed(KEY_HOST, 302, [('Location', target.origin + '/v1/runs')], b'')
-        self.assertEqual((code, out), (1, [PASS[0], 'fail start: the host answered 302'] + NOT_RUN + [KEY_PASS]))
+        self.assertEqual((code, out), (1, [PASS[0], 'fail start: the host answered 302; next: check the host, then retry']
+                                       + NOT_RUN + [KEY_PASS]))
         self.assertEqual((len(host.requests), target.requests), (1, []))
 
     def test_the_registry_holds_devin_and_the_schema_and_helper_refuse_the_same_registries(self):
@@ -1592,6 +1596,41 @@ class Kit(unittest.TestCase):
         with urllib.request.urlopen(req, timeout=10) as resp:
             self.assertEqual(resp.status, 200)
             self.assertEqual(json.loads(resp.read().decode()), {'id': '{{request.ticket}}', 'ticket': 7})
+
+    def test_refusals_include_next_across_version_schema_start_wake_and_stop(self):
+        driver = os.path.join(self.folder, 'refusal-driver')
+        with open(driver, 'w') as f:
+            f.write('#!%s\nimport json, os, subprocess, sys\n'
+                    'cmd = sys.argv[1] if len(sys.argv) > 1 else ""\n'
+                    'raw = sys.stdin.read() if cmd in ("start", "wake", "stop") else ""\n'
+                    'req = json.loads(raw) if raw.strip() else {}\n'
+                    'want = os.environ.get("REFUSE_CMD")\n'
+                    'if cmd == want and not (cmd == "start" and "effort" in req):\n'
+                    '    if cmd == "stop":\n'
+                    '        subprocess.run([%r, "stop"], input=raw, text=True, capture_output=True)\n'
+                    '    print(json.dumps({"error": os.environ["REFUSE_ERR"], "next": os.environ["REFUSE_NEXT"]}))\n'
+                    '    sys.exit(1)\n'
+                    'p = subprocess.run([%r] + sys.argv[1:], input=raw, text=True)\n'
+                    'sys.exit(p.returncode)\n'
+                    % (sys.executable, BASE, BASE))
+        os.chmod(driver, 0o700)
+        cases = [
+            ('version', 0, 'fail version', 'version unavailable', 'install runtime v1, then retry'),
+            ('schema', 0, 'fail version', 'schema unreadable', 'reinstall the driver package'),
+            ('start', 1, 'fail start', 'target missing', 'set TARGET to user@host before retrying'),
+            ('wake', 2, 'fail wake', 'wake channel closed', 'restart the remote session and retry'),
+            ('stop', 3, 'fail stop', 'stop target busy', 'stop the run manually from the host dashboard'),
+        ]
+        for cmd, idx, prefix, err_text, next_text in cases:
+            with self.subTest(cmd=cmd):
+                code, out, err = self.kit(driver, REFUSE_CMD=cmd, REFUSE_ERR=err_text, REFUSE_NEXT=next_text)
+                self.assertEqual(code, 1, '\n'.join(out) + err)
+                self.assertEqual(out[idx], '%s: %s; next: %s' % (prefix, err_text, next_text))
+        code, out, err = self.kit(driver, REFUSE_CMD='start', REFUSE_ERR='target missing',
+                                  REFUSE_NEXT='use ' + TOKEN + ' to retry')
+        self.assertEqual(code, 1, '\n'.join(out) + err)
+        self.assertEqual(out[1], 'fail start: its start output held a credential, which the kit does not show')
+        self.assertNotIn(TOKEN, '\n'.join(out) + err)
 
 
 if __name__ == '__main__':
