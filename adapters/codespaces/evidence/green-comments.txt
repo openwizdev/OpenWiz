@@ -1,0 +1,7 @@
+# Green (comments contract): test_driver.py on the fixtures after the comment cut, with the no-op agent-CLI stubs first on PATH
+$ PATH=<stubs>:$PATH python3 -I adapters/codespaces/test_driver.py
+............
+----------------------------------------------------------------------
+Ran 12 tests in 21.087s
+
+OK

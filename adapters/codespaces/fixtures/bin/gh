@@ -1,0 +1,159 @@
+#!/usr/bin/env python3
+ABOUT = """A synthetic `gh` CLI for the Codespaces driver's tests. Its argument shapes follow gh 2.100's manual
+(`gh codespace create|ssh|stop|list --help`, `gh auth status --help`); its answers are synthetic.
+
+It keeps its codespaces in the JSON file FAKE_GH_STATE, each with a home folder of its own beside it. It knows
+only the exact calls the driver makes, and exits 2 on any other. Settings, each optional:
+FAKE_GH_SCOPES    the signed-in token's scopes (default: gist, read:org, repo, workflow, codespace)
+FAKE_GH_SECRETS   JSON: each Codespaces user secret's name and its repository list (only names, never values)
+FAKE_GH_FAIL      comma-separated commands (auth, secrets, repositories, create, ssh, stop, list, view) that fail;
+                  `stop*1` fails only the first stop, `ssh@2` only the second ssh
+FAKE_GH_STOP_NOOP a stop that answers 0 and leaves the codespace running
+FAKE_GH_NO_SECRET_VALUES  the secrets are listed for the repository, but `gh codespace ssh` sets none of them
+`gh codespace create` without `-m` fails, as gh does where it can't ask and several machine types are offered
+FAKE_GH_ARGS      a file each call's arguments are appended to, one JSON array per line
+FAKE_MARKER       a word every failure prints on stderr, so a test can see that gh's text never reaches an answer
+`gh codespace ssh` joins its command words with spaces, as ssh does, and runs them with `sh -c` in the
+codespace's home, starting a codespace GitHub stopped. The command runs in a session and environment of its own,
+as on a remote host: HOME, a PATH whose first folder is fixtures/codespace-bin and then the boat driver's synthetic
+`git`, KIT_TRACKER, FAKE_TURNS, FAKE_HOLD, FAKE_HARNESS_401 and the synthetic git's FAKE_WIZ_* settings, and the codespace's secrets as GitHub would set them (matching the repository's name in any case), with synthetic
+values. A stop of the codespace ends every command running in it."""
+import fcntl, json, os, signal, subprocess, sys, time
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+STATE, ARGS = os.environ['FAKE_GH_STATE'], sys.argv[1:]
+SECRETS = json.loads(os.environ.get('FAKE_GH_SECRETS') or '{"CLAUDE_CODE_OAUTH_TOKEN": ["example/site"], '
+                                                          '"CODEX_API_KEY": ["example/site"]}')
+
+
+def update(change):
+    with open(STATE + '.lock', 'w') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            with open(STATE) as f:
+                state = json.load(f)
+        except FileNotFoundError:
+            state = {'codespaces': {}}
+        out = change(state)
+        with open(STATE + '.new', 'w') as f:
+            json.dump(state, f)
+        os.replace(STATE + '.new', STATE)
+        return out
+
+
+def fail(why, code=1):
+    sys.stderr.write('gh: %s (synthetic diagnostic %s)\n' % (why, os.environ.get('FAKE_MARKER', '')))
+    sys.exit(code)
+
+
+def failing(name):
+    def count(state):
+        state.setdefault('calls', {})[name] = state.get('calls', {}).get(name, 0) + 1
+        return state['calls'][name]
+    call = update(count)
+    for entry in os.environ.get('FAKE_GH_FAIL', '').split(','):
+        planted, at, nth = entry.partition('@')
+        planted, _, times = planted.partition('*')
+        if planted == name and (not times or call <= int(times)) and (not at or call == int(nth)):
+            fail('HTTP 502: planted failure of %s' % name)
+
+
+def codespace(state, name):
+    if name not in state['codespaces']:
+        fail('codespace %s not found' % name)
+    return state['codespaces'][name]
+
+
+def ssh(name, words):
+    failing('ssh')
+
+    def wake(state):
+        box = codespace(state, name)
+        box['state'] = 'Available'
+        return box
+    box = update(wake)
+    home = STATE + '.homes/' + name
+    os.makedirs(home, exist_ok=True)
+    env = {'HOME': home, 'PATH': os.pathsep.join([os.path.join(HERE, '..', 'codespace-bin'),
+                                                  os.path.join(HERE, '..', '..', '..', 'boat', 'fixtures', 'sandbox-bin'),
+                                                  os.environ['PATH']])}
+    env.update({k: os.environ[k] for k in ('OPENWIZ_KIT_RUN', 'KIT_TRACKER', 'FAKE_TURNS', 'FAKE_HOLD',
+                                          'FAKE_HARNESS_401', 'FAKE_WIZ_COMMIT', 'FAKE_WIZ_SAME_TREE') if k in os.environ})
+    if not os.environ.get('FAKE_GH_NO_SECRET_VALUES'):
+        env.update({s: 'synthetic-codespace-secret-value' for s, repos in SECRETS.items()
+                    if box['repository'].lower() in (r.lower() for r in repos)})
+    remote = subprocess.Popen(['sh', '-c', ' '.join(words)], cwd=home, env=env, start_new_session=True,
+                              stdin=subprocess.DEVNULL)
+    while remote.poll() is None:
+        if update(lambda s: codespace(s, name)['state']) != 'Available':
+            os.killpg(remote.pid, signal.SIGKILL)
+            fail('connection to the codespace closed', 255)
+        time.sleep(0.05)
+    sys.exit(remote.returncode)
+
+
+def main():
+    if os.environ.get('FAKE_GH_ARGS'):
+        with open(os.environ['FAKE_GH_ARGS'], 'a') as f:
+            f.write(json.dumps(ARGS) + '\n')
+    a = ARGS
+    if a == ['auth', 'status', '--active', '--hostname', 'github.com', '--json', 'hosts']:
+        failing('auth')
+        scopes = os.environ.get('FAKE_GH_SCOPES', 'gist, read:org, repo, workflow, codespace')
+        print(json.dumps({'hosts': {'github.com': [{'state': 'success', 'active': True, 'host': 'github.com',
+                                                    'login': 'example-user', 'scopes': scopes}]}}))
+    elif a == ['api', '--paginate', '/user/codespaces/secrets', '--jq', '.secrets[].name']:
+        failing('secrets')
+        print('\n'.join(SECRETS))
+    elif len(a) == 5 and a[:2] == ['api', '--paginate'] and a[3:] == ['--jq', '.repositories[].full_name'] \
+            and a[2].startswith('/user/codespaces/secrets/') and a[2].endswith('/repositories'):
+        failing('repositories')
+        name = a[2][len('/user/codespaces/secrets/'):-len('/repositories')]
+        if name not in SECRETS:
+            fail('HTTP 404: Not Found')
+        print('\n'.join(SECRETS[name]))
+    elif a[:4] == ['codespace', 'create', '-R', a[3] if len(a) > 3 else ''] and len(a) in (11, 13) \
+            and a[4:11] == ['--default-permissions', '--display-name', a[6], '--idle-timeout', '240m',
+                            '--retention-period', '72h'] and (len(a) == 11 or a[11] == '-m'):
+        failing('create')
+        if len(a) == 11:
+            fail('error getting machine type: there are multiple machine types to choose from; use --machine')
+
+        def create(state):
+            name = 'fake-space-%04d' % (len(state['codespaces']) + 1)
+            state['codespaces'][name] = {'repository': a[3], 'displayName': a[6], 'state': 'Available',
+                                         'machine': a[12] if len(a) == 13 else None}
+            return name
+        name = update(create)
+        sys.stderr.write('  synthetic progress: creating your codespace\n')
+        print(name)
+    elif len(a) >= 6 and a[:3] == ['codespace', 'ssh', '-c'] and a[4] == '--':
+        ssh(a[3], a[5:])
+    elif a[:3] == ['codespace', 'stop', '-c'] and len(a) == 4:
+        failing('stop')
+
+        def stop(state):
+            box = codespace(state, a[3])
+            if box['state'] != 'Available':
+                return False
+            if not os.environ.get('FAKE_GH_STOP_NOOP'):
+                box['state'] = 'Shutdown'
+            return True
+        if not update(stop):
+            fail('codespace %s is not running' % a[3])
+    elif a == ['codespace', 'list', '--json', 'name,state']:
+        failing('list')
+        print(json.dumps([{'name': n, 'state': b['state']} for n, b in update(lambda s: s)['codespaces'].items()][:30]))
+    elif a[:3] == ['codespace', 'view', '-c'] and a[4:] == ['--json', 'state'] and len(a) == 6:
+        failing('view')
+        found = update(lambda s: s['codespaces'].get(a[3]))
+        if found is None:
+            fail('HTTP 404: Not Found')
+        print(json.dumps({'state': found['state']}))
+    else:
+        sys.stderr.write(ABOUT + '\n')
+        fail('unexpected arguments', 2)
+
+
+if __name__ == '__main__':
+    main()

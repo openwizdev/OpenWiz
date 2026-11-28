@@ -1,0 +1,41 @@
+# Red (#2644): the two shutdown proofs against the driver at 690ea8b0, with the no-op agent-CLI stubs first on PATH
+$ python3 -I adapters/codespaces/test_driver.py Codespaces.test_a_start_whose_cleanup_stop_fails_retries_then_names_the_run_to_stop Codespaces.test_stop_never_reads_a_codespace_missing_from_a_cut_list_as_stopped
+FF
+======================================================================
+FAIL: test_a_start_whose_cleanup_stop_fails_retries_then_names_the_run_to_stop (__main__.Codespaces.test_a_start_whose_cleanup_stop_fails_retries_then_names_the_run_to_stop)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "~/work/OpenWiz/adapters/codespaces/test_driver.py", line 308, in test_a_start_whose_cleanup_stop_fails_retries_then_names_the_run_to_stop
+    self.assertEqual((code, list(self.codespaces().values())), (1, ['Shutdown']), err)
+AssertionError: Tuples differ: (1, ['Available']) != (1, ['Shutdown'])
+
+First differing element 1:
+['Available']
+['Shutdown']
+
+- (1, ['Available'])
++ (1, ['Shutdown']) : {'error': 'the pinned WizSkills skills (0.3.0) and claude could not be installed in codespace fake-space-0001: its tag is not the pinned commit; its codespace fake-space-0001 may still run: gh codespace stop failed: gh gave an error the driver does not repeat', 'next': 'run `gh codespace stop -c fake-space-0001` yourself, and check `gh codespace list`'}
+
+======================================================================
+FAIL: test_stop_never_reads_a_codespace_missing_from_a_cut_list_as_stopped (__main__.Codespaces.test_stop_never_reads_a_codespace_missing_from_a_cut_list_as_stopped)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "~/work/OpenWiz/adapters/codespaces/test_driver.py", line 328, in test_stop_never_reads_a_codespace_missing_from_a_cut_list_as_stopped
+    self.assertEqual((code, self.codespaces()['fake-space-0031']), (1, 'Available'), err)
+AssertionError: Tuples differ: (0, 'Available') != (1, 'Available')
+
+First differing element 0:
+0
+1
+
+- (0, 'Available')
+?  ^
+
++ (1, 'Available')
+?  ^
+ : {'run': 'cs-8d54d966d832', 'stopped': True}
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.832s
+
+FAILED (failures=2)

@@ -1,0 +1,65 @@
+# Red (review of b2302c1, findings 1 to 4): the four proofs against the driver at b2302c18, on the fixtures whose create now fails without -m (as gh does where it can't ask), with the no-op agent-CLI stubs first on PATH
+$ python3 -I adapters/codespaces/test_driver.py Codespaces.test_start_refuses_a_credential_by_its_shape_and_never_reads_the_environment_for_one Codespaces.test_every_stop_confirms_the_codespace_stopped_with_gh_codespace_view Codespaces.test_a_start_whose_turn_never_began_is_refused_and_stops_the_codespace Codespaces.test_create_takes_the_specs_flags_and_always_names_a_machine
+FEFFF
+======================================================================
+ERROR: test_every_stop_confirms_the_codespace_stopped_with_gh_codespace_view (__main__.Codespaces.test_every_stop_confirms_the_codespace_stopped_with_gh_codespace_view)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "~/work/OpenWiz/adapters/codespaces/test_driver.py", line 329, in test_every_stop_confirms_the_codespace_stopped_with_gh_codespace_view
+    self.assertTrue(self.ended(out))
+                    ^^^^^^^^^^^^^^^
+  File "~/work/OpenWiz/adapters/codespaces/test_driver.py", line 141, in ended
+    with open(os.path.join(self.env['OPENWIZ_CODESPACES_STATE'], out['run'] + '.json')) as f:
+                                                                 ~~~^^^^^^^
+KeyError: 'run'
+
+======================================================================
+FAIL: test_start_refuses_a_credential_by_its_shape_and_never_reads_the_environment_for_one (__main__.Codespaces.test_start_refuses_a_credential_by_its_shape_and_never_reads_the_environment_for_one)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "~/work/OpenWiz/adapters/codespaces/test_driver.py", line 321, in test_start_refuses_a_credential_by_its_shape_and_never_reads_the_environment_for_one
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'model looks like a credential, so nothing was saved or started', 'next': 'send the model itself in model; never a login, key or token'}
+
+======================================================================
+FAIL: test_a_start_whose_turn_never_began_is_refused_and_stops_the_codespace (__main__.Codespaces.test_a_start_whose_turn_never_began_is_refused_and_stops_the_codespace) (harness='claude')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "~/work/OpenWiz/adapters/codespaces/test_driver.py", line 343, in test_a_start_whose_turn_never_began_is_refused_and_stops_the_codespace
+    self.assertEqual((list(self.codespaces().values()), self.logged()), (['Shutdown'], []), err)
+AssertionError: Tuples differ: ([], []) != (['Shutdown'], [])
+
+First differing element 0:
+[]
+['Shutdown']
+
+- ([], [])
++ (['Shutdown'], []) : {'error': 'gh codespace create failed: gh asks for a machine type', 'next': 'set OPENWIZ_CODESPACES_MACHINE to a machine type the repository offers, then if `gh codespace list -L 1000` shows a codespace named openwiz-7, stop it, then start again'}
+
+======================================================================
+FAIL: test_a_start_whose_turn_never_began_is_refused_and_stops_the_codespace (__main__.Codespaces.test_a_start_whose_turn_never_began_is_refused_and_stops_the_codespace) (harness='codex')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "~/work/OpenWiz/adapters/codespaces/test_driver.py", line 343, in test_a_start_whose_turn_never_began_is_refused_and_stops_the_codespace
+    self.assertEqual((list(self.codespaces().values()), self.logged()), (['Shutdown'], []), err)
+AssertionError: Tuples differ: ([], []) != (['Shutdown'], [])
+
+First differing element 0:
+[]
+['Shutdown']
+
+- ([], [])
++ (['Shutdown'], []) : {'error': 'gh codespace create failed: gh asks for a machine type', 'next': 'set OPENWIZ_CODESPACES_MACHINE to a machine type the repository offers, then if `gh codespace list -L 1000` shows a codespace named openwiz-7, stop it, then start again'}
+
+======================================================================
+FAIL: test_create_takes_the_specs_flags_and_always_names_a_machine (__main__.Codespaces.test_create_takes_the_specs_flags_and_always_names_a_machine)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "~/work/OpenWiz/adapters/codespaces/test_driver.py", line 193, in test_create_takes_the_specs_flags_and_always_names_a_machine
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'gh codespace create failed: gh asks for a machine type', 'next': 'set OPENWIZ_CODESPACES_MACHINE to a machine type the repository offers, then if `gh codespace list -L 1000` shows a codespace named openwiz-7, stop it, then start again'}
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.601s
+
+FAILED (failures=4, errors=1)

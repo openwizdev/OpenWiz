@@ -1,0 +1,965 @@
+#!/usr/bin/env python3
+import ctypes, fcntl, json, os, re, secrets, shlex, shutil, signal, subprocess, sys, time
+import uuid
+
+sys.dont_write_bytecode = True
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+STATE = os.environ.get('OPENWIZ_CODESPACES_STATE') or os.path.expanduser('~/.local/state/openwiz-codespaces')
+VERSION = {'driver': 'codespaces', 'records': ['openwiz:records v1'],
+           'can': ['start', 'wake', 'stop', 'many-at-once', 'own-sandbox', 'effort']}
+HARNESSES = {'claude': (('CLAUDE_CODE_OAUTH_TOKEN', 'ANTHROPIC_API_KEY'), '@anthropic-ai/claude-code'),
+             'codex': (('CODEX_API_KEY',), '@openai/codex')}
+START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
+         'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
+         'model': r'(?=.{1,100}$)[A-Za-z0-9][A-Za-z0-9 ._:@+-]*(/[A-Za-z0-9][A-Za-z0-9 ._:@+-]*)*'}
+OPTIONAL = {'effort': r'[a-z][a-z0-9-]{0,19}'}
+RUN = {'run': r'cs-[0-9a-f]{12}'}
+CODESPACE_NAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9-]{0,99}')
+DEFAULT_MACHINE = 'basicLinux32gb'
+MACHINE = re.compile(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,59}')
+SESSION = re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')
+API_WAIT_SECONDS = 60
+CREATE_WAIT_SECONDS = 300
+INSTALL_WAIT_SECONDS = 300
+REACH_AND_START_WAIT_SECONDS = 180
+TURN_BEGAN_WAIT_SECONDS = 60
+TURN_BEGAN = 'openwiz-turn-began'
+DEFAULT_SETTLE_SECONDS, MAX_SETTLE_SECONDS = 20, 60
+EXIT_RECORD_WAIT_SECONDS = 5
+HARNESS_REFUSALS = re.compile(r'no conversation found|not logged in|please run /login|invalid api key|'
+                              r'401 unauthorized|authentication_error|failed to authenticate', re.I)
+RESERVED_SECRETS = ('CLAUDE_CODE_OAUTH_TOKEN', 'ANTHROPIC_API_KEY', 'CODEX_API_KEY', 'OPENAI_API_KEY', 'GITHUB_TOKEN',
+                    'GH_TOKEN')
+STOP_TRIES, STOP_RETRY_PAUSE_SECONDS = 2, 2
+MACOS_SECONDS_BETWEEN_LOOKS = 0.2
+LOOKS_PER_OUTPUT_CHECK = 5
+GRACE_SECONDS_BEFORE_KILL = 10
+UNWRITABLE = ('make OPENWIZ_CODESPACES_STATE (or ~/.local/state/openwiz-codespaces) a folder of your own that you '
+              'can write')
+CREDENTIAL_SHAPES = re.compile(
+    r'\b(?:[a-z_]*token|[a-z_]*key|secret|password|passwd|pwd|sig|signature|auth|credentials?)\s*='
+    r'|\b(?:password|passwd|secret|token)\s*:\s*\S|\bbearer\s+\S'
+    r'|gh[pousr]_[A-Za-z0-9]{8,}|github_pat_|AKIA[0-9A-Z]{16}|xox[abposr]-|sk-[A-Za-z0-9_-]{16,}', re.I)
+# PRIVACY: gh's own words (its stderr, its output on a failure) are only classified, never repeated: a diagnostic
+SIGNED_OUT = re.compile(r'sign|login|auth|401|unauthori[sz]ed|expired|scope', re.I)
+SIGN_IN = 'sign in with `gh auth login` yourself, and `gh auth refresh -h github.com -s codespace`'
+INSTALL_REFUSALS = ((r'refused: tag v\S+ is not the pinned commit', 'its tag is not the pinned commit'),
+                    (r'refused: commit \S+ is not the pinned tree', 'its commit is not the pinned tree'),
+                    (r'refused: the installed release is not the pinned (?:commit|tree)',
+                     'the installed release is not the pinned one'),
+                    (r'refused: \S+ exists', 'another skill of that name is installed there'),
+                    (r'refused: the harness did not install', 'the harness did not install'))
+
+
+class Refused(Exception):
+    pass
+
+
+def line(text):
+    text = ' '.join(str(text).split()) or 'no detail'
+    return text if len(text) <= 300 else text[:297] + '...'
+
+
+def unique(pairs):
+    if len({k for k, _ in pairs}) != len(pairs):
+        raise Refused('a key is repeated', 'send each key once')
+    return dict(pairs)
+
+
+def read(fields):
+    try:
+        req = json.loads(sys.stdin.read(), object_pairs_hook=unique)
+    except ValueError:
+        raise Refused('the input is not JSON', 'send one JSON object on stdin, as `driver schema` shows')
+    optional = OPTIONAL if fields is START else {}
+    if not isinstance(req, dict) or not set(fields) <= set(req) <= set(fields) | set(optional):
+        raise Refused('the input needs exactly ' + ', '.join(fields) + ''.join(', and optionally ' + k for k in optional),
+                      'send only those fields; never a login')
+    for key, pattern in dict(fields, **optional).items():
+        if key not in req:
+            continue
+        v = req[key]
+        if not (type(v) is int and v > 0 if pattern is None else isinstance(v, str) and re.fullmatch(pattern, v)):
+            raise Refused(key + ' is not valid', 'fix ' + key + ' as `driver schema` shows')
+    return req
+
+
+def looks_like_credential(text):
+    return bool(CREDENTIAL_SHAPES.search(text))
+
+
+def no_credentials(req):
+    # PRIVACY: runs before anything is saved or started, and the refusal names the field, never its value.
+    for key in dict(START, **OPTIONAL):
+        if isinstance(req.get(key), str) and looks_like_credential(req[key]):
+            raise Refused('%s looks like a credential, so nothing was saved or started' % key,
+                          'send the %s itself in %s; never a login, key or token' % (key, key))
+    return req
+
+
+def fit_for_ssh(req, nothing, then):
+    # PRIVACY: names only the field, never its value.
+    for key in dict(START, **OPTIONAL):
+        v = req.get(key) if isinstance(req, dict) else None
+        if isinstance(v, str) and (re.search(r'\s', v) or any(n in v.upper() for n in RESERVED_SECRETS)):
+            raise Refused('%s holds a space or a secret name such as GH_TOKEN, so %s' % (key, nothing),
+                          'send the %s itself, with no space and no secret name, then %s' % (key, then))
+    return req
+
+
+def settle_seconds():
+    raw = os.environ.get('OPENWIZ_CODESPACES_SETTLE') or str(DEFAULT_SETTLE_SECONDS)
+    try:
+        seconds = float(raw)
+    except ValueError:
+        seconds = float('nan')
+    if not 0 < seconds <= MAX_SETTLE_SECONDS:
+        raise Refused('OPENWIZ_CODESPACES_SETTLE is not a number of seconds above 0 and at most %d; nothing was '
+                      'started' % MAX_SETTLE_SECONDS, 'unset it, or set it to a number of seconds up to %d, then try '
+                      'again' % MAX_SETTLE_SECONDS)
+    return seconds
+
+
+def gh_program():
+    found = shutil.which('gh')
+    if not found:
+        raise Refused('the gh CLI is not installed here, so nothing was created',
+                      "install GitHub's gh CLI (cli.github.com) and sign in to it yourself first")
+    return found
+
+
+def gh_error(what, stderr, then):
+    if SIGNED_OUT.search(stderr):
+        why, step = 'gh is not signed in with the codespace scope', SIGN_IN
+    elif what == 'codespace create' and re.search(r'machine', stderr, re.I):
+        why, step = 'gh asks for a machine type', ('set OPENWIZ_CODESPACES_MACHINE to a machine type the repository '
+                                                   'offers')
+    else:
+        why = 'gh gave an error the driver does not repeat' if stderr.strip() else 'gh gave no answer'
+        step = 'run `gh %s` by hand to read what it says' % what
+    return Refused(line('gh %s failed: %s' % (what, why)), line('%s, then %s' % (step, then)))
+
+
+def gh(what, then, args, wait=API_WAIT_SECONDS):
+    try:
+        p = subprocess.run([gh_program()] + args, stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                           timeout=wait)
+    except subprocess.TimeoutExpired:
+        raise Refused('gh %s took too long; its outcome is unknown' % what, line(then))
+    if p.returncode != 0:
+        raise gh_error(what, p.stderr[-400:], then)
+    return p.stdout
+
+
+def lines_of(text):
+    return [x.strip() for x in text.splitlines() if x.strip()]
+
+
+def prechecks(req):
+    nothing = ', so nothing was created'
+    then = 'start again'
+    try:
+        hosts = json.loads(gh('auth status', then, ['auth', 'status', '--active', '--hostname', 'github.com',
+                                                    '--json', 'hosts']))
+        accounts = [a for a in hosts['hosts']['github.com'] if a.get('active')]
+        scopes = [s.strip() for s in accounts[0].get('scopes', '').split(',')]
+        signed_in = accounts[0].get('state') == 'success'
+    except (Refused, ValueError, KeyError, IndexError, TypeError, AttributeError):
+        raise Refused('gh is not signed in to github.com' + nothing, SIGN_IN + ', then start again')
+    if not signed_in or 'codespace' not in scopes:
+        raise Refused('gh lacks the codespace scope' + nothing,
+                      'run `gh auth refresh -h github.com -s codespace` yourself, then start again')
+    names, _ = HARNESSES[req['harness']]
+    try:
+        listed = lines_of(gh('api /user/codespaces/secrets', then,
+                             ['api', '--paginate', '/user/codespaces/secrets', '--jq', '.secrets[].name']))
+    except Refused:
+        raise Refused('gh could not list your Codespaces secrets' + nothing,
+                      'run `gh api /user/codespaces/secrets` by hand to read what it says, then start again')
+    held = [n for n in names if n in listed]
+    if not held:
+        raise Refused(line('no Codespaces secret %s is set on your account%s' % (' or '.join(names), nothing)),
+                      line('set one yourself, by name: `gh secret set %s --user --repos %s`, typing its value into '
+                           'gh, then start again' % (names[0], req['repository'])))
+    for name in held:
+        try:
+            repos = lines_of(gh('api', then, ['api', '--paginate', '/user/codespaces/secrets/%s/repositories' % name,
+                                              '--jq', '.repositories[].full_name']))
+        except Refused:
+            raise Refused('gh could not list the repositories of your Codespaces secret %s%s' % (name, nothing),
+                          'run `gh api /user/codespaces/secrets/%s/repositories` by hand, then start again' % name)
+        if req['repository'].lower() in (r.lower() for r in repos):
+            return
+    raise Refused(line('your Codespaces secret %s is not set for %s%s' % (held[0], req['repository'], nothing)),
+                  line('add %s to its repositories yourself in github.com/settings/codespaces, then start again'
+                       % req['repository']))
+
+
+def machine():
+    value = os.environ.get('OPENWIZ_CODESPACES_MACHINE') or DEFAULT_MACHINE
+    if not MACHINE.fullmatch(value):
+        raise Refused('OPENWIZ_CODESPACES_MACHINE is not a machine type, so nothing was created',
+                      'unset it for %s, or set it to a machine type such as standardLinux32gb, then start again'
+                      % DEFAULT_MACHINE)
+    return ['-m', value]
+
+
+def ssh(name, command):
+    return [gh_program(), 'codespace', 'ssh', '-c', name, '--', command]
+
+
+def pinned_skills():
+    try:
+        with open(os.path.join(HERE, '..', '..', 'wizskills.lock')) as f:
+            lock = json.load(f)
+        assert set(lock) == {'version', 'commit', 'tree'} and re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', lock['version'])
+        assert all(re.fullmatch(r'[0-9a-f]{40}', lock[k]) for k in ('commit', 'tree'))
+        return lock
+    except (OSError, ValueError, TypeError, AssertionError):
+        raise Refused("OpenWiz's wizskills.lock is missing or malformed, so nothing was created",
+                      'run the driver from an OpenWiz checkout whose wizskills.lock pins a WizSkills release')
+
+
+INSTALL = r'''set -eu
+v=%(version)s c=%(commit)s t=%(tree)s u=https://github.com/openwizdev/WizSkills.git
+d=$(mktemp -d)
+trap 'rm -rf "$d"' EXIT
+refuse() { echo "refused: $1" >&2; exit 1; }
+git init -q --bare "$d/r.git"
+git --git-dir "$d/r.git" fetch -q --no-tags "$u" "refs/tags/v$v:refs/tags/v$v"
+[ "$(git --git-dir "$d/r.git" rev-parse "refs/tags/v$v^{commit}")" = "$c" ] || refuse "tag v$v is not the pinned commit"
+[ "$(git --git-dir "$d/r.git" rev-parse "$c^{tree}")" = "$t" ] || refuse "commit $c is not the pinned tree"
+git --git-dir "$d/r.git" show "$c:install.sh" > "$d/install.sh"
+GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="url.file://$d/r.git.insteadOf" GIT_CONFIG_VALUE_0="$u" \
+  sh "$d/install.sh" --version "$v" --dest "$HOME/wizskills"
+[ "$(git -C "$HOME/wizskills" rev-parse HEAD)" = "$c" ] || refuse "the installed release is not the pinned commit"
+[ "$(git -C "$HOME/wizskills" rev-parse 'HEAD^{tree}')" = "$t" ] || refuse "the installed release is not the pinned tree"
+for root in "$HOME/.claude/skills" "$HOME/.agents/skills"; do
+  mkdir -p "$root"
+  for skill in "$HOME/wizskills/skills/"*/; do
+    skill=${skill%%/}
+    link=$root/${skill##*/}
+    if [ -e "$link" ] || [ -L "$link" ]; then
+      [ "$(readlink "$link")" = "$skill" ] || refuse "$link exists"
+    else
+      ln -s "$skill" "$link"
+    fi
+  done
+done
+command -v %(harness)s >/dev/null 2>&1 || npm install -g --silent %(package)s >/dev/null 2>&1 || true
+command -v %(harness)s >/dev/null 2>&1 || refuse "the harness did not install"
+mkdir -p "$HOME/.openwiz/runs"
+: > "$HOME/.openwiz/runs/%(run)s"
+echo "openwiz-ready $v"
+'''
+
+
+def install(name, lock, req, run):
+    script = INSTALL % dict(lock, harness=req['harness'], package=HARNESSES[req['harness']][1], run=run)
+    try:
+        p = subprocess.run(ssh(name, 'sh -c ' + shlex.quote(script)), stdin=subprocess.DEVNULL, capture_output=True,
+                           text=True, timeout=INSTALL_WAIT_SECONDS)
+        out = p.stdout + p.stderr
+        done = p.returncode == 0 and ('openwiz-ready ' + lock['version']) in p.stdout
+    except subprocess.TimeoutExpired:
+        out, done = '', False
+    if not done:
+        refused = [why for pattern, why in INSTALL_REFUSALS if re.search(pattern, out)]
+        raise Refused(line('the pinned WizSkills skills (%s) and %s could not be installed in codespace %s: %s'
+                           % (lock['version'], req['harness'], name, refused[0] if refused else
+                              'gh gave an error the driver does not repeat')),
+                      line('check that the codespace reaches github.com and npm, and that no other skill of that name '
+                           'is installed there, then start again'))
+
+
+def reach(name, run):
+    then = 'wake it again'
+    try:
+        p = subprocess.run(ssh(name, 'if test -e ~/.openwiz/runs/%s; then echo openwiz-home-ok; else echo '
+                                     'openwiz-home-lost; fi' % run), stdin=subprocess.DEVNULL, capture_output=True,
+                           text=True, timeout=REACH_AND_START_WAIT_SECONDS)
+    except subprocess.TimeoutExpired:
+        raise Refused('gh codespace ssh did not reach codespace %s in time, so the run is not woken' % name,
+                      'check `gh codespace view -c %s` for it, then %s' % (name, then))
+    found = lines_of(p.stdout)
+    if p.returncode == 0 and found[-1:] == ['openwiz-home-lost']:
+        raise Refused(line('codespace %s lost its home folder (it was rebuilt or replaced), and the agent\'s '
+                           'session with it, so run %s is not woken' % (name, run)), 'stop it, then start a new run')
+    if p.returncode != 0 or found[-1:] != ['openwiz-home-ok']:
+        raise gh_error('codespace ssh -c %s' % name, p.stderr[-400:], then)
+
+
+def prompt_text(req, woken):
+    what = 'You were woken: read the ticket again and carry on' if woken else 'Build the ticket'
+    return ('%s: GitHub repository %s, ticket #%d, with the %s skill (~/wizskills/skills/%s/SKILL.md). Clone '
+            'the repository if it is not here yet, and follow its instructions. %s'
+            % (what, req['repository'], req['ticket'], req['skill'], req['skill'],
+               'This run uses the %s effort, so your status note\'s model field is `<your model> %s`, such as '
+               '`Opus 5.5 %s`.' % ((req['effort'],) * 3) if 'effort' in req else
+               'This run uses the host\'s default effort, so your status note\'s model field is `<your model> default '
+               'effort`, such as `Opus 5.5 default effort`, never a configured effort.'))
+
+
+def harness_command(state):
+    req, woken, session = state['request'], bool(state['turns']), state['session']
+    fit_for_ssh(req, 'no turn was started', 'start a new run')
+    if req['harness'] == 'claude':
+        words = ['claude', '-p', '--dangerously-skip-permissions', '--output-format', 'stream-json', '--verbose',
+                 '--model', req['model']] + (
+            ['--effort', req['effort']] if 'effort' in req else []) + [
+            '--resume' if woken else '--session-id', session, prompt_text(req, woken)]
+    else:
+        words = ['codex', 'exec'] + (['resume'] if woken else []) + [
+            '--json', '--dangerously-bypass-approvals-and-sandbox', '--skip-git-repo-check', '-m', req['model']] + (
+            ['-c', 'model_reasoning_effort=' + req['effort']] if 'effort' in req else []) + (
+            [session] if woken else []) + [prompt_text(req, woken)]
+    folder = '/workspaces/' + req['repository'].partition('/')[2]
+    return 'cd %s 2>/dev/null; command -v %s >/dev/null 2>&1 && echo %s && exec %s' % (
+        shlex.quote(folder), words[0], TURN_BEGAN, ' '.join(shlex.quote(w) for w in words))
+
+
+def path(run, name):
+    return os.path.join(STATE, '%s.%s' % (run, name))
+
+
+def private_state():
+    os.makedirs(STATE, mode=0o700, exist_ok=True)
+    os.chmod(STATE, 0o700)
+    found = os.stat(STATE)
+    if found.st_uid != os.getuid() or found.st_mode & 0o077:
+        raise PermissionError('the state folder is not owner-only')
+
+
+def private(name, flags=os.O_WRONLY | os.O_CREAT | os.O_TRUNC):
+    fd = os.open(name, flags | os.O_NOFOLLOW, 0o600)
+    try:
+        os.fchmod(fd, 0o600)
+    except OSError:
+        os.close(fd)
+        raise
+    return fd
+
+
+LINUX = os.path.isdir('/proc/self') and hasattr(os, 'pidfd_open')
+PR_SET_CHILD_SUBREAPER = 36
+
+
+def ps(*args):
+    try:
+        p = subprocess.Popen(['ps'] + list(args), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, text=True)
+        out, err = p.communicate(timeout=30)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        raise OSError('ps did not run: %s' % e)
+    if p.returncode and err.strip():
+        raise OSError('ps failed: %s' % err.strip()[:100])
+    return out.splitlines(), p.pid
+
+
+# PRIVACY: reads only ps's process table (pid, parent, group, state, start time), never any environment.
+def members(roots, recorded, writers=()):
+    rows, me = ps('-A', '-o', 'pid=', '-o', 'ppid=', '-o', 'pgid=', '-o', 'stat=', '-o', 'lstart=')
+    started, children, found = {}, {}, set()
+    for row in rows:
+        f = row.split(None, 4)
+        if len(f) < 5 or f[3].startswith('Z'):
+            continue
+        pid, ppid, group = int(f[0]), int(f[1]), int(f[2])
+        started[pid] = f[4].strip()
+        children.setdefault(ppid, []).append(pid)
+        if group in roots or recorded.get(pid) == started[pid] or pid in writers:
+            found.add(pid)
+    todo = list(roots) + list(found)
+    while todo:
+        for c in children.get(todo.pop(), []):
+            if c not in found:
+                found.add(c)
+                todo.append(c)
+    return {p: started[p] for p in found - set(roots) - {os.getpid(), me}}
+
+
+# PRIVACY: asks lsof only which processes hold this run's own turn logs open for writing, never any environment.
+def writing_to(paths):
+    if not paths:
+        return set()
+    try:
+        out = subprocess.run(['lsof', '-F', 'pa', '--'] + list(paths), stdin=subprocess.DEVNULL,
+                             capture_output=True, text=True, timeout=30).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return set()
+    found, pid = set(), None
+    for field in out.splitlines():
+        if field[:1] == 'p' and field[1:].isdigit():
+            pid = int(field[1:])
+        elif field[:1] == 'a' and field[1:2] in ('w', 'u') and pid is not None:
+            found.add(pid)
+    return found
+
+
+def turn_logs(run):
+    try:
+        names = os.listdir(STATE)
+    except FileNotFoundError:
+        return []
+    return sorted(os.path.join(STATE, n) for n in names if n.startswith(run + '.') and n.endswith('.log'))
+
+
+def since(pid):
+    if not LINUX:
+        row = ps('-o', 'stat=', '-o', 'lstart=', '-p', str(pid))[0]
+        return row[0].split(None, 1)[1].strip() if row and not row[0].lstrip().startswith('Z') else None
+    try:
+        with open('/proc/%d/stat' % pid) as f:
+            fields = f.read().rpartition(')')[2].split()
+    except OSError:
+        return None
+    return None if fields[0] == 'Z' else int(fields[19])
+
+
+def descendants(pid):
+    children = {}
+    for p in filter(str.isdigit, os.listdir('/proc')):
+        try:
+            with open('/proc/%s/stat' % p) as f:
+                fields = f.read().rpartition(')')[2].split()
+        except OSError:
+            continue
+        if fields[0] != 'Z':
+            children.setdefault(int(fields[1]), []).append(int(p))
+    found, todo = set(), [pid]
+    while todo:
+        for c in children.get(todo.pop(), []):
+            if c not in found:
+                found.add(c)
+                todo.append(c)
+    return found
+
+
+def supervisor_record(log, supervisor):
+    return '%s.%d.sup' % (log[:-len('.log')], supervisor)
+
+
+def record_this_supervisor(log, kept=None, exited=None):
+    record = supervisor_record(log, os.getpid())
+    with os.fdopen(private(record + '.new'), 'w') as f:
+        json.dump({'supervisor': os.getpid(), 'supervisor_since': since(os.getpid()), 'kept': kept or {},
+                   'exit': exited}, f)
+    os.replace(record + '.new', record)
+
+
+def supervise(run, log, cmd):
+    if not re.fullmatch(RUN['run'], run):
+        print(json.dumps({'error': 'the run id is not valid'}), flush=True)
+        return
+    if LINUX and ctypes.CDLL(None, use_errno=True).prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) != 0:
+        print(json.dumps({'error': "this host cannot keep a turn's processes together"}), flush=True)
+        return
+    try:
+        record_this_supervisor(log)
+        with open(log, 'a') as out:
+            turn = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=out, stderr=subprocess.STDOUT)
+    except OSError as e:
+        print(json.dumps({'error': e.strerror}), flush=True)
+        return
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+    print(json.dumps({'pid': turn.pid, 'since': since(turn.pid)}), flush=True)
+    os.dup2(os.open(os.devnull, os.O_WRONLY), 1)
+    kept, exited = {}, []
+
+    def reaped(pid, status):
+        if pid == turn.pid and not exited:
+            exited.append(os.waitstatus_to_exitcode(status))
+            try:
+                record_this_supervisor(log, {str(p): t for p, t in kept.items()}, exited[0])
+            except OSError:
+                pass
+    if LINUX:
+        while True:
+            try:
+                reaped(*os.wait())
+            except ChildProcessError:
+                return
+    looks = 0
+    while True:
+        children_left = any_child_running_after_reaping(reaped)
+        scanned = looks % LOOKS_PER_OUTPUT_CHECK == 0
+        now = members({os.getpid()}, kept, writing_to([log]) if scanned else ())
+        if not children_left and not now and not scanned:
+            now = members({os.getpid()}, kept, writing_to([log]))
+        looks += 1
+        if now != kept:
+            kept = now
+            try:
+                record_this_supervisor(log, {str(p): t for p, t in kept.items()}, exited[0] if exited else None)
+            except OSError:
+                pass
+        if not children_left and not kept:
+            return
+        time.sleep(MACOS_SECONDS_BETWEEN_LOOKS)
+
+
+def any_child_running_after_reaping(reaped):
+    while True:
+        try:
+            pid, status = os.waitpid(-1, os.WNOHANG)
+        except ChildProcessError:
+            return False
+        if pid == 0:
+            return True
+        reaped(pid, status)
+
+
+def running(turn):
+    return bool(turn) and turn['since'] is not None and since(turn['pid']) == turn['since']
+
+
+def end(turns, run, logs):
+    kept = [(t['supervisor'], t['supervisor_since']) for t in turns if t and t['supervisor_since'] is not None]
+    left = set()
+    for sig, wait in ((signal.SIGTERM, GRACE_SECONDS_BEFORE_KILL), (signal.SIGKILL, 2)):
+        sent, deadline = set(), time.monotonic() + wait
+        while time.monotonic() < deadline:
+            kept = [(p, t) for p, t in kept if since(p) == t]
+            if not LINUX:
+                supervisors = {s for s, _ in kept}
+                left = set(members(supervisors, recorded_by(run, supervisors), writing_to(logs)))
+                if not kept and not left:
+                    return
+                for p in left - sent:
+                    try:
+                        os.kill(p, sig)
+                        sent.add(p)
+                    except OSError:
+                        pass
+                time.sleep(0.1)
+                continue
+            if not kept:
+                return
+            pinned = {}
+            for p in set().union(*(descendants(s) for s, _ in kept)) - sent:
+                try:
+                    pinned[p] = os.pidfd_open(p)
+                except OSError:
+                    pass
+            under = set().union(*(descendants(s) for s, _ in kept))
+            for p, fd in pinned.items():
+                try:
+                    if p in under:
+                        sent.add(p)
+                        signal.pidfd_send_signal(fd, sig)
+                except OSError:
+                    pass
+                finally:
+                    os.close(fd)
+            time.sleep(0.1)
+    raise Refused('run %s still has local processes after stop' % run,
+                  'stop it again, or end its processes by hand: they run under process %s'
+                  % ', '.join(str(p) for p in [p for p, _ in kept] or sorted(left)))
+
+
+def saved(run, state=None):
+    if state is not None:
+        private_state()
+        with os.fdopen(private(path(run, 'json.new')), 'w') as f:
+            json.dump(state, f)
+        os.replace(path(run, 'json.new'), path(run, 'json'))
+        return state
+    try:
+        with open(path(run, 'json')) as f:
+            return json.load(f)
+    except FileNotFoundError:
+        raise Refused('no run ' + run, 'check the run id that `driver start` printed')
+
+
+def lock(run, create):
+    if not os.path.exists(path(run, 'json')):
+        raise Refused('no run ' + run, 'check the run id that `driver start` printed')
+    if not create and not os.path.exists(path(run, 'lock')):
+        raise Refused('run %s has lost its lock file, which may have marked a stop' % run,
+                      'stop it, then start a new run')
+    try:
+        private_state()
+        fcntl.flock(private(path(run, 'lock'), os.O_RDONLY | (os.O_CREAT if create else 0)), fcntl.LOCK_EX)
+    except OSError:
+        raise Refused('the driver cannot lock run %s in its state folder' % run, UNWRITABLE)
+
+
+STOP_MARK_MTIME = 1
+
+
+def mark_stopping(run):
+    marked = False
+    try:
+        fd = os.open(path(run, 'lock'), os.O_WRONLY | os.O_TRUNC)
+        try:
+            marked = os.write(fd, b'stopping\n') == 9
+        finally:
+            os.close(fd)
+    except OSError:
+        pass
+    try:
+        os.utime(path(run, 'lock'), (STOP_MARK_MTIME, STOP_MARK_MTIME))
+        marked = True
+    except OSError:
+        pass
+    return marked
+
+
+def stopping(run):
+    try:
+        with open(path(run, 'lock'), 'rb') as f:
+            return f.read(9) == b'stopping\n' or os.fstat(f.fileno()).st_mtime == STOP_MARK_MTIME
+    except FileNotFoundError:
+        return True
+
+
+def supervisor_records(run):
+    try:
+        names = os.listdir(STATE)
+    except FileNotFoundError:
+        return []
+    return sorted(os.path.join(STATE, n) for n in names if n.startswith(run + '.') and n.endswith('.sup'))
+
+
+def recorded_by(run, supervisors):
+    recorded = {}
+    for name in supervisor_records(run):
+        try:
+            with open(name) as f:
+                kept = json.load(f)
+            if kept['supervisor'] in supervisors:
+                recorded.update({int(p): t for p, t in kept['kept'].items() if isinstance(t, str)})
+        except (OSError, ValueError, KeyError, TypeError, AttributeError):
+            continue
+    return recorded
+
+
+# PRIVACY: finds a run's unsaved turns only by the records their supervisors wrote in its state folder, never
+def strays(run, known):
+    found = []
+    for name in supervisor_records(run):
+        try:
+            with open(name) as f:
+                kept = json.load(f)
+            p, t = kept['supervisor'], kept['supervisor_since']
+        except (OSError, ValueError, KeyError, TypeError):
+            continue
+        if type(p) is int and p > 0 and p not in known and t is not None and since(p) == t:
+            found.append({'supervisor': p, 'supervisor_since': t})
+    return found
+
+
+def reported(what, failures, then):
+    return Refused(line('; '.join([what] + [f.args[0] for f in failures])),
+                   line('; '.join([f.args[1] for f in failures] + ([then] if then else []))))
+
+
+def turn(state, run, settle):
+    woken = bool(state['turns'])
+    log = path(run, '%d.log' % len(state['turns']))
+    command = harness_command(state)
+    os.close(private(log))
+    then = 'wake it again' if woken else 'start again'
+    os.environ['OPENWIZ_RUN'] = run
+    try:
+        sup = subprocess.Popen([sys.executable, '-I', os.path.abspath(__file__), '--turn', run, log] +
+                               ssh(state['codespace'], command), start_new_session=True,
+                               stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        with sup.stdout:
+            first = sup.stdout.readline()
+    except OSError as e:
+        raise Refused('gh codespace ssh did not start: %s' % e.strerror, 'check that `gh` runs by hand, then ' + then)
+    try:
+        started = json.loads(first)
+    except ValueError:
+        started = {'error': 'its supervisor did not answer'}
+    if 'pid' not in started:
+        raise Refused('gh codespace ssh did not start: %s' % started['error'],
+                      'check that `gh` runs by hand, then ' + then)
+    now = {'pid': started['pid'], 'since': started['since'], 'supervisor': sup.pid, 'supervisor_since': since(sup.pid)}
+    needs_thread = not woken and state['request']['harness'] == 'codex'
+    deadline = time.monotonic() + TURN_BEGAN_WAIT_SECONDS
+    while True:
+        ended_before_this_read = not running(now)
+        with open(log, errors='replace') as f:
+            text = f.read().splitlines()
+        began = TURN_BEGAN in (x.strip() for x in text)
+        found = [x.get('thread_id') for x in map(event, text) if x.get('type') == 'thread.started']
+        thread = found[0] if found and isinstance(found[0], str) and SESSION.fullmatch(found[0]) else None
+        if began and (thread or not needs_thread):
+            settled(run, state, now, log, settle)
+            return now, thread or state['session']
+        if ended_before_this_read or (found and not thread) or time.monotonic() > deadline:
+            end([now], run, [log])
+            what = 'the %s turn did not begin' % state['request']['harness'] if not began else 'codex printed no thread id'
+            raise Refused(line('%s in codespace %s, so the run did not %s' % (what, state['codespace'],
+                                                                            'wake' if woken else 'start')),
+                          line('read %s for why; check that its Codespaces secret signs %s in, then %s'
+                               % (log, state['request']['harness'], then)))
+        time.sleep(0.1)
+
+
+def exit_of(log, supervisor):
+    try:
+        with open(supervisor_record(log, supervisor)) as f:
+            code = json.load(f).get('exit')
+    except (OSError, ValueError, AttributeError):
+        return None
+    return code if type(code) is int else None
+
+
+def settled(run, state, now, log, settle):
+    woken, harness = bool(state['turns']), state['request']['harness']
+    deadline, ended_at = time.monotonic() + settle, None
+    while True:
+        ended_before_this_read = not running(now)
+        if ended_before_this_read and ended_at is None:
+            ended_at = time.monotonic()
+        with open(log, errors='replace') as f:
+            text = f.read().split('\n')
+        after = text[[x.strip() for x in text].index(TURN_BEGAN) + 1:]
+        code = exit_of(log, now['supervisor']) if ended_before_this_read else None
+        if any(harness_refused(line, harness) for line in after):
+            why = 'refused to %s' % ('resume its session' if woken else 'start')
+            break
+        if ended_before_this_read and code == 0:
+            return
+        if ended_before_this_read and code is not None:
+            why = 'exited with status %d' % code
+            break
+        if ended_before_this_read and time.monotonic() > ended_at + EXIT_RECORD_WAIT_SECONDS:
+            why = 'ended with no exit status'
+            break
+        if not ended_before_this_read and time.monotonic() > deadline:
+            return
+        time.sleep(0.1)
+    end([now], run, [log])
+    raise Refused(line('the %s turn %s in codespace %s, so the run did not %s'
+                       % (harness, why, state['codespace'], 'wake' if woken else 'start')),
+                  line('read %s for why; check that its Codespaces secret signs %s in%s, then %s'
+                       % (log, harness, '; if it lost its session, stop the run and start a new one' if woken else '',
+                          'wake it again' if woken else 'start again')))
+
+
+def event(text):
+    try:
+        item = json.loads(text)
+    except ValueError:
+        return {}
+    return item if isinstance(item, dict) else {}
+
+
+def harness_refused(line, harness):
+    item = event(line)
+    kind = item.get('type')
+    if kind is None:
+        return not line.lstrip().startswith('{') and bool(HARNESS_REFUSALS.search(line))
+    if harness == 'codex':
+        return kind in ('error', 'turn.failed') and bool(HARNESS_REFUSALS.search(line))
+    if kind == 'result' and item.get('is_error') is True:
+        return bool(HARNESS_REFUSALS.search(line))
+    if kind == 'system' and item.get('subtype') == 'api_retry':
+        return item.get('error_status') == 401 or item.get('error') == 'authentication_failed'
+    return kind == 'assistant' and item.get('error') == 'authentication_failed'
+
+
+def codespace_state(name):
+    try:
+        p = subprocess.run([gh_program(), 'codespace', 'view', '-c', name, '--json', 'state'], stdin=subprocess.DEVNULL,
+                           capture_output=True, text=True, timeout=API_WAIT_SECONDS)
+    except subprocess.TimeoutExpired:
+        return None
+    if p.returncode != 0:
+        return 'gone' if re.search(r'HTTP 404', p.stderr) else None  # PRIVACY: classified, never repeated
+    try:
+        state = json.loads(p.stdout).get('state')
+    except (ValueError, AttributeError):
+        return None
+    return state if isinstance(state, str) else None
+
+
+def stop_codespace(name):
+    for attempt in range(STOP_TRIES):
+        try:
+            gh('codespace stop', 'stop the run again', ['codespace', 'stop', '-c', name])
+            failed = Refused('gh codespace stop answered, but codespace %s did not stop' % name, 'stop the run again')
+        except Refused as e:
+            failed = e
+        if codespace_state(name) in ('Shutdown', 'ShuttingDown', 'gone'):
+            return
+        if attempt + 1 < STOP_TRIES:
+            time.sleep(STOP_RETRY_PAUSE_SECONDS)
+    raise failed
+
+
+def shutdown(run, turns, name, logs=None):
+    failures = []
+    try:
+        end(turns + strays(run, {t['supervisor'] for t in turns}), run, turn_logs(run) if logs is None else logs)
+    except Refused as e:
+        failures.append(e)
+    except Exception as e:
+        failures.append(Refused('the driver could not end its local processes: %s' % type(e).__name__,
+                                "end this run's processes by hand: they carry OPENWIZ_RUN=%s" % run))
+    if name:
+        try:
+            stop_codespace(name)
+        except Refused as e:
+            failures.append(Refused(line('its codespace %s may still run, billing compute: %s' % (name, e.args[0])),
+                                    line('stop run %s again, or run `gh codespace stop -c %s` yourself, and check '
+                                         '`gh codespace view -c %s` shows it Shutdown' % (run, name, name))))
+    return failures
+
+
+def abandon(run, state, error):
+    what = error.args[0] if isinstance(error, Refused) else 'the driver failed: ' + type(error).__name__
+    failures = shutdown(run, [], state['codespace'], [path(run, '%d.log' % len(state['turns']))])
+    try:
+        saved(run, dict(state, stopped=True))
+    except OSError:
+        pass
+    return reported(what, failures, '') if failures else None
+
+
+def unsaved(run, name, now, cmd, log):
+    failures = shutdown(run, [now], name if cmd == 'start' else None, [log])
+    if failures:
+        raise reported('run %s began a turn it could not save, and could not confirm everything ended; its '
+                       'outcome is unknown' % run, failures, 'read the ticket for what its agent did')
+    raise Refused('run %s began a turn it could not save, so the driver ended it; its outcome is unknown' % run,
+                  'read the ticket for what its agent did before you %s' % (
+                      'start a new run' if cmd == 'start' else 'wake it again'))
+
+
+def start(req):
+    if req['harness'] not in HARNESSES:
+        raise Refused('Codespaces runs no harness %s here, so nothing was created' % req['harness'],
+                      'use one of: ' + ', '.join(HARNESSES))
+    gh_program()
+    flags, lock, settle = machine(), pinned_skills(), settle_seconds()
+    prechecks(req)
+    run = 'cs-' + secrets.token_hex(6)
+    state = {'request': req, 'codespace': None, 'session': str(uuid.uuid4()) if req['harness'] == 'claude' else None,
+             'turns': [], 'stopped': False, 'starting': True}
+    try:
+        saved(run, state)
+        os.close(private(path(run, 'lock'), os.O_WRONLY | os.O_CREAT))
+    except OSError:
+        raise Refused('the driver cannot save runs in its state folder, so nothing was created', UNWRITABLE)
+    display = 'openwiz-%d' % req['ticket']
+    found = lines_of(gh('codespace create', 'if `gh codespace list -L 1000` shows a codespace named %s, stop it, then start '
+                        'again' % display,
+                        ['codespace', 'create', '-R', req['repository'], '--default-permissions', '--display-name',
+                         display, '--idle-timeout', '240m', '--retention-period', '72h'] + flags, CREATE_WAIT_SECONDS))
+    if not found or not CODESPACE_NAME.fullmatch(found[-1]) or looks_like_credential(found[-1]):
+        raise Refused('gh codespace create gave no codespace name',
+                      'stop the codespace named %s in `gh codespace list -L 1000` yourself, then start again' % display)
+    state['codespace'] = found[-1]
+    try:
+        try:
+            saved(run, state)
+        except OSError:
+            raise Refused('the driver cannot save run %s; its new codespace is stopped' % run,
+                          UNWRITABLE + ', then start again')
+        install(state['codespace'], lock, req, run)
+        now, session = turn(state, run, settle)
+        if looks_like_credential(session):
+            end([now], run, [path(run, '0.log')])
+            raise Refused('codex printed a thread id that looks like a credential, so the run did not start',
+                          'start again')
+        try:
+            saved(run, dict(state, turns=[now], session=session, starting=False))
+        except OSError:
+            unsaved(run, state['codespace'], now, 'start', path(run, '0.log'))
+    except Exception as e:
+        instead = abandon(run, state, e)
+        if instead:
+            raise instead from e
+        raise
+    return {'run': run}
+
+
+def wake(run):
+    lock(run, False)
+    state = saved(run)
+    if state['stopped']:
+        raise Refused('run %s is stopped' % run, 'start a new run')
+    if stopping(run):
+        raise Refused('a stop of run %s could not save that the run is stopped' % run,
+                      'stop it again; it stays stopped and is never woken')
+    if state.get('starting'):
+        raise Refused('run %s never finished starting' % run, 'stop it, then start a new run')
+    if state['turns'] and running(state['turns'][-1]):
+        return {'run': run, 'woke': True}
+    fit_for_ssh(state['request'], 'the run is not woken', 'stop it and start a new run')
+    settle = settle_seconds()
+    try:
+        saved(run, state)
+    except OSError:
+        raise Refused('the driver cannot save run %s; nothing was started' % run, UNWRITABLE + ', then wake it')
+    reach(state['codespace'], run)
+    now, _ = turn(state, run, settle)
+    try:
+        saved(run, dict(state, turns=state['turns'] + [now]))
+    except OSError:
+        unsaved(run, state['codespace'], now, 'wake', path(run, '%d.log' % len(state['turns'])))
+    return {'run': run, 'woke': True}
+
+
+def stop(run):
+    lock(run, True)
+    state = saved(run)
+    marked = mark_stopping(run)
+    try:
+        saved(run, dict(state, stopped=True))
+        kept = True
+    except OSError:
+        kept = False
+    failures = shutdown(run, state['turns'], state['codespace'])
+    every_process_ended = not failures
+    for name in os.listdir(STATE):
+        if name.startswith(run + '.') and (name.endswith('.log') or name.endswith('.sup') and every_process_ended):
+            try:
+                os.remove(os.path.join(STATE, name))
+            except OSError:
+                pass
+    if not kept:
+        failures.append(Refused('the driver could not save that it is stopped%s' % (
+                                    '' if marked else ', nor mark it stopping: do not wake it'),
+                                UNWRITABLE + ', then stop it again'))
+    if failures:
+        raise reported('run %s did not stop cleanly' % run, failures, '')
+    return {'run': run, 'stopped': True}
+
+
+def answer(cmd):
+    if cmd == 'version':
+        return VERSION
+    if cmd == 'schema':
+        with open(os.path.join(HERE, 'schema.json')) as f:
+            return json.load(f)
+    if cmd == 'start':
+        return start(fit_for_ssh(no_credentials(read(START)), 'nothing was saved or started', 'start again'))
+    if cmd in ('wake', 'stop'):
+        run = read(RUN)['run']
+        return wake(run) if cmd == 'wake' else stop(run)
+    raise Refused('unknown command', 'run one of: version, schema, start, wake, stop')
+
+
+def main():
+    if len(sys.argv) > 4 and sys.argv[1] == '--turn':
+        return supervise(sys.argv[2], sys.argv[3], sys.argv[4:])
+    try:
+        out, code = answer(sys.argv[1] if len(sys.argv) == 2 else ''), 0
+    except Refused as e:
+        out, code = {'error': e.args[0], 'next': e.args[1]}, 1
+    except Exception as e:
+        out, code = {'error': 'the driver failed: ' + type(e).__name__,
+                     'next': 'read its code and fix it; check `gh codespace list -L 1000` for what is running'}, 1
+    print(json.dumps(out))
+    sys.exit(code)
+
+
+if __name__ == '__main__':
+    main()

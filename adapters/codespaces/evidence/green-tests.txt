@@ -1,0 +1,7 @@
+# Green: test_driver.py on the fixtures
+$ python3 -I adapters/codespaces/test_driver.py
+..........
+----------------------------------------------------------------------
+Ran 10 tests in 11.927s
+
+OK

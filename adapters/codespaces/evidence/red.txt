@@ -1,0 +1,8 @@
+# Red: the kit against adapters/codespaces/driver as copied from adapters/template/, on the fixtures (synthetic gh, tracker in a temp folder), 7892eaf9
+$ python3 -I kernel/driver-kit/kit.py --driver adapters/codespaces/driver --repo example/site --ticket 7 --harness claude --model claude-opus-5-5 --tracker <tmp>/tracker.json --wait 8
+pass version: openwiz:records v1, and the schema is driver v1
+fail start: harness claude is not installed here
+fail wake: not run: start failed
+fail stop: not run: start failed
+pass token: no login or token passed through the driver
+exit 1
