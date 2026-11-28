@@ -21,3 +21,7 @@ rustix.workspace = true
 
 [lints]
 workspace = true
+
+[[bench]]
+name = "tick"
+harness = false
