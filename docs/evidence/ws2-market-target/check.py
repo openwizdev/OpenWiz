@@ -1,4 +1,3 @@
-"""Check that the market handoff contains both precisely sized PNG targets."""
 from pathlib import Path
 import struct
 import unittest
