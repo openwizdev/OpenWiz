@@ -10,10 +10,13 @@ It allows only the row's two lines, and exits 2 on any other command line, inclu
   vibe --prompt <prompt> --output streaming --resume <session> --trust --auto-approve
 <level> is off, low, medium, high, xhigh or max. --thinking and --model are new sessions only.
 --output streaming prints one JSON object per line, and the first one carries sessionId.
-With FAKE_CLI_SIGNED_OUT=1 it prints the missing-key line and exits 1.'''
+With FAKE_CLI_SIGNED_OUT=1 (or not-signed-in) it prints the headless Error: line and exits 1.'''
 LEVELS = ('off', 'low', 'medium', 'high', 'xhigh', 'max')
 SESSION = r'[A-Za-z0-9._:-]{1,100}'
-SIGNED_OUT = 'Missing MISTRAL_API_KEY environment variable for mistral provider'
+SIGNED_OUT = {
+    '1': 'Error: Missing MISTRAL_API_KEY environment variable for mistral provider',
+    'not-signed-in': 'Error: You are not signed in to Mistral. Sign in and retry.',
+}
 
 
 def carries_key(argv):
@@ -80,4 +83,5 @@ if sys.argv[1:] == ['--help']:
 prompt, model, session = parse(sys.argv[1:])
 if session is not None:
     model = model_of(session)
-fake_cli.turn(prompt, model, session, announce, signed_out=SIGNED_OUT)
+signed_out = SIGNED_OUT.get(os.environ.get('FAKE_CLI_SIGNED_OUT'), SIGNED_OUT['1'])
+fake_cli.turn(prompt, model, session, announce, signed_out=signed_out)

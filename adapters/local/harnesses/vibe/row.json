@@ -44,8 +44,8 @@
   "login": "Vibe's own login: vibe --setup saves the key in the OS keyring, or in ~/.vibe/.env when no keyring is available, or you set MISTRAL_API_KEY yourself; the driver never reads or passes it",
   "daemon": "none",
   "signed_out": [
-    "Missing MISTRAL_API_KEY environment variable",
-    "You are not signed in to Mistral"
+    "^Error: Missing MISTRAL_API_KEY environment variable for .+ provider\\.?[ \\t]*$",
+    "^Error: You are not signed in to Mistral\\. Sign in and retry\\.[ \\t]*$"
   ],
   "login_command": "vibe --setup",
   "login_env": "MISTRAL_API_KEY"
