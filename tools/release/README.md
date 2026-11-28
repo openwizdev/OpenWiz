@@ -129,3 +129,17 @@ Before these, `publish` alone reads its own record: a complete publication retur
 ## Prebuilt artifacts
 
 The manual `Packages` workflow builds Apple silicon Mac, Intel Mac and Linux x86_64 archives at the exact source commit, each with its `openwiz.build-products.v1` inventory (`build_products.py`, `package.py`), manifest, `SHA256SUMS` and stable `openwiz-<target>.manifest.json` and `.sha256` aliases. It never publishes. A release must carry all three targets' exact files. The installer side is in `contracts/install.v1.md` and `contracts/setup.v1.md`.
+
+## Pulling a release
+
+```sh
+python3 -I tools/release/pull.py --repo OWNER/NAME --record "$HOT_UPDATE_JSON" \
+  --live-check live-check.yml --threshold "$OWNER_THRESHOLD" --notes-issue "$NOTES_ISSUE"
+python3 -I tools/release/test_pull.py          # the proof, on a fake gh
+```
+
+`pull.py` watches the latest release's signals: the newest completed scheduled run of the `--live-check` workflow since the release shipped, and the public issues labelled `--label` (default `regression`) opened since then. A failed or timed-out newest run is `live-check-failed`; reports reaching `--threshold` are `regression-threshold`. Otherwise it reports the release healthy and changes nothing.
+
+On breakage it asks the grant reader (`grant.py check pull`, [release grant](../../contracts/release-grant.v1.md)). Only when the owner's recorded grant allows pulls does it mark the highest earlier stable release that is not pulled as latest again, rewrite the [release record](../../contracts/hot-update.v1.md#rollback-triggers-and-pulled-releases) with that version as `latest` and the bad one in `pulled` with its `last_good` and reason, and open one fix-forward issue with the evidence. Publishing the rewritten record through the verified update check is the release pipeline's step, not this tool's. Without the grant, as on today's Approval rules, it pulls nothing, leaves one `Needs you` comment on `--notes-issue` (not repeated on later runs) and exits 2.
+
+It never removes a release or a tag, and calls nothing but `gh api`. A release already listed as pulled, or reinstated as a pulled release's `last_good`, is not pulled again automatically; a missing or malformed record, or no good earlier release, stops it with exit 1 before any change.
