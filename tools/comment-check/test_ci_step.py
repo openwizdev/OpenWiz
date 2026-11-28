@@ -6,7 +6,7 @@ import subprocess
 import tempfile
 import unittest
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = ROOT / '.github' / 'workflows' / 'ci.yml'
 STEP = '      - name: The comment check (#1817)'
 CARRIED = ['tools/comment-check/check.py', 'tools/comment-check/test_check.py',

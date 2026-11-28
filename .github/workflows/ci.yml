@@ -212,7 +212,7 @@ jobs:
       - name: The comment check (#1817)
         run: |
           python3 -I tools/comment-check/test_check.py
-          python3 -I docs/evidence/1817/test_ci_step.py
+          python3 -I tools/comment-check/test_ci_step.py
           git fetch --no-tags --depth=2 origin "$GITHUB_SHA"
           python3 -I tools/comment-check/check.py diff --base HEAD^1
       - name: The owned-paths tests
