@@ -1,5 +1,3 @@
-"""Offline schema proofs for the synthetic NY2 snapshots and ping comments."""
-
 import copy
 from datetime import datetime
 import json
