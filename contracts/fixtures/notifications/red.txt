@@ -1,0 +1,6 @@
+test_contract_example_and_channel_gate (__main__.NotificationFixtures.test_contract_example_and_channel_gate) ... FAIL
+test_schema_accepts_and_refuses_each_listed_pair (__main__.NotificationFixtures.test_schema_accepts_and_refuses_each_listed_pair) ... FAIL
+AssertionError: False is not true : notifications.v1.md is missing
+AssertionError: False is not true : notifications.v1.schema.json is missing
+Ran 2 tests
+FAILED (failures=2)
