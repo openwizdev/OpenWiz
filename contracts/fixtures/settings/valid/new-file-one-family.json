@@ -1,0 +1,71 @@
+{
+  "schema": "openwiz.settings.v1",
+  "roles": {
+    "orchestrator": {
+      "harness": "claude-code",
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "account": "work",
+      "fallback": []
+    },
+    "builder": {
+      "harness": "claude-code",
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "account": "work",
+      "fallback": []
+    },
+    "fixer": "follows builder",
+    "reviewer": "waits",
+    "small_builder": "follows builder"
+  },
+  "accounts": {
+    "work": {
+      "harness": "claude-code",
+      "host": "local",
+      "reserved": false
+    }
+  },
+  "hosts": {
+    "home": {
+      "orchestrator": "local",
+      "builder": "local",
+      "reviewer": "local"
+    },
+    "overflow": null,
+    "max_agents": null,
+    "projects": {}
+  },
+  "drivers": {
+    "local": true,
+    "boat": false,
+    "cloudroom": false
+  },
+  "budgets": {},
+  "keys": {
+    "github-app": {
+      "store": "token-service-key",
+      "entry": "service/app/private-key.pem",
+      "opt_in": false,
+      "on": true,
+      "set_at": null
+    },
+    "eval": {
+      "store": "env-file",
+      "entry": "OPENWIZ_EVAL_KEY",
+      "opt_in": true,
+      "on": false,
+      "set_at": null
+    }
+  },
+  "channels": {
+    "t3": true,
+    "slack": false
+  },
+  "telemetry": false,
+  "updates": "ask",
+  "version": 1,
+  "changed_at": "2026-11-28T08:00:00Z",
+  "changed_by": "fill",
+  "history": []
+}

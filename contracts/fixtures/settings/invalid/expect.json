@@ -1,0 +1,81 @@
+{
+  "reviewer-builder-family.json": {
+    "rule": "cross_family",
+    "by": "schema",
+    "at": "$.roles.reviewer.harness",
+    "from": "full.json",
+    "reason": "The Reviewer can't be a Claude model while the Builder is one: reviews must be cross-family (ADR 0008)."
+  },
+  "reviewer-fallback-builder-family.json": {
+    "rule": "cross_family",
+    "by": "schema",
+    "at": "$.roles.reviewer.fallback[1].harness",
+    "from": "full.json"
+  },
+  "reviewer-follows.json": {
+    "rule": "follow",
+    "by": "schema",
+    "at": "$.roles.reviewer",
+    "from": "full.json"
+  },
+  "reserved-in-role.json": {
+    "rule": "reserved_in_role",
+    "by": "rule",
+    "at": "$.roles.builder.account",
+    "from": "full.json"
+  },
+  "reserved-in-fallback.json": {
+    "rule": "reserved_in_fallback",
+    "by": "rule",
+    "at": "$.roles.orchestrator.fallback[0].account",
+    "from": "full.json"
+  },
+  "key-shaped-value.json": {
+    "rule": "key_shaped",
+    "by": "schema",
+    "at": "$.keys.devin.entry",
+    "from": "full.json"
+  },
+  "at-in-label.json": {
+    "rule": "at_in_label",
+    "by": "schema",
+    "at": "$.accounts.work@home",
+    "from": "full.json"
+  },
+  "eleven-history.json": {
+    "rule": "history_over_10",
+    "by": "schema",
+    "at": "$.history: 11 items",
+    "from": "ten-history.json"
+  },
+  "unknown-field.json": {
+    "rule": "unknown_field",
+    "by": "schema",
+    "at": "$.keys.devin.value",
+    "from": "full.json"
+  },
+  "unknown-section.json": {
+    "rule": "unknown_field",
+    "by": "schema",
+    "at": "$.notes",
+    "from": "full.json"
+  },
+  "overflow-for-reviewers.json": {
+    "rule": "overflow_not_builders",
+    "by": "schema",
+    "at": "$.hosts.overflow.serves",
+    "from": "full.json"
+  },
+  "host-driver-off.json": {
+    "rule": "host_on",
+    "by": "rule",
+    "at": "$.hosts.overflow.host",
+    "from": "full.json"
+  },
+  "history-gap.json": {
+    "rule": "history_order",
+    "by": "rule",
+    "at": "$.history",
+    "from": "full.json"
+  }
+}
