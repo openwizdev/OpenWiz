@@ -26,6 +26,12 @@ PHASES = ('PHASE_PENDING', 'PHASE_RUNNING', 'PHASE_WAITING_FOR_INPUT', 'PHASE_ST
 GONE = ('ENVIRONMENT_PHASE_STOPPING', 'ENVIRONMENT_PHASE_STOPPED', 'ENVIRONMENT_PHASE_DELETING',
         'ENVIRONMENT_PHASE_DELETED')
 WOKEN = 'You were woken: read the ticket again and carry on.'
+AMBIGUOUS_START = (
+    'the key helper gave no answer',
+    'the key helper refused: the helper could not reach the host, or its answer was unreadable',
+    'the key helper refused: the host answered more than 1 MiB',
+    "the key helper refused: the host's answer held the key, so the helper did not pass it on",
+)
 
 
 class Refused(Exception):
@@ -146,6 +152,15 @@ def unsure(run, e):
     return Refused('run %s: %s' % (run, e.args[0]), 'run %s may still be active in Ona: %s' % (run, e.args[1]))
 
 
+def run_name(repository, ticket):
+    name = 'OpenWiz: %s#%d' % (repository, ticket)
+    if len(name) <= 100:
+        return name
+    head, tail = 'OpenWiz: ', '#%d' % ticket
+    room = 100 - len(head) - len(tail)
+    return head + repository[:room] + tail if room > 0 else (head + tail)[:100]
+
+
 def answer(cmd):
     if cmd == 'version':
         return VERSION
@@ -166,11 +181,16 @@ def answer(cmd):
         if 'effort' in req:
             if req['effort'] not in EFFORTS:
                 raise Refused('Ona cannot set effort %s for harness codex' % req['effort'], NO_EFFORT)
-            settings['reasoningEffort'] = req['effort']
+            settings['reasoningEffort'] = 'CODEX_REASONING_EFFORT_' + EFFORTS[req['effort']]
         lost = 'look for a new OpenWiz run in Ona, stop it, then retry'
-        status, started = ask(AGENT + 'StartAgent', {
-            'agentId': CODEX, 'codeContext': {'contextUrl': {'url': 'https://github.com/' + req['repository']}},
-            'name': 'OpenWiz: %s#%d' % (req['repository'], req['ticket']), 'codexSettings': settings})
+        try:
+            status, started = ask(AGENT + 'StartAgent', {
+                'agentId': CODEX, 'codeContext': {'contextUrl': {'url': 'https://github.com/' + req['repository']}},
+                'name': run_name(req['repository'], req['ticket']), 'codexSettings': settings})
+        except Refused as e:
+            if e.args[0] in AMBIGUOUS_START:
+                raise Refused(e.args[0], lost)
+            raise
         run = started.get('agentExecutionId') if isinstance(started, dict) else None
         named = isinstance(run, str) and re.fullmatch(RUN['run'], run)
         try:

@@ -16,7 +16,6 @@ UUID = r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 MODELS = ('GPT_5_5', 'GPT_5_4', 'GPT_5_4_MINI', 'GPT_5_3_CODEX', 'GPT_5_3_CODEX_SPARK', 'GPT_5_2', 'GPT_5_6_SOL',
           'GPT_5_6_TERRA', 'GPT_5_6_LUNA', 'GPT_6_ASTRA', 'GPT_6_SOL', 'GPT_6_LUNA', 'GPT_6_1_SOL')
 EFFORTS = ('LOW', 'MEDIUM', 'HIGH', 'EXTRA_HIGH', 'MAX', 'ULTRA')
-WORDS = ('low', 'medium', 'high', 'xhigh', 'max', 'ultra')
 NOTE = '\n'.join(['<!-- openwiz:status v1 -->', 'agent: builder', 'state: working', 'harness: codex', 'model: %s',
                   'skills: %s@0.1.2', 'step: %s', 'time: %s']) + '\n'
 
@@ -63,6 +62,9 @@ class FakeOna:
                             if fault and fault[2]:
                                 host.route(self.path, body_in)
                             code, body = fault[:2] if fault else host.route(self.path, body_in)
+                if code is DROP:
+                    self.close_connection = True
+                    return
                 self.reply(code, body)
 
             def reply(self, code, body):
@@ -130,10 +132,12 @@ class FakeOna:
             if body.get('agentId') != CODEX or not re.fullmatch(r'https://github\.com/[^/]+/[^/]+',
                                                                  context.get('url') or ''):
                 return error(400, 'invalid_argument', 'synthetic: the Codex agent and a context URL are required')
+            if not isinstance(body.get('name'), str) or len(body['name']) > 100:
+                return error(400, 'invalid_argument', 'synthetic: name must be at most 100 characters')
             if set(settings) - {'model', 'reasoningEffort'} or \
                     settings.get('model') not in ['CODEX_OPEN_AI_MODEL_' + m for m in MODELS] or \
-                    settings.get('reasoningEffort', 'medium') not in \
-                    ['CODEX_REASONING_EFFORT_' + e for e in EFFORTS] + list(WORDS):
+                    'reasoningEffort' in settings and settings['reasoningEffort'] not in \
+                    ['CODEX_REASONING_EFFORT_' + e for e in EFFORTS]:
                 return error(400, 'invalid_argument', 'synthetic: codex_settings are not defined values')
             if settings.get('reasoningEffort') in self.refuse_efforts:
                 return error(403, 'permission_denied', 'synthetic: your organization limits reasoning effort')

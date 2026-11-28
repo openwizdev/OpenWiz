@@ -2,7 +2,7 @@
 
 Login: held by Ona
 
-Effort: passed as `reasoningEffort`, for low, medium, high, xhigh, max and ultra; any other effort is refused, and nothing runs. Ona's documented names are `CODEX_REASONING_EFFORT_LOW` and the same form for `MEDIUM`, `HIGH`, `EXTRA_HIGH`, `MAX` and `ULTRA`.
+Effort: passed as `reasoningEffort`, for low (`CODEX_REASONING_EFFORT_LOW`), medium (`CODEX_REASONING_EFFORT_MEDIUM`), high (`CODEX_REASONING_EFFORT_HIGH`), xhigh (`CODEX_REASONING_EFFORT_EXTRA_HIGH`), max (`CODEX_REASONING_EFFORT_MAX`) and ultra (`CODEX_REASONING_EFFORT_ULTRA`); any other effort is refused, and nothing runs.
 
 The key is your `ONA_API_KEY`, or the keychain entry `openwiz-ona`; only the kit's key helper reads it.
 

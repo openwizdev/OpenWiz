@@ -69,6 +69,8 @@ class Driver(unittest.TestCase):
         self.env = dict(os.environ, KIT_TEST=self.mark, OPENWIZ_HOSTKEY_TEST_ORIGIN=self.host.origin)
 
     def tearDown(self):
+        if not os.path.isdir('/proc'):
+            return
         for pid in filter(str.isdigit, os.listdir('/proc')):
             try:
                 with open('/proc/%s/environ' % pid, 'rb') as f:
@@ -160,11 +162,29 @@ class Driver(unittest.TestCase):
         self.assertEqual(self.host.requests, [])
 
     def test_effort_reaches_the_host_as_codex_reasoning_effort(self):
-        for effort in ('low', 'medium', 'high', 'xhigh', 'max', 'ultra'):
+        for effort, value in (('low', 'LOW'), ('medium', 'MEDIUM'), ('high', 'HIGH'),
+                              ('xhigh', 'EXTRA_HIGH'), ('max', 'MAX'), ('ultra', 'ULTRA')):
+            want = 'CODEX_REASONING_EFFORT_' + value
             run = self.started(effort=effort)
             self.assertEqual(self.host.bodies('StartAgent')[-1]['codexSettings'],
-                             {'model': 'CODEX_OPEN_AI_MODEL_GPT_6_1_SOL', 'reasoningEffort': effort})
-            self.assertEqual(self.host.runs[run]['effort'], effort)
+                             {'model': 'CODEX_OPEN_AI_MODEL_GPT_6_1_SOL', 'reasoningEffort': want})
+            self.assertEqual(self.host.runs[run]['effort'], want)
+
+    def test_long_repository_bounds_display_name_and_keeps_full_context_and_prompt(self):
+        repo = 'example/' + 'a' * 82
+        self.started(repository=repo)
+        [start] = self.host.bodies('StartAgent')
+        self.assertLessEqual(len(start['name']), 100)
+        self.assertEqual(start['codeContext'], {'contextUrl': {'url': 'https://github.com/' + repo}})
+        [sent] = self.host.bodies('SendToAgentExecution')
+        self.assertEqual(sent['userInput']['inputs'],
+                         [{'text': {'content': 'Build the ticket: %s#7, with the build-ticket skill.' % repo}}])
+
+    def test_a_dropped_start_connection_directs_the_user_to_check_ona_before_retrying(self):
+        self.host.faults = {'StartAgent': (fake.DROP, None, True)}
+        code, out = self.driver('start', START)
+        self.assertEqual((code, out['next']), (1, 'look for a new OpenWiz run in Ona, stop it, then retry'))
+        self.assertEqual((len(self.host.runs), self.host.calls()), (1, [AGENT + 'StartAgent']))
 
     def test_no_effort_sends_none(self):
         self.started()
@@ -178,7 +198,7 @@ class Driver(unittest.TestCase):
         self.assertEqual(self.host.requests, [])
 
     def test_a_refused_start_sends_nothing_more(self):
-        self.use(refuse_efforts=('ultra',))
+        self.use(refuse_efforts=('CODEX_REASONING_EFFORT_ULTRA',))
         code, out = self.driver('start', dict(START, effort='ultra'))
         self.assertEqual((code, out), (1, {'error': 'Ona answered 403 to POST %sStartAgent' % AGENT,
                                            'next': "check your key and Ona's status, then retry"}))
