@@ -2,7 +2,7 @@
 
 Login: held by Cursor
 
-Effort: the host can't set it (the driver uses the Cloud Agents API's model ID and sends no separate effort setting). A start that carries `effort` is refused before contacting Cursor.
+Effort: passed as the `value` of the model's effort parameter in `model.params` on `POST /v1/agents`.
 
 - The key is your own `CURSOR_API_KEY`, or the keychain entry `openwiz-cursor-cloud` when that variable is unset.
 - OpenWiz never stores it. Removing it from your environment or keychain only stops OpenWiz using it here; the key stays valid at Cursor until you revoke it in Cursor's dashboard (API Keys). If it may have leaked, revoke it there.
@@ -23,7 +23,7 @@ Every Cursor call goes through the kit's key helper, [`hostkey.py`](../../kernel
 
 **Never two agents, never one left running.** Cursor runs one run per agent at a time, so a wake during an active run starts nothing. The driver saves the agent's id before it creates the agent, so a stop always reaches it. A wake, a stop and a start hold the run's lock, so they take turns. A stop marks the run stopped before it calls Cursor. If it can't save that, it still cancels and archives the agent, and a later wake is refused because Cursor shows the agent archived.
 
-`version` adds `many-at-once` and `own-sandbox` to `can`: every run is its own agent on its own machine.
+`version` adds `many-at-once`, `own-sandbox` and `effort` to `can`. When you set effort, the driver checks the model or alias in Cursor's `GET /v1/models` catalog for an `effort`, `reasoning` or `reasoning_effort` parameter that accepts your exact word. Unsupported selections are refused before an agent is created. Omit effort to use the model's default. [Cursor Cloud Agents API reference](https://cursor.com/docs/cloud-agent/api/endpoints).
 
 ## Before the first run (yours to do)
 
