@@ -112,7 +112,9 @@ fn bounded(state: &str) -> String {
 
 fn tail(text: &str) -> &str {
     let skip = text.chars().count().saturating_sub(TAIL_CHARS);
-    text.char_indices().nth(skip).map_or(text, |(at, _)| &text[at..])
+    text.char_indices()
+        .nth(skip)
+        .map_or(text, |(at, _)| &text[at..])
 }
 
 pub fn noul(response: &Value, name: &str) -> Option<f64> {
