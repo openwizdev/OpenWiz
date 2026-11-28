@@ -1,0 +1,17 @@
+# Neighbour suites at the N4 port (#1994), same 33 stubs and from-scratch environment; each compared with untouched origin/main (f4480544) in this sandbox.
+# Failing test names are identical on main and here (only the checkout path differs), so none comes from this change.
+main adapters/boat/test_driver.py: FAILED (errors=39) 39 failing
+main adapters/template/test_driver.py: FAILED (failures=2) 2 failing
+main adapters/local/test_driver.py: FAILED (failures=3) 3 failing
+head adapters/boat/test_driver.py: FAILED (errors=39) 39 failing
+head adapters/template/test_driver.py: FAILED (failures=2) 2 failing
+head adapters/local/test_driver.py: FAILED (failures=3) 3 failing
+head kernel/driver-kit/test_kit.py: FAILED (failures=12) 12 failing
+== adapters_boat_test_driver.py: SAME
+== adapters_local_test_driver.py: SAME
+== adapters_template_test_driver.py: SAME
+== kernel_driver-kit_test_kit.py: SAME (the names differ only by the checkout path)
+head kernel/driver-kit/test_hostkey.py: OK
+head adapters/devin/test_driver.py: OK
+head adapters/cloudroom/test_driver.py: OK
+head adapters/openclaw/test_driver.py: OK
