@@ -1,5 +1,3 @@
-"""Offline proofs for the launch post form and command-line checker."""
-
 import json
 from pathlib import Path
 import re
@@ -30,8 +28,7 @@ def post(body=CLAIM, **overrides):
         "claims": [CLAIM],
         **overrides,
     }
-    # The string and string-array literals used here are valid TOML as well as JSON.
-    metadata = "\n".join(f"{key} = {json.dumps(value)}" for key, value in fields.items())
+    metadata = "\n".join(f"{key} = {json.dumps(value, ensure_ascii=False)}" for key, value in fields.items())
     return f"+++\n{metadata}\n+++\n\n{body}\n"
 
 
@@ -119,10 +116,12 @@ class LaunchPostTests(unittest.TestCase):
         self.assert_refused(post(f"{CLAIM}\n\n[demo]: https://elsewhere.example/"), "link-destination")
         self.assert_refused(post(f"{CLAIM} <https://elsewhere.example/>"), "link-destination")
         self.assert_refused(post(f"{CLAIM} See www.elsewhere.example."), "link-destination")
+        self.assert_refused(post(f"{CLAIM} See elsewhere.example/path."), "link-destination")
         self.assert_refused(post(f"{CLAIM} [Demo](/unresolved)"), "link-destination")
         self.assert_refused(post(title="Show HN: https://elsewhere.example/"), "link-destination")
         self.assert_refused(post(media=["https://elsewhere.example/demo.mp4"]), "link-destination")
         self.assert_refused(post(status="posted", posted_link="https://elsewhere.example/"), "link-destination")
+        self.assert_accepted(post(f"{CLAIM} Read `README.md` at openwiz.dev."))
 
     def test_changelog_must_support_each_declared_claim_in_the_copy(self):
         self.assert_accepted(post(f"[Demo](https://openwiz.dev/)\n\n{CLAIM}"))
@@ -179,7 +178,7 @@ class LaunchPostTests(unittest.TestCase):
             self.write(f"example-{i}.md", example)
         result = self.check()
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("9", result.stdout)
+        self.assertEqual(result.stdout, "Checked 9 launch post(s).\n")
 
 
 if __name__ == "__main__":
