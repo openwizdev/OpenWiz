@@ -488,6 +488,46 @@ Delete its private key in GitHub's App settings if rotating it. Remove the local
 not revoke already minted tokens. Then remove `<state>/tokens/`, the refresh
 helper's cache.
 
+## PR opener (stopgap)
+
+Until the owner's token service is live, `.github/workflows/pr-opener.yml` opens
+a pull request against `main` as `openwiz[bot]` from `main`'s own workflow file.
+Only `main`'s copy of the workflow may ever read the App's key: the workflow
+triggers on `workflow_dispatch` only, its `open-pr` job runs in the
+`app-pr-opener` environment, refuses any ref other than `refs/heads/main`, and
+never checks out or executes code from the requested branch.
+
+### Owner setup
+
+Perform these steps on your own GitHub login in **Settings → Environments**:
+
+1. Create an environment named `app-pr-opener`.
+2. Under **Deployment branches and tags**, choose **Selected branches and tags**
+   and add a branch rule for `main` only.
+3. Add `OPENWIZ_GITHUB_APP_KEY` (the App's PEM private key, base64-encoded on
+   one line) as an **environment secret** in `app-pr-opener`. Never store it as
+   a repository secret.
+4. Add `OPENWIZ_GITHUB_APP_ID` (the App's public numeric ID) as an **environment
+   variable** in `app-pr-opener`.
+
+### Usage
+
+Agents dispatch the workflow against `main`, passing untrusted inputs as JSON on
+stdin with `--json` (`head` must match `room/**` and already exist):
+
+```sh
+gh workflow run pr-opener.yml --ref main --json <<'EOF'
+{"head":"room/example-branch","title":"#1234: example title","body":"Closes #1234\n","draft":"false"}
+EOF
+```
+
+`tools/github-app/pr-opener.py` signs the App JWT with `/usr/bin/openssl` over a
+pipe descriptor, mints an installation token scoped to this one repository with
+`pull_requests: write`, `contents: read` and `metadata: read`, verifies GitHub
+granted that exact scope, leaves any existing open pull request for `head`
+alone, records only the pull request number in the job summary, and revokes the
+token (`DELETE /installation/token`) before exit on both success and failure.
+
 ## Fixture proof
 
 ```sh

@@ -291,6 +291,31 @@ def jwt(directory, app_id):
         os.close(fd)
 
 
+def jwt_from_pem(key_pem, app_id):
+    require(type(app_id) is int and app_id > 0)
+    require(isinstance(key_pem, bytes) and 0 < len(key_pem) <= 16384 and key_pem.startswith(b"-----BEGIN "))
+    now = int(time.time())
+    header = encode(b'{"alg":"RS256","typ":"JWT"}')
+    payload = encode(json.dumps({"iat": now - 60, "exp": now + 540,
+                                 "iss": str(app_id)}, separators=(",", ":")).encode())
+    message = header + b"." + payload
+    read_fd, write_fd = os.pipe()
+    try:
+        view = memoryview(key_pem)
+        written = 0
+        while written < len(view):
+            written += os.write(write_fd, view[written:])
+        os.close(write_fd)
+        write_fd = None
+        signature = openssl(["dgst", "-sha256", "-sign", f"/dev/fd/{read_fd}"],
+                            message, pass_fds=(read_fd,))
+    finally:
+        os.close(read_fd)
+        if write_fd is not None:
+            os.close(write_fd)
+    return (message + b"." + encode(signature)).decode("ascii")
+
+
 def positive_id(value):
     require(re.fullmatch(r"[1-9][0-9]*", value) is not None)
     return value
