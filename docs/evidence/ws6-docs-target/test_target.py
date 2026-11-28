@@ -1,4 +1,3 @@
-"""Check the design handoff without a network or image library."""
 import re
 import struct
 import unittest
