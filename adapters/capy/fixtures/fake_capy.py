@@ -151,7 +151,7 @@ class FakeCapy:
     def route(self, method, target, body):
         path = target.partition('?')[0]
         for m, pattern, code, reply in self.answers:
-            if m == method and re.fullmatch(pattern, path):
+            if m == method and re.fullmatch(pattern, target if '?' in pattern else path):
                 return code, reply
         if method == 'GET' and path == '/api/v1/projects':
             return 200, {'items': self.projects}
@@ -180,7 +180,7 @@ class FakeCapy:
             t = self.by_request.get(body['requestId'])
             if t is None:
                 t = {'id': 'jam_01SYNTHETIC%013d' % len(self.threads), 'create': body, 'status': 'working',
-                     'archived': False, 'messages': [], 'interrupts': 0, 'note': None, 'events': 0}
+                     'archived': False, 'messages': [], 'by_key': {}, 'interrupts': 0, 'note': None, 'events': 0}
                 self.threads[t['id']] = self.by_request[body['requestId']] = t
                 self._note(t, 'started the throwaway ticket')
             if self.lose_creates:
@@ -201,10 +201,16 @@ class FakeCapy:
         if method == 'POST' and m and m.group(2) == '/message':
             if not isinstance(body, dict) or set(body) - SEND or not isinstance(body.get('text'), str):
                 return 400, tag('InvalidRequest', message='synthetic: not a SendMessageRequest')
+            key = body.get('clientKey')
+            if isinstance(key, str) and key in t['by_key']:
+                return 200, {'id': t['by_key'][key], 'deduped': True}
+            receipt = self._receipt(t)
+            if isinstance(key, str):
+                t['by_key'][key] = receipt['id']
             t['messages'].append(body)
             t['archived'], t['status'] = False, 'working'
             self._note(t, 'woke and read the ticket again')
-            return 200, self._receipt(t)
+            return 200, receipt
         if method == 'POST' and m and m.group(2) == '/interrupt':
             t['interrupts'] += 1
             t['status'] = 'idle'
