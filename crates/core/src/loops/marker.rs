@@ -1,11 +1,20 @@
-#[cfg(test)]
-fn marker(_: &str) -> String {
-    String::new()
+pub fn is_id(s: &str) -> bool {
+    let b = s.as_bytes();
+    (1..=64).contains(&b.len())
+        && (b[0].is_ascii_lowercase() || b[0].is_ascii_digit())
+        && b.iter()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || *c == b'-')
 }
 
-#[cfg(test)]
-fn split_marker(_: &str) -> Option<(&str, &str)> {
-    None
+pub fn marker(id: &str) -> String {
+    format!("[wizloop:{id}]")
+}
+
+pub fn split_marker(name: &str) -> Option<(&str, &str)> {
+    let rest = name.strip_suffix(']')?;
+    let at = rest.rfind(" [wizloop:")?;
+    let id = &rest[at + " [wizloop:".len()..];
+    is_id(id).then_some((id, &name[..at]))
 }
 
 #[cfg(test)]
