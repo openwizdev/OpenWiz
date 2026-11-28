@@ -1,0 +1,24 @@
+Fixture checks after merging main at 343bcbbbcfce018bf698e47bddeb084d84956c33.
+All suites and the kit ran behind 35 refusing agent CLI stubs with OPENWIZ_GITHUB_APP_KEY unset.
+
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/capy/test_driver.py
+15/15 passed.
+
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_kit.py
+26/26 passed.
+
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/driver-kit/test_hostkey.py
+25/25 passed.
+
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I tools/release/test_product_identity.py
+25/25 passed.
+
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I tools/release/test_package.py Package.test_runtime_carries_exactly_the_selected_drivers_and_kit_where_the_caller_finds_them
+1/1 passed.
+
+Standalone driver kit on fake Capy with CAPY_PROJECT_ID=project_synthetic1:
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 2
+pass wake: the run edited builder status note 2
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver, and on start, wake and stop the capy key reached its host only from the key helper, in its header

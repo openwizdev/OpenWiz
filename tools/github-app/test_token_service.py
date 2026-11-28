@@ -73,6 +73,42 @@ AUDIT = ("import json, os, stat, sys\n"
          "sys.addaudithook(hook)\n") + CLOCK
 
 
+SYNC = ("import errno, fcntl, json, os, sys\n"
+        "fault, log, seen = (os.environ[k] for k in ('SYNC_FAULT', 'SYNC_LOG', 'SYNC_SEEN'))\n"
+        "clock = sys.argv[1]\n"
+        "real_fsync, real_write = os.fsync, os.write\n"
+        "def ours(fd):\n"
+        "    try:\n"
+        "        held, path = os.fstat(fd), os.stat(log)\n"
+        "    except OSError:\n"
+        "        return False\n"
+        "    return (held.st_dev, held.st_ino) == (path.st_dev, path.st_ino)\n"
+        "def fsync(fd):\n"
+        "    if ours(fd):\n"
+        "        if fault == 'fail':\n"
+        "            raise OSError(errno.EIO, 'synthetic sync failure')\n"
+        "        probe = os.open(log, os.O_RDONLY)\n"
+        "        try:\n"
+        "            fcntl.flock(probe, fcntl.LOCK_EX | fcntl.LOCK_NB)\n"
+        "            held = False\n"
+        "        except BlockingIOError:\n"
+        "            held = True\n"
+        "        finally:\n"
+        "            os.close(probe)\n"
+        "        with open(log) as text, open(seen, 'a') as out:\n"
+        "            out.write(json.dumps([held, text.read()]) + '\\n')\n"
+        "        with open(clock) as now, open(clock + '.next', 'w') as later:\n"
+        "            later.write(str(float(now.read()) + 12))\n"
+        "        os.replace(clock + '.next', clock)\n"
+        "    return real_fsync(fd)\n"
+        "def write(fd, data):\n"
+        "    if fault == 'short' and ours(fd) and b'\"expiry\"' in data:\n"
+        "        return real_write(fd, data[:len(data) // 2])\n"
+        "    return real_write(fd, data)\n"
+        "os.fsync, os.write = fsync, write\n") + CLOCK
+EXPIRY = next(case for case in REQUESTS["cases"] if case.get("github") == "expiry")
+
+
 def revoked(calls):
     return [c[2] for c in calls if c[:2] == ("DELETE", "/installation/token")]
 
@@ -164,12 +200,14 @@ class ServiceFixture(unittest.TestCase):
         return subprocess.run(["python3", "-I", str(SERVICE), command, "--state-dir", str(self.state)],
                               capture_output=True, text=True, timeout=60, env=dict(os.environ, **(env or {})))
 
-    def mint(self, endpoint, request, env=None, audit=None):
+    def mint(self, endpoint, request, env=None, audit=None, script=None):
         text = request if isinstance(request, str) else json.dumps(request)
         self.clock.write_text(str(NOW))
         environment = {k: v for k, v in os.environ.items() if k != "OPENWIZ_GITHUB_APP_MODE"}
         environment["OPENWIZ_SYNTHETIC_GITHUB"] = "1"
-        return subprocess.run(["python3", "-I", "-c", AUDIT if audit else CLOCK, *([str(audit)] if audit else []),
+        program = script or (AUDIT if audit else CLOCK)
+        prefix = [str(audit)] if audit else []
+        return subprocess.run(["python3", "-I", "-c", program, *prefix,
                                str(self.clock), str(SERVICE), "mint",
                                "--state-dir", str(self.state), "--api-base", endpoint],
                               input=text, capture_output=True, text=True, timeout=60,
@@ -267,6 +305,46 @@ class RequestFixtureTests(ServiceFixture):
             self.assertEqual(self.logged()[-1]["outcome"], "expiry")
             fake["expires_at"] = NOW + 15 + 311
             self.assertEqual(self.mint(url, SMALL).returncode, 0)
+
+    def sync_mint(self, url, fault, request):
+        seen = Path(self.tmp.name) / "seen"
+        seen.unlink(missing_ok=True)
+        done = self.mint(url, request, script=SYNC,
+                         env={"SYNC_FAULT": fault, "SYNC_LOG": str(self.log), "SYNC_SEEN": str(seen)})
+        return done, [json.loads(line) for line in seen.read_text().splitlines()] if seen.exists() else []
+
+    def test_a_sync_after_the_append_that_uses_up_the_allowance_leaves_one_expiry_line(self):
+        with fake_github(self.pem, REQUESTS["installed"]) as (url, calls, fake):
+            fake["expires_at"] = NOW + 311
+            done, seen = self.sync_mint(url, "slow", EXPIRY["request"])
+            self.assertEqual((done.returncode, json.loads(done.stdout)), (5, EXPIRY["out"]["message"]))
+            self.assertEqual([json.loads(text)["outcome"] for text in seen[0][1].splitlines()], ["minted"])
+            self.assertEqual([held for held, _ in seen], [True, True], "the log stays locked until its last sync")
+            self.assertEqual(self.logged(), [EXPIRY["out"]["log"]])
+            self.assert_valid(self.logged()[0])
+            self.assertEqual(revoked(calls), ["Bearer synthetic-token"])
+            fake["expires_at"] = NOW + 360
+            done, _seen = self.sync_mint(url, "slow", EXPIRY["request"])
+            self.assertEqual(done.returncode, 0)
+            self.assertEqual([line["outcome"] for line in self.logged()], ["expiry", "minted"])
+            self.assertEqual(revoked(calls), ["Bearer synthetic-token"])
+
+    def test_a_failed_audit_sync_revokes_the_minted_token_and_leaves_no_line(self):
+        with fake_github(self.pem, REQUESTS["installed"]) as (url, calls, _fake):
+            done, _seen = self.sync_mint(url, "fail", EXPIRY["request"])
+            self.assertEqual((done.returncode, json.loads(done.stdout).get("refusal")), (1, "unavailable"))
+            self.assertEqual(revoked(calls), ["Bearer synthetic-token"])
+            self.assertEqual(self.log.read_text(), "")
+            self.assert_nothing_exposed("synthetic-token", done.stdout, done.stderr)
+
+    def test_a_short_write_of_the_expiry_line_leaves_one_valid_unavailable_line(self):
+        with fake_github(self.pem, REQUESTS["installed"]) as (url, calls, fake):
+            fake["expires_at"] = NOW + 311
+            done, _seen = self.sync_mint(url, "short", EXPIRY["request"])
+            self.assertEqual((done.returncode, json.loads(done.stdout).get("refusal")), (1, "unavailable"))
+            self.assertEqual(self.logged(), [dict(EXPIRY["out"]["log"], outcome="unavailable")])
+            self.assert_valid(self.logged()[0])
+            self.assertEqual(revoked(calls), ["Bearer synthetic-token"])
 
 
 class SealingTests(ServiceFixture):

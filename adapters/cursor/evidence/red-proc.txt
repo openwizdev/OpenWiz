@@ -1,0 +1,17 @@
+# Red run: with /proc hidden, a live fake agent looks dead.
+# Command: python3 -I adapters/cursor/test_driver.py Cursor.test_a_live_fake_agent_is_seen_when_proc_is_missing
+# Paths in the traceback read <repo>.
+test_a_live_fake_agent_is_seen_when_proc_is_missing (__main__.Cursor.test_a_live_fake_agent_is_seen_when_proc_is_missing) ... FAIL
+
+======================================================================
+FAIL: test_a_live_fake_agent_is_seen_when_proc_is_missing (__main__.Cursor.test_a_live_fake_agent_is_seen_when_proc_is_missing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/cursor/test_driver.py", line 277, in test_a_live_fake_agent_is_seen_when_proc_is_missing
+    self.assertTrue(alive(pid), 'a live agent looks dead without /proc')
+AssertionError: False is not true : a live agent looks dead without /proc
+
+----------------------------------------------------------------------
+Ran 1 test in 0.158s
+
+FAILED (failures=1)

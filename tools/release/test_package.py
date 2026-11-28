@@ -144,6 +144,8 @@ class Package(unittest.TestCase):
                    'adapters/devin/fixtures/kit-host.json': (ROOT / 'adapters/devin/fixtures/kit-host.json').read_bytes(),
                    'adapters/boat/driver': (ROOT / 'adapters/template/driver').read_bytes(),
                    'adapters/boat/schema.json': (ROOT / 'adapters/template/schema.json').read_bytes(),
+                   'adapters/cloudroom/driver': (ROOT / 'adapters/cloudroom/driver').read_bytes(),
+                   'adapters/cloudroom/schema.json': (ROOT / 'adapters/cloudroom/schema.json').read_bytes(),
                    'adapters/local/driver': b'#!/usr/bin/env python3\nprint("synthetic local driver")\n',
                    'adapters/local/schema.json': b'{"synthetic": "local schema"}\n',
                    'adapters/made-up/driver': b'#!/usr/bin/env python3\nprint("synthetic new driver")\n',
@@ -156,7 +158,8 @@ class Package(unittest.TestCase):
                 'kernel/driver-kit/README.md', 'kernel/driver-kit/test_kit.py',
                 'kernel/driver-kit/fixtures/fake-harness', 'kernel/records-kit/test_check.py',
                 'kernel/records/backfill.md')
-        releases = {'adapters/boat/release.json': [], 'adapters/local/release.json': [],
+        releases = {'adapters/boat/release.json': [], 'adapters/cloudroom/release.json': [],
+                    'adapters/local/release.json': [],
                     'adapters/devin/release.json': ['README.md', 'fixtures/kit-host.json'],
                     'adapters/made-up/release.json': ['fixtures/deep/host.json'],
                     'adapters/boat/fixtures/release.json': []}
@@ -170,13 +173,8 @@ class Package(unittest.TestCase):
                                *((path, b'synthetic, never carried\n') for path in left)]:
                 (root / path).parent.mkdir(parents=True, exist_ok=True)
                 (root / path).write_bytes(data)
-            # A driver on disk that the source commit doesn't track is never carried.
             source = commit(root, 'skills', 'tools', 'kernel', *(p for p in [*carried, *listed, *left]
-                                                                 if p.startswith('adapters/') and '/cloudroom/' not in p))
-            (root / 'adapters/cloudroom').mkdir()
-            (root / 'adapters/cloudroom/driver').write_bytes(b'untracked synthetic driver\n')
-            (root / 'adapters/cloudroom/schema.json').write_bytes(b'{}\n')
-            (root / 'adapters/cloudroom/release.json').write_bytes(b'{"extra_files": []}\n')
+                                                                 if p.startswith('adapters/')))
             target = TARGETS[0]
             (root / 'job').mkdir()
             (root / 'tracker.json').write_text(json.dumps({'record_authors': ['synthetic-author'], 'comments': []}))
@@ -231,6 +229,28 @@ class Package(unittest.TestCase):
             self.assertEqual(keyed.stdout.splitlines()[-1:], [
                 'pass token: no login or token passed through the driver, and on start, wake and stop the devin key '
                 'reached its host only from the key helper, in its header'], keyed.stderr)
+
+    def test_an_untracked_selected_host_is_never_carried(self):
+        tracked = {'adapters/local/driver': b'#!/usr/bin/env python3\nprint("synthetic local driver")\n',
+                   'adapters/local/schema.json': b'{"synthetic": "local schema"}\n'}
+        with tempfile.TemporaryDirectory(prefix='openwiz-untracked-host-') as temporary:
+            root = Path(temporary)
+            runtime_root(self, root)
+            for path, data in tracked.items():
+                (root / path).parent.mkdir(parents=True, exist_ok=True)
+                (root / path).write_bytes(data)
+            (root / 'adapters/local/release.json').write_bytes(b'{"extra_files": []}\n')
+            source = commit(root, 'skills', 'tools', 'adapters/local')
+            room = root / 'adapters/cloudroom'
+            room.mkdir()
+            (room / 'driver').write_bytes(b'untracked synthetic driver\n')
+            (room / 'schema.json').write_bytes(b'{}\n')
+            (room / 'release.json').write_bytes(b'{"extra_files": []}\n')
+            result, output = collected(root, source)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            assets = {row['path'] for row in json.loads(Path(str(output) + '.json').read_bytes())['assets']}
+            self.assertEqual(sorted(p for p in assets if p.startswith('runtime/adapters/')),
+                             sorted('runtime/' + path for path in tracked))
 
     def test_every_driver_shipped_before_its_folder_decided_still_ships_the_same_files(self):
         hosts = ('boat', 'cloudroom', 'devin', 'factory', 'hermes', 'local', 'openclaw')

@@ -19,7 +19,9 @@ and never a token. mint-token.py stays byte-identical to the copy WizSkills'
 launch-fleet carries: this tool uses the same guards from app.py.
 """
 import base64
+import contextlib
 from datetime import datetime
+import fcntl
 import json
 import os
 from pathlib import Path
@@ -197,7 +199,7 @@ def mint(api, request, setting):
     except Refused:
         app.revoke(api["base"], token)
         raise
-    return sealed, expires_at
+    return sealed, expires_at, token
 
 
 def fresh(expires_at):
@@ -207,10 +209,11 @@ def fresh(expires_at):
 def serve(api, log, data, setting):
     now = time.time()
     line = {"schema": SCHEMA, "kind": "mint-log", "at": int(now), "requester": "-"}
+    token = None
     try:
         request = request_of(data)
         line.update(requester=request["requester"], repositories=request["repositories"])
-        sealed, expires_at = mint(api, request, setting)
+        sealed, expires_at, token = mint(api, request, setting)
         line.update(permissions=request["permissions"], outcome="minted", expires_at=expires_at)
         message = {"schema": SCHEMA, "kind": "answer", "sealed_token": sealed, "expires_at": expires_at,
                    "repositories": request["repositories"], "permissions": request["permissions"]}
@@ -220,10 +223,47 @@ def serve(api, log, data, setting):
     except Exception:
         line["outcome"] = "unavailable"
         message = refusal("unavailable")
+    try:
+        fcntl.flock(log, fcntl.LOCK_EX)
+        try:
+            message = audit(log, line, message)
+        finally:
+            with contextlib.suppress(OSError):
+                fcntl.flock(log, fcntl.LOCK_UN)
+    except Exception:
+        message = refusal("unavailable")
+    if token is not None and message["kind"] == "refusal":
+        app.revoke(api["base"], token)
+    return message, REFUSALS[message["refusal"]][0] if message["kind"] == "refusal" else 0
+
+
+def audit(log, line, message):
+    start = os.lseek(log, 0, os.SEEK_END)
+    try:
+        record(log, start, line)
+        if message["kind"] == "answer" and not fresh(message["expires_at"]):
+            message = refusal("expiry")
+            record(log, start, refused_line(line, "expiry"))
+    except Exception:
+        message = refusal("unavailable")
+        try:
+            record(log, start, refused_line(line, "unavailable"))
+        except Exception:
+            with contextlib.suppress(OSError):
+                os.ftruncate(log, start)
+    return message
+
+
+def record(log, start, line):
     entry = (json.dumps(line) + "\n").encode()
+    os.ftruncate(log, start)
     app.require(os.write(log, entry) == len(entry))
     os.fsync(log)
-    return message, REFUSALS[message["refusal"]][0] if message["kind"] == "refusal" else 0
+
+
+def refused_line(line, code):
+    kept = {key: value for key, value in line.items() if key not in ("permissions", "expires_at")}
+    return dict(kept, outcome=code)
 
 
 def refusal(code):
