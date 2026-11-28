@@ -73,6 +73,20 @@ The fresh builder for the review-loops contract's one fresh round, of the origin
 
 Source: Jake, 2026-11-15 (J119; [private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6906276883)).
 
+## Roster
+
+Who may take which role in OpenWiz's fleet, under the [roster contract](../../contracts/roster.v1.md). launch-fleet picks the first row, in table order, whose Roles hold the start's role; a harness row only for its own harness. So the Models table's choices start as today: Claude Code and Codex, on Cloudroom. The host rows are for any other harness. A bot gets a row only once its KN7, KN8 or KN9 run has passed; none has yet.
+
+| Name | Kind | Driver | Roles | Writes as |
+| --- | --- | --- | --- | --- |
+| Claude Code | harness | cloudroom | orchestrator, builder, reviewer, helper | jparker2006's App |
+| Codex | harness | cloudroom | orchestrator, builder, reviewer, helper | jparker2006's App |
+| Cloudroom | host | cloudroom | orchestrator, builder, reviewer, helper | jparker2006's App |
+| Own computer | host | local | orchestrator, builder, reviewer, helper | jparker2006's App |
+| boat.dev | host | boat | orchestrator, builder, reviewer, helper | jparker2006's App |
+
+Source: ticket KN23 (#1856), from Jake's roster decision B4, 2026-11-20 ([private record](https://github.com/jparker2006/ClosedWiz/issues/3065#issuecomment-7035747833)).
+
 ## Loop
 
 How `launch-fleet` is woken; the loop and webhook identities stay in private orchestration state.
