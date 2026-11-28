@@ -67,7 +67,7 @@ def registry(path=REGISTRY):
     try:
         with open(path, 'rb') as f:
             hosts = json.loads(f.read().decode('utf-8'), object_pairs_hook=_unique, parse_constant=_no_constant)
-    except (OSError, ValueError, Refused):
+    except (OSError, ValueError, RecursionError, Refused):
         raise bad
     if not isinstance(hosts, dict) or not hosts:
         raise bad
@@ -116,7 +116,7 @@ def _escapes_ok(path):
 def read_request(text, hosts):
     try:
         req = json.loads(text, object_pairs_hook=_unique, parse_constant=_no_constant)
-    except ValueError:
+    except (ValueError, RecursionError):
         raise Refused('the input is not one JSON object', SCHEMA)
     if not isinstance(req, dict) or not {'host', 'method', 'path'} <= set(req) <= {'host', 'method', 'path', 'body'}:
         raise Refused('the input needs exactly host, method, path and an optional body', SCHEMA)
@@ -184,7 +184,7 @@ def fetch_test_key(origin):
         raise Refused(UNREACHABLE, 'check your network and the host\'s status, then retry')
     try:
         value = json.loads(raw.decode('utf-8'), parse_constant=_no_constant) if status == 200 else None
-    except ValueError:
+    except (ValueError, RecursionError):
         return ''
     if not isinstance(value, dict) or set(value) != {'key'} or not isinstance(value['key'], str):
         return ''
@@ -215,10 +215,10 @@ def send(origin, method, path, body, key):
     host, _, port = hostport.partition(':')
     headers = {'Authorization': 'Bearer ' + key, 'Accept': 'application/json', 'User-Agent': 'openwiz-hostkey/1'}
     data = None
-    if body is not None:
-        data = json.dumps(body, allow_nan=False).encode('utf-8')
-        headers['Content-Type'] = 'application/json'
     try:
+        if body is not None:
+            data = json.dumps(body, allow_nan=False).encode('utf-8')
+            headers['Content-Type'] = 'application/json'
         if scheme == 'https':
             scrub_tls_environment()
             conn = http.client.HTTPSConnection(host, int(port or 443), timeout=60,
@@ -234,7 +234,7 @@ def send(origin, method, path, body, key):
     except ssl.SSLError:
         raise Refused('TLS verification of the host failed', 'check the host\'s address and your system\'s '
                       'certificates; the helper trusts only the system defaults')
-    except (OSError, http.client.HTTPException, ValueError):
+    except (OSError, http.client.HTTPException, ValueError, RecursionError):
         raise Refused(UNREACHABLE,
                       'check your network and the host\'s status, then retry')
     if len(raw) > LIMIT:
@@ -258,7 +258,7 @@ def answer(status, raw, key):
     try:
         body = json.loads(raw.decode('utf-8'), parse_constant=_no_constant) if raw else None
         json.dumps(body, allow_nan=False)
-    except ValueError:
+    except (ValueError, RecursionError):
         body = None
     if key.encode('utf-8') in raw or any(key in s for s in _strings(body)):
         raise Refused('the host\'s answer held the key, so the helper did not pass it on',
@@ -269,7 +269,11 @@ def answer(status, raw, key):
 def screen(req, key):
     sent = [req['path'], urllib.parse.unquote(req['path'])]
     if 'body' in req:
-        sent += [json.dumps(req['body'], allow_nan=False)] + list(_strings(req['body']))
+        try:
+            dumped = json.dumps(req['body'], allow_nan=False)
+        except (ValueError, RecursionError):
+            raise Refused('the input is not one JSON object', SCHEMA)
+        sent += [dumped] + list(_strings(req['body']))
     if any(key in text for text in sent):
         raise Refused('the request holds the key, so the helper did not send it',
                       'send the request without the key; the helper adds it to the header itself')

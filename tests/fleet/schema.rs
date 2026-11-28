@@ -12,26 +12,29 @@ pub const SCHEMA_PATH: &str = concat!(
     "/../contracts/fleet.v1.schema.json"
 );
 
-const KNOWN_KEYWORDS: &[&str] = &[
-    "$schema",
-    "$id",
-    "$defs",
-    "$ref",
-    "title",
-    "description",
-    "type",
-    "required",
-    "properties",
-    "additionalProperties",
-    "items",
-    "enum",
-    "const",
-    "oneOf",
-    "minimum",
-    "minLength",
-    "maxLength",
-    "pattern",
-];
+fn is_known_keyword(key: &str) -> bool {
+    matches!(
+        key,
+        "$schema"
+            | "$id"
+            | "$defs"
+            | "$ref"
+            | "title"
+            | "description"
+            | "type"
+            | "required"
+            | "properties"
+            | "additionalProperties"
+            | "items"
+            | "enum"
+            | "const"
+            | "oneOf"
+            | "minimum"
+            | "minLength"
+            | "maxLength"
+            | "pattern"
+    )
+}
 
 pub fn load_schema() -> Value {
     let text = std::fs::read_to_string(SCHEMA_PATH).expect("the fleet schema is readable");
@@ -40,23 +43,26 @@ pub fn load_schema() -> Value {
 
 pub fn lint(schema: &Value) -> Vec<String> {
     let mut errors = Vec::new();
-    lint_node(schema, schema, "#", &mut errors);
+    let mut at = String::from("#");
+    lint_node(schema, schema, &mut at, &mut errors);
     errors
 }
 
-fn lint_node(root: &Value, node: &Value, at: &str, errors: &mut Vec<String>) {
+fn lint_node(root: &Value, node: &Value, at: &mut String, errors: &mut Vec<String>) {
+    use std::fmt::Write as _;
+
     let Some(rules) = node.as_object() else {
         errors.push(format!("{at}: schema node is not an object"));
         return;
     };
+    let base_len = at.len();
     for (key, child) in rules {
-        let here = format!("{at}/{key}");
         match key.as_str() {
-            k if !KNOWN_KEYWORDS.contains(&k) => {
-                errors.push(format!("{at}: unsupported schema keyword {k}"))
+            k if !is_known_keyword(k) => {
+                errors.push(format!("{at}: unsupported schema keyword {k}"));
             }
             "additionalProperties" if child != &Value::Bool(false) => {
-                errors.push(format!("{here}: only `false` is checked"))
+                errors.push(format!("{at}/{key}: only `false` is checked"));
             }
             "pattern" => {
                 if let Err(why) = child
@@ -64,27 +70,81 @@ fn lint_node(root: &Value, node: &Value, at: &str, errors: &mut Vec<String>) {
                     .ok_or("not a string".to_owned())
                     .and_then(parse)
                 {
-                    errors.push(format!("{here}: {why}"));
+                    errors.push(format!("{at}/{key}: {why}"));
                 }
             }
-            "$ref" => match child.as_str() {
-                Some(reference) if resolve(root, reference).is_some() => {}
-                _ => errors.push(format!("{here}: unresolvable $ref {child}")),
+            "$ref" => match child.as_str().and_then(|r| Some((r, resolve(root, r)?))) {
+                Some((reference, target)) => {
+                    if let Some(target_rules) = target.as_object()
+                        && (target_rules.contains_key("$ref") || target_rules.contains_key("oneOf"))
+                    {
+                        let mut seen = vec![reference];
+                        if has_ref_cycle(root, target, &mut seen) {
+                            errors.push(format!("{at}/{key}: cyclic $ref {reference}"));
+                        }
+                    }
+                }
+                None => errors.push(format!("{at}/{key}: unresolvable $ref {child}")),
             },
             "$defs" | "properties" => {
+                at.push('/');
+                at.push_str(key);
+                let key_len = at.len();
                 for (name, sub) in child.as_object().into_iter().flatten() {
-                    lint_node(root, sub, &format!("{here}/{name}"), errors);
+                    at.push('/');
+                    at.push_str(name);
+                    lint_node(root, sub, at, errors);
+                    at.truncate(key_len);
                 }
+                at.truncate(base_len);
             }
-            "items" => lint_node(root, child, &here, errors),
+            "items" => {
+                at.push('/');
+                at.push_str(key);
+                lint_node(root, child, at, errors);
+                at.truncate(base_len);
+            }
             "oneOf" => {
+                at.push('/');
+                at.push_str(key);
+                let key_len = at.len();
                 for (i, sub) in child.as_array().into_iter().flatten().enumerate() {
-                    lint_node(root, sub, &format!("{here}/{i}"), errors);
+                    let _ = write!(at, "/{i}");
+                    lint_node(root, sub, at, errors);
+                    at.truncate(key_len);
                 }
+                at.truncate(base_len);
             }
             _ => {}
         }
     }
+}
+
+fn has_ref_cycle<'a>(root: &'a Value, node: &'a Value, seen: &mut Vec<&'a str>) -> bool {
+    let Some(rules) = node.as_object() else {
+        return false;
+    };
+    if let Some(reference) = rules.get("$ref").and_then(Value::as_str) {
+        if seen.contains(&reference) {
+            return true;
+        }
+        if let Some(target) = resolve(root, reference) {
+            seen.push(reference);
+            let cyclic = has_ref_cycle(root, target, seen);
+            seen.pop();
+            if cyclic {
+                return true;
+            }
+        }
+    }
+    if let Some(options) = rules.get("oneOf").and_then(Value::as_array) {
+        for option in options {
+            if has_ref_cycle(root, option, seen) {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 #[derive(Default, Debug)]
@@ -97,7 +157,8 @@ pub fn validate(schema: &Value, value: &Value) -> Vec<String> {
 pub fn validate_with(schema: &Value, value: &Value, coverage: &mut Coverage) -> Vec<String> {
     let mut errors = Vec::new();
     let mut hits = Coverage::default();
-    check(schema, "#", value, "$", &mut errors, &mut hits);
+    let mut refs = Vec::new();
+    check(schema, "#", value, "$", &mut refs, &mut errors, &mut hits);
     if errors.is_empty() {
         coverage.0.extend(hits.0);
     }
@@ -108,11 +169,12 @@ fn node<'a>(root: &'a Value, at: &str) -> &'a Value {
     resolve(root, at).unwrap_or(&Value::Null)
 }
 
-fn check(
-    root: &Value,
+fn check<'a>(
+    root: &'a Value,
     at: &str,
     value: &Value,
     path: &str,
+    refs: &mut Vec<&'a str>,
     errors: &mut Vec<String>,
     hits: &mut Coverage,
 ) {
@@ -121,13 +183,21 @@ fn check(
         return;
     };
     for key in rules.keys() {
-        if !KNOWN_KEYWORDS.contains(&key.as_str()) {
+        if !is_known_keyword(key.as_str()) {
             errors.push(format!("{path}: unsupported schema keyword {key}"));
         }
     }
     if let Some(reference) = rules.get("$ref").and_then(Value::as_str) {
+        if refs.contains(&reference) {
+            errors.push(format!("{path}: cyclic $ref {reference}"));
+            return;
+        }
         match resolve(root, reference) {
-            Some(_) => check(root, reference, value, path, errors, hits),
+            Some(_) => {
+                refs.push(reference);
+                check(root, reference, value, path, refs, errors, hits);
+                refs.pop();
+            }
             None => errors.push(format!("{path}: unresolvable $ref {reference}")),
         }
     }
@@ -195,6 +265,7 @@ fn check(
                 &format!("{at}/oneOf/{i}"),
                 value,
                 path,
+                refs,
                 &mut e,
                 &mut h,
             );
@@ -231,7 +302,16 @@ fn check(
             if properties.is_some_and(|p| p.contains_key(key)) {
                 hits.0.insert((at.to_owned(), format!("property {key}")));
                 let child_at = format!("{at}/properties/{}", escape(key));
-                check(root, &child_at, child, &child_path, errors, hits);
+                let mut child_refs = Vec::new();
+                check(
+                    root,
+                    &child_at,
+                    child,
+                    &child_path,
+                    &mut child_refs,
+                    errors,
+                    hits,
+                );
             } else if rules.get("additionalProperties") == Some(&Value::Bool(false)) {
                 errors.push(format!("{path}: unexpected field {key}"));
             }
@@ -239,11 +319,13 @@ fn check(
     }
     if let (Some(_), Some(array)) = (rules.get("items"), value.as_array()) {
         for (i, item) in array.iter().enumerate() {
+            let mut item_refs = Vec::new();
             check(
                 root,
                 &format!("{at}/items"),
                 item,
                 &format!("{path}[{i}]"),
+                &mut item_refs,
                 errors,
                 hits,
             );
@@ -300,7 +382,7 @@ fn parse(pattern: &str) -> Result<Vec<Atom>, String> {
                     if chars.peek() == Some(&'-') {
                         chars.next();
                         let last = chars.next().ok_or("an unclosed range")?;
-                        if last == ']' || last < first {
+                        if last == ']' || last < first || "\\^[".contains(last) {
                             return Err("a range that is not supported".to_owned());
                         }
                         class.push((first, last));
@@ -326,13 +408,46 @@ fn parse(pattern: &str) -> Result<Vec<Atom>, String> {
 }
 
 fn matches(atoms: &[Atom], s: &str) -> bool {
+    let chars: Vec<char> = s.chars().collect();
+    let in_class = |atom: &Atom, c: char| atom.class.iter().any(|(a, b)| (*a..=*b).contains(&c));
+    let mut reachable = vec![false; chars.len() + 1];
+    reachable[0] = true;
+    let mut next = vec![false; chars.len() + 1];
+    for atom in atoms {
+        next.fill(false);
+        if atom.repeat {
+            for i in 0..=chars.len() {
+                if reachable[i] {
+                    next[i] = true;
+                }
+                if next[i] && i < chars.len() && in_class(atom, chars[i]) {
+                    next[i + 1] = true;
+                }
+            }
+        } else {
+            for i in 0..chars.len() {
+                if reachable[i] && in_class(atom, chars[i]) {
+                    next[i + 1] = true;
+                }
+            }
+        }
+        std::mem::swap(&mut reachable, &mut next);
+        if !reachable.iter().any(|&b| b) {
+            return false;
+        }
+    }
+    reachable[chars.len()]
+}
+
+#[cfg(test)]
+fn previous_matches(atoms: &[Atom], s: &str) -> bool {
     let in_class = |atom: &Atom, c: char| atom.class.iter().any(|(a, b)| (*a..=*b).contains(&c));
     match atoms.split_first() {
         None => s.is_empty(),
         Some((atom, rest)) if atom.repeat => {
             let mut tail = s;
             loop {
-                if matches(rest, tail) {
+                if previous_matches(rest, tail) {
                     return true;
                 }
                 match tail.chars().next() {
@@ -342,8 +457,14 @@ fn matches(atoms: &[Atom], s: &str) -> bool {
             }
         }
         Some((atom, rest)) => match s.chars().next() {
-            Some(c) if in_class(atom, c) => matches(rest, &s[c.len_utf8()..]),
+            Some(c) if in_class(atom, c) => previous_matches(rest, &s[c.len_utf8()..]),
             _ => false,
         },
     }
+}
+
+#[cfg(test)]
+pub fn pattern_oracle_matches(pattern: &str, text: &str) -> (bool, bool) {
+    let atoms = parse(pattern).expect("a linted fleet pattern");
+    (matches(&atoms, text), previous_matches(&atoms, text))
 }

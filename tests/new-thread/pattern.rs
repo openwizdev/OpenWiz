@@ -19,7 +19,10 @@ fn escape(chars: &[char], i: &mut usize) -> Result<char, String> {
         .ok_or("a short escape")?
         .iter()
         .collect();
-    if chars.get(*i + 1) != Some(&'u') || hex.len() != 4 {
+    if chars.get(*i + 1) != Some(&'u')
+        || hex.len() != 4
+        || !hex.bytes().all(|b| b.is_ascii_hexdigit())
+    {
         return Err("an escape other than \\uXXXX".to_owned());
     }
     let code = u32::from_str_radix(&hex, 16).map_err(|_| "a bad \\u escape")?;
@@ -69,6 +72,7 @@ fn parse(pattern: &str) -> Result<Vec<Atom>, String> {
                     i += 1;
                     let hi = match chars.get(i) {
                         None => return Err("an open range".to_owned()),
+                        Some('[') | Some('^') => return Err("[ or ^ inside a class".to_owned()),
                         Some('\\') => escape(&chars, &mut i)?,
                         Some(&c) => {
                             i += 1;
@@ -116,18 +120,65 @@ fn fits(atom: &Atom, c: char) -> bool {
 }
 
 fn matches(atoms: &[Atom], text: &[char]) -> bool {
+    let mut reachable = vec![false; text.len() + 1];
+    reachable[0] = true;
+    let mut next = vec![false; text.len() + 1];
+    for atom in atoms {
+        next.fill(false);
+        let Atom::Class { repeat, .. } = atom;
+        if *repeat {
+            for i in 0..=text.len() {
+                if reachable[i] {
+                    next[i] = true;
+                }
+                if next[i] && i < text.len() && fits(atom, text[i]) {
+                    next[i + 1] = true;
+                }
+            }
+        } else {
+            for i in 0..text.len() {
+                if reachable[i] && fits(atom, text[i]) {
+                    next[i + 1] = true;
+                }
+            }
+        }
+        std::mem::swap(&mut reachable, &mut next);
+        if !reachable.iter().any(|&b| b) {
+            return false;
+        }
+    }
+    reachable[text.len()]
+}
+
+#[cfg(test)]
+#[allow(
+    dead_code,
+    reason = "test oracle exercised in checks/schema_conformance"
+)]
+fn previous_matches(atoms: &[Atom], text: &[char]) -> bool {
     match atoms.split_first() {
         None => text.is_empty(),
         Some((atom, rest)) => {
             let Atom::Class { repeat, .. } = atom;
             if *repeat {
                 let run = text.iter().take_while(|&&c| fits(atom, c)).count();
-                (0..=run).rev().any(|n| matches(rest, &text[n..]))
+                (0..=run).rev().any(|n| previous_matches(rest, &text[n..]))
             } else {
-                text.first().is_some_and(|&c| fits(atom, c)) && matches(rest, &text[1..])
+                text.first().is_some_and(|&c| fits(atom, c)) && previous_matches(rest, &text[1..])
             }
         }
     }
+}
+
+#[cfg(test)]
+#[allow(
+    dead_code,
+    reason = "test oracle exercised in checks/schema_conformance"
+)]
+pub fn pattern_oracle_matches(pattern: &str, text: &str) -> (bool, bool) {
+    let atoms = parse(pattern).expect("a linted pattern");
+    let chars: Vec<char> = text.chars().collect();
+    (matches(&atoms, &chars), previous_matches(&atoms, &chars))
 }
 
 pub struct Pattern(Vec<Atom>);
@@ -216,14 +267,58 @@ pub fn lint(schema: &Value) -> Vec<String> {
 }
 
 pub fn validate(schema: &Value, value: &Value) -> Vec<String> {
-    let mut errors = crate::schema::validate(&stripped(schema), value);
+    let base = stripped(schema);
+    let mut errors = crate::schema::validate(&base, value);
     if errors.is_empty() {
-        walk(schema, schema, value, "$", &mut errors);
+        let mut probe_template = base;
+        if let Some(object) = probe_template.as_object_mut() {
+            for key in [
+                "type",
+                "properties",
+                "required",
+                "oneOf",
+                "items",
+                "const",
+                "enum",
+            ] {
+                object.remove(key);
+            }
+        }
+        let mut refs = Vec::new();
+        walk_at(
+            schema,
+            &mut probe_template,
+            schema,
+            None,
+            value,
+            "$",
+            &mut refs,
+            &mut errors,
+        );
     }
     errors
 }
 
-fn structurally(root: &Value, pointer: &str, value: &Value) -> bool {
+#[cfg(test)]
+#[allow(
+    dead_code,
+    reason = "test oracle exercised in checks/schema_conformance"
+)]
+pub fn previous_validate(schema: &Value, value: &Value) -> Vec<String> {
+    let mut errors = crate::schema::validate(&stripped(schema), value);
+    if errors.is_empty() {
+        let mut refs = Vec::new();
+        previous_walk_at(schema, schema, None, value, "$", &mut refs, &mut errors);
+    }
+    errors
+}
+
+#[cfg(test)]
+#[allow(
+    dead_code,
+    reason = "test oracle exercised in checks/schema_conformance"
+)]
+fn previous_structurally(root: &Value, pointer: &str, value: &Value) -> bool {
     let mut probe = stripped(root);
     let object = probe.as_object_mut().expect("an object schema");
     for key in [
@@ -241,25 +336,33 @@ fn structurally(root: &Value, pointer: &str, value: &Value) -> bool {
     crate::schema::validate(&probe, value).is_empty()
 }
 
-fn walk(root: &Value, node: &Value, value: &Value, path: &str, errors: &mut Vec<String>) {
-    walk_at(root, node, None, value, path, errors)
-}
-
-fn walk_at(
-    root: &Value,
-    node: &Value,
+#[cfg(test)]
+#[allow(
+    dead_code,
+    reason = "test oracle exercised in checks/schema_conformance"
+)]
+fn previous_walk_at<'a>(
+    root: &'a Value,
+    node: &'a Value,
     pointer: Option<&str>,
     value: &Value,
     path: &str,
+    refs: &mut Vec<&'a str>,
     errors: &mut Vec<String>,
 ) {
     let Some(rules) = node.as_object() else {
         return;
     };
     if let Some(reference) = rules.get("$ref").and_then(Value::as_str) {
+        if refs.contains(&reference) {
+            errors.push(format!("{path}: cyclic $ref {reference}"));
+            return;
+        }
         let target = reference.strip_prefix('#').unwrap_or_default();
         if let Some(next) = root.pointer(target) {
-            walk_at(root, next, Some(target), value, path, errors);
+            refs.push(reference);
+            previous_walk_at(root, next, Some(target), value, path, refs, errors);
+            refs.pop();
         }
     }
     if let Some(text) = value.as_str() {
@@ -284,12 +387,14 @@ fn walk_at(
         for (k, child) in object {
             if let Some(schema) = props.get(k) {
                 let at = pointer.map(|p| format!("{p}/properties/{k}"));
-                walk_at(
+                let mut child_refs = Vec::new();
+                previous_walk_at(
                     root,
                     schema,
                     at.as_deref(),
                     child,
                     &format!("{path}.{k}"),
+                    &mut child_refs,
                     errors,
                 );
             }
@@ -312,12 +417,14 @@ fn walk_at(
     if let (Some(items), Some(array)) = (rules.get("items"), value.as_array()) {
         for (i, item) in array.iter().enumerate() {
             let at = pointer.map(|p| format!("{p}/items"));
-            walk_at(
+            let mut item_refs = Vec::new();
+            previous_walk_at(
                 root,
                 items,
                 at.as_deref(),
                 item,
                 &format!("{path}[{i}]"),
+                &mut item_refs,
                 errors,
             );
         }
@@ -328,11 +435,136 @@ fn walk_at(
             return;
         };
         let matched: Vec<usize> = (0..branches.len())
-            .filter(|i| structurally(root, &format!("{base}/oneOf/{i}"), value))
+            .filter(|i| previous_structurally(root, &format!("{base}/oneOf/{i}"), value))
             .collect();
         if let [one] = matched.as_slice() {
             let at = format!("{base}/oneOf/{one}");
-            walk_at(root, &branches[*one], Some(&at), value, path, errors);
+            previous_walk_at(root, &branches[*one], Some(&at), value, path, refs, errors);
+        }
+    }
+}
+
+fn structurally(probe: &mut Value, pointer: &str, value: &Value) -> bool {
+    let object = probe.as_object_mut().expect("an object schema");
+    object.insert("$ref".to_owned(), Value::from(format!("#{pointer}")));
+    crate::schema::validate(probe, value).is_empty()
+}
+
+#[allow(
+    clippy::too_many_arguments,
+    reason = "shares the pre-stripped probe and active ref stack across recursive walk"
+)]
+fn walk_at<'a>(
+    root: &'a Value,
+    probe: &mut Value,
+    node: &'a Value,
+    pointer: Option<&str>,
+    value: &Value,
+    path: &str,
+    refs: &mut Vec<&'a str>,
+    errors: &mut Vec<String>,
+) {
+    let Some(rules) = node.as_object() else {
+        return;
+    };
+    if let Some(reference) = rules.get("$ref").and_then(Value::as_str) {
+        if refs.contains(&reference) {
+            errors.push(format!("{path}: cyclic $ref {reference}"));
+            return;
+        }
+        let target = reference.strip_prefix('#').unwrap_or_default();
+        if let Some(next) = root.pointer(target) {
+            refs.push(reference);
+            walk_at(root, probe, next, Some(target), value, path, refs, errors);
+            refs.pop();
+        }
+    }
+    if let Some(text) = value.as_str() {
+        if let Some(p) = rules.get("pattern").and_then(Value::as_str)
+            && !is_match(p, text)
+        {
+            errors.push(format!("{path}: does not match {p:?}"));
+        }
+        if let Some(max) = rules.get("maxUtf8Bytes").and_then(Value::as_u64)
+            && text.len() as u64 > max
+        {
+            errors.push(format!(
+                "{path}: {} bytes of UTF-8, above {max}",
+                text.len()
+            ));
+        }
+    }
+    if let (Some(props), Some(object)) = (
+        rules.get("properties").and_then(Value::as_object),
+        value.as_object(),
+    ) {
+        for (k, child) in object {
+            if let Some(schema) = props.get(k) {
+                let at = pointer.map(|p| format!("{p}/properties/{k}"));
+                let mut child_refs = Vec::new();
+                walk_at(
+                    root,
+                    probe,
+                    schema,
+                    at.as_deref(),
+                    child,
+                    &format!("{path}.{k}"),
+                    &mut child_refs,
+                    errors,
+                );
+            }
+        }
+    }
+    if let Some(array) = value.as_array() {
+        if let Some(min) = rules.get("minItems").and_then(Value::as_u64)
+            && (array.len() as u64) < min
+        {
+            errors.push(format!("{path}: {} items, fewer than {min}", array.len()));
+        }
+        if rules.get("uniqueItems") == Some(&Value::Bool(true)) {
+            for (i, item) in array.iter().enumerate() {
+                if array[..i].contains(item) {
+                    errors.push(format!("{path}[{i}]: equal to an earlier item"));
+                }
+            }
+        }
+    }
+    if let (Some(items), Some(array)) = (rules.get("items"), value.as_array()) {
+        for (i, item) in array.iter().enumerate() {
+            let at = pointer.map(|p| format!("{p}/items"));
+            let mut item_refs = Vec::new();
+            walk_at(
+                root,
+                probe,
+                items,
+                at.as_deref(),
+                item,
+                &format!("{path}[{i}]"),
+                &mut item_refs,
+                errors,
+            );
+        }
+    }
+    if let Some(branches) = rules.get("oneOf").and_then(Value::as_array) {
+        let Some(base) = pointer else {
+            errors.push(format!("{path}: a oneOf with no pointer to check it by"));
+            return;
+        };
+        let matched: Vec<usize> = (0..branches.len())
+            .filter(|i| structurally(probe, &format!("{base}/oneOf/{i}"), value))
+            .collect();
+        if let [one] = matched.as_slice() {
+            let at = format!("{base}/oneOf/{one}");
+            walk_at(
+                root,
+                probe,
+                &branches[*one],
+                Some(&at),
+                value,
+                path,
+                refs,
+                errors,
+            );
         }
     }
 }

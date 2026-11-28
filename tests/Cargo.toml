@@ -54,6 +54,11 @@ path = "loops/main.rs"
 name = "cli-agent"
 path = "cli-agent/main.rs"
 
+[[bench]]
+name = "schema_bench"
+path = "benches/schema_bench.rs"
+harness = false
+
 [dependencies]
 serde_json.workspace = true
 openwiz-core = { path = "../crates/core" }

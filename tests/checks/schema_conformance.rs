@@ -219,3 +219,267 @@ fn the_core_types_serialize_to_schema_valid_json() {
     }
     assert!(Path::new(crate::schema::SCHEMA_PATH).is_file());
 }
+
+#[path = "../fleet/schema.rs"]
+mod fleet_schema;
+
+#[test]
+fn validators_reject_bad_unicode_escapes_invalid_range_bounds_and_cyclic_refs() {
+    let plus_escape = json!({"type": "string", "pattern": "^[\\u+00A]$"});
+    assert!(
+        !lint(&plus_escape).is_empty(),
+        "support/schema.rs accepted \\u+00A"
+    );
+    assert!(
+        !crate::pattern::lint(&plus_escape).is_empty(),
+        "new-thread/pattern.rs accepted \\u+00A"
+    );
+
+    for bad_range in ["^[0-\\]$", "^[0-[]$", "^[0-^]$", "^[a-[]*$"] {
+        let s = json!({"type": "string", "pattern": bad_range});
+        assert!(
+            !lint(&s).is_empty(),
+            "support/schema.rs accepted {bad_range}"
+        );
+        assert!(
+            !fleet_schema::lint(&s).is_empty(),
+            "fleet/schema.rs accepted {bad_range}"
+        );
+        assert!(
+            !crate::pattern::lint(&s).is_empty(),
+            "new-thread/pattern.rs accepted {bad_range}"
+        );
+    }
+
+    let cyclic = json!({
+        "$defs": { "a": { "$ref": "#/$defs/a" } },
+        "$ref": "#/$defs/a"
+    });
+    assert!(
+        !lint(&cyclic).is_empty(),
+        "support/schema.rs accepted cyclic $ref"
+    );
+    assert!(
+        !fleet_schema::lint(&cyclic).is_empty(),
+        "fleet/schema.rs accepted cyclic $ref"
+    );
+    assert!(
+        !crate::pattern::lint(&cyclic).is_empty(),
+        "new-thread/pattern.rs accepted cyclic $ref"
+    );
+    assert!(!validate(&cyclic, &json!({})).is_empty());
+    assert!(!fleet_schema::validate(&cyclic, &json!({})).is_empty());
+    assert!(!crate::pattern::validate(&cyclic, &json!({})).is_empty());
+}
+
+#[test]
+fn repeated_star_patterns_match_without_exponential_backtracking() {
+    let pat = "^a*a*a*a*a*a*a*a*a*a*a*a*b$";
+    let schema = json!({"type": "string", "pattern": pat});
+    let value = json!("a".repeat(14));
+    let started = std::time::Instant::now();
+    assert!(!validate(&schema, &value).is_empty());
+    assert!(!fleet_schema::validate(&schema, &value).is_empty());
+    assert!(!crate::pattern::validate(&schema, &value).is_empty());
+    assert!(
+        started.elapsed() < std::time::Duration::from_millis(50),
+        "repeated star matching took {:?}",
+        started.elapsed()
+    );
+}
+
+struct SplitMix64(u64);
+
+impl SplitMix64 {
+    fn next_u64(&mut self) -> u64 {
+        self.0 = self.0.wrapping_add(0x9e37_79b9_7f4a_7c15);
+        let mut z = self.0;
+        z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+        z ^ (z >> 31)
+    }
+
+    fn usize(&mut self, upper: usize) -> usize {
+        (self.next_u64() as usize) % upper
+    }
+}
+
+fn gen_pattern(rng: &mut SplitMix64, allow_neg_and_escape: bool) -> String {
+    let literals = ['a', 'b', '0', '1', '_', '-'];
+    let count = 1 + rng.usize(4);
+    let mut pat = String::from("^");
+    for _ in 0..count {
+        match rng.usize(3) {
+            0 => pat.push(literals[rng.usize(literals.len())]),
+            1 => {
+                pat.push('[');
+                if allow_neg_and_escape && rng.usize(3) == 0 {
+                    pat.push('^');
+                }
+                let items = 1 + rng.usize(3);
+                for _ in 0..items {
+                    match rng.usize(3) {
+                        0 => pat.push_str("a-b"),
+                        1 if allow_neg_and_escape => pat.push_str("\\u0030-\\u0032"),
+                        _ => pat.push(literals[rng.usize(literals.len() - 1)]),
+                    }
+                }
+                if allow_neg_and_escape && rng.usize(4) == 0 {
+                    pat.push('-');
+                }
+                pat.push(']');
+            }
+            _ => {
+                if allow_neg_and_escape {
+                    pat.push_str("\\u0061");
+                } else {
+                    pat.push('a');
+                }
+            }
+        }
+        if rng.usize(2) == 0 {
+            pat.push('*');
+        }
+    }
+    pat.push('$');
+    pat
+}
+
+fn gen_text(rng: &mut SplitMix64) -> String {
+    let alphabet = ['a', 'b', 'c', '0', '1', '2', '_', '-', '\u{00e9}'];
+    let len = rng.usize(8);
+    (0..len)
+        .map(|_| alphabet[rng.usize(alphabet.len())])
+        .collect()
+}
+
+#[test]
+fn linear_pattern_matchers_agree_with_previous_recursive_oracles() {
+    let curated_text_rule = [
+        "^$",
+        "^a*$",
+        "^[^a-b]*a[^0-9]*$",
+        "^[a-z0-9_-]*$",
+        "^[\\u0020-\\u007e]*$",
+        "^a*b*a*$",
+        "^[ab-]*b$",
+    ];
+    let curated_fleet = [
+        "^$",
+        "^a*$",
+        "^[-a-z0-9_]*$",
+        "^a*b*a*$",
+        "^[-ab]*b$",
+        "^a[a-b]*b$",
+    ];
+    let samples = ["", "a", "b", "ab", "aba", "a-b_0", "xyz", "\n", "\u{00e9}"];
+
+    for pat in curated_text_rule {
+        for text in samples {
+            let (new_s, old_s) = crate::schema::text_rule_oracle_matches(pat, text);
+            assert_eq!(
+                new_s, old_s,
+                "support/schema mismatch on {pat:?} / {text:?}"
+            );
+            let (new_p, old_p) = crate::pattern::pattern_oracle_matches(pat, text);
+            assert_eq!(
+                new_p, old_p,
+                "new-thread/pattern mismatch on {pat:?} / {text:?}"
+            );
+            assert_eq!(
+                new_s, new_p,
+                "cross-validator mismatch on {pat:?} / {text:?}"
+            );
+        }
+    }
+    for pat in curated_fleet {
+        for text in samples {
+            let (new_f, old_f) = fleet_schema::pattern_oracle_matches(pat, text);
+            assert_eq!(new_f, old_f, "fleet/schema mismatch on {pat:?} / {text:?}");
+        }
+    }
+
+    let mut rng = SplitMix64(0x0003_6430_0000_0001);
+    for _ in 0..400 {
+        let pat = gen_pattern(&mut rng, true);
+        let fpat = gen_pattern(&mut rng, false);
+        for _ in 0..8 {
+            let text = gen_text(&mut rng);
+            let (new_s, old_s) = crate::schema::text_rule_oracle_matches(&pat, &text);
+            assert_eq!(
+                new_s, old_s,
+                "support/schema mismatch on {pat:?} / {text:?}"
+            );
+            let (new_p, old_p) = crate::pattern::pattern_oracle_matches(&pat, &text);
+            assert_eq!(
+                new_p, old_p,
+                "new-thread/pattern mismatch on {pat:?} / {text:?}"
+            );
+            let (new_f, old_f) = fleet_schema::pattern_oracle_matches(&fpat, &text);
+            assert_eq!(new_f, old_f, "fleet/schema mismatch on {fpat:?} / {text:?}");
+        }
+    }
+}
+
+#[test]
+fn pattern_validate_agrees_with_previous_validate_on_contract_schemas() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+    let loops_schema: Value = serde_json::from_str(
+        &std::fs::read_to_string(root.join("contracts/loops.v1.schema.json")).unwrap(),
+    )
+    .unwrap();
+    let loops_example: Value =
+        serde_json::from_str(&std::fs::read_to_string(root.join("loops/example.json")).unwrap())
+            .unwrap();
+
+    let mut bad_pattern = loops_example.clone();
+    bad_pattern["name"] = json!("bad\nname");
+    let mut bad_variant = loops_example.clone();
+    bad_variant["trigger"] = json!({"kind": "unknown"});
+    let mut dup_items = loops_example.clone();
+    if let Some(arr) = dup_items.get_mut("tags").and_then(Value::as_array_mut)
+        && let Some(first) = arr.first().cloned()
+    {
+        arr.push(first);
+    }
+
+    for candidate in [
+        loops_example,
+        bad_pattern,
+        bad_variant,
+        dup_items,
+        json!({}),
+        json!(null),
+    ] {
+        assert_eq!(
+            crate::pattern::validate(&loops_schema, &candidate),
+            crate::pattern::previous_validate(&loops_schema, &candidate),
+            "pattern::validate diverged on {candidate}"
+        );
+    }
+}
+
+#[test]
+#[ignore = "opt-in seeded soak fuzz test for schema validators"]
+fn fuzz_schema_validators_seeded_soak() {
+    let mut rng = SplitMix64(0x5eed_cafe_1234_5678);
+    let chars = [
+        '^', '$', '[', ']', '-', '\\', 'u', '+', '0', '9', 'a', 'z', '*', '?', '.', '(', ')',
+    ];
+    for _ in 0..25_000 {
+        let len = rng.usize(18);
+        let pat: String = (0..len).map(|_| chars[rng.usize(chars.len())]).collect();
+        let schema = json!({"type": "string", "pattern": pat});
+        let text = gen_text(&mut rng);
+        let val = Value::String(text);
+        if lint(&schema).is_empty() {
+            let _ = validate(&schema, &val);
+        }
+        if fleet_schema::lint(&schema).is_empty() {
+            let _ = fleet_schema::validate(&schema, &val);
+        }
+        if crate::pattern::lint(&schema).is_empty() {
+            let _ = crate::pattern::validate(&schema, &val);
+        }
+    }
+}
