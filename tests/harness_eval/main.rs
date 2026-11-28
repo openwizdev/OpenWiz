@@ -613,6 +613,106 @@ fn old_tool_results_compact_under_the_byte_budget() {
 }
 
 #[test]
+fn a_red_check_with_multiple_failed_units_sends_one_five_line_correction() {
+    let root = dir("multi-red");
+    let body = "\
+import sys
+sys.stdout.write('handlers\\tauth failed\\thandlers/auth.py:12\\n')
+sys.stdout.write('utils\\tparse failed\\tutils/parse.py:34\\n')
+sys.exit(1)
+";
+    let task = scenario(
+        &root,
+        &[],
+        &[
+            ("handlers", "fix handlers only"),
+            ("utils", "fix utils only"),
+        ],
+    )
+    .with_check(check(body));
+    let after = run(&gated(), &task, &mut claim);
+    assert_eq!(
+        after.correction_text.lines().count(),
+        5,
+        "{}",
+        after.correction_text
+    );
+    assert!(
+        after.correction_text.contains("UNIT: handlers"),
+        "{}",
+        after.correction_text
+    );
+    assert!(
+        !after.correction_text.contains("utils"),
+        "{}",
+        after.correction_text
+    );
+}
+
+#[test]
+fn handoff_pairs_failed_unit_with_its_evidence() {
+    let root = dir("handoff-unit");
+    let body = "\
+import sys
+sys.stdout.write('handlers\\tbroken\\thandlers.rs:17\\n')
+sys.exit(1)
+";
+    let task = scenario(
+        &root,
+        &[],
+        &[
+            ("utils", "fix utils only"),
+            ("handlers", "fix handlers only"),
+        ],
+    )
+    .with_check(check(body));
+    let after = run(&gated(), &task, &mut claim);
+    assert!(
+        after.handoff_text.contains("UNIT: handlers\n"),
+        "{}",
+        after.handoff_text
+    );
+    assert!(
+        after.handoff_text.contains("EVIDENCE: handlers.rs:17\n"),
+        "{}",
+        after.handoff_text
+    );
+}
+
+#[test]
+fn driver_probe_runs_without_a_timeout_binary() {
+    let root = dir("no-timeout");
+    let sys_bin = root.join("sys-bin");
+    fs::create_dir_all(&sys_bin).unwrap();
+    let python3 = std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default())
+        .map(|dir| dir.join("python3"))
+        .find(|path| path.is_file())
+        .expect("python3 must be on PATH");
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(&python3, sys_bin.join("python3")).unwrap();
+    let probe = driver_probe_with_system_path(&sys_bin.display().to_string());
+    assert_eq!(probe.start_exit, 0, "{probe:?}");
+    assert!(probe.accepted, "{probe:?}");
+}
+
+#[test]
+fn portable_deadline_kills_a_hanging_process() {
+    let python3 = std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default())
+        .map(|dir| dir.join("python3"))
+        .find(|path| path.is_file())
+        .expect("python3 must be on PATH");
+    let err = run_with_deadline(
+        &python3,
+        &["-c", "import time; time.sleep(10)"],
+        &std::collections::BTreeMap::new(),
+        b"",
+        std::time::Duration::from_millis(100),
+    )
+    .unwrap_err();
+    assert_eq!(err.kind(), std::io::ErrorKind::TimedOut, "{err}");
+}
+
+#[test]
 fn the_driver_accepts_exit_0_while_a_program_fails_and_keeps_the_log() {
     let probe = driver_probe();
     assert_eq!(probe.start_exit, 0, "{probe:?}");
@@ -998,6 +1098,10 @@ struct DriverProbe {
 }
 
 fn driver_probe() -> DriverProbe {
+    driver_probe_with_system_path("/usr/bin:/bin")
+}
+
+fn driver_probe_with_system_path(system_path: &str) -> DriverProbe {
     let root = dir("driver");
     let bin_dir = root.join("bin");
     let repos = root.join("repos/example/site/docs/agents");
@@ -1051,7 +1155,7 @@ fn driver_probe() -> DriverProbe {
     let env = std::collections::BTreeMap::from([
         (
             "PATH".to_owned(),
-            format!("{}:/usr/bin:/bin", bin_dir.display()),
+            format!("{}:{system_path}", bin_dir.display()),
         ),
         (
             "OPENWIZ_LOCAL_STATE".to_owned(),
@@ -1069,22 +1173,14 @@ fn driver_probe() -> DriverProbe {
         ),
         ("LANG".to_owned(), "C".to_owned()),
     ]);
-    let mut command = Command::new("timeout");
-    command
-        .args(["20", &driver.display().to_string(), "start"])
-        .env_clear()
-        .envs(&env)
-        .stdin(std::process::Stdio::piped())
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped());
-    let mut child = command.spawn().unwrap();
-    child
-        .stdin
-        .take()
-        .unwrap()
-        .write_all(br#"{"repository":"example/site","ticket":7,"skill":"build-ticket","harness":"claude","model":"claude-opus-5-5"}"#)
-        .unwrap();
-    let output = child.wait_with_output().unwrap();
+    let output = run_with_deadline(
+        &driver,
+        &["start"],
+        &env,
+        br#"{"repository":"example/site","ticket":7,"skill":"build-ticket","harness":"claude","model":"claude-opus-5-5"}"#,
+        std::time::Duration::from_secs(20),
+    )
+    .unwrap();
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
@@ -1108,23 +1204,13 @@ fn driver_probe() -> DriverProbe {
         .args(["-c", "import sys; sys.exit(1)"])
         .status()
         .unwrap();
-    let mut stop = Command::new("timeout");
-    let mut stop_child = stop
-        .args(["20", &driver.display().to_string(), "stop"])
-        .env_clear()
-        .envs(&env)
-        .stdin(std::process::Stdio::piped())
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .spawn()
-        .unwrap();
-    stop_child
-        .stdin
-        .take()
-        .unwrap()
-        .write_all(format!(r#"{{"run":"{run_id}"}}"#).as_bytes())
-        .unwrap();
-    let _ = stop_child.wait();
+    let _ = run_with_deadline(
+        &driver,
+        &["stop"],
+        &env,
+        format!(r#"{{"run":"{run_id}"}}"#).as_bytes(),
+        std::time::Duration::from_secs(20),
+    );
     DriverProbe {
         start_exit: output.status.code().unwrap_or(1),
         oracle_exit: oracle.code().unwrap_or(1),
@@ -1134,5 +1220,69 @@ fn driver_probe() -> DriverProbe {
         log_bytes: log.len(),
         prompt_bytes: prompt.len(),
         prompt,
+    }
+}
+
+fn run_with_deadline(
+    program: &Path,
+    args: &[&str],
+    env: &std::collections::BTreeMap<String, String>,
+    stdin_bytes: &[u8],
+    timeout: std::time::Duration,
+) -> std::io::Result<std::process::Output> {
+    use std::io::Read;
+    let mut child = Command::new(program)
+        .args(args)
+        .env_clear()
+        .envs(env)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()?;
+    if let Some(mut stdin) = child.stdin.take() {
+        let _ = stdin.write_all(stdin_bytes);
+    }
+    let stdout_handle = child.stdout.take().map(|mut out| {
+        std::thread::spawn(move || {
+            let mut buf = Vec::new();
+            let _ = out.read_to_end(&mut buf);
+            buf
+        })
+    });
+    let stderr_handle = child.stderr.take().map(|mut err| {
+        std::thread::spawn(move || {
+            let mut buf = Vec::new();
+            let _ = err.read_to_end(&mut buf);
+            buf
+        })
+    });
+    let deadline = std::time::Instant::now() + timeout;
+    loop {
+        if let Some(status) = child.try_wait()? {
+            let stdout = stdout_handle
+                .and_then(|handle| handle.join().ok())
+                .unwrap_or_default();
+            let stderr = stderr_handle
+                .and_then(|handle| handle.join().ok())
+                .unwrap_or_default();
+            return Ok(std::process::Output {
+                status,
+                stdout,
+                stderr,
+            });
+        }
+        if std::time::Instant::now() >= deadline {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::TimedOut,
+                format!(
+                    "{} timed out after {}ms",
+                    program.display(),
+                    timeout.as_millis()
+                ),
+            ));
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20));
     }
 }

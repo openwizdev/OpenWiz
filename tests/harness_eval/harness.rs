@@ -421,16 +421,9 @@ fn gate(
             scope: first_scope(scenario),
         }]
     };
-    let evidence_key = failures
-        .iter()
-        .map(|failure| failure.evidence.as_str())
-        .collect::<Vec<_>>()
-        .join("\n");
-    let text = failures
-        .iter()
-        .map(Failure::render)
-        .collect::<Vec<_>>()
-        .join("\n");
+    let failure = failures.into_iter().next().unwrap();
+    let evidence_key = failure.evidence.clone();
+    let text = failure.render();
     outcome.correction_text = text.clone();
     outcome.reds += 1;
     if config.stall_same_evidence && previous_evidence.as_deref() == Some(evidence_key.as_str()) {
@@ -1047,6 +1040,12 @@ fn handoff_text(
         }
         return full;
     }
+    let unit = outcome
+        .correction_text
+        .lines()
+        .find_map(|line| line.strip_prefix("UNIT: "))
+        .map(str::to_owned)
+        .unwrap_or_else(|| first_id(scenario));
     let evidence = outcome
         .correction_text
         .lines()
@@ -1057,8 +1056,7 @@ fn handoff_text(
         .map(|text| text.lines().next().unwrap_or(""))
         .unwrap_or("");
     let text = format!(
-        "UNIT: {}\nVERDICT: {}\nEVIDENCE: {evidence}\nSUMMARY: {summary}\n",
-        first_id(scenario),
+        "UNIT: {unit}\nVERDICT: {}\nEVIDENCE: {evidence}\nSUMMARY: {summary}\n",
         handoff_verdict(outcome.stop),
     );
     within_budget(&text, config.handoff_max_bytes)
