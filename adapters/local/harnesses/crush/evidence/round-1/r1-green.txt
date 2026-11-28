@@ -1,0 +1,13 @@
+# R1 green after merging main with MG1 (#2904, driver v1 takes /-separated model ids); row.json and fake unchanged
+# Command: python3 -I adapters/local/harnesses/crush/test_row.py, then python3 -I adapters/local/test_harnesses.py (planted rows, then every row). No-op stubs for every known agent CLI first on PATH; OPENWIZ_GITHUB_APP_KEY unset.
+pass crush row: not installed is a D3 error whose next says to install and sign in, and starts nothing
+pass crush row: not signed in is a D3 error whose next says to sign in with crush login
+pass crush row: a turn gets CRUSH_CLIENT_SERVER=0 over the user's own setting, and attaches to no outside server
+pass crush row: the wake gets the session id crush logged to stderr at start
+pass crush row: stop leaves no process of the run
+pass crush row: a provider-qualified model, anthropic/claude-sonnet-4.6, reaches crush --model unchanged on start and wake
+exit=0
+--- full runner
+pass crush: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+36 pass lines; 22 fail lines, each a planted row the runner expects to fail
+exit=0

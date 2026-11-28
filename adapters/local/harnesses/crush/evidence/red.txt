@@ -1,0 +1,12 @@
+# Red: HR1 runner and test_row.py on the row with a placeholder fake (refuses every command line)
+# Commands: python3 -I adapters/local/test_harnesses.py --rows adapters/local/harnesses; python3 -I test_row.py (in the row folder)
+# No-op stubs for every known agent CLI were first on PATH.
+fail crush: kit: fail start: run run-dc522bf7afcc: the first turn ended at once: the harness failed (exit 2)
+exit=1
+---
+pass crush row: not installed is a D3 error whose next says to install and sign in, and starts nothing
+fail crush row: not signed in is a D3 error whose next points at the log that says how to set up a provider
+fail crush row: a turn gets CRUSH_CLIENT_SERVER=0 over the user's own setting, and attaches to no outside server
+fail crush row: the wake gets the session id crush logged to stderr at start
+fail crush row: stop leaves no process of the run
+exit=1

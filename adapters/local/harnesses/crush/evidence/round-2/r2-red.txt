@@ -1,0 +1,9 @@
+# R2 red at 1f18c71 (review: VERDICT: CHANGES at 1f18c71): with OpenRouter and Anthropic both configured, the README's example anthropic/claude-sonnet-4.6 finds no model. The fake now matches --model as Crush v0.102.0 does (internal/app/provider.go) when FAKE_CRUSH_PROVIDERS names the configured providers; the test's model id is unchanged
+# Command: python3 -I adapters/local/harnesses/crush/test_row.py. No-op stubs for every known agent CLI first on PATH; OPENWIZ_GITHUB_APP_KEY unset.
+pass crush row: not installed is a D3 error whose next says to install and sign in, and starts nothing
+pass crush row: not signed in is a D3 error whose next says to sign in with crush login
+pass crush row: a turn gets CRUSH_CLIENT_SERVER=0 over the user's own setting, and attaches to no outside server
+pass crush row: the wake gets the session id crush logged to stderr at start
+pass crush row: stop leaves no process of the run
+fail crush row: with OpenRouter and Anthropic configured, anthropic/claude-sonnet-4.6 reaches crush --model unchanged and runs, on start and wake
+exit=1

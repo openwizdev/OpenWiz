@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+import os, sys
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.environ['FAKE_CLI_LIB'])
+import fake_cli
+
+HELP = '''The fake crush (v0.102.0's `crush run --help`, cut to what the row uses), allowing only:
+  crush run --quiet --verbose --model <m> --yolo -- <prompt>
+  crush run --quiet --verbose --session <id> --model <m> --yolo -- <prompt>
+Like Crush, it logs "Created session for non-interactive run session_id=<id>" to stderr before the first turn,
+attaches to an already running server when CRUSH_CLIENT_SERVER is true, and with FAKE_CLI_SIGNED_OUT set
+answers as a Crush with no provider signed in (on stderr, exit 1).'''
+
+SIGNED_OUT = "   ERROR  \n  No providers configured - please run 'crush' to set up a provider interactively."
+
+if sys.argv[1:] == ['--help']:
+    print(HELP)
+    sys.exit(0)
+a = sys.argv[1:]
+if a[:3] != ['run', '--quiet', '--verbose']:
+    fake_cli.refuse()
+a, session = a[3:], None
+if a[:1] == ['--session'] and len(a) > 1:
+    session, a = a[1], a[2:]
+if len(a) != 5 or a[0] != '--model' or a[2:4] != ['--yolo', '--']:
+    fake_cli.refuse()
+# External: Crush v0.102.0 reads a first --model segment that names a configured provider as a provider filter,
+# https://github.com/charmbracelet/crush/blob/v0.102.0/internal/app/provider.go#L15-L26
+SONNET_46_IN_CATWALK_V3_2_9 = {'anthropic': ['claude-sonnet-4-6'], 'openrouter': ['anthropic/claude-sonnet-4.6']}
+if os.environ.get('FAKE_CRUSH_PROVIDERS'):
+    providers = {p: SONNET_46_IN_CATWALK_V3_2_9[p] for p in os.environ['FAKE_CRUSH_PROVIDERS'].split(',')}
+    head, _, rest = a[1].partition('/')
+    only, model = (head, rest) if rest and head in providers else ('', a[1])
+    found = [p for p, ids in providers.items() for i in ids
+             if i.lower() == model.lower() and (not only or p.lower() == only.lower())]
+    if len(found) != 1:
+        why = 'not found' if not found else 'found in multiple providers'
+        print('   ERROR  \n  large model "%s" %s' % (model, why), file=sys.stderr)
+        sys.exit(1)
+GO_PARSEBOOL_TRUE = ('1', 't', 'T', 'TRUE', 'true', 'True')
+attach = os.environ.get('CRUSH_CLIENT_SERVER') in GO_PARSEBOOL_TRUE
+sys.stdout = sys.stderr
+fake_cli.turn(a[4], a[1], session, lambda sid: 'INFO  Created session for non-interactive run session_id=' + sid,
+              daemon='via-running-hub' if attach else None, signed_out=SIGNED_OUT)
