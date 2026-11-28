@@ -22,7 +22,6 @@ KIT = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit')
 sys.path.insert(0, KIT)
 import kit
 NO_PROC = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'fixtures', 'no-proc')
-# The rows in harnesses/ when effort was turned on; the README's Effort table lists each one.
 LISTED_ROWS = 'agy amp auggie copilot gemini goose junie kilo kimi oz pi qwen'.split()
 
 TOKEN = 'gh' + 'p_' + 'Synthetic0Local0Value' * 2 + '00'
