@@ -1,0 +1,545 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:openwiz:schema:subscriber-requests:v1",
+  "title": "openwiz.subscriber-requests.v1",
+  "description": "Records from the subscriber request policy, owner-only records, and public-safe projections. Readers must also verify provenance and transitions.",
+  "oneOf": [
+    {"$ref": "#/$defs/policy"},
+    {"$ref": "#/$defs/entitlement"},
+    {"$ref": "#/$defs/request"},
+    {"$ref": "#/$defs/triage"},
+    {"$ref": "#/$defs/credit-movement"},
+    {"$ref": "#/$defs/tracker"},
+    {"$ref": "#/$defs/attribution"},
+    {"$ref": "#/$defs/veto"},
+    {"$ref": "#/$defs/ban"}
+  ],
+  "$defs": {
+    "scope-repo": {"enum": ["openwizdev/openwiz", "openwizdev/wizskills", "openwizdev/wizmarket"]},
+    "issue-ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repo", "number"],
+      "properties": {"repo": {"$ref": "#/$defs/scope-repo"}, "number": {"type": "integer", "minimum": 1}}
+    },
+    "login": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?![\\s\\S])",
+      "maxLength": 39
+    },
+    "quote-acceptance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["quote_comment", "acceptance_comment"],
+      "properties": {
+        "quote_comment": {"type": "integer", "minimum": 1},
+        "acceptance_comment": {"type": "integer", "minimum": 1}
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "record",
+        "monthly_credits",
+        "bank_while",
+        "business_daily_default",
+        "costs",
+        "largest_unquoted",
+        "queue_order",
+        "within_tier",
+        "planned_work_first"
+      ],
+      "properties": {
+        "schema": {"const": "openwiz.subscriber-requests.v1"},
+        "record": {"const": "policy"},
+        "monthly_credits": {"const": {"1": 1, "10": 10, "100": null}},
+        "bank_while": {"const": "active"},
+        "business_daily_default": {"const": 3},
+        "business_daily_limit": {"type": "integer", "minimum": 0},
+        "costs": {"const": {"S": 1, "M": 2, "L": 5}},
+        "largest_unquoted": {"const": "L"},
+        "queue_order": {"const": ["100", "10", "1"]},
+        "within_tier": {"const": "oldest-first"},
+        "planned_work_first": {"const": true}
+      }
+    },
+    "entitlement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "record", "access", "login", "tier", "bank", "active", "banned"],
+      "properties": {
+        "schema": {"const": "openwiz.subscriber-requests.v1"},
+        "record": {"const": "entitlement"},
+        "access": {"const": "owner-only"},
+        "login": {"$ref": "#/$defs/login"},
+        "tier": {"enum": ["1", "10", "100"]},
+        "bank": {"type": ["integer", "null"], "minimum": 0},
+        "active": {"type": "boolean"},
+        "banned": {"type": "boolean"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"tier": {"const": "100"}}, "required": ["tier"]},
+          "then": {"properties": {"bank": {"type": "null"}}},
+          "else": {"properties": {"bank": {"type": "integer", "minimum": 0}}}
+        }
+      ]
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "record", "target", "author", "intake", "kind", "title", "text", "marker"],
+      "properties": {
+        "schema": {"const": "openwiz.subscriber-requests.v1"},
+        "record": {"const": "request"},
+        "target": {"$ref": "#/$defs/scope-repo"},
+        "author": {"$ref": "#/$defs/login"},
+        "intake": {"enum": ["public", "owner-private"]},
+        "kind": {"enum": ["bug", "driver", "feature", "docs"]},
+        "visibility": {"enum": ["public", "private"], "default": "public"},
+        "title": {"type": "string", "minLength": 1, "pattern": "\\S"},
+        "text": {"type": "string", "minLength": 1, "pattern": "\\S"},
+        "marker": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^OpenWiz subscriber request operation [0-9a-f]{32}(?![\\s\\S])"
+        },
+        "business_verified": {"type": "boolean"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"visibility": {"const": "private"}}, "required": ["visibility"]},
+          "then": {
+            "required": ["business_verified"],
+            "properties": {"intake": {"const": "owner-private"}, "business_verified": {"const": true}}
+          },
+          "else": {
+            "properties": {"intake": {"const": "public"}},
+            "not": {"anyOf": [{"required": ["business_verified"]}]}
+          }
+        }
+      ]
+    },
+    "triage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "record", "verdict"],
+      "properties": {
+        "schema": {"const": "openwiz.subscriber-requests.v1"},
+        "record": {"const": "triage"},
+        "verdict": {"enum": ["approved", "market-item", "quote", "needs-owner", "refused", "report"]},
+        "size": {"enum": ["S", "M", "L", "XL"]},
+        "ticket": {"$ref": "#/$defs/issue-ref"},
+        "item": {"enum": ["driver", "skill", "recipe"]},
+        "reason": {"type": "string", "minLength": 1, "pattern": "\\S"},
+        "quoted_credits": {"type": "integer", "minimum": 1},
+        "quote_acceptance": {"$ref": "#/$defs/quote-acceptance"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"verdict": {"const": "approved"}}, "required": ["verdict"]},
+          "then": {
+            "required": ["size", "ticket"],
+            "not": {
+              "anyOf": [{"required": ["item"]}, {"required": ["reason"]}, {"required": ["quoted_credits"]}]
+            }
+          }
+        },
+        {
+          "if": {"properties": {"verdict": {"const": "market-item"}}, "required": ["verdict"]},
+          "then": {
+            "required": ["size", "ticket", "item"],
+            "not": {"anyOf": [{"required": ["reason"]}, {"required": ["quoted_credits"]}]}
+          }
+        },
+        {
+          "if": {"properties": {"verdict": {"const": "quote"}}, "required": ["verdict"]},
+          "then": {
+            "required": ["size", "quoted_credits"],
+            "not": {
+              "anyOf": [
+                {"required": ["ticket"]},
+                {"required": ["item"]},
+                {"required": ["reason"]},
+                {"required": ["quote_acceptance"]}
+              ]
+            },
+            "properties": {"size": {"const": "XL"}}
+          }
+        },
+        {
+          "if": {"properties": {"verdict": {"const": "needs-owner"}}, "required": ["verdict"]},
+          "then": {
+            "required": ["reason"],
+            "not": {
+              "anyOf": [
+                {"required": ["size"]},
+                {"required": ["ticket"]},
+                {"required": ["item"]},
+                {"required": ["quoted_credits"]},
+                {"required": ["quote_acceptance"]}
+              ]
+            }
+          }
+        },
+        {
+          "if": {"properties": {"verdict": {"const": "refused"}}, "required": ["verdict"]},
+          "then": {
+            "required": ["reason"],
+            "not": {
+              "anyOf": [
+                {"required": ["size"]},
+                {"required": ["ticket"]},
+                {"required": ["item"]},
+                {"required": ["quoted_credits"]},
+                {"required": ["quote_acceptance"]}
+              ]
+            }
+          }
+        },
+        {
+          "if": {"properties": {"verdict": {"const": "report"}}, "required": ["verdict"]},
+          "then": {
+            "not": {
+              "anyOf": [
+                {"required": ["size"]},
+                {"required": ["ticket"]},
+                {"required": ["item"]},
+                {"required": ["reason"]},
+                {"required": ["quoted_credits"]},
+                {"required": ["quote_acceptance"]}
+              ]
+            }
+          }
+        },
+        {
+          "if": {"properties": {"verdict": {"enum": ["approved", "market-item"]}}, "required": ["verdict"]},
+          "then": {
+            "if": {"properties": {"size": {"const": "XL"}}, "required": ["size"]},
+            "then": {"required": ["quote_acceptance"]},
+            "else": {"not": {"anyOf": [{"required": ["quote_acceptance"]}]}}
+          }
+        }
+      ]
+    },
+    "credit-movement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "record", "access", "request", "action", "tier", "size", "credits"],
+      "properties": {
+        "schema": {"const": "openwiz.subscriber-requests.v1"},
+        "record": {"const": "credit-movement"},
+        "access": {"const": "owner-only"},
+        "request": {"type": "string", "minLength": 1, "pattern": "^[0-9a-f]{32}(?![\\s\\S])"},
+        "action": {"enum": ["spend", "return"]},
+        "tier": {"enum": ["1", "10", "100"]},
+        "size": {"enum": ["S", "M", "L", "XL"]},
+        "credits": {"type": ["integer", "null"], "minimum": 1},
+        "verdict": {"enum": ["approved", "market-item"]},
+        "reason": {"type": "string", "minLength": 1, "pattern": "\\S"},
+        "quote_acceptance": {"$ref": "#/$defs/quote-acceptance"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"action": {"const": "spend"}}, "required": ["action"]},
+          "then": {"required": ["verdict"], "not": {"anyOf": [{"required": ["reason"]}]}},
+          "else": {"required": ["reason"], "not": {"anyOf": [{"required": ["verdict"]}]}}
+        },
+        {
+          "if": {"properties": {"size": {"const": "XL"}}, "required": ["size"]},
+          "then": {"required": ["quote_acceptance"]},
+          "else": {"not": {"anyOf": [{"required": ["quote_acceptance"]}]}}
+        },
+        {
+          "if": {"properties": {"tier": {"const": "100"}}, "required": ["tier"]},
+          "then": {"properties": {"credits": {"type": "null"}}},
+          "else": {"properties": {"credits": {"type": "integer", "minimum": 1}}}
+        },
+        {
+          "if": {
+            "properties": {"tier": {"enum": ["1", "10"]}, "size": {"const": "S"}},
+            "required": ["tier", "size"]
+          },
+          "then": {"properties": {"credits": {"const": 1}}}
+        },
+        {
+          "if": {
+            "properties": {"tier": {"enum": ["1", "10"]}, "size": {"const": "M"}},
+            "required": ["tier", "size"]
+          },
+          "then": {"properties": {"credits": {"const": 2}}}
+        },
+        {
+          "if": {
+            "properties": {"tier": {"enum": ["1", "10"]}, "size": {"const": "L"}},
+            "required": ["tier", "size"]
+          },
+          "then": {"properties": {"credits": {"const": 5}}}
+        }
+      ]
+    },
+    "eta": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "position", "merged", "window_days", "days"],
+          "properties": {
+            "kind": {"const": "estimate"},
+            "position": {"type": "integer", "minimum": 1},
+            "merged": {"type": "integer", "minimum": 1},
+            "window_days": {"type": "number", "exclusiveMinimum": 0},
+            "days": {"type": "number", "exclusiveMinimum": 0}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "reason"],
+          "properties": {
+            "kind": {"const": "unavailable"},
+            "reason": {"enum": ["unknown-position", "unknown-throughput", "no-throughput"]}
+          }
+        }
+      ]
+    },
+    "tracker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "record", "request", "stage", "evidence", "eta"],
+      "properties": {
+        "schema": {"const": "openwiz.subscriber-requests.v1"},
+        "record": {"const": "tracker"},
+        "request": {"$ref": "#/$defs/issue-ref"},
+        "stage": {
+          "enum": [
+            "submitted",
+            "triaged",
+            "building",
+            "pull-request",
+            "reviewed",
+            "merged",
+            "released",
+            "working-on-install"
+          ]
+        },
+        "evidence": {"type": "object"},
+        "eta": {"$ref": "#/$defs/eta"},
+        "activity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["agent", "harness", "step", "time"],
+          "properties": {
+            "agent": {"enum": ["builder", "reviewer", "fleet"]},
+            "harness": {"type": "string", "minLength": 1, "pattern": "\\S"},
+            "step": {"type": "string", "minLength": 1, "pattern": "\\S"},
+            "time": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z(?![\\s\\S])",
+              "format": "date-time"
+            }
+          }
+        },
+        "diff": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["title", "files_changed", "additions", "deletions", "top_files"],
+          "properties": {
+            "title": {"type": "string", "minLength": 1, "pattern": "\\S"},
+            "files_changed": {"type": "integer", "minimum": 0},
+            "additions": {"type": "integer", "minimum": 0},
+            "deletions": {"type": "integer", "minimum": 0},
+            "top_files": {"type": "array", "items": {"type": "string", "minLength": 1, "pattern": "\\S"}}
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"stage": {"const": "submitted"}}, "required": ["stage"]},
+          "then": {
+            "properties": {
+              "evidence": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["issue"],
+                "properties": {"issue": {"$ref": "#/$defs/issue-ref"}}
+              }
+            }
+          }
+        },
+        {
+          "if": {"properties": {"stage": {"const": "triaged"}}, "required": ["stage"]},
+          "then": {
+            "properties": {
+              "evidence": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["verdict_comment", "verdict"],
+                "properties": {
+                  "verdict_comment": {"type": "integer", "minimum": 1},
+                  "verdict": {"enum": ["approved", "market-item", "quote", "needs-owner", "refused", "report"]}
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {"properties": {"stage": {"const": "building"}}, "required": ["stage"]},
+          "then": {
+            "properties": {
+              "evidence": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["ticket", "builder_status_comment"],
+                "properties": {
+                  "ticket": {"$ref": "#/$defs/issue-ref"},
+                  "builder_status_comment": {"type": "integer", "minimum": 1}
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {"properties": {"stage": {"const": "pull-request"}}, "required": ["stage"]},
+          "then": {
+            "properties": {
+              "evidence": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["pull_request"],
+                "properties": {"pull_request": {"$ref": "#/$defs/issue-ref"}}
+              }
+            }
+          }
+        },
+        {
+          "if": {"properties": {"stage": {"const": "reviewed"}}, "required": ["stage"]},
+          "then": {
+            "properties": {
+              "evidence": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["pull_request", "head", "review_comment"],
+                "properties": {
+                  "pull_request": {"$ref": "#/$defs/issue-ref"},
+                  "head": {"type": "string", "minLength": 1, "pattern": "^[0-9a-f]{40}(?![\\s\\S])"},
+                  "review_comment": {"type": "integer", "minimum": 1}
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {"properties": {"stage": {"const": "merged"}}, "required": ["stage"]},
+          "then": {
+            "properties": {
+              "evidence": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["pull_request", "merge_commit"],
+                "properties": {
+                  "pull_request": {"$ref": "#/$defs/issue-ref"},
+                  "merge_commit": {"type": "string", "minLength": 1, "pattern": "^[0-9a-f]{40}(?![\\s\\S])"}
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {"properties": {"stage": {"const": "released"}}, "required": ["stage"]},
+          "then": {
+            "properties": {
+              "evidence": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["merge_commit", "version"],
+                "properties": {
+                  "merge_commit": {"type": "string", "minLength": 1, "pattern": "^[0-9a-f]{40}(?![\\s\\S])"},
+                  "version": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?(?![\\s\\S])"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {"properties": {"stage": {"const": "working-on-install"}}, "required": ["stage"]},
+          "then": {
+            "properties": {
+              "evidence": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["version", "installed_version"],
+                "properties": {
+                  "version": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?(?![\\s\\S])"
+                  },
+                  "installed_version": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?(?![\\s\\S])"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "attribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "record", "visibility", "surface", "line"],
+      "properties": {
+        "schema": {"const": "openwiz.subscriber-requests.v1"},
+        "record": {"const": "attribution"},
+        "visibility": {"const": "public"},
+        "surface": {"enum": ["pull-request", "changelog", "listing"]},
+        "line": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^Requested by @[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?![\\s\\S])",
+          "maxLength": 53
+        }
+      }
+    },
+    "veto": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "record", "merged", "by", "comment"],
+      "properties": {
+        "schema": {"const": "openwiz.subscriber-requests.v1"},
+        "record": {"const": "veto"},
+        "merged": {"const": false},
+        "by": {"const": "owner"},
+        "comment": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^OpenWiz subscriber request veto: [^\\r\\n]*[^\\s][^\\r\\n]*(?![\\s\\S])"
+        }
+      }
+    },
+    "ban": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "record", "access", "login", "action", "confirmation"],
+      "properties": {
+        "schema": {"const": "openwiz.subscriber-requests.v1"},
+        "record": {"const": "ban"},
+        "access": {"const": "owner-only"},
+        "login": {"$ref": "#/$defs/login"},
+        "action": {"const": "ban-and-refund"},
+        "confirmation": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}
