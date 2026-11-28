@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import importlib.util
 import json
 import os
 import re
@@ -188,7 +189,7 @@ def version(m, issues, heads, tags, read_ticket, problems):
         state = "building"
     else:
         state = "being grilled"
-    return {"title": title, "state": state, "outcome": outcome}
+    return {"title": title, "state": state, "outcome": outcome, "number": m["number"], "html_url": m["html_url"]}
 
 
 def public_holds(line):
@@ -204,9 +205,12 @@ def public_holds(line):
     return None
 
 
-def public_page(versions):
+def public_page(versions, specs=None, wanted=None, req=None):
     out = ["# OpenWiz roadmap", "", "What is being built now, and what comes next."]
     for horizon, states in (("Now", NOW), ("Next", NEXT)):
+        if horizon == "Next" and req is not None:
+            out += req.specs_section(specs)
+            out += req.most_wanted_section(wanted)
         out += ["", f"## {horizon}", ""]
         group = [v for v in versions if v["state"] in states]
         for v in group:
@@ -283,6 +287,21 @@ def repo_arg(value):
     return value
 
 
+def load_requests():
+    path = Path(__file__).resolve().with_name("requests.py")
+    spec = importlib.util.spec_from_file_location("roadmap_requests", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def scope_repo_arg(value):
+    try:
+        return load_requests().validate_scope_repo(value)
+    except ValueError as e:
+        raise argparse.ArgumentTypeError(str(e)) from None
+
+
 def main(argv):
     parser = argparse.ArgumentParser(prog="roadmap.py", description=DESCRIPTION)
     parser.add_argument("--root", default=str(Path(__file__).resolve().parents[2]),
@@ -291,11 +310,24 @@ def main(argv):
                         help="write the short public roadmap to FILE")
     parser.add_argument("--public-repo", metavar="OWNER/NAME", type=repo_arg, default=PUBLIC_REPO,
                         help=f"the public repository whose v<version> tags mark published versions (default {PUBLIC_REPO})")
+    parser.add_argument("--with-requests", action="store_true",
+                        help="add Specs in progress and Most wanted sections")
+    parser.add_argument("--scope-repo", action="append", metavar="OWNER/NAME", type=scope_repo_arg,
+                        help="scope repository for public requests (default: the three OpenWiz scope repositories)")
     args = parser.parse_args(argv)
+    if args.scope_repo and not args.with_requests:
+        parser.error("--scope-repo requires --with-requests")
     root = Path(args.root)
     try:
         versions, problems = read_github(root, args.public_repo)
-        report = write_pages({args.public: Path(args.public)}, {args.public: public_page(versions)})
+        if args.with_requests:
+            req = load_requests()
+            specs = req.read_specs(root, versions, gh, objects, Fail)
+            wanted = req.read_requests(root, args.scope_repo, gh, objects, Fail)
+            page_text = public_page(versions, specs=specs, wanted=wanted, req=req)
+        else:
+            page_text = public_page(versions)
+        report = write_pages({args.public: Path(args.public)}, {args.public: page_text})
     except HalfWritten as e:
         print(f"roadmap: {e}", file=sys.stderr)
         return 1
