@@ -1,0 +1,57 @@
+$ python3 -I adapters/warp-oz/test_driver.py -v   # after merging EF1 371c9cbf, before effort joins can; refusing agent-CLI stubs first on PATH
+test_a_host_refusal_is_an_error_and_a_failed_stop_is_tried_again (__main__.Driver.test_a_host_refusal_is_an_error_and_a_failed_stop_is_tried_again) ... ok
+test_an_effort_warp_cant_set_is_refused_and_starts_nothing (__main__.Driver.test_an_effort_warp_cant_set_is_refused_and_starts_nothing) ... ok
+test_codex_effort_reaches_warp_as_its_reasoning_level (__main__.Driver.test_codex_effort_reaches_warp_as_its_reasoning_level) ... ok
+test_harness_login_and_environment_are_checked_before_any_call (__main__.Driver.test_harness_login_and_environment_are_checked_before_any_call) ... ok
+test_kit_passes_all_five_with_its_key_check (__main__.Driver.test_kit_passes_all_five_with_its_key_check) ... FAIL
+test_start_wake_and_stop_are_warps_documented_calls (__main__.Driver.test_start_wake_and_stop_are_warps_documented_calls) ... ok
+test_version_lists_effort_and_schema_is_the_kits_own (__main__.Driver.test_version_lists_effort_and_schema_is_the_kits_own) ... FAIL
+
+======================================================================
+FAIL: test_kit_passes_all_five_with_its_key_check (__main__.Driver.test_kit_passes_all_five_with_its_key_check)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 72, in test_kit_passes_all_five_with_its_key_check
+    self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
+AssertionError: Tuples differ: (1, ['fail version: its schema is not kern[347 chars]er']) != (0, ['pass version: openwiz:records v1, an[347 chars]er'])
+
+First differing element 0:
+1
+0
+
+- (1,
+-  ['fail version: its schema is not kernel/driver-kit/schema.json',
++ (0,
++  ['pass version: openwiz:records v1, and the schema is driver v1',
+    'pass start: the run posted builder status note 1',
+    'pass wake: the run edited builder status note 1',
+    'pass stop: the run ended, and a wake after it is refused',
+    'pass token: no login or token passed through the driver, and on start, wake '
+    'and stop the warp-oz key reached its host only from the key helper, in its '
+    'header']) : 
+
+======================================================================
+FAIL: test_version_lists_effort_and_schema_is_the_kits_own (__main__.Driver.test_version_lists_effort_and_schema_is_the_kits_own)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 82, in test_version_lists_effort_and_schema_is_the_kits_own
+    self.assertEqual((p.returncode, json.loads(p.stdout)),
+AssertionError: Tuples differ: (0, {[37 chars]nwiz:records v1'], 'can': ['start', 'wake', 'stop']}) != (0, {[37 chars]nwiz:records v1'], 'can': ['start', 'wake', 'stop', 'effort']})
+
+First differing element 1:
+{'dri[32 chars]enwiz:records v1'], 'can': ['start', 'wake', 'stop']}
+{'dri[32 chars]enwiz:records v1'], 'can': ['start', 'wake', 'stop', 'effort']}
+
+  (0,
+-  {'can': ['start', 'wake', 'stop'],
++  {'can': ['start', 'wake', 'stop', 'effort'],
+?                                  ++++++++++
+
+    'driver': 'warp-oz',
+    'records': ['openwiz:records v1']})
+
+----------------------------------------------------------------------
+Ran 7 tests in 3.261s
+
+FAILED (failures=2)
+exit 1

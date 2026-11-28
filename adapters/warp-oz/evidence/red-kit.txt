@@ -1,0 +1,89 @@
+$ python3 -I adapters/warp-oz/test_driver.py   # against the copied template driver (harness stubs first on PATH)
+# The credential-shaped synthetic run id of one subtest is written as the test builds it, so no log line holds a token's shape.
+FFFFFFF
+======================================================================
+FAIL: test_a_host_refusal_is_an_error_and_a_failed_stop_is_tried_again (__main__.Driver.test_a_host_refusal_is_an_error_and_a_failed_stop_is_tried_again) (answer={'status': 401, 'body': {'error': 'synthetic refusal'}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 132, in test_a_host_refusal_is_an_error_and_a_failed_stop_is_tried_again
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'run-885527c32f68'}
+
+======================================================================
+FAIL: test_a_host_refusal_is_an_error_and_a_failed_stop_is_tried_again (__main__.Driver.test_a_host_refusal_is_an_error_and_a_failed_stop_is_tried_again) (answer={'status': 200, 'body': {'run_id': 'ghp_' + 'Synthetic0' * 3, 'state': 'QUEUED'}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 132, in test_a_host_refusal_is_an_error_and_a_failed_stop_is_tried_again
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'run-adf1bddb5410'}
+
+======================================================================
+FAIL: test_a_host_refusal_is_an_error_and_a_failed_stop_is_tried_again (__main__.Driver.test_a_host_refusal_is_an_error_and_a_failed_stop_is_tried_again) (answer={'status': 200, 'body': {'state': 'QUEUED'}})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 132, in test_a_host_refusal_is_an_error_and_a_failed_stop_is_tried_again
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'run-36bbcf6d68ab'}
+
+======================================================================
+FAIL: test_a_host_refusal_is_an_error_and_a_failed_stop_is_tried_again (__main__.Driver.test_a_host_refusal_is_an_error_and_a_failed_stop_is_tried_again)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 139, in test_a_host_refusal_is_an_error_and_a_failed_stop_is_tried_again
+    self.assertEqual(self.call('wake', {'run': run})[0], 1)
+AssertionError: 0 != 1
+
+======================================================================
+FAIL: test_harness_login_and_environment_are_checked_before_any_call (__main__.Driver.test_harness_login_and_environment_are_checked_before_any_call)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 112, in test_harness_login_and_environment_are_checked_before_any_call
+    self.assertEqual([c['body']['config'] for c in self.calls()], [{
+AssertionError: Lists differ: [] != [{'harness': {'type': 'claude'}, 'harness_[59 chars]N'}}]
+
+Second list contains 1 additional elements.
+First extra element 0:
+{'harness': {'type': 'claude'}, 'harness_auth_secrets': {'claude_auth_secret_name': 'SYN_CLAUDE_LOGIN'}}
+
+- []
++ [{'harness': {'type': 'claude'},
++   'harness_auth_secrets': {'claude_auth_secret_name': 'SYN_CLAUDE_LOGIN'}}]
+
+======================================================================
+FAIL: test_kit_passes_all_five_with_its_key_check (__main__.Driver.test_kit_passes_all_five_with_its_key_check)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 71, in test_kit_passes_all_five_with_its_key_check
+    self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[224 chars]st"]) != (0, ['pass version: openwiz:records v1, an[347 chars]er'])
+
+First differing element 0:
+1
+0
+
+- (1,
++ (0,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+-   'fail start: no builder status note appeared within 8 seconds',
+-   'fail wake: not run: start failed',
+-   'fail stop: not run: start failed',
+-   "fail token: the warp-oz key never reached the kit's fake host"])
++   'pass start: the run posted builder status note 1',
++   'pass wake: the run edited builder status note 1',
++   'pass stop: the run ended, and a wake after it is refused',
++   'pass token: no login or token passed through the driver, and on start, wake '
++   'and stop the warp-oz key reached its host only from the key helper, in its '
++   'header']) : 
+
+======================================================================
+FAIL: test_start_wake_and_stop_are_warps_documented_calls (__main__.Driver.test_start_wake_and_stop_are_warps_documented_calls)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 86, in test_start_wake_and_stop_are_warps_documented_calls
+    self.assertRegex(run, r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+AssertionError: Regex didn't match: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' not found in 'run-d27126499f77'
+
+----------------------------------------------------------------------
+Ran 4 tests in 9.329s
+
+FAILED (failures=7)

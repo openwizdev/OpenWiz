@@ -1,0 +1,16 @@
+$ python3 -I adapters/warp-oz/test_driver.py -v   # at 897a3549 (R1, R2 fixes), 35 refusing agent-CLI stubs first on PATH, env -u OPENWIZ_GITHUB_APP_KEY
+test_a_host_refusal_is_an_error_and_a_failed_stop_is_tried_again (__main__.Driver.test_a_host_refusal_is_an_error_and_a_failed_stop_is_tried_again) ... ok
+test_a_run_saved_but_not_cancelled_says_so (__main__.Driver.test_a_run_saved_but_not_cancelled_says_so) ... ok
+test_a_saved_run_is_read_only_in_its_exact_shape (__main__.Driver.test_a_saved_run_is_read_only_in_its_exact_shape) ... ok
+test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable (__main__.Driver.test_a_wake_or_cancel_answer_warp_never_documents_is_unknown_and_stop_stays_retryable) ... ok
+test_an_effort_warp_cant_set_is_refused_and_starts_nothing (__main__.Driver.test_an_effort_warp_cant_set_is_refused_and_starts_nothing) ... ok
+test_codex_effort_reaches_warp_as_its_reasoning_level (__main__.Driver.test_codex_effort_reaches_warp_as_its_reasoning_level) ... ok
+test_harness_login_and_environment_are_checked_before_any_call (__main__.Driver.test_harness_login_and_environment_are_checked_before_any_call) ... ok
+test_kit_passes_all_five_with_its_key_check (__main__.Driver.test_kit_passes_all_five_with_its_key_check) ... ok
+test_start_wake_and_stop_are_warps_documented_calls (__main__.Driver.test_start_wake_and_stop_are_warps_documented_calls) ... ok
+test_version_lists_effort_and_schema_is_the_kits_own (__main__.Driver.test_version_lists_effort_and_schema_is_the_kits_own) ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 6.068s
+
+OK

@@ -1,0 +1,91 @@
+$ python3 -I adapters/warp-oz/test_driver.py   # after merging KY1's 2292b177, whose helper takes its test key only from the fake host (refusing agent-CLI stubs first on PATH)
+# The helper's error names the key's variable and its keychain entry; they are written <the key's variable> and <the keychain entry> here, since no file of the driver may name the variable and the entry's name belongs in the README only.
+E.FFFFFFF
+======================================================================
+ERROR: test_a_host_refusal_is_an_error_and_a_failed_stop_is_tried_again (__main__.Driver.test_a_host_refusal_is_an_error_and_a_failed_stop_is_tried_again)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 154, in test_a_host_refusal_is_an_error_and_a_failed_stop_is_tried_again
+    run = self.call('start', START)[1]['run']
+          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+KeyError: 'run'
+
+======================================================================
+FAIL: test_codex_effort_reaches_warp_as_its_reasoning_level (__main__.Driver.test_codex_effort_reaches_warp_as_its_reasoning_level) (effort='low')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 124, in test_codex_effort_reaches_warp_as_its_reasoning_level
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': "the key helper refused: the kit's fake host gave no test key; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads <the key's variable> or <the keychain entry>", 'next': "unset OPENWIZ_HOSTKEY_TEST_ORIGIN: it is only for the kit's tests"}
+
+======================================================================
+FAIL: test_codex_effort_reaches_warp_as_its_reasoning_level (__main__.Driver.test_codex_effort_reaches_warp_as_its_reasoning_level) (effort='medium')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 124, in test_codex_effort_reaches_warp_as_its_reasoning_level
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': "the key helper refused: the kit's fake host gave no test key; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads <the key's variable> or <the keychain entry>", 'next': "unset OPENWIZ_HOSTKEY_TEST_ORIGIN: it is only for the kit's tests"}
+
+======================================================================
+FAIL: test_codex_effort_reaches_warp_as_its_reasoning_level (__main__.Driver.test_codex_effort_reaches_warp_as_its_reasoning_level) (effort='high')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 124, in test_codex_effort_reaches_warp_as_its_reasoning_level
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': "the key helper refused: the kit's fake host gave no test key; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads <the key's variable> or <the keychain entry>", 'next': "unset OPENWIZ_HOSTKEY_TEST_ORIGIN: it is only for the kit's tests"}
+
+======================================================================
+FAIL: test_codex_effort_reaches_warp_as_its_reasoning_level (__main__.Driver.test_codex_effort_reaches_warp_as_its_reasoning_level) (effort='xhigh')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 124, in test_codex_effort_reaches_warp_as_its_reasoning_level
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': "the key helper refused: the kit's fake host gave no test key; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads <the key's variable> or <the keychain entry>", 'next': "unset OPENWIZ_HOSTKEY_TEST_ORIGIN: it is only for the kit's tests"}
+
+======================================================================
+FAIL: test_harness_login_and_environment_are_checked_before_any_call (__main__.Driver.test_harness_login_and_environment_are_checked_before_any_call)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 108, in test_harness_login_and_environment_are_checked_before_any_call
+    self.assertEqual(self.call('start', START)[0], 0)
+AssertionError: 1 != 0
+
+======================================================================
+FAIL: test_kit_passes_all_five_with_its_key_check (__main__.Driver.test_kit_passes_all_five_with_its_key_check)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 72, in test_kit_passes_all_five_with_its_key_check
+    self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[441 chars]er']) != (0, ['pass version: openwiz:records v1, an[347 chars]er'])
+
+First differing element 0:
+1
+0
+
+- (1,
++ (0,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
++   'pass start: the run posted builder status note 1',
++   'pass wake: the run edited builder status note 1',
++   'pass stop: the run ended, and a wake after it is refused',
+-   "fail start: the key helper refused: the kit's fake host gave no test key; "
+-   'under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads <the key's variable> or '
+-   '<the keychain entry>',
+-   'fail wake: not run: start failed',
+-   'fail stop: not run: start failed',
+    'pass token: no login or token passed through the driver, and on start, wake '
+    'and stop the warp-oz key reached its host only from the key helper, in its '
+    'header']) : 
+
+======================================================================
+FAIL: test_start_wake_and_stop_are_warps_documented_calls (__main__.Driver.test_start_wake_and_stop_are_warps_documented_calls)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/warp-oz/test_driver.py", line 83, in test_start_wake_and_stop_are_warps_documented_calls
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': "the key helper refused: the kit's fake host gave no test key; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads <the key's variable> or <the keychain entry>", 'next': "unset OPENWIZ_HOSTKEY_TEST_ORIGIN: it is only for the kit's tests"}
+
+----------------------------------------------------------------------
+Ran 6 tests in 2.016s
+
+FAILED (failures=7, errors=1)

@@ -1,0 +1,11 @@
+{
+  "answers": [
+    {"method": "POST", "path": "/api/v1/agent/runs", "status": 200,
+     "body": {"run_id": "00000000-0000-4000-8000-00000000c0de", "task_id": "00000000-0000-4000-8000-00000000c0de",
+              "state": "QUEUED"}},
+    {"method": "POST", "path": "/api/v1/agent/runs/[0-9a-fA-F-]{36}/followups", "status": 200,
+     "body": {"followup_id": "00000000-0000-4000-8000-00000000f011", "outcome": "live_session"}},
+    {"method": "POST", "path": "/api/v1/agent/runs/[0-9a-fA-F-]{36}/cancel", "status": 200,
+     "body": "00000000-0000-4000-8000-00000000c0de"}
+  ]
+}
