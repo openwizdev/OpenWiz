@@ -1,0 +1,13 @@
+F
+======================================================================
+FAIL: test_golden_recall_cases_show_in_the_composer (__main__.BrowserTests.test_golden_recall_cases_show_in_the_composer)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/agent/repos/OpenWiz/tools/ghost-t3/test_sidecar.py", line 372, in test_golden_recall_cases_show_in_the_composer
+    self.assertEqual(self.ghost(), step["expected_ghost"], case["name"])
+AssertionError: None != ' all recs' : grill_code_j1
+
+----------------------------------------------------------------------
+Ran 1 test in 0.782s
+
+FAILED (failures=1)
