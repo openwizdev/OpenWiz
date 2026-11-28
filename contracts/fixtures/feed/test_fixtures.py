@@ -404,13 +404,37 @@ class FeedContract(unittest.TestCase):
 
         expect = load(COMMENTS_INVALID / "expect.json")
         self.assertEqual(sorted(expect), sorted(p.name for p in COMMENTS_INVALID.glob("*.txt")))
+        rule_markers = {
+            "settings_path": ("settings_path:",),
+            "proposal_differs": ("proposal_differs:",),
+            "privacy_email": ("$.reason: matches a refused form",),
+            "fields_exact": ("fields_exact:",),
+            "privacy_key": ("$.key: matches a refused form",),
+            "privacy_account_id": ("$.to: matches a refused form",),
+            "utc_time": ("$.resets_at: does not match",),
+            "switch_differs": ("switch_differs:",),
+            "suggestion_reason": ("$.reason: not in",),
+            "listing_url": ("$.listing: does not match",),
+            "unknown_marker": ("unknown_marker:",),
+        }
         for name, case in expect.items():
             with self.subTest(name):
                 _, found = parse_comment((COMMENTS_INVALID / name).read_text(encoding="utf-8"), self.schema)
                 self.assertTrue(found, f"{name} should be refused")
+                prefixes = rule_markers[case["rule"]]
+                self.assertTrue(any(line.startswith(prefixes) for line in found), (name, case["rule"], found))
                 self.assertIn(f"`{name}`", self.text, "the contract names each invalid comment fixture")
         self.assertEqual({case["form"] for case in expect.values()} - {"unknown"},
                          {"setting-proposal", "key-needed", "quota-switch", "driver-suggestion"})
+        for good_path in ("roles.builder", "roles.builder.effort", "accounts.work.profile.folder",
+                          "hosts.home.builder", "hosts.overflow.host", "hosts.max_agents",
+                          "hosts.projects.syn-owner/syn-app", "drivers.boat",
+                          "budgets.local:claude:work.amount", "keys.devin.on", "channels.slack", "telemetry"):
+            self.assertTrue(settings_path_ok(good_path), good_path)
+        for bad_path in ("schema", "channels.t3", "updates", "version", "changed_at", "changed_by",
+                         "history", "hosts.overflow.serves", "keys.devin.value", "keys.devin.set_at",
+                         "keys.devin.opt_in", "unknown.section"):
+            self.assertFalse(settings_path_ok(bad_path), bad_path)
 
     def test_resolution_transitions_cover_every_kind_and_leave_needs_you(self):
         cases = load(RESOLUTION)
@@ -453,6 +477,23 @@ class FeedContract(unittest.TestCase):
                 self.assertEqual(errors(ledger, ledger_schema, self.schema), [])
 
     def test_privacy_refuses_key_email_and_account_id_shapes(self):
+        def walk_strings(node, at="#"):
+            if isinstance(node, dict):
+                if node.get("type") == "string" and "const" not in node and "enum" not in node:
+                    yield at, node
+                for key, value in node.items():
+                    if key != "not":
+                        yield from walk_strings(value, f"{at}/{key}")
+            elif isinstance(node, list):
+                for index, value in enumerate(node):
+                    yield from walk_strings(value, f"{at}/{index}")
+
+        guards = ({"$ref": "#/$defs/no_private"}, {"$ref": "#/$defs/no_private_id"})
+        for at, node in walk_strings(self.schema):
+            if at.endswith("/resolved_at"):
+                continue
+            with self.subTest(schema_string=at):
+                self.assertTrue(any(guard in node.get("allOf", []) for guard in guards), at)
         no_private = {"$ref": "#/$defs/no_private"}
         for bad in (
             "sk-syn-0000000000000000",

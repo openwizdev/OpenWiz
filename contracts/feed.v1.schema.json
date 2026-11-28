@@ -1,0 +1,304 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:openwiz:schema:feed:v1",
+  "title": "openwiz.feed.v1",
+  "description": "The home feed file, .openwiz/feed.v1.json (spec #3408, ticket #3410). contracts/feed.v1.md states the cross-field rules checked after the schema: budget.used <= budget.allowed, unique card ids, card id and link agreement with record, and since <= resolved_at <= read_at. $defs also fixes the one-ping ledger (openwiz.feed-pinged.v1) and the four openwiz:*-v1 comment forms.",
+  "type": "object",
+  "required": ["schema", "read_at", "budget", "cards", "unavailable"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "openwiz.feed.v1"},
+    "read_at": {"$ref": "#/$defs/utc"},
+    "budget": {"$ref": "#/$defs/budget"},
+    "cards": {"type": "array", "items": {"$ref": "#/$defs/card"}},
+    "unavailable": {"type": "array", "items": {"$ref": "#/$defs/unavailable_source"}}
+  },
+  "$defs": {
+    "no_private_id": {
+      "description": "Refuses key or token prefixes, emails, account or thread identifiers, and home-directory paths.",
+      "not": {
+        "pattern": "sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{16,}|github_pat_|glpat-|xox[abprs]-|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{20,}|eyJ[A-Za-z0-9_-]{8,}\\.|-----BEGIN|[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)+|\\b(acct|usr|user|org|team|proj|prj|mch|auto|thr|cr)_[A-Za-z0-9_-]{3,}|/(Users|home)/"
+      }
+    },
+    "no_private": {
+      "description": "Refuses private identifiers and long raw token runs wherever a free string may stand.",
+      "allOf": [
+        {"$ref": "#/$defs/no_private_id"},
+        {"not": {"pattern": "[A-Za-z0-9+=_-]{40,}"}}
+      ]
+    },
+    "utc": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "allOf": [{"$ref": "#/$defs/no_private"}]
+    },
+    "repo": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9](-?[A-Za-z0-9]){0,38}/[A-Za-z0-9._-]{1,100}$",
+      "allOf": [{"$ref": "#/$defs/no_private_id"}]
+    },
+    "label": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,32}$",
+      "allOf": [{"$ref": "#/$defs/no_private"}]
+    },
+    "host": {
+      "type": "string",
+      "maxLength": 40,
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "allOf": [{"$ref": "#/$defs/no_private"}]
+    },
+    "single_line": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240,
+      "pattern": "^[^\\r\\n]+$",
+      "allOf": [{"$ref": "#/$defs/no_private"}]
+    },
+    "budget": {
+      "type": "object",
+      "required": ["used", "allowed"],
+      "additionalProperties": false,
+      "properties": {
+        "used": {"type": "integer", "minimum": 0},
+        "allowed": {"type": "integer", "minimum": 1}
+      }
+    },
+    "unavailable_source": {
+      "type": "object",
+      "required": ["source", "reason"],
+      "additionalProperties": false,
+      "properties": {
+        "source": {"$ref": "#/$defs/single_line"},
+        "reason": {"$ref": "#/$defs/single_line"}
+      }
+    },
+    "record": {
+      "type": "object",
+      "required": ["repository", "number", "comment_id"],
+      "additionalProperties": false,
+      "properties": {
+        "repository": {"$ref": "#/$defs/repo"},
+        "number": {"type": "integer", "minimum": 1},
+        "comment_id": {"oneOf": [{"type": "integer", "minimum": 1}, {"type": "null"}]}
+      }
+    },
+    "card_id": {
+      "type": "string",
+      "pattern": "^((spec|release|key|setting|quota|driver):[A-Za-z0-9](-?[A-Za-z0-9]){0,38}/[A-Za-z0-9._-]{1,100}#[1-9][0-9]*:[1-9][0-9]*|pr:[A-Za-z0-9](-?[A-Za-z0-9]){0,38}/[A-Za-z0-9._-]{1,100}#[1-9][0-9]*@[0-9a-f]{40}|blocker:[A-Za-z0-9](-?[A-Za-z0-9]){0,38}/[A-Za-z0-9._-]{1,100}#[1-9][0-9]*(:[1-9][0-9]*)?)$",
+      "allOf": [{"$ref": "#/$defs/no_private_id"}]
+    },
+    "github_link": {
+      "type": "string",
+      "pattern": "^https://github\\.com/[A-Za-z0-9](-?[A-Za-z0-9]){0,38}/[A-Za-z0-9._-]{1,100}/(issues|pull)/[1-9][0-9]*(#issuecomment-[1-9][0-9]*)?$",
+      "allOf": [{"$ref": "#/$defs/no_private_id"}]
+    },
+    "card": {
+      "type": "object",
+      "required": ["id", "kind", "needs_owner", "title", "link", "record", "since", "resolved_at"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"$ref": "#/$defs/card_id"},
+        "kind": {
+          "enum": [
+            "spec-to-approve",
+            "pr-ready-to-merge",
+            "release",
+            "key-needed",
+            "setting-proposal",
+            "blocker",
+            "quota-switch",
+            "driver-suggestion"
+          ]
+        },
+        "needs_owner": {"type": "boolean"},
+        "title": {"$ref": "#/$defs/single_line"},
+        "link": {"$ref": "#/$defs/github_link"},
+        "record": {"$ref": "#/$defs/record"},
+        "since": {"$ref": "#/$defs/utc"},
+        "resolved_at": {"oneOf": [{"$ref": "#/$defs/utc"}, {"type": "null"}]}
+      },
+      "allOf": [
+        {
+          "if": {"required": ["resolved_at"], "properties": {"resolved_at": {"type": "string"}}},
+          "then": {"properties": {"needs_owner": {"const": false}}}
+        },
+        {
+          "if": {
+            "required": ["kind", "resolved_at"],
+            "properties": {
+              "kind": {"enum": ["spec-to-approve", "pr-ready-to-merge", "release", "key-needed", "setting-proposal"]},
+              "resolved_at": {"type": "null"}
+            }
+          },
+          "then": {"properties": {"needs_owner": {"const": true}}}
+        },
+        {
+          "if": {"required": ["kind"], "properties": {"kind": {"enum": ["quota-switch", "driver-suggestion"]}}},
+          "then": {"properties": {"needs_owner": {"const": false}}}
+        },
+        {
+          "if": {"required": ["kind"], "properties": {"kind": {"const": "spec-to-approve"}}},
+          "then": {
+            "properties": {
+              "id": {"pattern": "^spec:[^:]+:[1-9][0-9]*$"},
+              "link": {"pattern": "#issuecomment-[1-9][0-9]*$"},
+              "record": {"properties": {"comment_id": {"type": "integer", "minimum": 1}}}
+            }
+          }
+        },
+        {
+          "if": {"required": ["kind"], "properties": {"kind": {"const": "pr-ready-to-merge"}}},
+          "then": {
+            "properties": {
+              "id": {"pattern": "^pr:[^@]+@[0-9a-f]{40}$"},
+              "link": {"pattern": "/pull/[1-9][0-9]*$"},
+              "record": {"properties": {"comment_id": {"type": "null"}}}
+            }
+          }
+        },
+        {
+          "if": {"required": ["kind"], "properties": {"kind": {"const": "release"}}},
+          "then": {
+            "properties": {
+              "id": {"pattern": "^release:[^:]+:[1-9][0-9]*$"},
+              "link": {"pattern": "#issuecomment-[1-9][0-9]*$"},
+              "record": {"properties": {"comment_id": {"type": "integer", "minimum": 1}}}
+            }
+          }
+        },
+        {
+          "if": {"required": ["kind"], "properties": {"kind": {"const": "key-needed"}}},
+          "then": {
+            "properties": {
+              "id": {"pattern": "^key:[^:]+:[1-9][0-9]*$"},
+              "link": {"pattern": "#issuecomment-[1-9][0-9]*$"},
+              "record": {"properties": {"comment_id": {"type": "integer", "minimum": 1}}}
+            }
+          }
+        },
+        {
+          "if": {"required": ["kind"], "properties": {"kind": {"const": "setting-proposal"}}},
+          "then": {
+            "properties": {
+              "id": {"pattern": "^setting:[^:]+:[1-9][0-9]*$"},
+              "link": {"pattern": "#issuecomment-[1-9][0-9]*$"},
+              "record": {"properties": {"comment_id": {"type": "integer", "minimum": 1}}}
+            }
+          }
+        },
+        {
+          "if": {"required": ["kind"], "properties": {"kind": {"const": "blocker"}}},
+          "then": {
+            "properties": {"id": {"pattern": "^blocker:"}},
+            "allOf": [
+              {
+                "if": {
+                  "required": ["record"],
+                  "properties": {"record": {"required": ["comment_id"], "properties": {"comment_id": {"type": "null"}}}}
+                },
+                "then": {
+                  "properties": {
+                    "id": {"pattern": "^blocker:[^:]+$"},
+                    "link": {"pattern": "/issues/[1-9][0-9]*$"}
+                  }
+                },
+                "else": {
+                  "properties": {
+                    "id": {"pattern": "^blocker:[^:]+:[1-9][0-9]*$"},
+                    "link": {"pattern": "#issuecomment-[1-9][0-9]*$"}
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "if": {"required": ["kind"], "properties": {"kind": {"const": "quota-switch"}}},
+          "then": {
+            "properties": {
+              "id": {"pattern": "^quota:[^:]+:[1-9][0-9]*$"},
+              "link": {"pattern": "#issuecomment-[1-9][0-9]*$"},
+              "record": {"properties": {"comment_id": {"type": "integer", "minimum": 1}}}
+            }
+          }
+        },
+        {
+          "if": {"required": ["kind"], "properties": {"kind": {"const": "driver-suggestion"}}},
+          "then": {
+            "properties": {
+              "id": {"pattern": "^driver:[^:]+:[1-9][0-9]*$"},
+              "link": {"pattern": "#issuecomment-[1-9][0-9]*$"},
+              "record": {"properties": {"comment_id": {"type": "integer", "minimum": 1}}}
+            }
+          }
+        }
+      ]
+    },
+    "ping_ledger": {
+      "description": "The one-ping ledger, pinged.json in the home checkout's .openwiz/home folder: card ids and UTC ping times only.",
+      "type": "object",
+      "required": ["schema", "pinged"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {"const": "openwiz.feed-pinged.v1"},
+        "pinged": {
+          "type": "object",
+          "propertyNames": {"$ref": "#/$defs/card_id"},
+          "additionalProperties": {"$ref": "#/$defs/utc"}
+        }
+      }
+    },
+    "choice_ref": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]+:[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*:[A-Za-z0-9._-]+:[A-Za-z0-9_-]{1,32}$",
+      "allOf": [{"$ref": "#/$defs/no_private"}]
+    },
+    "setting_proposal_comment": {
+      "type": "object",
+      "required": ["path", "current", "proposed", "reason", "role"],
+      "additionalProperties": false,
+      "properties": {
+        "path": {"type": "string", "minLength": 1, "maxLength": 160, "pattern": "^[A-Za-z0-9._:/-]+$", "allOf": [{"$ref": "#/$defs/no_private"}]},
+        "current": {"type": "string", "minLength": 1, "maxLength": 160, "pattern": "^[^\\r\\n]+$", "allOf": [{"$ref": "#/$defs/no_private"}]},
+        "proposed": {"type": "string", "minLength": 1, "maxLength": 160, "pattern": "^[^\\r\\n]+$", "allOf": [{"$ref": "#/$defs/no_private"}]},
+        "reason": {"type": "string", "minLength": 1, "maxLength": 200, "pattern": "^[^\\r\\n]+$", "allOf": [{"$ref": "#/$defs/no_private"}]},
+        "role": {"enum": ["orchestrator", "builder", "fixer", "reviewer", "small_builder", "fleet"]}
+      }
+    },
+    "key_needed_comment": {
+      "type": "object",
+      "required": ["key"],
+      "additionalProperties": false,
+      "properties": {
+        "key": {"$ref": "#/$defs/label"}
+      }
+    },
+    "quota_switch_comment": {
+      "type": "object",
+      "required": ["role", "from", "to", "resets_at"],
+      "additionalProperties": false,
+      "properties": {
+        "role": {"enum": ["orchestrator", "builder", "fixer", "reviewer", "small_builder"]},
+        "from": {"$ref": "#/$defs/choice_ref"},
+        "to": {"$ref": "#/$defs/choice_ref"},
+        "resets_at": {"$ref": "#/$defs/utc"}
+      }
+    },
+    "driver_suggestion_comment": {
+      "type": "object",
+      "required": ["driver", "reason", "listing"],
+      "additionalProperties": false,
+      "properties": {
+        "driver": {"$ref": "#/$defs/host"},
+        "reason": {"enum": ["home full", "quota out"]},
+        "listing": {
+          "type": "string",
+          "maxLength": 240,
+          "pattern": "^https://[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+/[A-Za-z0-9._/-]+$",
+          "allOf": [{"$ref": "#/$defs/no_private"}]
+        }
+      }
+    }
+  }
+}
