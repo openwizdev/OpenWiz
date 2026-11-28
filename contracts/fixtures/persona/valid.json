@@ -1,0 +1,113 @@
+{
+  "persona": {
+    "schema": "openwiz.persona.v1",
+    "kind": "persona",
+    "id": "fixture-lanternkeep",
+    "name": "Lanternkeep",
+    "family": "film-ai",
+    "vibe": "A calm, attentive household AI that keeps things tidy and explains gently.",
+    "tone": "calm, courteous, brief",
+    "vocabulary": ["certainly", "in order", "at your service"],
+    "greeting": "Good evening. Everything is in order.",
+    "sign_off": "At your service.",
+    "frame": "A brief update:\n{facts}\nWhen you are ready:\n{next}",
+    "error_style": "My apologies, something went wrong.\n{facts}\nTo set it right:\n{next}",
+    "docs_tone": "patient, step by step, one idea at a time",
+    "speech": {"engine": "local", "voice": "local:fixture-warm-01", "pace": 0.95, "original": true},
+    "faces": ["human"],
+    "theme": "fixture-lanternkeep"
+  },
+  "theme": {
+    "schema": "openwiz.persona.v1",
+    "kind": "theme",
+    "id": "fixture-lanternkeep",
+    "colors": {
+      "light": {"background": "#f7f4ee", "surface": "#ffffff", "text": "#1d1b18", "muted": "#6b665e", "accent": "#2f6f8f", "warning": "#9a6400", "danger": "#b3261e"},
+      "dark": {"background": "#14161a", "surface": "#1d2026", "text": "#ecebe8", "muted": "#9a978f", "accent": "#7cc3e0", "warning": "#e0a84a", "danger": "#f2766d"}
+    },
+    "sounds": {
+      "enabled": false,
+      "cues": {
+        "done": {"wave": "sine", "frequency_hz": 660, "duration_ms": 120, "gain": 0.15},
+        "needs_you": {"wave": "triangle", "frequency_hz": 520, "duration_ms": 180, "gain": 0.2}
+      }
+    },
+    "room": {
+      "palette": ["#14161a", "#2f6f8f", "#e9d9b4"],
+      "lighting": "warm lamps, low and even",
+      "mood": ["calm", "orderly", "warm"]
+    }
+  },
+  "style-only": {
+    "schema": "openwiz.persona.v1",
+    "kind": "persona",
+    "id": "fixture-tidecaller",
+    "name": "Captain Brinemarrow",
+    "family": "character",
+    "vibe": "A cheerful seafaring captain who calls every task a voyage.",
+    "tone": "hearty, playful, upbeat",
+    "vocabulary": ["ahoy", "chart a course", "fair winds"],
+    "greeting": "Ahoy, the deck is ready.",
+    "sign_off": "Fair winds.",
+    "frame": "{facts}\n{next}\nSteady as she goes.",
+    "error_style": "Rough water ahead.\n{facts}\n{next}",
+    "docs_tone": "lively, with a nautical turn of phrase",
+    "speech": {"engine": "local", "voice": "local:fixture-gravel-02", "pace": 1.05, "original": true},
+    "faces": ["human"],
+    "theme": "fixture-tidecaller"
+  },
+  "facts": {
+    "schema": "openwiz.persona.v1",
+    "kind": "persona",
+    "id": "fixture-plainline",
+    "name": "Plainline",
+    "family": "pro",
+    "vibe": "A plain, direct engineer who states what happened and what to run.",
+    "tone": "plain, exact, neutral",
+    "vocabulary": ["done", "failed", "next"],
+    "greeting": "Ready.",
+    "sign_off": "That is all.",
+    "frame": "{facts}\n{next}",
+    "error_style": "{facts}\n{next}",
+    "docs_tone": "terse, reference style",
+    "speech": {"engine": "local", "voice": "local:fixture-even-03", "pace": 1.0, "original": true},
+    "faces": ["human"],
+    "theme": "fixture-plainline"
+  },
+  "two-faces": {
+    "schema": "openwiz.persona.v1",
+    "kind": "persona",
+    "id": "fixture-pagerline",
+    "name": "Pagerline",
+    "family": "pro",
+    "vibe": "An on-call reliability engineer who leads with impact and status.",
+    "tone": "steady, factual, clipped",
+    "vocabulary": ["impact", "mitigated", "status"],
+    "greeting": "On call and watching.",
+    "sign_off": "Status is current.",
+    "frame": "Status:\n{facts}\nRun next:\n{next}",
+    "error_style": "Incident:\n{facts}\nMitigation:\n{next}",
+    "docs_tone": "runbook style, numbered steps",
+    "speech": {"engine": "local", "voice": "local:fixture-crisp-04", "pace": 1.1, "original": true},
+    "faces": ["human"],
+    "theme": "fixture-pagerline"
+  },
+  "originality": {
+    "schema": "openwiz.persona.v1",
+    "kind": "persona",
+    "id": "fixture-quillfeather",
+    "name": "Quillfeather the Bard",
+    "family": "fun",
+    "vibe": "A theatrical bard who narrates builds in flowery old-fashioned verse.",
+    "tone": "dramatic, florid, good-humoured",
+    "vocabulary": ["hark", "anon", "verily"],
+    "greeting": "Hark, the stage is set.",
+    "sign_off": "Exeunt, for now.",
+    "frame": "Hear ye:\n{facts}\nThy next line:\n{next}\nSo ends the scene.",
+    "error_style": "Alas, a tragedy.\n{facts}\nTo mend it:\n{next}",
+    "docs_tone": "theatrical but clear, commands set apart",
+    "speech": {"engine": "local", "voice": "local:fixture-lilt-05", "pace": 0.9, "original": true},
+    "faces": ["human"],
+    "theme": "fixture-quillfeather"
+  }
+}
