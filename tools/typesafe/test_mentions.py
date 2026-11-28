@@ -135,6 +135,10 @@ class Live(unittest.TestCase):
         import verdict
         self.assertEqual(verdict_sent, [verdict.sent_state(r['line']) for r in verdict_rows
                                         if verdict.sent_state(r['line']) is not None])
+        turn_questions = set(config['turn_end']['questions'])
+        turn_sent = [state for state, questions in fake.calls if set(questions) == turn_questions]
+        self.assertTrue(turn_sent)
+        self.assertFalse(any('sign' in state.lower() for state in turn_sent))
 
     def test_live_without_the_opt_in_sends_nothing(self):
         with mock.patch.dict(os.environ, {'TYPESAFE_API_KEY': 'synthetic-typesafe-key'}), \

@@ -13,6 +13,7 @@ import jev_judge
 import jev_mentions
 import plan_limit
 import tokens
+import turn_end
 import verdict
 
 FIXTURES = HERE / 'fixtures'
@@ -66,6 +67,18 @@ def score_mentions(data):
     return len(data['cases']), old_hit, shaped_hit
 
 
+def score_turn_end(data):
+    old_hit = shaped_hit = 0
+    for row in data['cases']:
+        structured = any(event.get('event') == 'usage_limit' for event in row['events'])
+        old = structured
+        shaped = structured or (row.get('nouls') is not None and turn_end.usage_limit(
+            row['text'], _Recorded(row['nouls'])))
+        old_hit += int(old == row['expected'])
+        shaped_hit += int(shaped == row['expected'])
+    return len(data['cases']), old_hit, shaped_hit
+
+
 def score_verdict(data):
     old_hit = shaped_hit = 0
     for row in data['cases']:
@@ -79,6 +92,7 @@ HANDLERS = {
     'openwiz.typesafe-bench.plan-limit.v1': ('plan-limit', score_plan_limit),
     'openwiz.typesafe-bench.verdict.v1': ('verdict', score_verdict),
     'openwiz.typesafe-bench.mentions.v1': ('mentions', score_mentions),
+    'openwiz.typesafe-bench.turn-end.v1': ('turn-end', score_turn_end),
 }
 
 
@@ -126,11 +140,24 @@ def live_mentions(data, ask):
     return hit, len(data['cases'])
 
 
+def live_turn_end(data, ask):
+    hit = 0
+    for row in data['cases']:
+        structured = any(event.get('event') == 'usage_limit' for event in row['events'])
+        if structured or not row['text']:
+            shaped = structured
+        else:
+            shaped = turn_end.usage_limit(row['text'], ask)
+        hit += int(shaped == row['expected'])
+    return hit, len(data['cases'])
+
+
 LIVE = {
     'openwiz.typesafe-bench.judge.v1': ('judge', live_judge),
     'openwiz.typesafe-bench.plan-limit.v1': ('plan-limit', live_plan_limit),
     'openwiz.typesafe-bench.verdict.v1': ('verdict', live_verdict),
     'openwiz.typesafe-bench.mentions.v1': ('mentions', live_mentions),
+    'openwiz.typesafe-bench.turn-end.v1': ('turn-end', live_turn_end),
 }
 
 
