@@ -111,17 +111,11 @@ while True:
 '''
 LEGACY_STOP_WRAPPER = '''import importlib.machinery, importlib.util, os, re, signal, sys
 sys.dont_write_bytecode = True
-if os.environ.get('AUDIT_ENVIRON') or os.environ.get('DENY_ENVIRON'):
-    seen, deny = os.environ.get('AUDIT_ENVIRON'), os.environ.get('DENY_ENVIRON')
+if os.environ.get('DENY_ENVIRON'):
     def audit(event, args):
         if event == 'open' and isinstance(args[0], (str, bytes)):
-            path = os.fsdecode(args[0])
-            if re.fullmatch(r'/proc/[0-9]+/environ', path):
-                if seen:
-                    with open(seen, 'a') as f:
-                        f.write(path + '\\n')
-                if deny:
-                    raise PermissionError('synthetic environ refusal')
+            if re.fullmatch(r'/proc/[0-9]+/environ', os.fsdecode(args[0])):
+                raise PermissionError('synthetic environ refusal')
     sys.addaudithook(audit)
 spec = importlib.util.spec_from_loader('template', importlib.machinery.SourceFileLoader('template', %r))
 t = importlib.util.module_from_spec(spec)
@@ -138,6 +132,19 @@ if os.environ.get('DENY_SIGNALS'):
     os.killpg = denied
     real_kill = os.kill
     os.kill = lambda pid, sig: real_kill(pid, sig) if sig == 0 else denied(pid, sig)
+if os.environ.get('RECYCLE_GROUP_TO'):
+    reused_id = int(os.environ['RECYCLE_GROUP_FROM'])
+    newcomer = int(os.environ['RECYCLE_GROUP_TO'])
+    real_proc_table = t.proc_table
+    scans = [0]
+    def recycled_proc_table(run):
+        scans[0] += 1
+        table, children = real_proc_table(run)
+        if scans[0] >= 2 and reused_id not in table and newcomer in table:
+            ppid, _pgid, _sid, started = table[newcomer]
+            table[newcomer] = (ppid, reused_id, reused_id, started)
+        return table, children
+    t.proc_table = recycled_proc_table
 t.main()
 '''
 
@@ -721,16 +728,85 @@ class Template(unittest.TestCase):
         outsider = subprocess.Popen(['sleep', '120'], start_new_session=True,
                                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.addCleanup(lambda p=outsider: (p.kill(), p.wait()))
-        audited = os.path.join(self.folder, 'environ-opens')
-        driver = self.wrapper('legacy-audit', LEGACY_STOP_WRAPPER)
-        code, out = self.call('stop', {'run': run}, driver=driver, AUDIT_ENVIRON=audited)
+        code, out = self.call('stop', {'run': run})
         self.assertEqual((code, out), (0, {'run': run, 'stopped': True}))
         self.assertFalse(alive(child), 'a worker in the legacy turn group still runs after stop')
         self.assertEqual(self.marked(), [], 'a legacy run process still runs after stop')
         self.assertTrue(alive(outsider.pid), 'stop affected an unrelated process')
-        opened = read(audited).splitlines() if os.path.exists(audited) else []
-        self.assertNotIn('/proc/%d/environ' % outsider.pid, opened, 'stop read an unrelated process environment')
         self.assertEqual(self.call('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
+
+    def test_stop_ends_a_detached_marked_worker_left_by_the_older_template(self):
+        old_driver = self.script('pre-1590-driver', PRE_1590_TEMPLATE)
+        code, started = self.call('start', START, driver=old_driver)
+        self.assertEqual(code, 0, started)
+        run = started['run']
+        [(turn, child, _)] = self.logged(1)
+        self.assertTrue(self.until(lambda: not alive(turn)), 'the legacy harness did not exit')
+        self.assertTrue(alive(child))
+        outsider = subprocess.Popen(
+            ['sleep', '120'], start_new_session=True,
+            env=dict(os.environ, OUTSIDER_SYNTHETIC='synthetic-outsider-value'),
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.addCleanup(lambda p=outsider: (p.kill(), p.wait()))
+        code, out = self.call('stop', {'run': run})
+        self.assertEqual((code, out), (0, {'run': run, 'stopped': True}))
+        self.assertFalse(alive(child), 'a detached marked worker from the legacy run still runs after stop')
+        self.assertEqual(self.marked(), [], 'a legacy run process still runs after stop')
+        self.assertTrue(alive(outsider.pid), 'stop affected an unrelated process')
+        self.assertNotIn('synthetic-outsider-value', json.dumps(out))
+        self.assertEqual(self.call('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
+
+    def test_without_proc_stop_refuses_an_unverified_legacy_stopped_flag(self):
+        old_driver = self.script('pre-1590-driver', PRE_1590_TEMPLATE)
+        open(self.hold, 'w').close()
+        code, started = self.call('start', START, driver=old_driver)
+        self.assertEqual(code, 0, started)
+        [(turn, child, _)] = self.logged(1)
+        record_path = os.path.join(self.env['OPENWIZ_TEMPLATE_STATE'], started['run'] + '.json')
+        state = json.loads(read(record_path))
+        state['stopped'] = True
+        with open(record_path, 'w') as f:
+            json.dump(state, f)
+        macos = {'PATH': NO_PROC + os.pathsep + self.env['PATH'], 'NO_PROC_PYTHON': sys.executable}
+        code, out = self.call('stop', started, **macos)
+        self.assertEqual(code, 1, out)
+        self.assertTrue(out.get('error') and out.get('next'), out)
+        self.assertTrue(alive(turn) and alive(child))
+        self.assertEqual(self.call('stop', started), (0, dict(started, stopped=True)))
+        self.assertEqual((alive(turn), alive(child)), (False, False))
+        self.assertEqual(self.call('stop', started, **macos), (0, dict(started, stopped=True)))
+
+    def test_stop_does_not_signal_a_process_that_reused_a_verified_legacy_group_or_session(self):
+        run = 'run-' + secrets.token_hex(6)
+        folder = self.env['OPENWIZ_TEMPLATE_STATE']
+        os.makedirs(folder, exist_ok=True)
+        fixtures = os.path.join(self.folder, 'recycle-fixtures')
+        holder_script = self.script('holder', CHECKPOINT_HARNESS, folder=fixtures)
+        ready = os.path.join(self.folder, 'holder-ready')
+        first_turn = subprocess.Popen(
+            ['sleep', '120'], start_new_session=True,
+            env=dict(self.env, OPENWIZ_RUN=run),
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.addCleanup(lambda p=first_turn: (p.kill(), p.wait()))
+        second_turn = subprocess.Popen(
+            [holder_script], start_new_session=True,
+            env=dict(self.env, OPENWIZ_RUN=run, READY=ready, IGNORE_TERM='1'),
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.addCleanup(lambda p=second_turn: (p.kill(), p.wait()))
+        self.assertTrue(self.until(lambda: os.path.exists(ready) and bool(read(ready).strip())))
+        unmarked = subprocess.Popen(
+            ['sleep', '120'], start_new_session=True,
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.addCleanup(lambda p=unmarked: (p.kill(), p.wait()))
+        with open(os.path.join(folder, run + '.json'), 'w') as f:
+            json.dump({'request': START, 'turns': [first_turn.pid, second_turn.pid], 'stopped': False}, f)
+        driver = self.wrapper('legacy-recycle', LEGACY_STOP_WRAPPER)
+        code, out = self.call('stop', {'run': run}, driver=driver, SHORT_GRACE='0.4',
+                              RECYCLE_GROUP_FROM=str(first_turn.pid), RECYCLE_GROUP_TO=str(unmarked.pid))
+        self.assertEqual((code, out), (0, {'run': run, 'stopped': True}))
+        self.assertFalse(alive(first_turn.pid))
+        self.assertFalse(alive(second_turn.pid))
+        self.assertTrue(alive(unmarked.pid), 'stop signaled an unrelated process after group/session reuse')
 
     def test_stop_gives_a_legacy_run_shutdown_grace_before_sigkill(self):
         old_driver = self.script('pre-1590-driver', PRE_1590_TEMPLATE)

@@ -329,9 +329,9 @@ def proc_table(run):
     return table, children
 
 
-# PRIVACY: legacy pre-#1590 records store only turn pids; read /proc/<pid>/environ only for candidates
-# already tied to those turns' pids, process groups or sessions to verify OPENWIZ_RUN, never repeating it.
-def scan_legacy(turn_ids, run, mark, tracked, verified_groups, verified_sessions, checked_unmarked):
+# PRIVACY: legacy pre-#1590 records store only turn pids, so detached workers can outlive their turn
+# in a new session; inspect own-UID /proc/<pid>/environ solely for OPENWIZ_RUN=<run>, never retaining it.
+def scan_legacy(turn_ids, run, mark, tracked, checked_unmarked):
     table, children = proc_table(run)
     self_chain, cur = set(), os.getpid()
     while cur in table and cur not in self_chain:
@@ -339,29 +339,34 @@ def scan_legacy(turn_ids, run, mark, tracked, verified_groups, verified_sessions
         cur = table[cur][0]
     for p in [p for p, st in tracked.items() if p not in table or table[p][3] != st]:
         del tracked[p]
-    live_groups = {pgid for _, pgid, _, _ in table.values()}
-    live_sessions = {sid for _, _, sid, _ in table.values()}
-    verified_groups &= live_groups
-    verified_sessions &= live_sessions
+    uid = os.geteuid()
     unreadable = set()
     for p, (_, pgid, sid, st) in table.items():
         if p in self_chain or p in tracked or (p, st) in checked_unmarked:
             continue
-        if p not in turn_ids and pgid not in turn_ids and sid not in turn_ids:
+        tied = p in turn_ids or pgid in turn_ids or sid in turn_ids
+        try:
+            if os.stat('/proc/%d' % p).st_uid != uid:
+                checked_unmarked.add((p, st))
+                continue
+        except OSError:
             continue
         try:
             with open('/proc/%d/environ' % p, 'rb') as f:
-                raw = f.read()
+                matched = mark in f.read().split(b'\0')
         except (FileNotFoundError, ProcessLookupError):
             continue
         except PermissionError:
-            try:
-                if os.stat('/proc/%d' % p).st_uid != os.geteuid():
-                    checked_unmarked.add((p, st))
-                else:
-                    unreadable.add(p)
-            except OSError:
-                pass
+            if tied:
+                unreadable.add(p)
+            else:
+                try:
+                    if os.stat('/proc/%d/environ' % p).st_uid != uid:
+                        checked_unmarked.add((p, st))
+                    else:
+                        unreadable.add(p)
+                except OSError:
+                    pass
             continue
         except OSError:
             if since(p) == st:
@@ -369,23 +374,30 @@ def scan_legacy(turn_ids, run, mark, tracked, verified_groups, verified_sessions
             continue
         if since(p) != st:
             continue
-        if mark in raw.split(b'\0'):
+        if matched:
             tracked[p] = st
-            if pgid in turn_ids:
-                verified_groups.add(pgid)
-            if sid in turn_ids:
-                verified_sessions.add(sid)
         else:
             checked_unmarked.add((p, st))
-    for p, (_, pgid, sid, st) in table.items():
-        if p not in self_chain and (pgid in verified_groups or sid in verified_sessions):
-            tracked[p] = st
-    todo = list(tracked)
-    while todo:
-        for c in children.get(todo.pop(), ()):
-            if c not in tracked and c not in self_chain and c in table:
-                tracked[c] = table[c][3]
-                todo.append(c)
+    self_groups = {table[p][1] for p in self_chain if p in table}
+    self_sessions = {table[p][2] for p in self_chain if p in table}
+    while True:
+        witnessed = [p for p, st in tracked.items() if p in table and since(p) == st]
+        groups = {table[p][1] for p in witnessed
+                  if (table[p][1] in turn_ids or table[p][1] in tracked) and table[p][1] not in self_groups}
+        sessions = {table[p][2] for p in witnessed
+                    if (table[p][2] in turn_ids or table[p][2] in tracked) and table[p][2] not in self_sessions}
+        added = False
+        for p, (_, pgid, sid, st) in table.items():
+            if p not in tracked and p not in self_chain and (pgid in groups or sid in sessions):
+                tracked[p] = st
+                added = True
+        for p in witnessed:
+            for c in children.get(p, ()):
+                if c not in tracked and c not in self_chain and c in table:
+                    tracked[c] = table[c][3]
+                    added = True
+        if not added:
+            break
     return unreadable - set(tracked)
 
 
@@ -409,21 +421,21 @@ def signal_pinned(targets, sig, sent):
             os.close(fd)
 
 
-def end_legacy(turns, run, already_stopped=False):
+def end_legacy(turns, run, verified_stopped=False):
     if not all(type(pid) is int and pid > 0 for pid in turns):
         raise Refused('run %s was saved by an older template and a turn is not a pid, so it was not stopped' % run,
                       'end its processes by hand')
     if not LINUX:
-        if already_stopped:
+        if verified_stopped:
             return
         raise Refused('run %s was saved by an older template and this host cannot confirm its processes ended' % run,
                       'stop it on Linux, or end processes carrying OPENWIZ_RUN=%s by hand' % run)
     turn_ids, mark = set(turns), ('OPENWIZ_RUN=' + run).encode()
-    tracked, verified_groups, verified_sessions, checked_unmarked = {}, set(), set(), set()
+    tracked, checked_unmarked = {}, set()
     for sig, wait in ((signal.SIGTERM, GRACE), (signal.SIGKILL, KILL_GRACE)):
         sent, deadline = set(), time.monotonic() + wait
         while True:
-            unreadable = scan_legacy(turn_ids, run, mark, tracked, verified_groups, verified_sessions, checked_unmarked)
+            unreadable = scan_legacy(turn_ids, run, mark, tracked, checked_unmarked)
             if not tracked:
                 if unreadable:
                     raise Refused('run %s has processes the driver cannot inspect to confirm it stopped' % run,
@@ -433,7 +445,7 @@ def end_legacy(turns, run, already_stopped=False):
             if time.monotonic() >= deadline:
                 break
             time.sleep(min(0.1, max(0, deadline - time.monotonic())))
-    unreadable = scan_legacy(turn_ids, run, mark, tracked, verified_groups, verified_sessions, checked_unmarked)
+    unreadable = scan_legacy(turn_ids, run, mark, tracked, checked_unmarked)
     if not tracked and not unreadable:
         return
     if not tracked:
@@ -557,9 +569,10 @@ def answer(cmd):
         state = saved(run)
         if cmd == 'stop':
             if legacy_turns(state['turns']):
-                end_legacy(state['turns'], run, state.get('stopped'))
+                verified = state.get('stopped') is True and state.get('legacy_stop_verified') is True
+                end_legacy(state['turns'], run, verified)
                 try:
-                    saved(run, dict(state, stopped=True))
+                    saved(run, dict(state, stopped=True, legacy_stop_verified=True))
                 except OSError:
                     raise Refused('run %s has ended, but the driver could not save that it is stopped' % run,
                                   'make OPENWIZ_TEMPLATE_STATE (or ~/.local/state/openwiz-template) a folder you can '
