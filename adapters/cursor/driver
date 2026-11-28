@@ -1,0 +1,333 @@
+#!/usr/bin/env python3
+# SECURITY: every Cursor call goes through the kit's key helper (driver v1 N4). This file sends it only a host name,
+# a method, a path and a body, never a key or an address, and never reads the key itself.
+import fcntl, json, os, re, secrets, subprocess, sys, uuid
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+HELPER = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'hostkey.py')
+HOST = 'cursor-cloud'
+STATE = os.environ.get('OPENWIZ_CURSOR_STATE') or os.path.expanduser('~/.local/state/openwiz-cursor')
+VERSION = {'driver': 'cursor', 'records': ['openwiz:records v1'],
+           'can': ['start', 'wake', 'stop', 'many-at-once', 'own-sandbox']}
+START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
+         'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
+         'model': r'(?=.{1,100}$)[A-Za-z0-9][A-Za-z0-9 ._:@+-]*(/[A-Za-z0-9][A-Za-z0-9 ._:@+-]*)*'}
+START_WITH_EFFORT = dict(START, effort=r'[a-z][a-z0-9-]{0,19}')
+CANT_SET_EFFORT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster "
+                   "to run it at the host's default")
+RUN = {'run': r'run-[0-9a-f]{12}'}
+HARNESS = 'cursor'
+SIGN_IN = 'check your Cursor API key and where you keep it, as adapters/cursor/README.md says'
+REFUSED_BEFORE_SENDING = ('no key in either ', 'the key in ', "the kit's fake host gave no test key",
+                          'OPENWIZ_HOSTKEY_TEST_ORIGIN is not', 'the helper runs only in', 'native TLS loaded',
+                          'kernel/driver-kit/hosts.json is not', 'the request holds the key', 'host is not ',
+                          'the input ', 'a key is repeated', 'method is not', 'path ', 'body is not')
+FIX_STATE = 'make OPENWIZ_CURSOR_STATE (or ~/.local/state/openwiz-cursor) a folder you can write'
+
+
+class Refused(Exception):
+    pass
+
+
+def unique(pairs):
+    if len({k for k, _ in pairs}) != len(pairs):
+        raise Refused('a key is repeated', 'send each key once')
+    return dict(pairs)
+
+
+def read(fields):
+    try:
+        req = json.loads(sys.stdin.read(), object_pairs_hook=unique)
+    except ValueError:
+        raise Refused('the input is not JSON', 'send one JSON object on stdin, as `driver schema` shows')
+    if fields is START and isinstance(req, dict) and 'effort' in req:
+        fields = START_WITH_EFFORT
+    if not isinstance(req, dict) or set(req) != set(fields):
+        raise Refused('the input needs exactly ' + ', '.join(fields), 'send only those fields; never a login')
+    for key, pattern in fields.items():
+        v = req[key]
+        if not (type(v) is int and v > 0 if pattern is None else isinstance(v, str) and re.fullmatch(pattern, v)):
+            raise Refused(key + ' is not valid', 'fix ' + key + ' as `driver schema` shows')
+    return req
+
+
+def plain(text):
+    return ' '.join(re.sub(r'[\x00-\x1f]', ' ', text).split())
+
+
+def api(method, path, body=None):
+    request = {'host': HOST, 'method': method, 'path': '/v1' + path}
+    if body is not None:
+        request['body'] = body
+    try:
+        p = subprocess.run([sys.executable, '-I', HELPER], input=json.dumps(request), capture_output=True,
+                           text=True, timeout=120)
+        out = json.loads(p.stdout)
+        assert isinstance(out, dict)
+    except (OSError, subprocess.TimeoutExpired, ValueError, AssertionError):
+        return None, None
+    error, then = out.get('error'), out.get('next')
+    if p.returncode and isinstance(error, str) and error.startswith(REFUSED_BEFORE_SENDING):
+        raise Refused('nothing was sent to Cursor: the key helper refused: ' + error,
+                      then if isinstance(then, str) and plain(then) else SIGN_IN)
+    if p.returncode or type(out.get('status')) is not int:
+        return None, None
+    return out['status'], out.get('body') if out.get('body') is not None else {}
+
+
+def why(code, answer):
+    error = answer.get('error') if isinstance(answer, dict) else None
+    name = error.get('code') if isinstance(error, dict) else error
+    return 'HTTP %d%s' % (code, ' ' + name if isinstance(name, str) and re.fullmatch(r'[a-z_]{1,40}', name) else '')
+
+
+def refused(code, answer, what, then):
+    if code in (401, 403) and 'feature_unavailable' not in why(code, answer):
+        return Refused('Cursor refused your key (%s) when it was asked to %s' % (why(code, answer), what), SIGN_IN)
+    return Refused('Cursor refused to %s (%s)' % (what, why(code, answer)), then)
+
+
+def pinned_skills():
+    if not os.path.exists(os.path.join(HERE, '..', '..', 'wizskills.lock')):
+        return built_pin()
+    try:
+        with open(os.path.join(HERE, '..', '..', 'wizskills.lock')) as f:
+            lock = json.load(f)
+        assert set(lock) == {'version', 'commit', 'tree'} and re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', lock['version'])
+        assert all(re.fullmatch(r'[0-9a-f]{40}', lock[k]) for k in ('commit', 'tree'))
+        return lock
+    except (OSError, ValueError, TypeError, AssertionError):
+        raise Refused("OpenWiz's wizskills.lock is missing or malformed; nothing was started",
+                      'run the driver from an OpenWiz checkout whose wizskills.lock pins a WizSkills release')
+
+
+def built_pin():
+    try:
+        with open(os.path.join(HERE, '..', '..', 'openwiz-build.txt')) as f:
+            lines = f.read().split('\n')
+        assert len(lines) == 5 and lines[0] == 'openwiz.package.v1' and lines[4] == ''
+        assert re.fullmatch(r'[0-9a-f]{40}', lines[2])
+        return {'source': lines[2]}
+    except (OSError, UnicodeDecodeError, AssertionError):
+        raise Refused("neither OpenWiz's wizskills.lock nor its installed build stamp could be read; nothing was "
+                      'started', 'run the driver from an OpenWiz checkout or an OpenWiz install whose runtime has '
+                      'openwiz-build.txt')
+
+
+def prompt(req, lock=None):
+    if lock is not None and 'source' in lock:
+        return ('Build the ticket: GitHub repository %(repository)s, ticket #%(ticket)d, with the %(skill)s skill. '
+                'First get the WizSkills release OpenWiz pins: read wizskills.lock at commit %(source)s of '
+                'https://github.com/openwizdev/OpenWiz for its version, commit and tree, fetch that version\'s tag '
+                'v<version> of https://github.com/openwizdev/WizSkills, check that it is that commit with that tree, '
+                'and refuse to go on if it is not. Then read skills/%(skill)s/SKILL.md from that commit and follow it, '
+                'as the builder of that ticket.' % dict(req, **lock))
+    if lock is None:
+        return ('You were woken: read the ticket again and carry on: GitHub repository %s, ticket #%d, with the %s '
+                'skill.' % (req['repository'], req['ticket'], req['skill']))
+    return ('Build the ticket: GitHub repository %(repository)s, ticket #%(ticket)d, with the %(skill)s skill. First '
+            'get the WizSkills release OpenWiz pins: fetch tag v%(version)s of https://github.com/openwizdev/WizSkills,'
+            ' check that it is commit %(commit)s with tree %(tree)s, and refuse to go on if it is not. Then read '
+            'skills/%(skill)s/SKILL.md from that commit and follow it, as the builder of that ticket.'
+            % dict(req, **lock))
+
+
+def path(run, ext):
+    return os.path.join(STATE, run + ext)
+
+
+def saved(run, state=None):
+    if state is not None:
+        os.makedirs(STATE, mode=0o700, exist_ok=True)
+        new = path(run, '.json.new')
+        fd = os.open(new, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, 'w') as f:
+            json.dump(state, f)
+        os.chmod(new, 0o600)
+        os.replace(new, path(run, '.json'))
+        return state
+    try:
+        with open(path(run, '.json')) as f:
+            return json.load(f)
+    except FileNotFoundError:
+        raise Refused('no run ' + run, 'check the run id that `driver start` printed')
+
+
+def forget(run):
+    for ext in ('.json', '.lock'):
+        try:
+            os.remove(path(run, ext))
+        except OSError:
+            pass
+
+
+def lock(run):
+    try:
+        fcntl.flock(os.open(path(run, '.lock'), os.O_RDONLY | os.O_CREAT, 0o600), fcntl.LOCK_EX)
+    except OSError:
+        raise Refused('the driver cannot lock run %s in its state folder' % run, FIX_STATE)
+
+
+def end(agent, known=True):
+    try:
+        return ending(agent, known)
+    except Refused as e:
+        return ['ending agent %s (%s)' % (agent, e.args[0].replace('nothing was sent to Cursor: ', ''))], False
+
+
+def ending(agent, known):
+    code, answer = api('GET', '/agents/' + agent)
+    if code == 404:
+        return ([] if known else ['whether agent %s was ever created (Cursor shows none yet, and a late create is not '
+                                  'ruled out)' % agent]), False
+    seen = code == 200 and isinstance(answer, dict)
+    if not seen:
+        failed = ['reading agent %s (%s)' % (agent, 'no answer' if code is None else why(code, answer))]
+        run = None
+    elif answer.get('status') == 'ARCHIVED':
+        return [], True
+    else:
+        failed, run = [], answer.get('latestRunId')
+    if isinstance(run, str) and re.fullmatch(r'[A-Za-z0-9_-]{1,100}', run):
+        code, answer = api('POST', '/agents/%s/runs/%s/cancel' % (agent, run))
+        if code not in (200, 409):
+            failed.append('cancelling run %s (%s)' % (run, 'no answer' if code is None else why(code, answer)))
+    code, answer = api('POST', '/agents/%s/archive' % agent)
+    if code != 200:
+        failed.append('archiving agent %s (%s)' % (agent, 'no answer' if code is None else why(code, answer)))
+    return failed, seen or code == 200
+
+
+def start():
+    req = read(START)
+    if 'effort' in req:
+        raise Refused("Cursor can't run harness %s at effort %s" % (req['harness'], req['effort']), CANT_SET_EFFORT)
+    if req['harness'] != HARNESS:
+        raise Refused('Cursor cloud agents run only Cursor\'s own agent, not %s' % req['harness'],
+                      'start again with harness cursor, or use a driver for %s' % req['harness'])
+    pins = pinned_skills()
+    run, agent = 'run-' + secrets.token_hex(6), 'bc-' + str(uuid.uuid4())
+    state = {'agent': agent, 'stopped': False, 'starting': True}
+    try:
+        saved(run, state)
+        lock(run)
+    except (OSError, Refused):
+        raise Refused('the driver cannot save runs in its state folder; nothing was started', FIX_STATE)
+    try:
+        code, answer = api('POST', '/agents', {
+            'prompt': {'text': prompt(req, pins)}, 'model': {'id': req['model']},
+            'repos': [{'url': 'https://github.com/' + req['repository']}], 'name': 'openwiz-' + run,
+            'agentId': agent, 'autoCreatePR': False})
+    except Refused:
+        forget(run)
+        raise
+    if code is None or code >= 500 or code == 409:
+        failed, seen = end(agent, known=False)
+        try:
+            saved(run, dict(state, stopped=True, starting=not seen))
+        except OSError:
+            pass
+        if failed:
+            raise Refused('Cursor gave no answer to the start of run %s, and did not confirm that its agent %s is '
+                          'ended or was never created, so its outcome is unknown' % (run, agent),
+                          'stop run %s again later: it archives the agent once Cursor shows it; or archive it at '
+                          'cursor.com/agents; read the ticket before you start again' % run)
+        raise Refused('Cursor gave no answer to the start of run %s, so the driver archived its agent; its outcome '
+                      'is unknown' % run, 'read the ticket for what its agent did before you start again')
+    if code not in (200, 201):
+        forget(run)
+        raise refused(code, answer, 'create the agent; nothing was started',
+                      'check the repository is connected to Cursor and the model is one Cursor lists, then start again')
+    try:
+        saved(run, dict(state, starting=False, request={k: req[k] for k in ('repository', 'ticket', 'skill')}))
+    except OSError:
+        if end(agent)[0]:
+            raise Refused('run %s created agent %s but could not save it, nor confirm ending it; its outcome is '
+                          'unknown' % (run, agent), 'archive agent %s at cursor.com/agents, and read the ticket for '
+                          'what it did, before you start again' % agent)
+        raise Refused('run %s created an agent it could not save, so the driver archived it; its outcome is unknown'
+                      % run, 'read the ticket for what its agent did before you start again')
+    return {'run': run}
+
+
+def wake():
+    run = read(RUN)['run']
+    state = saved(run)
+    lock(run)
+    state = saved(run)
+    if state['stopped']:
+        raise Refused('run %s is stopped' % run, 'start a new run')
+    if state['starting']:
+        raise Refused('run %s never finished starting' % run, 'stop it, then start a new run')
+    code, answer = api('GET', '/agents/' + state['agent'])
+    if code != 200 or not isinstance(answer, dict):
+        raise Refused('Cursor did not show run %s\'s agent (%s); nothing was sent'
+                      % (run, 'no answer' if code is None else why(code, answer)),
+                      'check that Cursor answers, ' + SIGN_IN + ', then wake it again')
+    if answer.get('status') == 'ARCHIVED':
+        raise Refused('run %s\'s agent is archived on Cursor' % run, 'stop it, then start a new run')
+    if answer.get('status') == 'ACTIVE':
+        return {'run': run, 'woke': True}
+    code, answer = api('POST', '/agents/%s/runs' % state['agent'], {'prompt': {'text': prompt(state['request'])}})
+    if code is None or code >= 500:
+        detail = 'no answer' if code is None else 'HTTP %d' % code
+        nxt = 'read the ticket; Cursor runs one turn per agent at a time, so waking again never starts two'
+        if code is not None and code >= 500:
+            nxt = 'wake it again: ' + nxt
+        raise Refused('Cursor failed while waking run %s (%s); whether it woke is unknown' % (run, detail), nxt)
+    if code in (200, 201) or why(code, answer) == 'HTTP 409 agent_busy':
+        return {'run': run, 'woke': True}
+    raise refused(code, answer, 'wake run %s' % run, 'stop it, then start a new run')
+
+
+def stop():
+    run = read(RUN)['run']
+    saved(run)
+    lock(run)
+    state = saved(run)
+    try:
+        saved(run, dict(state, stopped=True))
+        kept = True
+    except OSError:
+        kept = False
+    failed, seen = end(state['agent'], known=not state['starting'])
+    if seen and state['starting'] and kept:
+        try:
+            saved(run, dict(state, stopped=True, starting=False))
+        except OSError:
+            pass
+    if failed:
+        raise Refused('run %s: Cursor did not confirm %s' % (run, '; '.join(failed)),
+                      'stop it again, or archive agent %s at cursor.com/agents' % state['agent'])
+    if not kept:
+        raise Refused('run %s\'s agent is archived, but the driver could not save that it is stopped' % run,
+                      FIX_STATE + ', then stop it again')
+    return {'run': run, 'stopped': True}
+
+
+def answer(cmd):
+    if cmd == 'version':
+        return VERSION
+    if cmd == 'schema':
+        with open(os.path.join(HERE, 'schema.json')) as f:
+            return json.load(f)
+    if cmd in ('start', 'wake', 'stop'):
+        return globals()[cmd]()
+    raise Refused('unknown command', 'run one of: version, schema, start, wake, stop')
+
+
+def main():
+    try:
+        out, code = answer(sys.argv[1] if len(sys.argv) == 2 else ''), 0
+    except Refused as e:
+        out, code = {'error': e.args[0], 'next': e.args[1]}, 1
+    except Exception as e:
+        out, code = {'error': 'the driver failed: ' + type(e).__name__, 'next': 'read its code, fix it, retry'}, 1
+    if code:
+        out = {k: plain(v)[:300] for k, v in out.items()}
+    print(json.dumps(out))
+    sys.exit(code)
+
+
+if __name__ == '__main__':
+    main()

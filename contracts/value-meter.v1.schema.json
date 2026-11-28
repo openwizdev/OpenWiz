@@ -1,0 +1,462 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:openwiz:schema:value-meter:v1",
+  "title": "openwiz.value-meter.v1",
+  "description": "Opt-in value meter documents: config, per-PR record, collection, report, and anonymized aggregate. See contracts/value-meter.v1.md. A fixture proves shape, never a live read.",
+  "oneOf": [
+    {"$ref": "#/$defs/config"},
+    {"$ref": "#/$defs/pr_record"},
+    {"$ref": "#/$defs/collection"},
+    {"$ref": "#/$defs/report"},
+    {"$ref": "#/$defs/aggregate"}
+  ],
+  "$defs": {
+    "schema_name": {"const": "openwiz.value-meter.v1"},
+    "repo": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,38}/[a-z0-9._-]{1,100}$"
+    },
+    "aggregate_reason": {
+      "type": "string",
+      "enum": [
+        "unconfigured_repos",
+        "unconfigured_rate",
+        "incomplete_read",
+        "no_merged_prs",
+        "no_known_cost",
+        "partial_cost_coverage",
+        "upstream_unknown",
+        "week_unknown",
+        "week_partial"
+      ]
+    },
+    "nullable_aggregate_reason": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/aggregate_reason"}
+      ]
+    },
+    "utc": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "boundary": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T08:00:00Z$"
+    },
+    "nonnegative": {"type": "number", "minimum": 0},
+    "finite": {"type": "number"},
+    "positive": {"type": "number", "exclusiveMinimum": 0},
+    "nullable_nonnegative": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/nonnegative"}]},
+    "nullable_number": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/finite"}]},
+    "nullable_positive": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/positive"}]},
+    "reason": {"type": ["string", "null"]},
+    "count": {"type": "integer", "minimum": 0},
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end"],
+      "properties": {
+        "start": {"$ref": "#/$defs/boundary"},
+        "end": {"$ref": "#/$defs/boundary"}
+      }
+    },
+    "windows": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["timezone", "end", "this_week", "last_week"],
+      "properties": {
+        "timezone": {"const": "fixed-PST"},
+        "end": {"$ref": "#/$defs/boundary"},
+        "this_week": {"$ref": "#/$defs/window"},
+        "last_week": {"$ref": "#/$defs/window"}
+      }
+    },
+    "count_metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "value", "known_count", "total_count", "reason"],
+      "properties": {
+        "state": {"enum": ["known", "unknown"]},
+        "value": {"type": ["number", "null"]},
+        "known_count": {"$ref": "#/$defs/count"},
+        "total_count": {"$ref": "#/$defs/count"},
+        "reason": {"$ref": "#/$defs/reason"}
+      },
+      "allOf": [
+        {
+          "if": {"required": ["state"], "properties": {"state": {"const": "unknown"}}},
+          "then": {"properties": {"value": {"type": "null"}, "reason": {"type": "string", "minLength": 1}}}
+        },
+        {
+          "if": {"required": ["state"], "properties": {"state": {"const": "known"}}},
+          "then": {"properties": {"value": {"type": "number", "minimum": 0}, "reason": {"type": "null"}}}
+        }
+      ]
+    },
+    "money_metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "value", "known_count", "total_count", "reason", "net_of_known_cost_usd", "net_reason"],
+      "properties": {
+        "state": {"enum": ["known", "unknown"]},
+        "value": {"type": ["number", "null"]},
+        "known_count": {"$ref": "#/$defs/count"},
+        "total_count": {"$ref": "#/$defs/count"},
+        "reason": {"$ref": "#/$defs/reason"},
+        "net_of_known_cost_usd": {"$ref": "#/$defs/nullable_number"},
+        "net_reason": {"$ref": "#/$defs/reason"}
+      },
+      "allOf": [
+        {
+          "if": {"required": ["state"], "properties": {"state": {"const": "unknown"}}},
+          "then": {
+            "properties": {
+              "value": {"type": "null"},
+              "reason": {"type": "string", "minLength": 1},
+              "net_of_known_cost_usd": {"type": "null"}
+            }
+          }
+        },
+        {
+          "if": {"required": ["state"], "properties": {"state": {"const": "known"}}},
+          "then": {"properties": {"value": {"type": "number", "minimum": 0}, "reason": {"type": "null"}}}
+        },
+        {
+          "if": {"required": ["net_of_known_cost_usd"], "properties": {"net_of_known_cost_usd": {"type": "null"}}},
+          "then": {"properties": {"net_reason": {"type": "string", "minLength": 1}}}
+        },
+        {
+          "if": {"required": ["net_of_known_cost_usd"], "properties": {"net_of_known_cost_usd": {"type": "number"}}},
+          "then": {"properties": {"net_reason": {"type": "null"}}}
+        }
+      ]
+    },
+    "cost_metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "value", "known_count", "total_count", "reason"],
+      "properties": {
+        "state": {"enum": ["known", "partial", "unknown"]},
+        "value": {"type": ["number", "null"]},
+        "known_count": {"$ref": "#/$defs/count"},
+        "total_count": {"$ref": "#/$defs/count"},
+        "reason": {"$ref": "#/$defs/reason"}
+      },
+      "allOf": [
+        {
+          "if": {"required": ["state"], "properties": {"state": {"const": "unknown"}}},
+          "then": {"properties": {"value": {"type": "null"}, "reason": {"type": "string", "minLength": 1}}}
+        },
+        {
+          "if": {"required": ["state"], "properties": {"state": {"const": "known"}}},
+          "then": {
+            "properties": {
+              "value": {"type": "number", "minimum": 0},
+              "reason": {"type": "null"},
+              "known_count": {"minimum": 1}
+            }
+          }
+        },
+        {
+          "if": {"required": ["state"], "properties": {"state": {"const": "partial"}}},
+          "then": {
+            "properties": {
+              "value": {"type": "number", "minimum": 0},
+              "reason": {"type": "string", "minLength": 1},
+              "known_count": {"minimum": 1}
+            }
+          }
+        }
+      ]
+    },
+    "week_metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "merged_prs",
+        "hours_saved",
+        "money_saved_usd",
+        "cost_per_merged_pr_credits",
+        "cost_per_merged_pr_usd"
+      ],
+      "properties": {
+        "merged_prs": {
+          "allOf": [
+            {"$ref": "#/$defs/count_metric"},
+            {
+              "if": {"required": ["state"], "properties": {"state": {"const": "known"}}},
+              "then": {"properties": {"value": {"type": "integer"}}}
+            }
+          ]
+        },
+        "hours_saved": {"$ref": "#/$defs/count_metric"},
+        "money_saved_usd": {"$ref": "#/$defs/money_metric"},
+        "cost_per_merged_pr_credits": {"$ref": "#/$defs/cost_metric"},
+        "cost_per_merged_pr_usd": {"$ref": "#/$defs/cost_metric"}
+      }
+    },
+    "delta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "value", "direction", "known_count", "total_count", "reason"],
+      "properties": {
+        "state": {"enum": ["known", "partial", "unknown"]},
+        "value": {"type": ["number", "null"]},
+        "direction": {"enum": ["up", "down", "flat", "unknown"]},
+        "known_count": {"$ref": "#/$defs/count"},
+        "total_count": {"$ref": "#/$defs/count"},
+        "reason": {"$ref": "#/$defs/reason"}
+      },
+      "allOf": [
+        {
+          "if": {"required": ["state"], "properties": {"state": {"const": "unknown"}}},
+          "then": {
+            "properties": {
+              "value": {"type": "null"},
+              "direction": {"const": "unknown"},
+              "reason": {"type": "string", "minLength": 1}
+            }
+          }
+        },
+        {
+          "if": {"required": ["state"], "properties": {"state": {"const": "known"}}},
+          "then": {
+            "properties": {
+              "value": {"type": "number"},
+              "direction": {"enum": ["up", "down", "flat"]},
+              "reason": {"type": "null"}
+            }
+          }
+        },
+        {
+          "if": {"required": ["state"], "properties": {"state": {"const": "partial"}}},
+          "then": {
+            "properties": {
+              "value": {"type": "number"},
+              "direction": {"enum": ["up", "down", "flat"]},
+              "reason": {"type": "string", "minLength": 1}
+            }
+          }
+        }
+      ]
+    },
+    "deltas": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "merged_prs",
+        "hours_saved",
+        "money_saved_usd",
+        "cost_per_merged_pr_credits",
+        "cost_per_merged_pr_usd"
+      ],
+      "properties": {
+        "merged_prs": {"$ref": "#/$defs/delta"},
+        "hours_saved": {"$ref": "#/$defs/delta"},
+        "money_saved_usd": {"$ref": "#/$defs/delta"},
+        "cost_per_merged_pr_credits": {"$ref": "#/$defs/delta"},
+        "cost_per_merged_pr_usd": {"$ref": "#/$defs/delta"}
+      }
+    },
+    "config": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "kind", "enabled", "repos", "hours_per_merged_pr", "hourly_rate_usd", "share_aggregates"],
+      "properties": {
+        "schema": {"$ref": "#/$defs/schema_name"},
+        "kind": {"const": "config"},
+        "enabled": {"type": "boolean"},
+        "repos": {"type": "array", "items": {"$ref": "#/$defs/repo"}, "uniqueItems": true},
+        "hours_per_merged_pr": {"$ref": "#/$defs/nullable_positive"},
+        "hourly_rate_usd": {"$ref": "#/$defs/nullable_positive"},
+        "share_aggregates": {"type": "boolean"}
+      }
+    },
+    "pr_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "kind", "repository", "pull_request", "merged_at", "closing_ticket", "cost_credits", "cost_usd", "cost_status", "cost_reason"],
+      "properties": {
+        "schema": {"$ref": "#/$defs/schema_name"},
+        "kind": {"const": "pr_record"},
+        "repository": {"$ref": "#/$defs/repo"},
+        "pull_request": {"type": "integer", "minimum": 1},
+        "merged_at": {"$ref": "#/$defs/utc"},
+        "closing_ticket": {"oneOf": [{"type": "null"}, {"type": "integer", "minimum": 1}]},
+        "cost_credits": {"$ref": "#/$defs/nullable_nonnegative"},
+        "cost_usd": {"$ref": "#/$defs/nullable_nonnegative"},
+        "cost_status": {"enum": ["known", "unknown"]},
+        "cost_reason": {"$ref": "#/$defs/reason"}
+      },
+      "allOf": [
+        {
+          "if": {"required": ["cost_status"], "properties": {"cost_status": {"const": "unknown"}}},
+          "then": {
+            "properties": {
+              "cost_credits": {"type": "null"},
+              "cost_usd": {"type": "null"},
+              "cost_reason": {"type": "string", "minLength": 1}
+            }
+          }
+        },
+        {
+          "if": {"required": ["cost_status"], "properties": {"cost_status": {"const": "known"}}},
+          "then": {
+            "properties": {
+              "cost_credits": {"type": "number"},
+              "cost_reason": {"type": "null"}
+            }
+          }
+        }
+      ]
+    },
+    "read": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "status", "reason"],
+      "properties": {
+        "repository": {"$ref": "#/$defs/repo"},
+        "status": {"enum": ["complete", "incomplete"]},
+        "reason": {"$ref": "#/$defs/reason"}
+      },
+      "allOf": [
+        {
+          "if": {"required": ["status"], "properties": {"status": {"const": "complete"}}},
+          "then": {"properties": {"reason": {"type": "null"}}}
+        },
+        {
+          "if": {"required": ["status"], "properties": {"status": {"const": "incomplete"}}},
+          "then": {"properties": {"reason": {"type": "string", "minLength": 1}}}
+        }
+      ]
+    },
+    "aggregate_count_metric": {
+      "allOf": [
+        {"$ref": "#/$defs/count_metric"},
+        {"properties": {"reason": {"$ref": "#/$defs/nullable_aggregate_reason"}}}
+      ]
+    },
+    "aggregate_money_metric": {
+      "allOf": [
+        {"$ref": "#/$defs/money_metric"},
+        {
+          "properties": {
+            "reason": {"$ref": "#/$defs/nullable_aggregate_reason"},
+            "net_reason": {"$ref": "#/$defs/nullable_aggregate_reason"}
+          }
+        }
+      ]
+    },
+    "aggregate_cost_metric": {
+      "allOf": [
+        {"$ref": "#/$defs/cost_metric"},
+        {"properties": {"reason": {"$ref": "#/$defs/nullable_aggregate_reason"}}}
+      ]
+    },
+    "aggregate_week_metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "merged_prs",
+        "hours_saved",
+        "money_saved_usd",
+        "cost_per_merged_pr_credits",
+        "cost_per_merged_pr_usd"
+      ],
+      "properties": {
+        "merged_prs": {
+          "allOf": [
+            {"$ref": "#/$defs/aggregate_count_metric"},
+            {
+              "if": {"required": ["state"], "properties": {"state": {"const": "known"}}},
+              "then": {"properties": {"value": {"type": "integer"}}}
+            }
+          ]
+        },
+        "hours_saved": {"$ref": "#/$defs/aggregate_count_metric"},
+        "money_saved_usd": {"$ref": "#/$defs/aggregate_money_metric"},
+        "cost_per_merged_pr_credits": {"$ref": "#/$defs/aggregate_cost_metric"},
+        "cost_per_merged_pr_usd": {"$ref": "#/$defs/aggregate_cost_metric"}
+      }
+    },
+    "aggregate_delta": {
+      "allOf": [
+        {"$ref": "#/$defs/delta"},
+        {"properties": {"reason": {"$ref": "#/$defs/nullable_aggregate_reason"}}}
+      ]
+    },
+    "aggregate_deltas": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "merged_prs",
+        "hours_saved",
+        "money_saved_usd",
+        "cost_per_merged_pr_credits",
+        "cost_per_merged_pr_usd"
+      ],
+      "properties": {
+        "merged_prs": {"$ref": "#/$defs/aggregate_delta"},
+        "hours_saved": {"$ref": "#/$defs/aggregate_delta"},
+        "money_saved_usd": {"$ref": "#/$defs/aggregate_delta"},
+        "cost_per_merged_pr_credits": {"$ref": "#/$defs/aggregate_delta"},
+        "cost_per_merged_pr_usd": {"$ref": "#/$defs/aggregate_delta"}
+      }
+    },
+    "collection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "kind", "reads", "records"],
+      "properties": {
+        "schema": {"$ref": "#/$defs/schema_name"},
+        "kind": {"const": "collection"},
+        "reads": {"type": "array", "items": {"$ref": "#/$defs/read"}, "uniqueItems": true},
+        "records": {"type": "array", "items": {"$ref": "#/$defs/pr_record"}, "uniqueItems": true}
+      }
+    },
+    "report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "kind", "opted_in", "as_of", "windows", "metrics", "week_over_week"],
+      "properties": {
+        "schema": {"$ref": "#/$defs/schema_name"},
+        "kind": {"const": "report"},
+        "opted_in": {"type": "boolean"},
+        "as_of": {"$ref": "#/$defs/utc"},
+        "windows": {"$ref": "#/$defs/windows"},
+        "metrics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["this_week", "last_week"],
+          "properties": {
+            "this_week": {"$ref": "#/$defs/week_metrics"},
+            "last_week": {"$ref": "#/$defs/week_metrics"}
+          }
+        },
+        "week_over_week": {"$ref": "#/$defs/deltas"}
+      }
+    },
+    "aggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "kind", "as_of", "windows", "metrics", "week_over_week"],
+      "properties": {
+        "schema": {"$ref": "#/$defs/schema_name"},
+        "kind": {"const": "aggregate"},
+        "as_of": {"$ref": "#/$defs/utc"},
+        "windows": {"$ref": "#/$defs/windows"},
+        "metrics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["this_week", "last_week"],
+          "properties": {
+            "this_week": {"$ref": "#/$defs/aggregate_week_metrics"},
+            "last_week": {"$ref": "#/$defs/aggregate_week_metrics"}
+          }
+        },
+        "week_over_week": {"$ref": "#/$defs/aggregate_deltas"}
+      }
+    }
+  }
+}

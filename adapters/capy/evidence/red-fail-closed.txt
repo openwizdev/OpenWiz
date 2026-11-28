@@ -1,0 +1,128 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/capy/test_driver.py   (35 refusing agent CLI stubs first on PATH; the fail-closed proofs of the review round, before the fix)
+F..FFFF.F.F......F..F.
+======================================================================
+FAIL: test_a_create_receipt_off_its_shape_or_for_another_project_is_a_possible_start (__main__.Driver.test_a_create_receipt_off_its_shape_or_for_another_project_is_a_possible_start)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/capy/test_driver.py", line 273, in test_a_create_receipt_off_its_shape_or_for_another_project_is_a_possible_start
+    out = self.refused('start', START, shows)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "adapters/capy/test_driver.py", line 94, in refused
+    self.assertEqual(code, 1, (request, self.host.answers, out))
+AssertionError: 0 != 1 : ({'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude-code', 'model': 'claude-synthetic-1'}, [('POST', '/api/v1/threads', 200, {'id': 'jam_other', 'projectId': 'project_other', 'authorId': 'user_synthetic', 'previousAuthorId': None, 'title': 'OpenWiz: example/site#7', 'titleCustom': True, 'status': 'working', 'archived': False, 'lastModelId': 'anthropic/claude-synthetic-1', 'queuedAt': None, 'linearIssue': None, 'pullRequestAuthor': None, 'usage': {'llmCredits': 0, 'imageCredits': 0, 'vmCredits': 0, 'totalCredits': 0}, 'createdAt': '2030-01-01T00:00:00Z', 'updatedAt': '2030-01-01T00:00:00Z', 'lastActivityAt': None, 'hasUnreads': False, 'mentionCount': 0, 'owed': False, 'member': True})], {'run': 'jam_other'})
+
+======================================================================
+FAIL: test_a_project_list_off_its_documented_shape_is_refused_before_any_create (__main__.Driver.test_a_project_list_off_its_documented_shape_is_refused_before_any_create)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/capy/test_driver.py", line 263, in test_a_project_list_off_its_documented_shape_is_refused_before_any_create
+    self.assertIn('CAPY_PROJECT_ID', self.refused('start', START)['next'])
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "adapters/capy/test_driver.py", line 94, in refused
+    self.assertEqual(code, 1, (request, self.host.answers, out))
+AssertionError: 0 != 1 : ({'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude-code', 'model': 'claude-synthetic-1'}, [('GET', '/api/v1/projects', 200, {'items': [{'id': 'project_synthetic1', 'name': 'Site', 'description': None, 'code': 'SITE', 'visibility': 'org', 'repos': [{'repoFullName': 'Example/Site', 'baseBranch': 'main', 'mode': 'primary'}], 'createdAt': '2030-01-01T00:00:00Z', 'updatedAt': '2030-01-01T00:00:00Z'}], 'more': 1})], {'run': 'jam_01SYNTHETIC0000000000000'})
+
+======================================================================
+FAIL: test_a_rejected_effort_needs_a_readable_model_list_to_say_the_model_cannot_set_it (__main__.Driver.test_a_rejected_effort_needs_a_readable_model_list_to_say_the_model_cannot_set_it)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/capy/test_driver.py", line 291, in test_a_rejected_effort_needs_a_readable_model_list_to_say_the_model_cannot_set_it
+    self.assertNotEqual(self.refused('start', dict(START, effort='xhigh'), 'xhigh')['next'], NO_EFFORT)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "adapters/capy/test_driver.py", line 96, in refused
+    self.assertIn(shows, out['error'])
+AssertionError: 'xhigh' not found in 'Capy cannot run model anthropic/claude-synthetic-1 for this key'
+
+======================================================================
+FAIL: test_an_effort_outside_capys_reasoning_modes_is_refused_before_any_request (__main__.Driver.test_an_effort_outside_capys_reasoning_modes_is_refused_before_any_request)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/capy/test_driver.py", line 279, in test_an_effort_outside_capys_reasoning_modes_is_refused_before_any_request
+    self.assertEqual(self.driver('start', dict(START, effort=effort)), (1, {
+AssertionError: Tuples differ: (1, {'error': 'Capy answered 400 to POST /api/v1/threads', 'n[79 chars]in"}) != (1, {'error': 'Capy cannot run claude-code (model claude-synt[159 chars]lt"})
+
+First differing element 1:
+{'error': 'Capy answered 400 to POST /api/v1/threads', 'n[78 chars]ain"}
+{'error': 'Capy cannot run claude-code (model claude-synt[158 chars]ult"}
+
+  (1,
+-  {'error': 'Capy answered 400 to POST /api/v1/threads',
+-   'next': "check your key, your Capy project and the start's fields, then "
+-           'start again'})
++  {'error': 'Capy cannot run claude-code (model claude-synthetic-1) at effort '
++            'ultra',
++   'next': "this host can't set effort: remove the effort for this harness in "
++           "your Models table or Roster to run it at the host's default"})
+
+======================================================================
+FAIL: test_an_effort_the_model_does_not_offer_is_the_exact_refusal_and_starts_nothing (__main__.Driver.test_an_effort_the_model_does_not_offer_is_the_exact_refusal_and_starts_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/capy/test_driver.py", line 175, in test_an_effort_the_model_does_not_offer_is_the_exact_refusal_and_starts_nothing
+    self.assertEqual((code, out), (1, {'error': 'Capy cannot run claude-code (model claude-synthetic-1) at '
+AssertionError: Tuples differ: (1, {[28 chars]aude-synthetic-1 at effort xhigh', 'next': "th[121 chars]lt"}) != (1, {[28 chars]aude-code (model claude-synthetic-1) at effort[141 chars]lt"})
+
+First differing element 1:
+{'err[24 chars]aude-synthetic-1 at effort xhigh', 'next': "th[120 chars]ult"}
+{'err[24 chars]aude-code (model claude-synthetic-1) at effort[140 chars]ult"}
+
+  (1,
+-  {'error': 'Capy cannot run claude-synthetic-1 at effort xhigh',
+?                                                          ----- -
+
++  {'error': 'Capy cannot run claude-code (model claude-synthetic-1) at effort '
+?                            +++++++++++++++++++                   +
+
++            'xhigh',
+    'next': "this host can't set effort: remove the effort for this harness in "
+            "your Models table or Roster to run it at the host's default"})
+
+======================================================================
+FAIL: test_an_unreadable_or_mismatched_thread_read_refuses_wake_and_stop_before_any_write (__main__.Driver.test_an_unreadable_or_mismatched_thread_read_refuses_wake_and_stop_before_any_write)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/capy/test_driver.py", line 234, in test_an_unreadable_or_mismatched_thread_read_refuses_wake_and_stop_before_any_write
+    self.assertNotEqual(self.refused(cmd, {'run': run}, run)['next'], 'start a new run')
+AssertionError: 'start a new run' == 'start a new run'
+
+======================================================================
+FAIL: test_every_refusal_fits_d3_even_for_the_longest_repository_and_ticket (__main__.Driver.test_every_refusal_fits_d3_even_for_the_longest_repository_and_ticket)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/capy/test_driver.py", line 296, in test_every_refusal_fits_d3_even_for_the_longest_repository_and_ticket
+    self.refused('start', dict(START, repository=repo), repo)
+  File "adapters/capy/test_driver.py", line 93, in refused
+    code, out = self.driver(cmd, request)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "adapters/capy/test_driver.py", line 89, in driver
+    self.assertTrue(isinstance(line, str) and 1 <= len(line) <= 300 and '\n' not in line, out)
+AssertionError: False is not true : {'error': 'no Capy project lists oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo/rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr', 'next': 'add oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo/rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr to one Capy project (Settings, Projects & setup), or set CAPY_PROJECT_ID to the project to run it in, then start again'}
+
+======================================================================
+FAIL: test_start_takes_capy_project_id_else_the_project_listing_the_repository_else_refuses (__main__.Driver.test_start_takes_capy_project_id_else_the_project_listing_the_repository_else_refuses)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/capy/test_driver.py", line 144, in test_start_takes_capy_project_id_else_the_project_listing_the_repository_else_refuses
+    self.assertEqual((code, out), (1, {
+AssertionError: Tuples differ: (1, {[55 chars]'add example/site to one Capy project (Setting[88 chars]in'}) != (1, {[55 chars]'add the repository to one Capy project (Setti[90 chars]in'})
+
+First differing element 1:
+{'err[51 chars]'add example/site to one Capy project (Setting[87 chars]ain'}
+{'err[51 chars]'add the repository to one Capy project (Setti[89 chars]ain'}
+
+Diff is 666 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_wake_and_stop_refuse_unless_capy_confirms_each_write (__main__.Driver.test_wake_and_stop_refuse_unless_capy_confirms_each_write)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/capy/test_driver.py", line 246, in test_wake_and_stop_refuse_unless_capy_confirms_each_write
+    self.refused(cmd, {'run': run}, run)
+  File "adapters/capy/test_driver.py", line 94, in refused
+    self.assertEqual(code, 1, (request, self.host.answers, out))
+AssertionError: 0 != 1 : ({'run': 'jam_01SYNTHETIC0000000000000'}, [('POST', '/api/v1/threads/jam_01SYNTHETIC0000000000000/message', 200, None)], {'run': 'jam_01SYNTHETIC0000000000000', 'woke': True})
+
+----------------------------------------------------------------------
+Ran 22 tests in 16.719s
+
+FAILED (failures=9)

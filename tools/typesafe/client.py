@@ -1,24 +1,10 @@
-"""TypeSafe System One client for Jev.
-
-The documented call is POST https://api.typesafe.ai/v1/systemone with
-Authorization: Bearer <key>. The key is read only from the environment
-variable TYPESAFE_API_KEY. This module never logs the key or puts it in
-an error message.
-
-Model id jev-1.14.0 is the version jev-latest pointed at when this was
-written (docs.typesafe.ai/models). A pinned id keeps a threshold from
-moving when the alias does. Output tokens are free; input is $0.042 per
-million tokens. The docs publish no latency SLO. A call that fails, or
-takes longer than the timeout, raises TypeSafeError so the caller can
-keep its previous behaviour.
-"""
-
 import json
 import os
 import urllib.error
 import urllib.request
 
 ENV = 'TYPESAFE_API_KEY'
+OPT_IN = 'OPENWIZ_JEV'
 URL = 'https://api.typesafe.ai/v1/systemone'
 MODEL = 'jev-1.14.0'
 MAX_STATE_CHARS = 24000
@@ -26,12 +12,10 @@ TIMEOUT_S = 10
 
 
 class TypeSafeError(Exception):
-    """A call that did not return a usable answer. The message is a fixed word."""
+    pass
 
 
 class SystemOne:
-    """The small interface every caller uses. Tests pass a fake."""
-
     def system_one(self, state, questions, model=MODEL):
         raise NotImplementedError
 
@@ -88,8 +72,6 @@ class HttpClient(SystemOne):
 
 
 class FakeClient(SystemOne):
-    """Returns a canned response, or raises, and records the call. No network."""
-
     def __init__(self, answers=None, error=None, model=MODEL):
         self._answers = answers
         self._error = error
@@ -103,7 +85,13 @@ class FakeClient(SystemOne):
         return {'model': self._model, 'answers': self._answers or {}, 'usage': {'input_tokens': 0, 'output_tokens': 0}}
 
 
+def opted_in():
+    return os.environ.get(OPT_IN) == '1'
+
+
 def from_env():
+    if not opted_in():
+        return None
     key = os.environ.get(ENV, '')
     if not isinstance(key, str) or not key.strip():
         return None
@@ -116,12 +104,15 @@ def _urlopen(url, body, headers, timeout):
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             return resp.status, resp.read()
     except urllib.error.HTTPError as e:
-        # Read and drop the body so a proxy error page cannot surface later.
-        try:
-            e.read()
-        except Exception:
-            pass
+        _discard_error_page(e)
         return e.code, b''
+
+
+def _discard_error_page(error):
+    try:
+        error.read()
+    except Exception:
+        pass
 
 
 def noul(response, name):
@@ -133,7 +124,6 @@ def noul(response, name):
 
 
 def choice(response, name):
-    """The chosen name, its probability, and the answer's confidence."""
     answer = _answer(response, name, 'choice')
     name_of = answer.get('choice')
     probabilities = answer.get('probabilities')
@@ -149,7 +139,6 @@ def choice(response, name):
 
 
 def score(response, name):
-    """The position, its confidence, the level probabilities, and the legend."""
     answer = _answer(response, name, 'score')
     value = answer.get('score')
     confidence = answer.get('confidence')
@@ -167,11 +156,12 @@ def score(response, name):
 
 
 def box(response, name):
-    """The four edges as fractions of the image, and the answer's confidence."""
     answer = _answer(response, name, 'box')
     edges = answer.get('box')
     confidence = answer.get('confidence')
-    if not isinstance(edges, dict) or not _finite(confidence) or not 0 <= confidence <= 1:
+    if not isinstance(edges, dict):
+        raise TypeSafeError('shape')
+    if confidence is not None and (not _finite(confidence) or not 0 <= confidence <= 1):
         raise TypeSafeError('shape')
     found = {}
     for edge in ('top', 'bottom', 'left', 'right'):
@@ -179,7 +169,7 @@ def box(response, name):
         if not _finite(value) or not 0 <= value <= 1:
             raise TypeSafeError('shape')
         found[edge] = float(value)
-    return found, float(confidence)
+    return found, None if confidence is None else float(confidence)
 
 
 def _answer(response, name, kind):
