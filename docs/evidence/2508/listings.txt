@@ -1,0 +1,124 @@
+commit: 2b0b0d192d9013f223279d507bc7a809540f66da
+read: kernel/live-rig/listings.json
+read: kernel/live-rig/hosts/*.json
+read: kernel/live-rig/vps/hosts/*.json
+
+listings.json
+  driver  Cloudroom  cloudroom
+  driver  Conductor  conductor
+  driver  Cursor  cursor-cloud-agents
+  driver  Factory  factory
+  driver  Hermes  hermes
+  driver  Pane  pane
+  driver  boat.dev  boat-dev
+  driver  local  local
+driver keys: 8
+harness keys: 0
+
+host configs
+  file: kernel/live-rig/hosts/boat.json
+  host: boat.dev
+  listing: boat-dev
+  cost: unknown
+  needs: boat, gh
+  signed_in_count: 2
+  signed_in_programs: boat, gh
+  runs: claude/opus-5-5, codex/gpt-5.4-mini
+  wait: 900
+
+  file: kernel/live-rig/hosts/cloudroom.json
+  host: Cloudroom
+  listing: cloudroom
+  cost: unknown
+  needs: room-cli, gh
+  signed_in_count: 2
+  signed_in_programs: room-cli, gh
+  runs: claude/claude-opus-5-5
+  wait: 900
+
+  file: kernel/live-rig/hosts/local.json
+  host: local
+  listing: local
+  cost: none
+  needs: claude, gh
+  signed_in_count: 1
+  signed_in_programs: gh
+  runs: claude/claude-opus-5-5
+  wait: 900
+
+  file: kernel/live-rig/vps/hosts/conductor.json
+  host: Conductor
+  listing: conductor
+  cost: paid
+  needs: curl, gh
+  signed_in_count: 2
+  signed_in_programs: python3, gh
+  runs: claude/opus-5-5-1m
+  wait: 900
+
+  file: kernel/live-rig/vps/hosts/cursor.json
+  host: Cursor
+  listing: cursor-cloud-agents
+  cost: paid
+  needs: curl, gh
+  signed_in_count: 2
+  signed_in_programs: python3, gh
+  runs: cursor/composer-2.5
+  wait: 900
+
+  file: kernel/live-rig/vps/hosts/factory.json
+  host: Factory
+  listing: factory
+  cost: paid
+  needs: droid, gh
+  signed_in_count: 2
+  signed_in_programs: python3, gh
+  runs: droid/claude-opus-5-5
+  wait: 900
+
+  file: kernel/live-rig/vps/hosts/hermes.json
+  host: Hermes
+  listing: hermes
+  cost: paid
+  needs: hermes, gh
+  signed_in_count: 1
+  signed_in_programs: gh
+  runs: claude/claude-opus-5-5
+  wait: 900
+
+  file: kernel/live-rig/vps/hosts/pane.json
+  host: Pane
+  listing: pane
+  cost: paid
+  needs: runpane, gh
+  signed_in_count: 2
+  signed_in_programs: runpane, gh
+  runs: claude/claude-opus-5-5
+  wait: 900
+
+cost none
+  local  listing local  runs claude/claude-opus-5-5
+driver listings with cost none: 1
+harness listings with cost none: 0
+
+skipped as cost
+  boat.dev  cost unknown  listing boat-dev  runs claude/opus-5-5, codex/gpt-5.4-mini
+  Cloudroom  cost unknown  listing cloudroom  runs claude/claude-opus-5-5
+  Conductor  cost paid  listing conductor  runs claude/opus-5-5-1m
+  Cursor  cost paid  listing cursor-cloud-agents  runs cursor/composer-2.5
+  Factory  cost paid  listing factory  runs droid/claude-opus-5-5
+  Hermes  cost paid  listing hermes  runs claude/claude-opus-5-5
+  Pane  cost paid  listing pane  runs claude/claude-opus-5-5
+count: 7
+
+empty signed_in
+  none
+count: 0
+
+needs program not named by a signed_in command
+  local  program claude  cost none  listing local
+  Conductor  program curl  cost paid  listing conductor
+  Cursor  program curl  cost paid  listing cursor-cloud-agents
+  Factory  program droid  cost paid  listing factory
+  Hermes  program hermes  cost paid  listing hermes
+count: 5

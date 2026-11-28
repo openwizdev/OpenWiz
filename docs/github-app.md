@@ -577,7 +577,7 @@ an HTTP endpoint on `127.0.0.1`, never GitHub or CloudRoom. (The setup page's br
 proofs went with the web view in #1264.) `--api-base` exists for
 this seam: only the fixed production API or explicit HTTP `127.0.0.1:PORT` is
 accepted, and redirects are refused. Never use real keys with the test endpoint.
-The `rust` CI job runs these fixtures in its "The skills' tests" step
+The `release` CI job (part 2) runs these fixtures in its "The GitHub App" step
 (`.github/workflows/ci.yml`).
 
 Sources (GitHub documentation, read 2026-11-01):

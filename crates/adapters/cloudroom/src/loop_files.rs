@@ -2290,10 +2290,8 @@ pub fn read_list(
     deadline: Instant,
 ) -> Result<Vec<Map<String, Value>>, SourceError> {
     let out = process::run(source.program(), &Invocation::LoopList, deadline)?;
-    serde_json::from_slice::<openwiz_core::new_thread::read::StrictJson>(&out)
+    let doc = crate::json_once::parse(&out, true)
         .map_err(|_| malformed("not one JSON document with each key once"))?;
-    let doc: Value =
-        serde_json::from_slice(&out).map_err(|_| malformed("not one JSON document"))?;
     let items = doc
         .get("automations")
         .and_then(Value::as_array)

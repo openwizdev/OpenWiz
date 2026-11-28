@@ -4,7 +4,6 @@ use std::time::Instant;
 
 use openwiz_core::fleet::model::{Check, CheckResult, Commit, NonEmpty, Number};
 use openwiz_core::fleet::tick::{ChangedFile, CheckRun, ReportComment};
-use openwiz_core::new_thread::read::StrictJson;
 use serde_json::{Map, Value};
 
 use crate::allowlist::{Invocation, Module};
@@ -628,8 +627,7 @@ impl TickReads {
 }
 
 pub fn document(bytes: &[u8]) -> Result<Value> {
-    serde_json::from_slice::<StrictJson>(bytes).map_err(|_| "invalid or duplicate JSON value")?;
-    serde_json::from_slice(bytes).map_err(|_| "invalid JSON")
+    crate::json_once::parse(bytes, true).map_err(|_| "invalid or duplicate JSON value")
 }
 pub fn object<'a>(v: &'a Value, keys: &[&str]) -> Result<&'a Map<String, Value>> {
     let o = v.as_object().ok_or("expected object")?;
@@ -744,4 +742,26 @@ fn comment(o: &Map<String, Value>) -> Result<Comment> {
         created,
         updated,
     })
+}
+
+#[cfg(test)]
+mod oracle {
+    use super::document;
+
+    #[test]
+    fn document_matches_the_two_pass_oracle() {
+        for bytes in crate::json_once::oracle::samples() {
+            let old = crate::json_once::oracle::two_pass(true, &bytes);
+            let new = document(&bytes);
+            match old {
+                Ok(value) => assert_eq!(new.ok(), Some(value)),
+                Err(crate::json_once::oracle::Pass::First) => {
+                    assert_eq!(new, Err("invalid or duplicate JSON value"));
+                }
+                Err(crate::json_once::oracle::Pass::Second) => {
+                    assert_eq!(new, Err("invalid JSON"));
+                }
+            }
+        }
+    }
 }

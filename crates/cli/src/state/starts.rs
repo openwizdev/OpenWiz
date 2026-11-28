@@ -9,7 +9,6 @@ use openwiz_core::messaging::OpId;
 use openwiz_core::messaging::record::StoreError;
 use openwiz_core::model::Timestamp;
 use openwiz_core::new_thread::Settings;
-use openwiz_core::new_thread::read::StrictJson;
 use serde_json::{Map, Value};
 
 use super::{Area, Kind, Store, io_error};
@@ -105,9 +104,8 @@ impl StartStore for Store<Starts> {
 }
 
 pub fn read(text: &str) -> Result<StartRecord, String> {
-    serde_json::from_str::<StrictJson>(text)
+    let doc = crate::json_once::parse(text.as_bytes(), true)
         .map_err(|_| "not JSON, or a key given twice".to_owned())?;
-    let doc: Value = serde_json::from_str(text).map_err(|_| "not JSON".to_owned())?;
     let path = "record";
     let top = exact(&doc, path, &RECORD_KEYS)?;
     if string(top, path, "schema")? != START_RECORD_SCHEMA_ID {
@@ -253,6 +251,18 @@ mod tests {
     use serde_json::json;
 
     use super::*;
+
+    #[test]
+    fn a_refused_document_matches_the_two_pass_oracle() {
+        for bytes in crate::json_once::oracle::samples() {
+            let Ok(text) = std::str::from_utf8(&bytes) else {
+                continue;
+            };
+            if crate::json_once::oracle::two_pass(true, &bytes).is_err() {
+                assert_eq!(read(text), Err("not JSON, or a key given twice".to_owned()));
+            }
+        }
+    }
 
     fn good() -> Value {
         let key = StartKey::builder(

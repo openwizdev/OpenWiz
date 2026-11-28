@@ -5,7 +5,7 @@ This contract fixes the shapes the spec's tickets build against: the
 builder's ruling line, the reviewer's mark for each ruling, the re-check and
 final-check outcomes, the logged blocker and the four v2 `Next:` states. BR1
 (#886) writes it and teaches `check-report` in
-[`tools/war-room/review_loops.py`](../tools/war-room/review_loops.py) to
+[`tools/war-room/review_loops.py`](https://github.com/openwizdev/OpenWiz/blob/8880e7b7bbe6932e177cd5b2532e692231d66b0c/tools/war-room/review_loops.py) to
 enforce it. BR3 (#888) puts the ruling line into the build skill, BR4 (#889)
 the marks and outcomes into the review skill, and BR5 (#890) the `Next:`
 routing into the fleet skill.
