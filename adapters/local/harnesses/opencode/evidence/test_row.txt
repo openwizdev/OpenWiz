@@ -1,0 +1,23 @@
+$ python3 -I adapters/local/harnesses/opencode/test_row.py
+pass opencode row: the fake exits 2 on --continue instead of the session id
+pass opencode row: the fake exits 2 on a --format other than json
+pass opencode row: the fake exits 2 on a --format the CLI does not know
+pass opencode row: the fake exits 2 on a prompt not after --
+pass opencode row: the fake exits 2 on a second prompt word
+pass opencode row: the fake exits 2 on a session id that starts with a dash
+pass opencode row: the fake exits 2 on a start prompt on a wake line
+pass opencode row: the fake exits 2 on a start with no --model
+pass opencode row: the fake exits 2 on a start with no prompt
+pass opencode row: the fake exits 2 on a wake prompt on a start line
+pass opencode row: the fake exits 2 on a wake with no session id
+pass opencode row: the fake exits 2 on an unknown flag
+pass opencode row: the fake exits 2 on no run subcommand
+pass opencode row: the fake exits 2 on run --attach, which uses a server someone else started
+pass opencode row: the fake exits 2 on run --port
+pass opencode row: the fake exits 2 on run --variant, which the row never passes
+pass opencode row: the fake exits 2 on the serve command
+pass opencode row: the fake takes the row's start line
+pass opencode row: the fake takes the row's start line with --auto
+pass opencode row: the fake takes the row's wake line
+pass opencode row: the fake's --help names only the two run forms
+exit 0
