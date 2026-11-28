@@ -1,0 +1,12 @@
+{
+  "schema": "openwiz.value-meter.v1",
+  "kind": "collection",
+  "reads": [
+    {
+      "repository": "synthetic-owner/synthetic-repo",
+      "status": "incomplete",
+      "reason": null
+    }
+  ],
+  "records": []
+}

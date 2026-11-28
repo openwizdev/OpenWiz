@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+ABOUT = """A synthetic Claude Code (`claude`) and Codex (`codex`) inside the fake Sprite, for the Sprites driver's tests.
+
+It takes only the exact command lines the driver sends, and exits 2 on any other. As a harness behind the Sprites
+gateway, it needs its base URL variable (ANTHROPIC_BASE_URL or OPENAI_BASE_URL) to be a gateway URL and its key
+variable (ANTHROPIC_API_KEY or CODEX_API_KEY) to be set to anything; without them, it exits 1 as not logged in. It
+appends its arguments and its whole environment, names and values, to FAKE_ENVS as one JSON object per line. A first
+turn makes a session in the Sprite's home (Codex prints its thread id first, as `codex exec --json` does); a resumed
+one needs that session. With its skill installed, a first turn posts one builder note in KIT_TRACKER, and each resumed
+turn edits it. It logs `<pid> <session> first|woken` to FAKE_TURNS, and runs while the file FAKE_HOLD exists (only a resumed turn when the file holds `woken`). With
+FAKE_HARNESS_401 set, it then prints a synthetic `401 Unauthorized` line (for codex, an `error` event)."""
+import json, os, re, sys, time, uuid
+
+name, a = os.path.basename(sys.argv[0]), sys.argv[1:]
+UUID = r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+GATEWAY = 'https://api.sprites.dev/v1/gateway/'
+if name == 'claude':
+    m = re.fullmatch(r'-p\0--dangerously-skip-permissions\0--model\0([^\0]+)(?:\0--effort\0([^\0]+))?'
+                     r'\0--(session-id|resume)\0(%s)\0([^\0]+)' % UUID, '\0'.join(a))
+    model, effort, kind, session, prompt = m.groups() if m else (None,) * 5
+    resume, base, key = kind == 'resume', 'ANTHROPIC_BASE_URL', 'ANTHROPIC_API_KEY'
+    provider = 'anthropic'
+else:
+    m = re.fullmatch(r'exec(\0resume)?\0--json\0--dangerously-bypass-approvals-and-sandbox\0--skip-git-repo-check'
+                     r'\0-m\0([^\0]+)(?:\0-c\0model_reasoning_effort=([^\0]+))?(?:\0(%s))?\0([^\0]+)' % UUID,
+                     '\0'.join(a))
+    resume, model, effort, session, prompt = (bool(m.group(1)),) + m.groups()[1:] if m else (None,) * 5
+    base, key, provider = 'OPENAI_BASE_URL', 'CODEX_API_KEY', 'openai'
+if not m or bool(resume) != bool(session if name == 'codex' else resume):
+    sys.exit('%s: unexpected arguments\n%s' % (name, ABOUT))
+if os.environ.get('FAKE_ENVS'):
+    with open(os.environ['FAKE_ENVS'], 'a') as f:
+        f.write(json.dumps({'harness': name, 'args': a, 'env': dict(os.environ)}) + '\n')
+if not os.environ.get(base, '').startswith(GATEWAY + provider + '/') or not os.environ.get(key):
+    sys.exit('%s: not logged in' % name)
+sessions = os.path.join(os.environ['HOME'], '.fake-sessions')
+os.makedirs(sessions, exist_ok=True)
+if name == 'codex' and not resume:
+    session = str(uuid.uuid4())
+    print(json.dumps({'type': 'thread.started', 'thread_id': session}), flush=True)
+held = os.path.join(sessions, session)
+if resume != os.path.exists(held):
+    sys.exit('%s: %s' % (name, 'no conversation found with that session id' if resume else 'that session exists'))
+note = json.load(open(held))['note'] if resume else None
+skill = re.search(r'with the ([a-z0-9-]+) skill', prompt).group(1)
+root = '.claude' if name == 'claude' else '.agents'
+if os.path.exists(os.path.join(os.environ['HOME'], root, 'skills', skill, 'SKILL.md')):
+    path, now = os.environ['KIT_TRACKER'], time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+    body = '\n'.join(['<!-- openwiz:status v1 -->', 'agent: builder', 'state: working', 'harness: Fake',
+                      'model: ' + model, 'skills: %s@0.1.2' % skill,
+                      'step: ' + ('woke and read the ticket again' if resume else 'started the throwaway ticket'),
+                      'time: ' + now]) + '\n'
+    with open(path) as f:
+        tracker = json.load(f)
+    if note is None:
+        note = 1 + max([c['id'] for c in tracker['comments']], default=0)
+        tracker['comments'].append({'id': note, 'author': 'example-bot[bot]', 'updated_at': now, 'body': body})
+    else:
+        [c for c in tracker['comments'] if c['id'] == note][0].update(body=body, updated_at=now)
+    with open(path + '.%d' % os.getpid(), 'w') as f:
+        json.dump(tracker, f)
+    os.replace(path + '.%d' % os.getpid(), path)
+with open(held, 'w') as f:
+    json.dump({'note': note}, f)
+if os.environ.get('FAKE_TURNS'):
+    with open(os.environ['FAKE_TURNS'], 'a') as f:
+        f.write('%d %s %s\n' % (os.getpid(), session, 'woken' if resume else 'first'))
+if os.environ.get('FAKE_HARNESS_401') and name == 'codex':
+    print(json.dumps({'type': 'error', 'message': 'unexpected status 401 Unauthorized (synthetic)'}), flush=True)
+elif os.environ.get('FAKE_HARNESS_401'):
+    print('ERROR: unexpected status 401 Unauthorized (synthetic)', flush=True)
+def holding():
+    try:
+        with open(os.environ.get('FAKE_HOLD') or os.devnull) as f:
+            return os.environ.get('FAKE_HOLD') and (resume or f.read().strip() != 'woken')
+    except FileNotFoundError:
+        return False
+
+
+while holding():
+    time.sleep(0.05)

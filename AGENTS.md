@@ -20,6 +20,7 @@ Everything on this repository is public; private records live in `jparker2006/Cl
 | `crates/adapters/cloudroom` | The `room-cli` allowlist (`src/allowlist.rs`) and the CloudRoom source; every `room-cli` call goes through it |
 | `crates/adapters/github` | Fleets' GitHub reads and writes, through `gh` and its own allowlist |
 | `crates/cli` | The `openwiz` program; `src/state/` is the owner's state directory |
+| `extensions/chrome` | The Chrome side panel and its loopback bridge; it does not call `room-cli` |
 | `kernel/` | The records and driver contracts, with their test kits |
 | `adapters/template/` | A copyable minimal driver |
 | `contracts/` | Versioned contracts and JSON schemas |
