@@ -1,0 +1,56 @@
+{
+  "schema": "openwiz.settings-cli.v1",
+  "kind": "show",
+  "settings": {
+    "schema": "openwiz.settings.v1",
+    "roles": {
+      "orchestrator": "not set",
+      "builder": "not set",
+      "fixer": "not set",
+      "reviewer": "not set",
+      "small_builder": "not set"
+    },
+    "accounts": {},
+    "hosts": {
+      "home": {
+        "orchestrator": "local",
+        "builder": "local",
+        "reviewer": "local"
+      },
+      "overflow": null,
+      "max_agents": null,
+      "projects": {}
+    },
+    "drivers": {
+      "local": true
+    },
+    "budgets": {},
+    "keys": {
+      "SYN_OPTIONAL_A": {
+        "store": "env-file",
+        "entry": "SYN_ENTRY_A",
+        "opt_in": true,
+        "on": false,
+        "set_at": null,
+        "last_used_at": "never"
+      },
+      "SYN_OPTIONAL_B": {
+        "store": "boat-env",
+        "entry": "SYN_ENTRY_B",
+        "opt_in": true,
+        "on": true,
+        "set_at": "2001-01-02T04:05:06Z",
+        "last_used_at": "2001-01-03T04:05:06Z"
+      }
+    },
+    "channels": {
+      "t3": true
+    },
+    "telemetry": false,
+    "updates": "ask",
+    "version": 1,
+    "changed_at": "2001-01-03T04:05:06Z",
+    "changed_by": "fill",
+    "history": []
+  }
+}

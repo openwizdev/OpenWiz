@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:openwiz:schema:settings-cli:v1",
+  "title": "openwiz.settings-cli.v1",
+  "oneOf": [
+    {"$ref": "#/$defs/show"},
+    {"$ref": "#/$defs/show_path"},
+    {"$ref": "#/$defs/changed"},
+    {"$ref": "#/$defs/restored"},
+    {"$ref": "#/$defs/history"},
+    {"$ref": "#/$defs/refused"},
+    {"$ref": "#/$defs/missing"}
+  ],
+  "$defs": {
+    "show": {
+      "type": "object",
+      "required": ["schema", "kind", "settings"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {"const": "openwiz.settings-cli.v1"},
+        "kind": {"const": "show"},
+        "settings": {"$ref": "#/$defs/settings"}
+      }
+    },
+    "show_path": {
+      "type": "object",
+      "required": ["schema", "kind", "path", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {"const": "openwiz.settings-cli.v1"},
+        "kind": {"const": "show_path"},
+        "path": {"$ref": "#/$defs/path"},
+        "value": {}
+      }
+    },
+    "changed": {
+      "type": "object",
+      "required": ["schema", "kind", "version", "changes"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {"const": "openwiz.settings-cli.v1"},
+        "kind": {"const": "changed"},
+        "version": {"$ref": "#/$defs/version"},
+        "changes": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/change"}
+        }
+      }
+    },
+    "restored": {
+      "type": "object",
+      "required": ["schema", "kind", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {"const": "openwiz.settings-cli.v1"},
+        "kind": {"const": "restored"},
+        "version": {"$ref": "#/$defs/version"}
+      }
+    },
+    "history": {
+      "type": "object",
+      "required": ["schema", "kind", "entries"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {"const": "openwiz.settings-cli.v1"},
+        "kind": {"const": "history"},
+        "entries": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/history_entry"},
+          "maxItems": 10
+        }
+      }
+    },
+    "refused": {
+      "type": "object",
+      "required": ["schema", "kind", "reason"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {"const": "openwiz.settings-cli.v1"},
+        "kind": {"const": "refused"},
+        "reason": {"$ref": "#/$defs/line"}
+      }
+    },
+    "missing": {
+      "type": "object",
+      "required": ["schema", "kind"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {"const": "openwiz.settings-cli.v1"},
+        "kind": {"const": "missing"}
+      }
+    },
+    "settings": {
+      "description": "The stored settings under settings.v1, with last_used_at added to each key row.",
+      "type": "object",
+      "required": ["keys"],
+      "properties": {
+        "keys": {"$ref": "#/$defs/key_map"}
+      }
+    },
+    "key_map": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/key_row"}
+    },
+    "key_row": {
+      "type": "object",
+      "required": ["store", "entry", "opt_in", "on", "set_at", "last_used_at"],
+      "additionalProperties": false,
+      "properties": {
+        "store": {
+          "enum": [
+            "token-service-key",
+            "boat-env",
+            "macos-keychain",
+            "linux-secret-service",
+            "env-file",
+            "cloudroom-secret"
+          ]
+        },
+        "entry": {"$ref": "#/$defs/line"},
+        "opt_in": {"type": "boolean"},
+        "on": {"type": "boolean"},
+        "set_at": {
+          "oneOf": [{"$ref": "#/$defs/time"}, {"type": "null"}]
+        },
+        "last_used_at": {
+          "oneOf": [{"$ref": "#/$defs/time"}, {"const": "never"}]
+        }
+      }
+    },
+    "change": {
+      "type": "object",
+      "required": ["path", "old", "new"],
+      "additionalProperties": false,
+      "properties": {
+        "path": {"$ref": "#/$defs/path"},
+        "old": {},
+        "new": {}
+      }
+    },
+    "history_entry": {
+      "type": "object",
+      "required": ["version", "changed_at", "changed_by", "paths"],
+      "additionalProperties": false,
+      "properties": {
+        "version": {"$ref": "#/$defs/version"},
+        "changed_at": {"$ref": "#/$defs/time"},
+        "changed_by": {
+          "enum": ["settings tab", "Wiz chat", "fill"]
+        },
+        "paths": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/path"}
+        }
+      }
+    },
+    "version": {"type": "integer", "minimum": 1},
+    "path": {"$ref": "#/$defs/line"},
+    "time": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "line": {"type": "string", "minLength": 1, "pattern": "^[^\\u0000-\\u001F\\u007F\\u0085\\u2028\\u2029]*$"}
+  }
+}

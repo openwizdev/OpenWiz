@@ -16,18 +16,16 @@ fn read_json(path: &Path) -> Value {
     serde_json::from_slice(&bytes.unwrap()).expect("expected JSON")
 }
 
-fn validate_answer(schema: &Value, answer: &Value) -> Vec<String> {
-    // The shared validator only supports closed objects. Apply the key map's
-    // additionalProperties rule to each name present in this answer.
+fn validate_with_key_map_expanded(schema: &Value, answer: &Value) -> Vec<String> {
     let mut schema = schema.clone();
     let keys = schema["$defs"]["key_map"].as_object_mut().unwrap();
-    let row = keys.remove("additionalProperties").unwrap();
+    let row_rule = keys.remove("additionalProperties").unwrap();
     let properties: Map<String, Value> = answer
         .pointer("/settings/keys")
         .and_then(Value::as_object)
         .into_iter()
         .flatten()
-        .map(|(name, _)| (name.clone(), row.clone()))
+        .map(|(name, _)| (name.clone(), row_rule.clone()))
         .collect();
     keys.insert("properties".into(), Value::Object(properties));
     keys.insert("additionalProperties".into(), json!(false));
@@ -76,7 +74,7 @@ fn settings_cli_schema_checks_every_fixture() {
             }
             let name = path.file_stem().unwrap().to_str().unwrap();
             let answer = read_json(&path);
-            let errors = validate_answer(&schema, &answer);
+            let errors = validate_with_key_map_expanded(&schema, &answer);
             assert_eq!(errors.is_empty(), valid, "{directory}/{name}: {errors:?}");
             if valid {
                 assert_eq!(answer["kind"], name, "{name}: fixture kind");
