@@ -20,6 +20,15 @@ python3 tools/roadmap/test.py                         # its tests, on a fake gh
 
 `--public` writes each Now and Next version's number, state and "You can …" line. Each line must use only plain punctuation, no token mixing letters and digits, and no capitalised word but `You`, `OpenWiz`, `CloudRoom`, `GitHub`, `Mac` and `PC`, or nothing is written. That guard is a backstop, not a privacy review.
 
+## Specs in progress and Most wanted
+
+Pass `--with-requests` to add two sections between **Now** and **Next**, backed by `requests.py` (tested with `python3 -I tools/roadmap/test_requests.py`):
+
+- **`## Specs in progress`**: open spec issues (`state == "open"` and at least one sub-issue) in every version whose state is `building`, ordered by version then issue number. Each line is `- **<version>**: [<title>](<url>)`, or `- None right now.` when empty.
+- **`## Most wanted`**: the top 10 open public subscriber requests across the scope repositories (`openwizdev/OpenWiz`, `openwizdev/WizSkills`, `openwizdev/WizMarket`), ranked by `+1` reactions descending (ties broken by repository slug, then issue number). Each line is `- [<title>](<url>) — <count> +1` (or `+1s`), or `- None right now.` when empty.
+
+Public requests are matched strictly by the `openwiz.subscriber-requests.v1` request form (`Kind: bug|driver|feature|docs`, optional `Visibility: public`, blank line, non-empty prose, blank line, and the closing `OpenWiz subscriber request operation <32 lowercase hex>` line). Any `Visibility: private` or non-public request, any repository outside the three scope repositories, and any requester login, tier, body prose or business detail never appear. Pass `--scope-repo OWNER/NAME` (repeatable, restricted to the three scope repositories) with `--with-requests` to narrow which scope repositories are read.
+
 ## Exit status
 
 | Status | Means |
