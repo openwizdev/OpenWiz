@@ -5,9 +5,17 @@
   </picture>
 </h1>
 
-**OpenWiz is the open kernel for agent factories. Bring your own everything. Owned by no one.** This repo is the kernel itself; the [other repos](https://github.com/openwizdev) add skills, loops and the app on top.
+**OpenWiz is the open kernel for agent factories: you approve a plan, and coding agents build, review and merge its tickets.** Bring your own everything. Owned by no one. This repo is the kernel itself; the [other repos](https://github.com/openwizdev) add skills, loops and the app on top.
 
-You make the decisions: answer a few questions. The agents run the factory: they write the spec and the tickets, build, review and merge. You watch it ship.
+![How OpenWiz runs a factory from an approved plan to merged pull requests](docs/how-openwiz-works.png)
+
+**Install in one line** — tell your coding agent (Claude Code, Codex, Cursor or another) `Install OpenWiz`, then check your first run:
+
+```sh
+openwiz --help
+```
+
+If OpenWiz is useful to you, starring this repository helps other developers find it.
 
 **Status:** OpenWiz 0.1.0 ("OpenWiz 0.01") is the current release: the [release](https://github.com/openwizdev/OpenWiz/releases/tag/v0.1.0) installs on macOS (Apple silicon or Intel) and on Linux on x86_64 (glibc 2.34 or later), with no CloudRoom. CloudRoom offers no Intel Mac build today, so on an Intel Mac your agents run on this computer or on boat.dev. OpenWiz 0.1.1 ("OpenWiz 0.02") is coming next and is not released yet. OpenWiz builds itself, in public, in this repo.
 
