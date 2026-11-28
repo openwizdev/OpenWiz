@@ -1,0 +1,80 @@
+{
+  "bad ok status": "2030-01-02T02:00:00Z synthetic-sweep succeeded sweep dispatched",
+  "non-UTC ok time": "2030-01-02T02:00:00-01:00 synthetic-sweep ok sweep completed",
+  "extra log line": "2030-01-02T02:00:00Z synthetic-sweep ok sweep completed\n",
+  "missing why": "2030-01-02T02:00:00Z synthetic-sweep ok  ",
+  "missing task id": {
+    "schema": "openwiz.home.v1",
+    "loops": {
+      "synthetic-sweep": {
+        "schedule": {
+          "kind": "interval",
+          "every_ms": 900000,
+          "anchor_ms": 0
+        },
+        "path": "loops/synthetic-sweep.md",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    }
+  },
+  "short hash": {
+    "schema": "openwiz.home.v1",
+    "loops": {
+      "synthetic-sweep": {
+        "task_id": "synthetic-task-a",
+        "schedule": {
+          "kind": "interval",
+          "every_ms": 900000,
+          "anchor_ms": 0
+        },
+        "path": "loops/synthetic-sweep.md",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    }
+  },
+  "non-hex hash": {
+    "schema": "openwiz.home.v1",
+    "loops": {
+      "synthetic-sweep": {
+        "task_id": "synthetic-task-a",
+        "schedule": {
+          "kind": "interval",
+          "every_ms": 900000,
+          "anchor_ms": 0
+        },
+        "path": "loops/synthetic-sweep.md",
+        "sha256": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
+      }
+    }
+  },
+  "escaping loop file": {
+    "schema": "openwiz.home.v1",
+    "loops": {
+      "synthetic-sweep": {
+        "task_id": "synthetic-task-a",
+        "schedule": {
+          "kind": "interval",
+          "every_ms": 900000,
+          "anchor_ms": 0
+        },
+        "path": "loops/../synthetic-sweep.md",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    }
+  },
+  "nonpositive interval": {
+    "schema": "openwiz.home.v1",
+    "loops": {
+      "synthetic-sweep": {
+        "task_id": "synthetic-task-a",
+        "schedule": {
+          "kind": "interval",
+          "every_ms": 0,
+          "anchor_ms": 0
+        },
+        "path": "loops/synthetic-sweep.md",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    }
+  }
+}

@@ -1,0 +1,30 @@
+[
+  {"schema": "openwiz.home.v1", "loops": {}},
+  {
+    "schema": "openwiz.home.v1",
+    "loops": {
+      "synthetic-sweep": {
+        "task_id": "synthetic-task-a",
+        "schedule": {"kind": "interval", "every_ms": 900000, "anchor_ms": 0},
+        "path": "loops/synthetic-sweep.md",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "synthetic-backup": {
+        "task_id": "synthetic-task-b",
+        "schedule": {"kind": "fixed-time", "cron": "0 2 * * *", "timezone": "UTC"},
+        "path": "loops/synthetic/backup.md",
+        "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "synthetic-once": {
+        "task_id": "synthetic-task-c",
+        "schedule": {"kind": "fixed-time", "at": "2030-01-02T04:00:00Z"},
+        "path": "loops/synthetic-once.md",
+        "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      }
+    }
+  },
+  "2030-01-02T02:00:00Z synthetic-sweep ok sweep completed",
+  "2030-01-02T02:00:00Z synthetic-sweep quiet nothing to sweep",
+  "2030-01-02T02:00:00Z synthetic-sweep recovered recovery returned",
+  "2030-01-02T02:00:00Z synthetic-sweep failed sweep did not finish"
+]
