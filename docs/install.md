@@ -10,6 +10,14 @@ Using Grok Bot? See [Grok Bot + OpenWiz](grok-bot.md).
 
 **Status:** this is the install for OpenWiz 0.1.1 ("OpenWiz 0.02"), which is coming and not released yet; the current release is OpenWiz 0.1.0. CloudRoom is optional: setup is done when GitHub's sign-in is verified, and CloudRoom's sign-in too only if you pick CloudRoom. Installing today? Follow [OpenWiz 0.1.0](#openwiz-010) at the end.
 
+## Platforms
+
+These platform levels apply to OpenWiz 0.2.0.
+
+- **Supported.** macOS on Apple silicon and Intel, and Linux on x86_64 and aarch64 with glibc 2.34 or later. The release bar is a clean-machine install and first fleet on both operating systems.
+- **Community.** Windows through WSL uses the corresponding Linux build and requirements. It works for some users. The project does not test WSL.
+- **Unsupported.** Native Windows. Run the installer from a Linux distribution inside WSL instead.
+
 ## Before you start
 
 - **A supported computer:** macOS on Apple silicon or Intel, or Linux on x86_64 with glibc 2.34 or later (`ldd --version` shows it). Linux on ARM is not supported. **An Intel Mac installs with no CloudRoom,** on 0.1.1 and on 0.1.0 alike: preflight reads it ready. CloudRoom has no Intel Mac build, so on an Intel Mac, agents run on this computer or on boat.dev. On Linux older than glibc 2.39, `openwiz` may print a `GLIBC_2.39` warning and still work.

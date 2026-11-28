@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-import fcntl
 import json
 import os
 from pathlib import Path
@@ -70,9 +69,17 @@ a signed publisher identity.
 """
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-import install as installer
-import harness
-import pull
+
+
+def native_windows(system):
+    return system == 'Windows' or system.startswith(('CYGWIN_NT', 'MSYS_NT', 'MINGW'))
+
+
+if not native_windows(platform.system()):
+    import fcntl
+    import install as installer
+    import harness
+    import pull
 
 HOSTS = {('Darwin', 'arm64'): 'aarch64-apple-darwin', ('Darwin', 'x86_64'): 'x86_64-apple-darwin',
          ('Linux', 'x86_64'): 'x86_64-unknown-linux-gnu', ('Linux', 'aarch64'): 'aarch64-unknown-linux-gnu'}
@@ -80,6 +87,8 @@ NOTES = {('Darwin', 'x86_64'): 'Supported. CloudRoom has no Intel Mac build, so 
          ' computer or on boat.dev.',
          ('Linux', 'aarch64'): 'Supported. CloudRoom has no Linux ARM desktop build; outside a CloudRoom sandbox,'
          ' agents run on this computer or on boat.dev.'}
+WSL_NOTE = 'WSL has community support. It works for some users and the project does not test it.'
+WINDOWS_NOTE = 'Native Windows is not supported. Use Windows Subsystem for Linux (WSL). ' + WSL_NOTE
 DISK = 512 * 1024 * 1024
 GLIBC = (2, 34)
 TOOLS = (('room-cli', 'Optional: CloudRoom is needed only if you pick it as the host; then install the CloudRoom'
@@ -123,13 +132,16 @@ def glibc_check(which):
 
 def preflight(host, which, disk):
     target = HOSTS.get(host)
+    note = NOTES.get(host, 'Supported.') if target else (
+        'OpenWiz installs on macOS (Apple silicon or Intel) and on Linux (x86_64 or aarch64).')
+    if host[0] == 'Linux' and ('microsoft' in platform.release().lower()
+                              or os.environ.get('WSL_DISTRO_NAME') or os.environ.get('WSL_INTEROP')):
+        note = WSL_NOTE if target else note + ' ' + WSL_NOTE
     checks = [
         {'id': 'python', 'state': 'ok' if sys.version_info >= (3, 9) else 'refused',
          'next': 'Python %d.%d is enough.' % sys.version_info[:2] if sys.version_info >= (3, 9)
          else 'Install Python 3.9 or later.'},
-        {'id': 'target', 'state': 'ok' if target else 'refused',
-         'next': NOTES.get(host, 'Supported.') if target else
-         'OpenWiz installs on macOS (Apple silicon or Intel) and on Linux (x86_64 or aarch64).'},
+        {'id': 'target', 'state': 'ok' if target else 'refused', 'next': note},
     ]
     free = disk()
     checks.append({'id': 'disk', 'state': 'ok' if free is not None and free >= DISK else 'refused',
@@ -471,7 +483,7 @@ def remove_unlocked(root, state, state_root, yes, home, codex_home, made=None):
                 + hand), 0
 
 
-def main(argv=None, fetch=pull.fetch_bytes, host=None, stdout=None):
+def main(argv=None, fetch=None, host=None, stdout=None):
     out = stdout or sys.stdout
     parser = Parser(prog='install', description=DESCRIPTION, formatter_class=argparse.RawDescriptionHelpFormatter)
     commands = parser.add_subparsers(dest='command', required=True, parser_class=Parser)
@@ -504,6 +516,17 @@ def main(argv=None, fetch=pull.fetch_bytes, host=None, stdout=None):
     except Usage as usage:
         print(json.dumps({'schema': 'openwiz.install-error.v1', 'outcome': 'usage', 'reason': str(usage)}), file=out)
         return 2
+    host = host or (platform.system(), platform.machine())
+    if native_windows(host[0]):
+        if args.command == 'preflight':
+            value = {'schema': 'openwiz.preflight.v1', 'ready': False, 'target': None,
+                     'checks': [{'id': 'target', 'state': 'refused', 'next': WINDOWS_NOTE}],
+                     'reason': 'Read this machine only; nothing was installed.'}
+        else:
+            value = {'schema': 'openwiz.install-error.v1', 'outcome': 'refused',
+                     'command': args.command, 'reason': WINDOWS_NOTE}
+        print(json.dumps(value, separators=(',', ':')), file=out)
+        return 5
     try:
         if args.command == 'preflight':
             def disk():
@@ -511,9 +534,9 @@ def main(argv=None, fetch=pull.fetch_bytes, host=None, stdout=None):
                     return shutil.disk_usage(Path.home()).free
                 except OSError:
                     return None
-            value, code = preflight(host or (platform.system(), platform.machine()), shutil.which, disk)
+            value, code = preflight(host, shutil.which, disk)
         elif args.command == 'download':
-            value, code = download(args.target, args.dir, fetch, args.version), 0
+            value, code = download(args.target, args.dir, pull.fetch_bytes if fetch is None else fetch, args.version), 0
         elif args.command == 'install':
             value, code = install(args.assets, args.target, args.root, args.state_root), 0
         elif args.command == 'skills':

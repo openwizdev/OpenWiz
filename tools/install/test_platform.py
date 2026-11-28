@@ -8,9 +8,8 @@ import tempfile
 import unittest
 
 HERE = Path(__file__).resolve().parent
-WINDOWS_LINE = ('Native Windows is not supported. Use Windows Subsystem for Linux (WSL). '
-                'WSL is community support: it works for some users and the project does not test it.')
-WSL_NOTE = 'WSL is community support: it works for some users and the project does not test it.'
+WSL_NOTE = 'WSL has community support. It works for some users and the project does not test it.'
+WINDOWS_LINE = 'Native Windows is not supported. Use Windows Subsystem for Linux (WSL). ' + WSL_NOTE
 
 RUN = """
 import platform
