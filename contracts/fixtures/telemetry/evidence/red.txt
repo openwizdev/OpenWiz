@@ -1,0 +1,13 @@
+F
+======================================================================
+FAIL: test_new_settings_keep_every_opt_in_off (__main__.TelemetryFixtures.test_new_settings_keep_every_opt_in_off) (file='new-file.json', fixture_set='telemetry')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/telemetry/test_fixtures.py", line 17, in test_new_settings_keep_every_opt_in_off
+    self.assertIs(settings["telemetry"], False, "telemetry must default to off")
+AssertionError: True is not False : telemetry must default to off
+
+----------------------------------------------------------------------
+Ran 1 test in 0.002s
+
+FAILED (failures=1)
