@@ -4,6 +4,10 @@ sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
 FAKE = os.path.join(HERE, 'fake')
 LIB = os.path.join(HERE, '..', '..', 'fixtures')
+LOCAL = os.path.dirname(LIB)
+sys.path.insert(0, LOCAL)
+from test_harnesses import ThrowawayMachine, since, until
+
 PROMPT = 'Work on the ticket with the build-ticket skill.'
 WOKEN = 'You were woken. Carry on with the build-ticket skill.'
 START = ['-p', PROMPT, '--output-format', 'stream-json', '-m', 'kimi-code/kimi-for-coding']
@@ -29,6 +33,52 @@ NOT_SIGNED_OUT = ['error: failed to run prompt: provider my-openai has no creden
                   'error: failed to run prompt: model kimi-code/kimi-for-coding does not resolve to a configured provider',
                   'error: failed to run prompt: no default model configured',
                   '{"role":"assistant","content":"the provider is managed:kimi-code"}']
+
+# Kimi Code CLI 2.7.2, v2-run-print.test.ts and startup-error.ts.
+OVERLOAD = 'error: failed to run prompt: provider.overloaded: llm request failed'
+
+
+def model_and_limit():
+    with ThrowawayMachine(os.path.dirname(HERE), 'kimi', 'kimi', FAKE, 'auto') as env:
+        request = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'kimi',
+                   'model': START[-1]}
+        code, _ = env.driver('start', dict(request, model='synthetic-unknown'), FAKE_CLI_RECORD_ONLY='1')
+        if code != 1 or env.records():
+            return ['an unknown model did not refuse without starting a turn']
+        code, error = env.driver('start', request, FAKE_CLI_LIMIT='1', FAKE_CLI_RECORD_ONLY='1')
+        if code != 1 or 'usage limit' not in error.get('error', ''):
+            return ['the driver did not recognize the fake Kimi overload as a row usage limit']
+
+        code, run = env.driver('start', request, FAKE_CLI_RECORD_ONLY='1')
+        if code != 0:
+            return ['the known model did not start']
+        try:
+            first = env.records()[0]
+            if first['argv'][-2:] != ['-m', request['model']]:
+                return ['the start changed the model argument']
+            # The supervisor owns the wait. In the test, bypass the delay and
+            # exercise its actual retry, which must use the saved session.
+            with open(env.wrapper, 'r+') as f:
+                wrapper = f.read().replace("t.START['effort'] = t.EFFORT",
+                                           't.SELF = __file__\nt.limit_sleep = lambda seconds, run: seconds == 60.0')
+                f.seek(0)
+                f.write(wrapper)
+                f.truncate()
+            code, _ = env.driver('wake', run, env.wrapper, FAKE_CLI_LIMIT='1', FAKE_CLI_RECORD_ONLY='1')
+            if code != 0:
+                return ['the wake after a successful start was refused']
+            supervisor = env.state_of(run['run'])['turns'][1]['supervisor']
+            if not until(lambda: since(supervisor) is None):
+                return ['the retry supervisor did not finish']
+            log = env.log(run['run'])
+            if log.splitlines().count(OVERLOAD) != 2 or log.count('resume on the same model') != 1:
+                return ['the overload did not trigger exactly one automatic retry']
+            woken, retried = [call['argv'] for call in env.calls()[-2:]]
+            if woken != retried or len(woken) != 4 or woken[:3] != ['-S', first['session'], '-p']:
+                return ['the automatic retry did not wake the same session without a model override']
+            return []
+        finally:
+            env.driver('stop', run)
 
 
 def signed_out(folder):
@@ -113,10 +163,14 @@ def main():
             if sessions[2:] != ['fake-1', 'fake-2']:
                 bad.append('the fake\'s woken turns got %r' % sessions[2:])
         bad += signed_out(folder)
+        p = run(START, folder, FAKE_CLI_LIMIT='1')
+        if p.returncode != 1 or p.stderr != OVERLOAD + '\n':
+            bad.append('the fake did not emit the exact Kimi overload line on stderr and exit 1')
         bad += background_shape(folder)
+    bad += model_and_limit()
     for line in bad:
         print('fail: ' + line)
-    print('fail' if bad else 'pass: the fake takes only the documented kimi command lines, and signed_out matches only kimi\'s missing login')
+    print('fail' if bad else 'pass: Kimi command lines, model alias, login, daemon and same-session overload retry')
     return 1 if bad else 0
 
 
