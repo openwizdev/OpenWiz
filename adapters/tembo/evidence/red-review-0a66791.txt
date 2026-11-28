@@ -1,0 +1,149 @@
+....F...F...F...FF.F..FF....
+======================================================================
+FAIL: test_a_stop_or_archive_tembo_does_not_confirm_is_refused_with_its_run (__main__.Driver.test_a_stop_or_archive_tembo_does_not_confirm_is_refused_with_its_run)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/tembo/test_driver.py", line 402, in test_a_stop_or_archive_tembo_does_not_confirm_is_refused_with_its_run
+    self.assertEqual(self.driver('stop', {'run': run}), (1, {
+AssertionError: Tuples differ: (0, {'run': 'f41cfc6e-9c90-4608-aa70-90625[22 chars]rue}) != (1, {'error': 'run f41cfc6e-9c90-4608-aa70[232 chars]in'})
+
+First differing element 0:
+0
+1
+
+- (0, {'run': 'f41cfc6e-9c90-4608-aa70-906257ed5350', 'stopped': True})
++ (1,
++  {'error': 'run f41cfc6e-9c90-4608-aa70-906257ed5350 may not have stopped: '
++            'Tembo answered 404 to DELETE '
++            '/v1/sessions/f41cfc6e-9c90-4608-aa70-906257ed5350 in a form the '
++            'driver cannot read',
++   'next': 'check run f41cfc6e-9c90-4608-aa70-906257ed5350 on Tembo, then stop '
++           'it again'}) : ('DELETE', 404, {'deleted': True, 'id': 'f41cfc6e-9c90-4608-aa70-906257ed5350'})
+
+======================================================================
+FAIL: test_an_unreadable_repository_list_refuses_start (__main__.Driver.test_an_unreadable_repository_list_refuses_start)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/tembo/test_driver.py", line 339, in test_an_unreadable_repository_list_refuses_start
+    self.assertEqual(self.driver('start', START), (1, want), (code, body))
+AssertionError: Tuples differ: (1, {'error': 'the driver failed: KeyError', 'next': 're[24 chars]ry'}) != (1, {'error': 'Tembo answered 200 to GET /v1/repositorie[76 chars]ry"})
+
+First differing element 1:
+{'error': 'the driver failed: KeyError', 'next': 're[23 chars]try'}
+{'error': 'Tembo answered 200 to GET /v1/repositorie[75 chars]try"}
+
+  (1,
+-  {'error': 'the driver failed: KeyError',
+-   'next': 'read its code, fix it, retry'})
++  {'error': 'Tembo answered 200 to GET /v1/repositories in a form the driver '
++            'cannot read',
++   'next': "check Tembo's status, then retry"}) : (200, {'items': [{'id': '00000000-0000-4000-8000-0000000000a2', 'name': 'Site', 'url': 'https://github.com/Example/Site', 'provider': {'type': 'github', 'displayName': 'synthetic', 'integrationId': '00000000-0000-4000-8000-0000000000e1'}}], 'nextCursor': None})
+
+======================================================================
+FAIL: test_kit_passes_all_five_for_codex_at_its_default_medium_effort (__main__.Driver.test_kit_passes_all_five_for_codex_at_its_default_medium_effort)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/tembo/test_driver.py", line 122, in test_kit_passes_all_five_for_codex_at_its_default_medium_effort
+    self.assertEqual((out, err), (want, ''))
+AssertionError: Tuples differ: (['pa[58 chars]1', "fail start: effort: medium never reached [258 chars], '') != (['pa[58 chars]1', "pass start: the run posted builder status[329 chars], '')
+
+First differing element 0:
+['pas[57 chars]1', "fail start: effort: medium never reached [253 chars]der']
+['pas[57 chars]1', "pass start: the run posted builder status[324 chars]der']
+
+  (['pass version: openwiz:records v1, and the schema is driver v1',
+-   "fail start: effort: medium never reached the kit's fake tembo host",
+-   'fail wake: not run: start failed',
+-   'fail stop: not run: start failed',
++   'pass start: the run posted builder status note 2; effort: medium reached '
++   "the kit's fake tembo host",
++   'pass wake: the run edited builder status note 2',
++   'pass stop: the run ended, and a wake after it is refused',
+    'pass token: no login or token passed through the driver, and on start, wake '
+    'and stop the tembo key reached its host only from the key helper, in its '
+    'header'],
+   '')
+
+======================================================================
+FAIL: test_start_follows_the_cursor_to_a_later_page (__main__.Driver.test_start_follows_the_cursor_to_a_later_page)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/tembo/test_driver.py", line 171, in test_start_follows_the_cursor_to_a_later_page
+    run = self.started()
+          ^^^^^^^^^^^^^^
+  File "adapters/tembo/test_driver.py", line 97, in started
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'Tembo has no connected repository example/site', 'next': 'connect example/site to Tembo (Settings, Integrations, GitHub), then start again'}
+
+======================================================================
+FAIL: test_start_picks_the_github_repository_not_a_same_named_gitlab_one (__main__.Driver.test_start_picks_the_github_repository_not_a_same_named_gitlab_one)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/tembo/test_driver.py", line 157, in test_start_picks_the_github_repository_not_a_same_named_gitlab_one
+    self.assertEqual(self.host.sessions[run]['request']['codeRepositoryIds'], [REPO])
+AssertionError: Lists differ: ['00000000-0000-4000-8000-0000000000c1'] != ['00000000-0000-4000-8000-0000000000a2']
+
+First differing element 0:
+'00000000-0000-4000-8000-0000000000c1'
+'00000000-0000-4000-8000-0000000000a2'
+
+- ['00000000-0000-4000-8000-0000000000c1']
+?                                     ^^
+
++ ['00000000-0000-4000-8000-0000000000a2']
+?                                     ^^
+
+
+======================================================================
+FAIL: test_start_refuses_a_cursor_that_repeats (__main__.Driver.test_start_refuses_a_cursor_that_repeats)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/tembo/test_driver.py", line 180, in test_start_refuses_a_cursor_that_repeats
+    self.assertEqual(self.driver('start', START), (1, {
+AssertionError: Tuples differ: (1, {'error': 'Tembo has no connected repository example/site'[89 chars]in'}) != (1, {'error': 'Tembo answered 200 to GET /v1/repositories in a[70 chars]ry"})
+
+First differing element 1:
+{'error': 'Tembo has no connected repository example/site'[88 chars]ain'}
+{'error': 'Tembo answered 200 to GET /v1/repositories in a[69 chars]try"}
+
+  (1,
+-  {'error': 'Tembo has no connected repository example/site',
+-   'next': 'connect example/site to Tembo (Settings, Integrations, GitHub), '
+-           'then start again'})
++  {'error': 'Tembo answered 200 to GET /v1/repositories in a form the driver '
++            'cannot read',
++   'next': "check Tembo's status, then retry"})
+
+======================================================================
+FAIL: test_start_refuses_two_github_rows_for_one_repository (__main__.Driver.test_start_refuses_two_github_rows_for_one_repository)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/tembo/test_driver.py", line 162, in test_start_refuses_two_github_rows_for_one_repository
+    self.assertEqual(self.driver('start', START), (1, {
+AssertionError: Tuples differ: (0, {'run': 'bcd02a2a-1086-427c-8a7d-76855846b7ea'}) != (1, {'error': 'Tembo has more than one con[131 chars]in'})
+
+First differing element 0:
+0
+1
+
+- (0, {'run': 'bcd02a2a-1086-427c-8a7d-76855846b7ea'})
++ (1,
++  {'error': 'Tembo has more than one connected repository example/site',
++   'next': 'keep one example/site connected to Tembo (Settings, Integrations, '
++           'GitHub), then start again'})
+
+======================================================================
+FAIL: test_start_takes_the_schema_s_qualified_and_long_model_ids (__main__.Driver.test_start_takes_the_schema_s_qualified_and_long_model_ids)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/tembo/test_driver.py", line 186, in test_start_takes_the_schema_s_qualified_and_long_model_ids
+    run = self.started(harness='codex', model=model)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "adapters/tembo/test_driver.py", line 97, in started
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'model is not valid', 'next': 'fix model as `driver schema` shows'}
+
+----------------------------------------------------------------------
+Ran 28 tests in 26.937s
+
+FAILED (failures=8)

@@ -16,5 +16,11 @@
     "variable": "CAPY_API_KEY",
     "keychain": "openwiz-capy",
     "header": "authorization-bearer"
+  },
+  "tembo": {
+    "origin": "https://api.tembo.io",
+    "variable": "TEMBO_API_KEY",
+    "keychain": "openwiz-tembo",
+    "header": "authorization-bearer"
   }
 }
