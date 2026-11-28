@@ -1,0 +1,28 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/capy/test_driver.py -v   (35 refusing agent CLI stubs first on PATH; synthetic fake Capy on loopback)
+test_a_create_receipt_off_its_shape_or_for_another_project_is_a_possible_start (__main__.Driver.test_a_create_receipt_off_its_shape_or_for_another_project_is_a_possible_start) ... ok
+test_a_host_error_is_a_fixed_refusal (__main__.Driver.test_a_host_error_is_a_fixed_refusal) ... ok
+test_a_lost_create_is_retried_with_the_same_request_id_and_starts_one_thread (__main__.Driver.test_a_lost_create_is_retried_with_the_same_request_id_and_starts_one_thread) ... ok
+test_a_project_list_off_its_documented_shape_is_refused_before_any_create (__main__.Driver.test_a_project_list_off_its_documented_shape_is_refused_before_any_create) ... ok
+test_a_rejected_effort_needs_a_readable_model_list_to_say_the_model_cannot_set_it (__main__.Driver.test_a_rejected_effort_needs_a_readable_model_list_to_say_the_model_cannot_set_it) ... ok
+test_an_effort_outside_capys_reasoning_modes_is_refused_before_any_request (__main__.Driver.test_an_effort_outside_capys_reasoning_modes_is_refused_before_any_request) ... ok
+test_an_effort_the_model_does_not_offer_is_the_exact_refusal_and_starts_nothing (__main__.Driver.test_an_effort_the_model_does_not_offer_is_the_exact_refusal_and_starts_nothing) ... ok
+test_an_unknown_run_is_refused_by_wake_and_stop (__main__.Driver.test_an_unknown_run_is_refused_by_wake_and_stop) ... ok
+test_an_unreadable_or_mismatched_thread_read_refuses_wake_and_stop_before_any_write (__main__.Driver.test_an_unreadable_or_mismatched_thread_read_refuses_wake_and_stop_before_any_write) ... ok
+test_effort_reaches_the_host_as_the_model_reasoning_mode (__main__.Driver.test_effort_reaches_the_host_as_the_model_reasoning_mode) ... ok
+test_every_refusal_fits_d3_even_for_the_longest_repository_and_ticket (__main__.Driver.test_every_refusal_fits_d3_even_for_the_longest_repository_and_ticket) ... ok
+test_every_request_reaches_the_host_with_the_key_header_only (__main__.Driver.test_every_request_reaches_the_host_with_the_key_header_only) ... ok
+test_inputs_off_the_schema_are_refused_before_any_request (__main__.Driver.test_inputs_off_the_schema_are_refused_before_any_request) ... ok
+test_kit_passes_all_five_on_the_fake_host (__main__.Driver.test_kit_passes_all_five_on_the_fake_host) ... ok
+test_no_driver_file_names_the_key_or_the_keychain (__main__.Driver.test_no_driver_file_names_the_key_or_the_keychain) ... ok
+test_start_creates_one_thread_in_the_repository_project_on_the_harness_model (__main__.Driver.test_start_creates_one_thread_in_the_repository_project_on_the_harness_model) ... ok
+test_start_refuses_a_harness_capy_has_no_subscription_for (__main__.Driver.test_start_refuses_a_harness_capy_has_no_subscription_for) ... ok
+test_start_takes_capy_project_id_else_the_project_listing_the_repository_else_refuses (__main__.Driver.test_start_takes_capy_project_id_else_the_project_listing_the_repository_else_refuses) ... ok
+test_stop_interrupts_then_archives_and_a_wake_after_it_is_refused (__main__.Driver.test_stop_interrupts_then_archives_and_a_wake_after_it_is_refused) ... ok
+test_version_lists_effort_and_the_schema_is_the_kernels (__main__.Driver.test_version_lists_effort_and_the_schema_is_the_kernels) ... ok
+test_wake_and_stop_refuse_unless_capy_confirms_each_write (__main__.Driver.test_wake_and_stop_refuse_unless_capy_confirms_each_write) ... ok
+test_wake_steers_a_message_into_the_same_thread_and_its_note_is_edited (__main__.Driver.test_wake_steers_a_message_into_the_same_thread_and_its_note_is_edited) ... ok
+
+----------------------------------------------------------------------
+Ran 22 tests
+
+OK

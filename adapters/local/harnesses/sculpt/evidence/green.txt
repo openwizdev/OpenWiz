@@ -1,0 +1,99 @@
+# Green: the full runner with the sculpt row; agent-CLI stubs first on PATH, OPENWIZ_GITHUB_APP_KEY unset
+
+$ python3 -I adapters/local/harnesses/sculpt/test_row.py
+pass sculpt: not installed is a D3 error whose next says to install sculpt, and starts nothing
+pass sculpt: create starts a backend session that is not a child of the sculpt process, and that process has exited
+pass sculpt: interrupt is a documented command and leaves the backend session running
+pass sculpt: delete without -y exits 2 and leaves the backend session running
+pass sculpt: delete -y ends that backend session
+pass sculpt: interrupt after delete exits 2 and the backend stays ended
+pass sculpt: send after delete exits 2
+pass sculpt: a second delete exits 2
+pass sculpt: start runs `sculpt agent create --prompt <prompt> --model <m> --json`
+pass sculpt: wake runs `sculpt agent send <id> <prompt> --model <m> --follow` with the start's agent id
+pass sculpt: the agent id read from the indented "id" line is the id wake sends
+pass sculpt: stop runs `sculpt agent delete <id> -y` while the turn still runs, and that ends the backend session the process tree does not hold
+pass sculpt: the fake exits 2 on an --effort flag
+pass sculpt: the fake exits 2 on a --reasoning flag
+pass sculpt: the fake exits 2 on no --json
+pass sculpt: the fake exits 2 on no --prompt
+pass sculpt: the fake exits 2 on an option where --model needs its value
+pass sculpt: the fake exits 2 on a repeated --prompt
+pass sculpt: the fake exits 2 on agent run
+pass sculpt: the fake exits 2 on sculpt run
+pass sculpt: the fake exits 2 on delete without an agent id
+pass sculpt: the fake exits 2 on an empty --model
+pass sculpt: the fake exits 2 on a blank --model
+pass sculpt: the fake exits 2 on send to an unknown id
+pass sculpt: delete -y ends only the named backend and leaves the other running
+pass sculpt: delete -y of the remaining backend ends it
+pass sculpt: delete whose recorded start time does not match exits 2 and does not kill that process
+pass sculpt: the session pattern reads the agent id line and not workspace_id
+pass sculpt: effort low is refused with the fixed next, starting nothing
+pass sculpt: effort medium is refused with the fixed next, starting nothing
+pass sculpt: effort high is refused with the fixed next, starting nothing
+pass sculpt: effort xhigh is refused with the fixed next, starting nothing
+pass sculpt: effort max is refused with the fixed next, starting nothing
+exit=0
+
+$ python3 -I adapters/local/test_harnesses.py
+fail claude: row.json harness: claude is built in, and no row may use a built-in name
+fail credential-env: row.json env: a value looks like a credential; env holds only fixed settings that are not credentials
+fail daemon-survives: daemon: the background process the row declares still runs after stop
+pass effort-crowded: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+fail effort-missing: row.json effort: it has no effort form; give an effort map or "none: <one line why>"
+fail effort-unpassed: row.json effort: it maps effort values to arguments, but start has no {effort} to pass them
+pass example: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+pass example-none: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+fail larger-argument: row.json start: a placeholder sits inside a larger argument; each fills a whole argument
+pass login-env-good: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+fail login-env-lowercase: row.json login_env: it is not one variable name: a capital, then 1 to 63 capitals, digits or _
+fail login-env-no-command: row.json login_command: a row with login_env names the command the user runs to sign in
+fail login-env-too-long: row.json login_env: with it, the not-signed-in next passes D3's 300 characters; shorten login_command, login_env or program
+fail login-env-value: row.json login_env: it looks like a credential; login_env names a variable, never its value
+fail precheck-credential: row.json precheck: a fixed argument looks like a credential; a row holds no login, key or token
+fail precheck-matches-anything: row.json precheck: its match pattern matches empty output, so it would pass anything
+fail precheck-other-program: row.json precheck: it runs another program; it starts with the row's program
+fail precheck-placeholder: row.json precheck: it takes only {model} and {effort}, each once and as a whole argument
+fail precheck-unmatched: precheck: a start with the row's own fake was refused by its precheck
+pass row-commands: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+fail row-missing: row.json is missing
+fail session-differs: session: the wake turn got a different session id from the start turn
+fail signed-out-bad-pattern: row.json signed_out: a pattern does not compile
+pass signed-out-json: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+fail stop-no-session: row.json stop: it has no {session}, so it could reach other runs' sessions
+fail stop-other-program: row.json stop: it runs another program; it starts with the row's program
+fail stop-placeholder: row.json stop: it takes only {session}, once and as a whole argument
+fail wake-no-session: row.json wake: it has no {session}
+pass driver: a broken row's D3 error names its row file and fits the error schema: a row folder with no row.json, a harness that is not a string, and a 60-character harness with a missing field
+pass driver: a row's session id and signed_out patterns are read from its first turn's output, never the clone's, and the first line that has the session's JSON path decides it
+pass driver: an effort the row can't take is refused before the driver looks for its program, and a row's effort ids are lower-case words of up to 20 characters
+pass driver: a row whose fixed arguments in start, wake, modes or effort look like a credential, joined or as a flag and its value, is refused naming only its field
+pass driver: a precheck that exits non-zero, does not match or runs past its timeout is a D3 refusal that starts no turn, runs outside the clone with the row's env, and keeps its output in the run's log only
+pass driver: a precheck that cannot open the run's log or its folder is the same D3 refusal, so its run is saved as stopped
+pass driver: a precheck's output is left out of the first turn's sign-in check, so a first turn that ends at once with exit 0 still starts
+pass driver: a precheck that names {effort} is skipped for a start without an effort, and its model and effort fill whole arguments and match as literal text
+pass driver: a row's stop runs with the run's session while the turns still run, and a failing or hanging stop still ends the process tree, saying so in fixed words with its output in the run's log only
+pass driver: a row's stop gets only its run's own reported session, and is skipped, still ending the tree, when there is none or it starts with a dash
+pass driver: a precheck's or stop's env reaches only its own process, never the driver's environment
+pass driver: a precheck or stop is still ended when the driver's watch on it fails, as when ps fails on macOS
+pass driver: the longest valid login_env row's not-signed-in next fits D3's 300 characters, one character more refuses the row, and so does a row whose env sets its login_env
+pass driver: a row's env and effort setting reach only the harness, never the turn's supervisor
+pass driver: an unknown harness is a D3 error that lists the built-ins and the row folders, and starts nothing
+pass driver: a wake before the reported session id is known is a D3 error that starts nothing, whether the first turn has ended or still runs
+pass driver: a wake while the first turn runs saves its newly reported session id, and once it is saved answers woke with no state write and starts nothing
+rows in adapters/local/harnesses: agy, amp, auggie, copilot, gemini, goose, junie, kilo, kimi, oz, pi, qwen, sculpt
+pass agy: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+pass amp: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+pass auggie: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+pass copilot: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+pass gemini: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+pass goose: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+pass junie: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+pass kilo: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+pass kimi: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+pass oz: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+pass pi: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+pass qwen: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+pass sculpt: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+exit=0
