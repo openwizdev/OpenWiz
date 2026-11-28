@@ -1,0 +1,8 @@
+Capy review regression proofs at 88d2e96 with the new tests and synthetic loopback fixtures.
+
+test_kit_passes_for_both_supported_and_refused_effort (ultra): the kit failed start because the README says the harness takes ultra.
+test_a_rate_limited_create_waits_the_seconds_capy_asks_then_sends_it_once_more: the second 429 asked for 600 seconds, but the driver advised waiting one minute.
+test_a_stop_during_a_wake_of_the_same_run_waits_for_it_and_leaves_the_run_stopped: a second state directory stopped the run while the first controller's wake was held.
+test_a_create_receipt_off_its_shape_or_for_another_project_is_a_possible_start: the start returned success for a thread whose receipt had a null project.
+
+Ran 4 tests, 4 assertion failures.

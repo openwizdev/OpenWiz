@@ -3,52 +3,86 @@
 The aim: install OpenWiz, give it one small idea for your own repository, and
 see your first pull request reviewed, checked and merged within an hour.
 
-**Status:** the First hour page is tested on synthetic fixtures only. A real
-first hour, and how long it takes, are not yet verified.
+**Status:** a real first hour, and how long it takes, are not yet verified.
+The current release is **OpenWiz 0.1.0**; automatic fleets outside CloudRoom
+and self-checking first-fleet onboarding arrive in **OpenWiz 0.1.1** (not
+released yet).
 
-## Follow it in the app
+## What happens, in order
 
-Open `http://127.0.0.1:7370/#first-hour`. On a computer, **First hour** is
-also in the sidebar. On a phone, search for "Go to First hour". The page shows
-six steps, and each step shows only what OpenWiz has actually read:
+Your coding agent walks you through the published **OpenWiz 0.1.0** install
+and first fleet in chat, and you can watch progress on GitHub or in the web
+app at [openwiz.dev/app](https://openwiz.dev/app/):
 
-1. **Install OpenWiz.** Paste the one install line into your coding agent; see
-   [Install OpenWiz](install.md).
-2. **Connect your accounts.** **Open setup** goes to the setup page. Each
-   connection is checked on its own, and CloudRoom's one sign-in screen is on
-   the CloudRoom step. Setup checks your agent harness login. It does not check
-   a reviewer from the other model family, so the page shows that reviewer as
-   unknown. Once the connections are verified, the step says which identity
-   acts: your own OpenWiz App, or your personal GitHub login if you chose to
-   skip the App. A skipped App needs nothing more, and there is no engine to
-   choose. The private brain is made by your installing agent (`openwiz init`)
-   and checked as part of the project.
-3. **Give your first idea.** Your installing agent continues through
-   [install's first-fleet branch](../skills/install/SKILL.md#5-first-fleet) with the same repository, or
-   give it one small idea in a thread on your project. It grills you briefly.
-4. **Confirm the spec and approve the plan.** Both happen in **Decisions**, as
-   two separate answers. A sent answer counts only once Decisions shows it as
-   saved. Approving work does not approve spending.
-5. **Watch the fleet build.** Builders start only after you approve the exact
-   plan and say yes to the start: one fleet thread with its own loop starts
-   them. Counts are shown as reported, and a partial read shows as unknown, not
-   zero. See [How OpenWiz works](how-openwiz-works.md).
-6. **First verified merge.** A merge shows as verified only when GitHub reports
-   the pull request merged and the merge commit has been read back on its
-   base. A closed pull request or a progress count is never a verified merge.
+1. **Install OpenWiz.** Paste the one install line into your coding agent and
+   follow the [OpenWiz 0.1.0](install.md#openwiz-010) section of
+   [Install OpenWiz](install.md) (WizSkills `maint/0.2`).
+2. **Pick a host and connect GitHub.** Choose where your agents run: **this
+   computer**, **boat.dev**, or **CloudRoom** (CloudRoom is optional). Your
+   installing agent checks each connection on its own (`setup.py check` and
+   `github_login.py`, plus CloudRoom sign-in only if you chose CloudRoom).
+   When connecting a repository for a CloudRoom fleet, it sets the acting
+   GitHub identity (your own OpenWiz App or an explicit skip to your personal
+   GitHub login) and initializes the project's private brain (`openwiz init`).
+3. **Give your first idea.** With CloudRoom, your installing agent continues
+   through 0.1.0's
+   [first-fleet onboarding](https://github.com/openwizdev/WizSkills/blob/maint/0.2/skills/install/SKILL.md#6-first-fleet)
+   with one repository (a new private demo repository or one of yours), then
+   grills you briefly (one or two short rounds) until you confirm the grill
+   summary. Without CloudRoom (this computer or boat.dev), follow 0.1.0's
+   [Without CloudRoom](https://github.com/openwizdev/WizSkills/blob/maint/0.2/skills/install/SKILL.md#without-cloudroom)
+   steps to run `setup` and `grill` in your project's clone.
+4. **Plan and approve the start.** On 0.1.0 with CloudRoom, your agent writes
+   the spec (`to-spec`) and waits for your spec confirmation, cuts 4 to 7 small
+   tickets (`to-tickets`) and waits for your exact-plan approval, and then
+   previews the launch (naming the fleet thread, loop, builders, reviewer and
+   Cloud Credits) and waits for your separate yes to start. Without CloudRoom,
+   after you confirm the grill, `to-spec` and `to-tickets` write the spec,
+   create the tickets and record the machine plan approval; your agent then
+   previews each hand-started builder (naming the repository, ticket, harness,
+   model and any charges) and waits for your separate yes before starting it.
+5. **Watch the fleet build.** On 0.1.0 with CloudRoom, one fleet thread on a
+   CloudRoom Loop starts builders on ready tickets, sends pull requests to an
+   independent reviewer from the other model family, and merges approved, green
+   work. Without CloudRoom (this computer or boat.dev), you start each builder
+   by hand through its driver, and review, wake and merge its pull request
+   yourself — no automatic fleet or reviewer starts without CloudRoom on 0.1.0
+   (see
+   [0.1.0 hand-start instructions](https://github.com/openwizdev/WizSkills/blob/maint/0.2/skills/install/SKILL.md#without-cloudroom)).
+   Follow progress on GitHub or at [openwiz.dev/app](https://openwiz.dev/app/).
+   See [How OpenWiz works](how-openwiz-works.md).
+6. **First verified merge.** A merge counts as verified only when GitHub
+   reports the pull request merged and the merge commit has been read back on
+   its base. A closed pull request or a progress count is never a verified
+   merge.
 
-The page reads setup, decisions and your first fleet once when it opens, and
-again when you press **Refresh**. It never sends, starts or stops anything.
+## OpenWiz 0.1.1 (coming next)
+
+Requires **OpenWiz 0.1.1 or later** (not released yet) with WizSkills `v0.5.0`
+— do not use its Connect commands on 0.1.0, where `openwiz models` does not
+take `--host`. On 0.1.1,
+[the install skill's onboarding road](https://github.com/openwizdev/WizSkills/blob/v0.5.0/skills/install/SKILL.md#6-the-onboarding-road)
+adds:
+
+- **Self-checking first-fleet plan:** after one short grill round and your
+  confirmation of the grill summary, `to-tickets` checks and approves the
+  first-fleet plan itself (no manual spec or plan approval for that first
+  fleet); nothing still starts until you say yes to the launch preview naming
+  the host and what it can cost.
+- **Automatic fleets on every host:** builders and reviewers run on **this
+  computer** (via the local session runner in chat, with an opt-in local
+  heartbeat to keep running after chat closes), on **boat.dev** (via the local
+  heartbeat), or in **CloudRoom** (via a fleet thread's loop).
 
 ## When something goes wrong
 
-- **Refused:** nothing took effect. Follow the step's next action, and your
-  drafts stay.
-- **Check first:** a reply was lost, so OpenWiz cannot tell whether the step
-  took effect. Ask your installing agent to check the operation by its id
-  before trying again, and never start it a second time.
-- **Failed or unknown:** a read did not answer or answered only in part. Press
-  **Refresh**. Work already running carries on.
+- **Interrupted:** start a new session of your coding agent and say
+  `continue the OpenWiz install`; each step checks what is already done before
+  acting. See [If it is interrupted or fails](install.md#if-it-is-interrupted-or-fails).
+- **Refused:** nothing took effect. Follow the step's next action.
+- **Uncertain result:** if a reply was lost so OpenWiz cannot tell whether a
+  step took effect, check its state before retrying and never start it a second
+  time.
 
-Feedback and sharing are on **Home**. OpenWiz is free now. Paid plans come
-later. CloudRoom and model charges are separate and not included.
+OpenWiz is free now. Paid plans come later. CloudRoom, boat.dev and model
+charges are separate and not included.

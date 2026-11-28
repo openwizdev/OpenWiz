@@ -1,0 +1,44 @@
+{
+  "harness": "cursor",
+  "program": "agent",
+  "start": [
+    "--print",
+    "--output-format",
+    "stream-json",
+    "--trust",
+    "--model",
+    "{model}",
+    "{mode}",
+    "{prompt}"
+  ],
+  "wake": [
+    "--print",
+    "--output-format",
+    "stream-json",
+    "--trust",
+    "--resume",
+    "{session}",
+    "--model",
+    "{model}",
+    "{mode}",
+    "{prompt}"
+  ],
+  "session": {
+    "json": [
+      "session_id"
+    ]
+  },
+  "modes": {
+    "force": [
+      "--force"
+    ]
+  },
+  "env": {},
+  "effort": "none: agent (Cursor CLI 2026.11.22-e9042b2) has no effort flag or env setting; its --help puts effort only inside a parameterized model id, such as 'claude-opus-4-8[effort=high]'",
+  "login": "agent's own login: `agent login` saves it locally (the macOS keychain, or ~/.config/cursor/auth.json on Linux), or the CURSOR_API_KEY the user set for the CLI; the driver never reads or passes it",
+  "daemon": "agent runs each shell tool command as its own detached process group under the turn, and may keep background shells after its last message; stop ends them with the process tree",
+  "signed_out": [
+    "please run '(?:agent|cursor-agent) login'"
+  ],
+  "login_command": "agent login"
+}

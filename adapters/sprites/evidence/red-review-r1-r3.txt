@@ -1,0 +1,45 @@
+# Red (review at 50df0641, R1 to R3): the new and changed tests against the unfixed driver, at 99ee2bb8 plus the fixture and test edits
+# env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/sprites/test_driver.py; 42 refusing agent-CLI stubs first on PATH
+FAIL: test_a_blob_only_an_older_github_commit_holds_is_never_uploaded_again (__main__.Push.test_a_blob_only_an_older_github_commit_holds_is_never_uploaded_again)
+AssertionError: Lists differ: ['blobs', 'trees', 'commits', 'refs/heads/agent/7'] != ['trees', 'commits', 'refs/heads/agent/7']
+FAIL: test_a_run_keeps_its_organization_when_the_default_or_the_variable_changes (__main__.Sprites.test_a_run_keeps_its_organization_when_the_default_or_the_variable_changes) (same_name_there=False)
+AssertionError: Tuples differ: ((1, {'error': 'sprite exec -s openwiz-sp-e[254 chars], []) != ((0, {'run': 'sp-e444baafb069', 'woke': Tru[57 chars], [])
+FAIL: test_a_run_keeps_its_organization_when_the_default_or_the_variable_changes (__main__.Sprites.test_a_run_keeps_its_organization_when_the_default_or_the_variable_changes) (same_name_there=True)
+AssertionError: Tuples differ: ((1, {'error': "Sprite openwiz-sp-8fc81e08d[219 chars], []) != ((0, {'run': 'sp-8fc81e08d12a', 'woke': Tru[82 chars]2a'])
+FAIL: test_a_stop_destroys_nothing_but_the_sprite_its_start_read (__main__.Sprites.test_a_stop_destroys_nothing_but_the_sprite_its_start_read)
+AssertionError: Tuples differ: (0, [], [['destroy', '--force', 'openwiz-sp-5e505ada0c62']]) != (1, ['openwiz-sp-5e505ada0c62'], [])
+FAIL: test_an_effort_the_harness_cannot_take_is_refused_before_anything_is_created (__main__.Sprites.test_an_effort_the_harness_cannot_take_is_refused_before_anything_is_created) (harness='pi', effort='high')
+AssertionError: 'use one of: claude, codex' != "this host can't set effort: remove the e[81 chars]ault"
+FAIL: test_start_creates_one_labelled_sprite_named_for_the_run (__main__.Sprites.test_start_creates_one_labelled_sprite_named_for_the_run)
+AssertionError: Lists differ: [['create', '--skip-console', '--label', 'openwiz', 'op[19 chars]c8']] != [['create', '-o', 'example-org', '--skip-console', '--l[40 chars]c8']]
+FAIL: test_start_refuses_before_any_create_without_its_connection_ids (__main__.Sprites.test_start_refuses_before_any_create_without_its_connection_ids) (case='no organization')
+AssertionError: 0 != 1 : {'run': 'sp-4e6d70ff8efc'}
+FAIL: test_start_refuses_before_any_create_without_its_connection_ids (__main__.Sprites.test_start_refuses_before_any_create_without_its_connection_ids) (case='an organization that is a flag')
+AssertionError: 0 != 1 : {'run': 'sp-9b85f00b7beb'}
+FAIL: test_stop_runs_sprite_destroy_and_confirms_the_sprite_is_gone (__main__.Sprites.test_stop_runs_sprite_destroy_and_confirms_the_sprite_is_gone)
+AssertionError: Lists differ: [['destroy', '--force', 'openwiz-sp-75340b7e49e5']] != [['destroy', '-o', 'example-org', '--force', 'openwiz-sp-75340b7e49e5']]
+Ran 38 tests in 52.657s
+FAILED (failures=9)
+# R1's full diff (left: what the unfixed driver did; the wake, the stop, Sprites left in example-org, Sprites left in example-other-org)
++ ((0, {'run': 'sp-a02889a03a26', 'woke': True}),
+- ((1,
+-   {'error': 'sprite exec -s openwiz-sp-a02889a03a26 failed: sprite gave an '
+-             'error the driver does not repeat',
+-    'next': 'run `sprite exec -s openwiz-sp-a02889a03a26` by hand to read what '
+-            'it says, then wake it again'}),
+   (0, {'run': 'sp-a02889a03a26', 'stopped': True}),
+-  ['openwiz-sp-a02889a03a26'],
++  [],
+   [])
++ ((0, {'run': 'sp-9d7db1ef4fe4', 'woke': True}),
+- ((1,
+-   {'error': "Sprite openwiz-sp-9d7db1ef4fe4 lost its run's files, and the "
+-             "agent's session with them, so run sp-9d7db1ef4fe4 is not woken",
+-    'next': 'stop it, then start a new run'}),
+   (0, {'run': 'sp-9d7db1ef4fe4', 'stopped': True}),
++  [],
+-  ['openwiz-sp-9d7db1ef4fe4'],
+?                             ^
++  ['openwiz-sp-9d7db1ef4fe4'])
+?                             ^
+-  [])

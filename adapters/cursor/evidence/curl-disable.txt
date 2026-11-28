@@ -1,0 +1,7 @@
+# R3 ad-hoc check, 2026-11-20: real curl 7.88.1, offline, file URLs only, in a scratch folder <d>. CURL_HOME and HOME point at <d>/home, whose .curlrc holds one line: url = "file://<d>/extra.txt".
+$ curl -sS file://<d>/asked.txt
+synthetic page outside the API
+requested
+$ curl --disable -sS file://<d>/asked.txt
+requested
+# Without --disable, the default config added a second transfer the driver never asked for. The driver now puts --disable first on both of its curl calls (--version and every API call); the fake curl refuses any call without it.

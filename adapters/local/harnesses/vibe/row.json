@@ -1,0 +1,52 @@
+{
+  "harness": "vibe",
+  "program": "vibe",
+  "start": [
+    "--prompt",
+    "{prompt}",
+    "--output",
+    "streaming",
+    "--model",
+    "{model}",
+    "--trust",
+    "{mode}",
+    "{effort}"
+  ],
+  "wake": [
+    "--prompt",
+    "{prompt}",
+    "--output",
+    "streaming",
+    "--resume",
+    "{session}",
+    "--trust",
+    "{mode}"
+  ],
+  "session": {
+    "json": [
+      "sessionId"
+    ]
+  },
+  "modes": {
+    "auto-approve": [
+      "--auto-approve"
+    ]
+  },
+  "env": {},
+  "effort": {
+    "off": ["--thinking", "off"],
+    "low": ["--thinking", "low"],
+    "medium": ["--thinking", "medium"],
+    "high": ["--thinking", "high"],
+    "xhigh": ["--thinking", "xhigh"],
+    "max": ["--thinking", "max"]
+  },
+  "login": "Vibe's own login: vibe --setup saves the key in the OS keyring, or in ~/.vibe/.env when no keyring is available, or you set MISTRAL_API_KEY yourself; the driver never reads or passes it",
+  "daemon": "none",
+  "signed_out": [
+    "^Error: Missing MISTRAL_API_KEY environment variable for .+ provider\\.?[ \\t]*$",
+    "^Error: You are not signed in to Mistral\\. Sign in and retry\\.[ \\t]*$"
+  ],
+  "login_command": "vibe --setup",
+  "login_env": "MISTRAL_API_KEY"
+}

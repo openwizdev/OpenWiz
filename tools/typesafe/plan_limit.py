@@ -1,11 +1,3 @@
-"""The previous plan-limit lines, and the weighted Nouls in config.json.
-
-Keep `exact` equal to `exact_plan_limit` in `crates/cli/src/typesafe.rs`.
-A plan-limit stop, ordinary work, and a sign-in problem are three questions
-in one request. The weights are in the config. An uncertain Noul, a missing
-key, or any error leaves the exact lines as the only match.
-"""
-
 import client
 import decide
 

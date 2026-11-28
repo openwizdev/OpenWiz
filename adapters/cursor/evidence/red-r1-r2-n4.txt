@@ -1,0 +1,112 @@
+# Red run for R1 and R2 (review 7118672858) at the driver of 30f231a7, new tests only changed.
+# Command: env -u OPENWIZ_GITHUB_APP_KEY env -i PATH=<33 refusal stubs>:/usr/local/bin:/usr/bin:/bin HOME=<tmp> python3 -I adapters/cursor/test_driver.py
+# Paths read <repo> and <tmp>; the key variable's name reads <KEY-VARIABLE>.
+test_a_failed_archive_is_reported_with_the_agent_to_archive (__main__.Cursor.test_a_failed_archive_is_reported_with_the_agent_to_archive) ... ok
+test_a_key_pasted_into_the_model_is_refused_and_never_saved (__main__.Cursor.test_a_key_pasted_into_the_model_is_refused_and_never_saved) ... FAIL
+test_a_lost_create_cursor_does_not_show_yet_stays_unconfirmed_and_stoppable (__main__.Cursor.test_a_lost_create_cursor_does_not_show_yet_stays_unconfirmed_and_stoppable) ... ok
+test_a_lost_create_whose_cleanup_the_helper_refuses_stays_stoppable (__main__.Cursor.test_a_lost_create_whose_cleanup_the_helper_refuses_stays_stoppable) ... FAIL
+test_a_missing_key_is_a_clear_error_and_sends_nothing (__main__.Cursor.test_a_missing_key_is_a_clear_error_and_sends_nothing) ... FAIL
+test_a_refused_login_says_where_the_key_lives_and_shows_no_answer (__main__.Cursor.test_a_refused_login_says_where_the_key_lives_and_shows_no_answer) ... FAIL
+test_a_start_whose_answer_is_lost_archives_its_agent (__main__.Cursor.test_a_start_whose_answer_is_lost_archives_its_agent) ... ok
+test_a_stop_that_cannot_save_still_archives_and_no_wake_reopens_it (__main__.Cursor.test_a_stop_that_cannot_save_still_archives_and_no_wake_reopens_it) ... ok
+test_a_wake_during_a_run_starts_no_second_run_and_one_after_it_follows_up (__main__.Cursor.test_a_wake_during_a_run_starts_no_second_run_and_one_after_it_follows_up) ... ok
+test_an_installed_driver_starts_with_the_pin_its_build_names (__main__.Cursor.test_an_installed_driver_starts_with_the_pin_its_build_names) ... ok
+test_kit_passes_all_five_with_its_key_check (__main__.Cursor.test_kit_passes_all_five_with_its_key_check) ... ok
+test_runs_reach_only_the_fake_cursor_and_python (__main__.Cursor.test_runs_reach_only_the_fake_cursor_and_python) ... ok
+test_start_creates_one_agent_under_an_id_it_saved_first_with_no_login (__main__.Cursor.test_start_creates_one_agent_under_an_id_it_saved_first_with_no_login) ... FAIL
+test_start_refuses_any_harness_but_cursor_and_creates_nothing (__main__.Cursor.test_start_refuses_any_harness_but_cursor_and_creates_nothing) ... ok
+test_stop_cancels_the_active_run_then_archives_and_never_deletes (__main__.Cursor.test_stop_cancels_the_active_run_then_archives_and_never_deletes) ... ok
+test_the_key_never_passes_through_the_driver (__main__.Cursor.test_the_key_never_passes_through_the_driver) ... ok
+test_the_tests_read_no_other_process_environment (__main__.Cursor.test_the_tests_read_no_other_process_environment) ... ok
+
+======================================================================
+FAIL: test_a_key_pasted_into_the_model_is_refused_and_never_saved (__main__.Cursor.test_a_key_pasted_into_the_model_is_refused_and_never_saved)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/cursor/test_driver.py", line 218, in test_a_key_pasted_into_the_model_is_refused_and_never_saved
+    self.assertEqual((self.calls(), self.on_disk()), ([], ''))
+AssertionError: Tuples differ: ([], 'run-0d9e5a67eba5.json\n{"request": {"repo[242 chars]k\n') != ([], '')
+
+First differing element 1:
+'run-0d9e5a67eba5.json\n{"request": {"repo[241 chars]ck\n'
+''
+
++ ([], '')
+- ([],
+-  'run-0d9e5a67eba5.json\n'
+-  '{"request": {"repository": "example/site", "ticket": 7, "skill": '
+-  '"build-ticket", "harness": "cursor", "model": '
+-  '"syn-test-key-b085e5820b6de3da1d23d6ee"}, "agent": '
+-  '"bc-57da4b74-79d3-474f-a5a6-d55769572dc2", "stopped": false, "starting": '
+-  'true}run-0d9e5a67eba5.lock\n')
+
+======================================================================
+FAIL: test_a_lost_create_whose_cleanup_the_helper_refuses_stays_stoppable (__main__.Cursor.test_a_lost_create_whose_cleanup_the_helper_refuses_stays_stoppable)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/cursor/test_driver.py", line 356, in test_a_lost_create_whose_cleanup_the_helper_refuses_stays_stoppable
+    self.assertNotIn('nothing was sent', err['error'])
+AssertionError: 'nothing was sent' unexpectedly found in "nothing was sent to Cursor: the key helper refused: the kit's fake host gave no test key; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads <KEY-VARIABLE> or the keychain entry openwiz-cursor-cloud"
+
+======================================================================
+FAIL: test_a_missing_key_is_a_clear_error_and_sends_nothing (__main__.Cursor.test_a_missing_key_is_a_clear_error_and_sends_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/cursor/test_driver.py", line 212, in test_a_missing_key_is_a_clear_error_and_sends_nothing
+    self.assertEqual((self.calls(), self.agents(), self.on_disk()), ([], {}, ''))
+AssertionError: Tuples differ: ([], {}, 'run-7ad6df480b22.json\n{"request": {"repo[222 chars]k\n') != ([], {}, '')
+
+First differing element 2:
+'run-7ad6df480b22.json\n{"request": {"repo[221 chars]ck\n'
+''
+
++ ([], {}, '')
+- ([],
+-  {},
+-  'run-7ad6df480b22.json\n'
+-  '{"request": {"repository": "example/site", "ticket": 7, "skill": '
+-  '"build-ticket", "harness": "cursor", "model": "synthetic-model-1"}, "agent": '
+-  '"bc-33a61bc2-5021-433a-a86c-05711fde9b78", "stopped": false, "starting": '
+-  'true}run-7ad6df480b22.lock\n')
+
+======================================================================
+FAIL: test_a_refused_login_says_where_the_key_lives_and_shows_no_answer (__main__.Cursor.test_a_refused_login_says_where_the_key_lives_and_shows_no_answer)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/cursor/test_driver.py", line 349, in test_a_refused_login_says_where_the_key_lives_and_shows_no_answer
+    self.assertEqual((self.agents(), self.on_disk()), ({}, ''))
+AssertionError: Tuples differ: ({}, 'run-346d7712ef01.json\n{"request": {"repo[222 chars]k\n') != ({}, '')
+
+First differing element 1:
+'run-346d7712ef01.json\n{"request": {"repo[221 chars]ck\n'
+''
+
++ ({}, '')
+- ({},
+-  'run-346d7712ef01.json\n'
+-  '{"request": {"repository": "example/site", "ticket": 7, "skill": '
+-  '"build-ticket", "harness": "cursor", "model": "synthetic-model-1"}, "agent": '
+-  '"bc-5893c4b1-9682-4acb-b653-a22c03ad48ba", "stopped": true, "starting": '
+-  'false}run-346d7712ef01.lock\n')
+
+======================================================================
+FAIL: test_start_creates_one_agent_under_an_id_it_saved_first_with_no_login (__main__.Cursor.test_start_creates_one_agent_under_an_id_it_saved_first_with_no_login)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/cursor/test_driver.py", line 167, in test_start_creates_one_agent_under_an_id_it_saved_first_with_no_login
+    self.assertEqual(json.load(f), {'agent': body['agentId'], 'stopped': False, 'starting': False, 'request':
+AssertionError: {'request': {'repository': 'example/site', [173 chars]alse} != {'agent': 'bc-4add2d3c-9ab2-480b-b1bc-7d46a[122 chars]et'}}
+  {'agent': 'bc-4add2d3c-9ab2-480b-b1bc-7d46a94b4819',
++  'request': {'repository': 'example/site',
+-  'request': {'harness': 'cursor',
+-              'model': 'synthetic-model-1',
+-              'repository': 'example/site',
+               'skill': 'build-ticket',
+               'ticket': 7},
+   'starting': False,
+   'stopped': False}
+
+----------------------------------------------------------------------
+Ran 17 tests in 6.265s
+
+FAILED (failures=5)
