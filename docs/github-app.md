@@ -225,6 +225,43 @@ python3 -I tools/github-app/token-service.py stop --state-dir "$HOME/.local/stat
   `contracts/fixtures/token-service/requests.json` case and the guards above against
   a fake GitHub with a throwaway key.
 
+## The Actions token-service route
+
+An agent can also reach the token service through a `main`-only GitHub Actions
+workflow in the owner's private repository (`OPENWIZ_TOKEN_SERVICE_ROUTE=actions`
+and `OPENWIZ_TOKEN_SERVICE_REPOSITORY=<owner/name>`), using the workflow template
+at `tools/github-app/mint-workflow.yml` and the same sealed-answer contract
+([`token-service.v1`](../contracts/token-service.v1.md)). Only `main`'s workflow
+code may ever read the App's private key: a branch-triggered or non-`main`
+workflow must never read it.
+
+Owner setup steps:
+
+1. **Create the `token-service` environment** in the private repository with
+   deployment branches restricted to `main` only. Add environment variables
+   `OPENWIZ_GITHUB_APP_ID` (the numeric App ID) and, for the factory App,
+   `OPENWIZ_GITHUB_APP_MODE=factory`.
+2. **Make a fresh App key into its secret**, through GitHub's own form: generate
+   a new private key in the App's settings, base64-encode the PEM, and save it
+   as the `token-service` environment secret `OPENWIZ_GITHUB_APP_KEY` (never a
+   repository secret).
+3. **Protect `main` with a ruleset** so only the owner can change it (no branch
+   bypass or agent push to `main`).
+4. **Copy the template** (`tools/github-app/mint-workflow.yml`) into the private
+   repository's `.github/workflows/mint-workflow.yml` on `main`, keeping its
+   pinned `openwizdev/OpenWiz` commit SHA and pinned action SHAs.
+5. **Delete the old key** in the App's settings once the new route is verified.
+
+With `OPENWIZ_TOKEN_SERVICE_ROUTE=actions` and
+`OPENWIZ_TOKEN_SERVICE_REPOSITORY=<owner/name>`, `agent-token.py` dispatches the
+workflow on `main` with the request (and one-time `answer_key`) plus a fresh
+random `nonce`, waits up to 120 seconds (backing off on 403 or 429), downloads
+and immediately deletes the 1-day artifact named by `nonce`, and opens and checks
+the sealed answer in memory. Any failure falls back to the owner's account with
+the standard-error note. Offline proofs run with
+`python3 -I tools/github-app/test_mint_workflow.py` and
+`python3 -I tools/github-app/test_agent_token.py`.
+
 ## Pairing App selection
 
 When the owner's machine holds more than one App's state, the pairing mint must reach
