@@ -9,7 +9,8 @@ import unittest
 
 HERE = Path(__file__).resolve().parent
 WSL_NOTE = 'WSL has community support. It works for some users and the project does not test it.'
-WINDOWS_LINE = 'Native Windows is not supported. Use Windows Subsystem for Linux (WSL). ' + WSL_NOTE
+WINDOWS_LINE = ('Native Windows is not supported. Use Windows Subsystem for Linux (WSL). ' + WSL_NOTE
+                + ' OpenWiz installs on macOS (Apple silicon or Intel) and on Linux (x86_64 or aarch64).')
 
 RUN = """
 import platform
