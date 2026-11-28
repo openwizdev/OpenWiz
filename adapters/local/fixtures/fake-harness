@@ -16,6 +16,23 @@ else:
 skill = re.search(r'with the ([a-z0-9-]+) skill', prompt).group(1)
 woken = prompt.startswith('You were woken')
 
+if not worker and os.environ.get('FAKE_PROBE'):
+    def shell(*argv):
+        return subprocess.run(argv, stdin=subprocess.DEVNULL, capture_output=True, text=True).stdout.strip()
+    try:
+        with open('/proc/self/oom_score_adj') as f:
+            mine = f.read().strip()
+    except OSError:
+        mine = None
+    probe = {'harness': mine, 'bash': shell('bash', '-c', 'cat /proc/self/oom_score_adj'),
+             'owner': shell('bash', '-c', 'echo "$FAKE_OWNER_MARK"'),
+             'claude': shell('sh', '-c', '. "$CLAUDE_ENV_FILE"; cat /proc/self/oom_score_adj')
+             if os.environ.get('CLAUDE_ENV_FILE') else None}
+    probe.update({k: os.environ.get(k) for k in ('OMP_NUM_THREADS', 'PYTHON_CPU_COUNT', 'CARGO_BUILD_JOBS',
+                                                 'BASH_ENV', 'CLAUDE_ENV_FILE')})
+    with open(os.environ['FAKE_PROBE'] + '.new', 'w') as f:
+        json.dump(probe, f)
+    os.replace(os.environ['FAKE_PROBE'] + '.new', os.environ['FAKE_PROBE'])
 if not worker:
     if os.environ.get('FAKE_MODELS'):
         with open(os.environ['FAKE_MODELS'], 'a') as f:
