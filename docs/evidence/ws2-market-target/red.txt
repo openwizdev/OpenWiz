@@ -1,0 +1,21 @@
+FF
+======================================================================
+FAIL: test_targets (__main__.MarketTargetTest.test_targets) (target='phone')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "check.py", line 13, in test_targets
+    self.assertTrue(image.is_file(), f"{image.name} is missing")
+AssertionError: False is not true : phone.png is missing
+
+======================================================================
+FAIL: test_targets (__main__.MarketTargetTest.test_targets) (target='desktop')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "check.py", line 13, in test_targets
+    self.assertTrue(image.is_file(), f"{image.name} is missing")
+AssertionError: False is not true : desktop.png is missing
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+FAILED (failures=2)
