@@ -114,6 +114,48 @@ class Client(unittest.TestCase):
         self.assertNotIn(b'Bearer', ran.stdout + ran.stderr)
 
 
+class Redirect(unittest.TestCase):
+    def test_a_redirect_is_refused_and_the_key_never_follows_it(self):
+        import http.server
+        import threading
+        seen = []
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_POST(self):
+                seen.append((self.path, self.headers.get('Authorization')))
+                self.rfile.read(int(self.headers.get('Content-Length') or 0))
+                if self.path == '/v1/systemone':
+                    self.send_response(303)
+                    self.send_header('Location', '/elsewhere')
+                    self.end_headers()
+                    return
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'{"answers": {}}')
+
+            def do_GET(self):
+                seen.append((self.path, self.headers.get('Authorization')))
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'{"answers": {}}')
+
+            def log_message(self, *args):
+                pass
+
+        server = http.server.HTTPServer(('127.0.0.1', 0), Handler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            url = f'http://127.0.0.1:{server.server_port}/v1/systemone'
+            http_client = client.HttpClient(KEY, url=url)
+            with self.assertRaises(client.TypeSafeError) as caught:
+                http_client.system_one('hello', {'q': {'type': 'noul', 'instructions': 'Is it so?'}})
+        finally:
+            server.shutdown()
+            server.server_close()
+        self.assertEqual(str(caught.exception), 'http')
+        self.assertEqual([path for path, _ in seen], ['/v1/systemone'])
+
+
 def urllib_error():
     import urllib.error
     return urllib.error.URLError('synthetic failure')

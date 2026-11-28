@@ -98,10 +98,16 @@ def from_env():
     return HttpClient(key)
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
 def _urlopen(url, body, headers, timeout):
     req = urllib.request.Request(url, data=body, headers=headers, method='POST')
+    opener = urllib.request.build_opener(_NoRedirect)
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with opener.open(req, timeout=timeout) as resp:
             return resp.status, resp.read()
     except urllib.error.HTTPError as e:
         _discard_error_page(e)
