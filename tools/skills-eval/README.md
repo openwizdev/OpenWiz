@@ -15,6 +15,8 @@ python3 -I tools/skills-eval/parallel.py --out "$RESULTS_DIR" --env-file "$ENV_F
 
 `check`, `coverage`, `run` and `tokens --offline` read the shipped skills from a commit's `.claude-plugin/plugin.json` (`--rev`, default `HEAD`). The skills moved to WizSkills in #555: at `HEAD` they stop with a `TypeError`, and the last commit before #555 reports 104 problems (its private folders are not in the snapshot). They are unavailable in this checkout. `parallel.py` only resumes a results directory whose `manifest.json` a `run` already wrote.
 
+`eval.py mentions --jev --skills DIR` is the one command that asks TypeSafe's Jev which docs a SKILL.md names that the keywords missed. It reads a WizSkills checkout, needs `OPENWIZ_JEV=1` and `TYPESAFE_API_KEY`, and sends a SKILL.md only when the keywords left a doc unresolved. `check` and `tokens --offline` never ask Jev.
+
 | File | What |
 | --- | --- |
 | `cases/`, `provenance.json` | One synthetic case per file; each case's source |

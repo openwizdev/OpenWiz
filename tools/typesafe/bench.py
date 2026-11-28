@@ -101,7 +101,8 @@ def live_judge(data, ask):
 def live_plan_limit(data, ask):
     hit = 0
     for row in data['cases']:
-        response = None if plan_limit.exact(row['text']) else _asked(ask, row['text'], decide.questions('plan_limit'))
+        text = row['text']
+        response = None if plan_limit.exact(text) else _asked(ask, text[-4000:], decide.questions('plan_limit'))
         hit += int(plan_limit.shaped(row['text'], response) == row['expected'])
     return hit, len(data['cases'])
 
@@ -110,7 +111,8 @@ def live_verdict(data, ask):
     hit = 0
     for row in data['cases']:
         line = row['line']
-        response = None if verdict.exact(line) else _asked(ask, line, decide.questions('verdict'))
+        state = verdict.sent_state(line)
+        response = None if state is None else _asked(ask, state, decide.questions('verdict'))
         hit += int(verdict.shaped(line, response) == row['expected'])
     return hit, len(data['cases'])
 
@@ -118,7 +120,8 @@ def live_verdict(data, ask):
 def live_mentions(data, ask):
     hit = 0
     for row in data['cases']:
-        found = tokens.named_docs(row['text']) | jev_mentions.extra(row['text'], ask)
+        keywords = tokens.named_docs(row['text'])
+        found = keywords | jev_mentions.extra(row['text'], ask, keywords)
         hit += int(found == set(row['expected']))
     return hit, len(data['cases'])
 
