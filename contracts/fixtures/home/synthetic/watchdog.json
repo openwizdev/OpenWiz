@@ -38,6 +38,14 @@
     "log": ["2030-01-02T02:20:00Z synthetic-backup ok backup completed"],
     "late": false
   },
+  "fixed time with no due occurrence yet": {
+    "loop": "synthetic-backup", "now": "2030-01-02T02:30:01Z",
+    "last_due": null, "late": false
+  },
+  "webhook without a clock deadline": {
+    "loop": "synthetic-on-hook", "now": "2030-01-02T02:30:01Z",
+    "late": false
+  },
   "failed with fresh completion": {
     "loop": "synthetic-sweep", "now": "2030-01-02T02:30:01Z", "every_ms": 900000,
     "lastRunStatus": "failed",
@@ -50,7 +58,8 @@
       "2030-01-02T02:25:00Z synthetic-backup ok backup completed",
       "2030-01-02T02:28:00Z synthetic-sweep failed sweep did not finish",
       "2030-01-02T02:29:00Z synthetic-sweep recovered recovery returned",
-      "2030-01-02T02:30:00Z synthetic-sweep ok"
+      "2030-01-02T02:30:00Z synthetic-sweep ok",
+      "2030-01-02T02:30:02Z synthetic-sweep ok future completion"
     ],
     "late": true
   }

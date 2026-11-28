@@ -5,21 +5,27 @@
     "loops": {
       "synthetic-sweep": {
         "task_id": "synthetic-task-a",
-        "schedule": {"kind": "interval", "every_ms": 900000, "anchor_ms": 0},
+        "schedule": {"type": "interval", "everyMs": 900000},
         "path": "loops/synthetic-sweep.md",
         "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       },
       "synthetic-backup": {
         "task_id": "synthetic-task-b",
-        "schedule": {"kind": "fixed-time", "cron": "0 2 * * *", "timezone": "UTC"},
+        "schedule": {"type": "fixed_time", "timeOfDay": "02:00", "weekdays": [1, 3], "timeZone": "Etc/UTC"},
         "path": "loops/synthetic/backup.md",
         "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
       },
       "synthetic-once": {
         "task_id": "synthetic-task-c",
-        "schedule": {"kind": "fixed-time", "at": "2030-01-02T04:00:00Z"},
+        "schedule": {"type": "once", "runAt": "2030-01-02T04:00:00.25-05:00"},
         "path": "loops/synthetic-once.md",
         "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "synthetic-on-hook": {
+        "task_id": "synthetic-task-d",
+        "schedule": {"type": "webhook"},
+        "path": "loops/synthetic-on-hook.md",
+        "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
       }
     }
   },
