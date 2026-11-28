@@ -100,14 +100,15 @@ fn run_ask(
         }
         answer
     });
-    let sent = child
-        .stdin
-        .take()
-        .map(|mut input| std::io::Write::write_all(&mut input, request));
+    let stdin = child.stdin.take();
+    let request = request.to_vec();
+    let writer = std::thread::spawn(move || {
+        stdin.is_some_and(|mut input| std::io::Write::write_all(&mut input, &request).is_ok())
+    });
     let finished = loop {
         match child.try_wait() {
             Ok(Some(status)) => break Some(status),
-            Ok(None) if matches!(sent, Some(Ok(()))) && std::time::Instant::now() < until => {
+            Ok(None) if std::time::Instant::now() < until => {
                 std::thread::sleep(std::time::Duration::from_millis(20));
             }
             _ => break None,
@@ -117,9 +118,10 @@ fn run_ask(
         let _ = child.kill();
         let _ = child.wait();
     }
+    let sent = writer.join().unwrap_or(false);
     let answer = reader.join().ok()?;
     finished
-        .filter(|status| status.success() && answer.len() <= MAX_ANSWER_BYTES)
+        .filter(|status| sent && status.success() && answer.len() <= MAX_ANSWER_BYTES)
         .map(|_| answer)
 }
 
@@ -563,6 +565,44 @@ mod tests {
         for inherited in ["HOME", "PATH", "USER", "GH_TOKEN", "PYTHONPATH"] {
             assert!(!seen.contains_key(inherited), "{inherited} leaked");
         }
+    }
+
+    #[test]
+    fn a_request_larger_than_the_pipe_is_bounded_by_the_deadline() {
+        let tool = ask_script(
+            "pipe",
+            "import sys, time\ntime.sleep(30)\nsys.stdin.read()\n",
+        );
+        let request = vec![b'x'; 1 << 20];
+        let started = std::time::Instant::now();
+        assert_eq!(
+            run_ask(
+                &tool,
+                std::ffi::OsStr::new("synthetic"),
+                &request,
+                soon(300)
+            ),
+            None
+        );
+        assert!(started.elapsed() < std::time::Duration::from_secs(3));
+    }
+
+    #[test]
+    fn a_large_request_read_promptly_is_answered() {
+        let tool = ask_script(
+            "bigin",
+            "import sys\ndata = sys.stdin.read()\nprint('{\"n\": %d}' % len(data))\n",
+        );
+        let request = vec![b'x'; 1 << 20];
+        let answer = run_ask(
+            &tool,
+            std::ffi::OsStr::new("synthetic"),
+            &request,
+            soon(5_000),
+        )
+        .unwrap();
+        let seen: Value = serde_json::from_slice(&answer).unwrap();
+        assert_eq!(seen["n"], 1 << 20);
     }
 
     #[test]
