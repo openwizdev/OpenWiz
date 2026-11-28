@@ -1,0 +1,408 @@
+[
+  {
+    "name": "spec-to-approve-owner-approves",
+    "kind": "spec-to-approve",
+    "before": {
+      "id": "spec:syn-owner/syn-app#10:2001",
+      "kind": "spec-to-approve",
+      "needs_owner": true,
+      "title": "0.2.0 spec: synthetic widget queue",
+      "link": "https://github.com/syn-owner/syn-app/issues/10#issuecomment-2001",
+      "record": {
+        "repository": "syn-owner/syn-app",
+        "number": 10,
+        "comment_id": 2001
+      },
+      "since": "2026-11-28T09:00:00Z",
+      "resolved_at": null
+    },
+    "event": {
+      "type": "owner_decision",
+      "after_comment_id": 2001,
+      "author_is_owner": true,
+      "at": "2026-11-28T10:05:00Z"
+    },
+    "read_at": "2026-11-28T10:30:00Z",
+    "expect_resolved": true
+  },
+  {
+    "name": "spec-to-approve-non-owner-comment-does-not-resolve",
+    "kind": "spec-to-approve",
+    "before": {
+      "id": "spec:syn-owner/syn-app#10:2001",
+      "kind": "spec-to-approve",
+      "needs_owner": true,
+      "title": "0.2.0 spec: synthetic widget queue",
+      "link": "https://github.com/syn-owner/syn-app/issues/10#issuecomment-2001",
+      "record": {
+        "repository": "syn-owner/syn-app",
+        "number": 10,
+        "comment_id": 2001
+      },
+      "since": "2026-11-28T09:00:00Z",
+      "resolved_at": null
+    },
+    "event": {
+      "type": "owner_decision",
+      "after_comment_id": 2001,
+      "author_is_owner": false,
+      "at": "2026-11-28T10:05:00Z"
+    },
+    "read_at": "2026-11-28T10:30:00Z",
+    "expect_resolved": false
+  },
+  {
+    "name": "pr-ready-to-merge-merged",
+    "kind": "pr-ready-to-merge",
+    "before": {
+      "id": "pr:syn-owner/syn-app#42@1111111111111111111111111111111111111111",
+      "kind": "pr-ready-to-merge",
+      "needs_owner": true,
+      "title": "#41: add synthetic widget queue",
+      "link": "https://github.com/syn-owner/syn-app/pull/42",
+      "record": {
+        "repository": "syn-owner/syn-app",
+        "number": 42,
+        "comment_id": null
+      },
+      "since": "2026-11-28T09:15:00Z",
+      "resolved_at": null
+    },
+    "event": {
+      "type": "pr_merged",
+      "at": "2026-11-28T10:10:00Z"
+    },
+    "read_at": "2026-11-28T10:30:00Z",
+    "expect_resolved": true
+  },
+  {
+    "name": "pr-ready-to-merge-still-open-and-green",
+    "kind": "pr-ready-to-merge",
+    "before": {
+      "id": "pr:syn-owner/syn-app#42@1111111111111111111111111111111111111111",
+      "kind": "pr-ready-to-merge",
+      "needs_owner": true,
+      "title": "#41: add synthetic widget queue",
+      "link": "https://github.com/syn-owner/syn-app/pull/42",
+      "record": {
+        "repository": "syn-owner/syn-app",
+        "number": 42,
+        "comment_id": null
+      },
+      "since": "2026-11-28T09:15:00Z",
+      "resolved_at": null
+    },
+    "event": {
+      "type": "comment_added",
+      "at": "2026-11-28T10:10:00Z"
+    },
+    "read_at": "2026-11-28T10:30:00Z",
+    "expect_resolved": false
+  },
+  {
+    "name": "release-owner-ships",
+    "kind": "release",
+    "before": {
+      "id": "release:syn-owner/syn-app#50:2002",
+      "kind": "release",
+      "needs_owner": true,
+      "title": "Release 0.2.0-syn.1 candidate",
+      "link": "https://github.com/syn-owner/syn-app/issues/50#issuecomment-2002",
+      "record": {
+        "repository": "syn-owner/syn-app",
+        "number": 50,
+        "comment_id": 2002
+      },
+      "since": "2026-11-28T09:20:00Z",
+      "resolved_at": null
+    },
+    "event": {
+      "type": "owner_ship_decision",
+      "author_is_owner": true,
+      "at": "2026-11-28T10:12:00Z"
+    },
+    "read_at": "2026-11-28T10:30:00Z",
+    "expect_resolved": true
+  },
+  {
+    "name": "release-agent-comment-does-not-resolve",
+    "kind": "release",
+    "before": {
+      "id": "release:syn-owner/syn-app#50:2002",
+      "kind": "release",
+      "needs_owner": true,
+      "title": "Release 0.2.0-syn.1 candidate",
+      "link": "https://github.com/syn-owner/syn-app/issues/50#issuecomment-2002",
+      "record": {
+        "repository": "syn-owner/syn-app",
+        "number": 50,
+        "comment_id": 2002
+      },
+      "since": "2026-11-28T09:20:00Z",
+      "resolved_at": null
+    },
+    "event": {
+      "type": "owner_ship_decision",
+      "author_is_owner": false,
+      "at": "2026-11-28T10:12:00Z"
+    },
+    "read_at": "2026-11-28T10:30:00Z",
+    "expect_resolved": false
+  },
+  {
+    "name": "key-needed-key-set-in-settings",
+    "kind": "key-needed",
+    "before": {
+      "id": "key:syn-owner/syn-app#61:2003",
+      "kind": "key-needed",
+      "needs_owner": true,
+      "title": "Enable synthetic review integration",
+      "link": "https://github.com/syn-owner/syn-app/issues/61#issuecomment-2003",
+      "record": {
+        "repository": "syn-owner/syn-app",
+        "number": 61,
+        "comment_id": 2003
+      },
+      "since": "2026-11-28T09:25:00Z",
+      "resolved_at": null
+    },
+    "event": {
+      "type": "settings_key_set",
+      "key": "devin",
+      "set_at": "2026-11-28T10:14:00Z"
+    },
+    "read_at": "2026-11-28T10:30:00Z",
+    "expect_resolved": true
+  },
+  {
+    "name": "key-needed-older-set-at-does-not-resolve",
+    "kind": "key-needed",
+    "before": {
+      "id": "key:syn-owner/syn-app#61:2003",
+      "kind": "key-needed",
+      "needs_owner": true,
+      "title": "Enable synthetic review integration",
+      "link": "https://github.com/syn-owner/syn-app/issues/61#issuecomment-2003",
+      "record": {
+        "repository": "syn-owner/syn-app",
+        "number": 61,
+        "comment_id": 2003
+      },
+      "since": "2026-11-28T09:25:00Z",
+      "resolved_at": null
+    },
+    "event": {
+      "type": "settings_key_set",
+      "key": "devin",
+      "set_at": "2026-11-28T08:00:00Z"
+    },
+    "read_at": "2026-11-28T10:30:00Z",
+    "expect_resolved": false
+  },
+  {
+    "name": "setting-proposal-answered-by-owner-or-wiz",
+    "kind": "setting-proposal",
+    "before": {
+      "id": "setting:syn-owner/syn-app#62:2004",
+      "kind": "setting-proposal",
+      "needs_owner": true,
+      "title": "Raise builder effort for widget tests",
+      "link": "https://github.com/syn-owner/syn-app/issues/62#issuecomment-2004",
+      "record": {
+        "repository": "syn-owner/syn-app",
+        "number": 62,
+        "comment_id": 2004
+      },
+      "since": "2026-11-28T09:30:00Z",
+      "resolved_at": null
+    },
+    "event": {
+      "type": "proposal_answered",
+      "by_owner_or_wiz": true,
+      "at": "2026-11-28T10:15:00Z"
+    },
+    "read_at": "2026-11-28T10:30:00Z",
+    "expect_resolved": true
+  },
+  {
+    "name": "setting-proposal-unrelated-comment-does-not-resolve",
+    "kind": "setting-proposal",
+    "before": {
+      "id": "setting:syn-owner/syn-app#62:2004",
+      "kind": "setting-proposal",
+      "needs_owner": true,
+      "title": "Raise builder effort for widget tests",
+      "link": "https://github.com/syn-owner/syn-app/issues/62#issuecomment-2004",
+      "record": {
+        "repository": "syn-owner/syn-app",
+        "number": 62,
+        "comment_id": 2004
+      },
+      "since": "2026-11-28T09:30:00Z",
+      "resolved_at": null
+    },
+    "event": {
+      "type": "proposal_answered",
+      "by_owner_or_wiz": false,
+      "at": "2026-11-28T10:15:00Z"
+    },
+    "read_at": "2026-11-28T10:30:00Z",
+    "expect_resolved": false
+  },
+  {
+    "name": "blocker-completed-and-owner-wait-cleared",
+    "kind": "blocker",
+    "before": {
+      "id": "blocker:syn-owner/syn-app#71",
+      "kind": "blocker",
+      "needs_owner": true,
+      "title": "Owner sign-off ticket for synthetic fixture",
+      "link": "https://github.com/syn-owner/syn-app/issues/71",
+      "record": {
+        "repository": "syn-owner/syn-app",
+        "number": 71,
+        "comment_id": null
+      },
+      "since": "2026-11-28T09:40:00Z",
+      "resolved_at": null
+    },
+    "event": {
+      "type": "blockers_updated",
+      "blocker_close_reasons": [
+        "COMPLETED"
+      ],
+      "owner_wait_cleared": true,
+      "at": "2026-11-28T10:16:00Z"
+    },
+    "read_at": "2026-11-28T10:30:00Z",
+    "expect_resolved": true
+  },
+  {
+    "name": "blocker-not-planned-does-not-resolve-per-b2",
+    "kind": "blocker",
+    "before": {
+      "id": "blocker:syn-owner/syn-app#72",
+      "kind": "blocker",
+      "needs_owner": false,
+      "title": "Wire queue consumer after schema ticket",
+      "link": "https://github.com/syn-owner/syn-app/issues/72",
+      "record": {
+        "repository": "syn-owner/syn-app",
+        "number": 72,
+        "comment_id": null
+      },
+      "since": "2026-11-28T09:45:00Z",
+      "resolved_at": null
+    },
+    "event": {
+      "type": "blockers_updated",
+      "blocker_close_reasons": [
+        "NOT_PLANNED"
+      ],
+      "owner_wait_cleared": true,
+      "at": "2026-11-28T10:16:00Z"
+    },
+    "read_at": "2026-11-28T10:30:00Z",
+    "expect_resolved": false
+  },
+  {
+    "name": "quota-switch-reset-time-passed",
+    "kind": "quota-switch",
+    "before": {
+      "id": "quota:syn-owner/syn-app#80:2006",
+      "kind": "quota-switch",
+      "needs_owner": false,
+      "title": "Reviewer fallback after usage limit",
+      "link": "https://github.com/syn-owner/syn-app/issues/80#issuecomment-2006",
+      "record": {
+        "repository": "syn-owner/syn-app",
+        "number": 80,
+        "comment_id": 2006
+      },
+      "since": "2026-11-28T09:50:00Z",
+      "resolved_at": null
+    },
+    "event": {
+      "type": "clock",
+      "resets_at": "2026-11-28T10:20:00Z"
+    },
+    "read_at": "2026-11-28T10:30:00Z",
+    "expect_resolved": true
+  },
+  {
+    "name": "quota-switch-before-reset-stays-open",
+    "kind": "quota-switch",
+    "before": {
+      "id": "quota:syn-owner/syn-app#80:2006",
+      "kind": "quota-switch",
+      "needs_owner": false,
+      "title": "Reviewer fallback after usage limit",
+      "link": "https://github.com/syn-owner/syn-app/issues/80#issuecomment-2006",
+      "record": {
+        "repository": "syn-owner/syn-app",
+        "number": 80,
+        "comment_id": 2006
+      },
+      "since": "2026-11-28T09:50:00Z",
+      "resolved_at": null
+    },
+    "event": {
+      "type": "clock",
+      "resets_at": "2026-11-28T16:00:00Z"
+    },
+    "read_at": "2026-11-28T10:30:00Z",
+    "expect_resolved": false
+  },
+  {
+    "name": "driver-suggestion-enabled-in-settings",
+    "kind": "driver-suggestion",
+    "before": {
+      "id": "driver:syn-owner/syn-app#81:2007",
+      "kind": "driver-suggestion",
+      "needs_owner": false,
+      "title": "Overflow driver suggested while home is full",
+      "link": "https://github.com/syn-owner/syn-app/issues/81#issuecomment-2007",
+      "record": {
+        "repository": "syn-owner/syn-app",
+        "number": 81,
+        "comment_id": 2007
+      },
+      "since": "2026-11-28T09:55:00Z",
+      "resolved_at": null
+    },
+    "event": {
+      "type": "settings_driver",
+      "driver": "boat",
+      "enabled": true,
+      "at": "2026-11-28T10:18:00Z"
+    },
+    "read_at": "2026-11-28T10:30:00Z",
+    "expect_resolved": true
+  },
+  {
+    "name": "driver-suggestion-still-off-stays-open",
+    "kind": "driver-suggestion",
+    "before": {
+      "id": "driver:syn-owner/syn-app#81:2007",
+      "kind": "driver-suggestion",
+      "needs_owner": false,
+      "title": "Overflow driver suggested while home is full",
+      "link": "https://github.com/syn-owner/syn-app/issues/81#issuecomment-2007",
+      "record": {
+        "repository": "syn-owner/syn-app",
+        "number": 81,
+        "comment_id": 2007
+      },
+      "since": "2026-11-28T09:55:00Z",
+      "resolved_at": null
+    },
+    "event": {
+      "type": "settings_driver",
+      "driver": "boat",
+      "enabled": false,
+      "at": "2026-11-28T10:18:00Z"
+    },
+    "read_at": "2026-11-28T10:30:00Z",
+    "expect_resolved": false
+  }
+]

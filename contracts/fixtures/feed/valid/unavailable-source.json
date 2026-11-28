@@ -1,0 +1,15 @@
+{
+  "schema": "openwiz.feed.v1",
+  "read_at": "2026-11-28T10:30:00Z",
+  "budget": {
+    "used": 2,
+    "allowed": 60
+  },
+  "cards": [],
+  "unavailable": [
+    {
+      "source": "syn-owner/syn-app:pulls",
+      "reason": "GitHub API rate limited"
+    }
+  ]
+}

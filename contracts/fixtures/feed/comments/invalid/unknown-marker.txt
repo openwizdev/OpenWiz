@@ -1,0 +1,2 @@
+openwiz:notify v1
+message: synthetic

@@ -1,0 +1,25 @@
+{
+  "schema": "openwiz.feed.v1",
+  "read_at": "2026-11-28T10:30:00Z",
+  "budget": {
+    "used": 4,
+    "allowed": 60
+  },
+  "cards": [
+    {
+      "id": "key:syn-owner/syn-app#61:2003",
+      "kind": "key-needed",
+      "needs_owner": true,
+      "title": "Need key sk-syn-0000000000000000 for review",
+      "link": "https://github.com/syn-owner/syn-app/issues/61#issuecomment-2003",
+      "record": {
+        "repository": "syn-owner/syn-app",
+        "number": 61,
+        "comment_id": 2003
+      },
+      "since": "2026-11-28T09:25:00Z",
+      "resolved_at": null
+    }
+  ],
+  "unavailable": []
+}

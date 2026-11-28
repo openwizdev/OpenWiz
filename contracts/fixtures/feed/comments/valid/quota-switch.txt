@@ -1,0 +1,5 @@
+openwiz:quota-switch v1
+role: reviewer
+from: codex:gpt-6.2-sol:medium:codex-work
+to: codex:vendor/demo:medium:codex-work
+resets_at: 2026-11-28T16:00:00Z

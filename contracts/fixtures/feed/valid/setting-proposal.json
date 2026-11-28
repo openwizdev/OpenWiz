@@ -1,0 +1,25 @@
+{
+  "schema": "openwiz.feed.v1",
+  "read_at": "2026-11-28T10:30:00Z",
+  "budget": {
+    "used": 4,
+    "allowed": 60
+  },
+  "cards": [
+    {
+      "id": "setting:syn-owner/syn-app#62:2004",
+      "kind": "setting-proposal",
+      "needs_owner": true,
+      "title": "Raise builder effort for widget tests",
+      "link": "https://github.com/syn-owner/syn-app/issues/62#issuecomment-2004",
+      "record": {
+        "repository": "syn-owner/syn-app",
+        "number": 62,
+        "comment_id": 2004
+      },
+      "since": "2026-11-28T09:30:00Z",
+      "resolved_at": null
+    }
+  ],
+  "unavailable": []
+}

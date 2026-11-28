@@ -1,0 +1,7 @@
+{
+  "schema": "openwiz.feed-pinged.v1",
+  "pinged": {
+    "pr:syn-owner/syn-app#42@1111111111111111111111111111111111111111": "2026-11-28T09:16:00Z",
+    "spec:syn-owner/syn-app#10:2001": "2026-11-28T09:01:00Z"
+  }
+}

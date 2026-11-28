@@ -1,0 +1,16 @@
+Red run (#3410), before the contract and schema existed.
+Command: python3 -I contracts/fixtures/feed/test_fixtures.py (exit 1)
+
+test_blocker_distinguishes_owner_waiting_from_scroll_only (__main__.FeedContract.test_blocker_distinguishes_owner_waiting_from_scroll_only) ... FAIL
+test_each_invalid_feed_fixture_changes_one_top_level_field (__main__.FeedContract.test_each_invalid_feed_fixture_changes_one_top_level_field) ... FAIL
+test_every_invalid_feed_fixture_is_refused_for_its_rule (__main__.FeedContract.test_every_invalid_feed_fixture_is_refused_for_its_rule) ... FAIL
+test_every_valid_feed_fixture_is_accepted (__main__.FeedContract.test_every_valid_feed_fixture_is_accepted) ... FAIL
+test_nothing_real_in_contract_schema_or_fixtures (__main__.FeedContract.test_nothing_real_in_contract_schema_or_fixtures) ... FAIL
+test_one_ping_rule_and_ledger_shape (__main__.FeedContract.test_one_ping_rule_and_ledger_shape) ... FAIL
+test_privacy_refuses_key_email_and_account_id_shapes (__main__.FeedContract.test_privacy_refuses_key_email_and_account_id_shapes) ... FAIL
+test_resolution_transitions_cover_every_kind_and_leave_needs_you (__main__.FeedContract.test_resolution_transitions_cover_every_kind_and_leave_needs_you) ... FAIL
+test_the_contract_documents_all_fields_kinds_forms_and_rules (__main__.FeedContract.test_the_contract_documents_all_fields_kinds_forms_and_rules) ... FAIL
+test_valid_and_invalid_comment_forms (__main__.FeedContract.test_valid_and_invalid_comment_forms) ... FAIL
+AssertionError: False is not true : feed.v1.md is missing
+Ran 10 tests in 0.001s
+FAILED (failures=10)

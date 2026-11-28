@@ -1,0 +1,6 @@
+openwiz:setting-proposal v1
+path: roles.builder.effort
+current: medium
+proposed: high
+reason: Two builds stalled on medium effort and passed on high.
+role: orchestrator

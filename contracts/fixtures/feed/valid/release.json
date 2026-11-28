@@ -1,0 +1,25 @@
+{
+  "schema": "openwiz.feed.v1",
+  "read_at": "2026-11-28T10:30:00Z",
+  "budget": {
+    "used": 4,
+    "allowed": 60
+  },
+  "cards": [
+    {
+      "id": "release:syn-owner/syn-app#50:2002",
+      "kind": "release",
+      "needs_owner": true,
+      "title": "Release 0.2.0-syn.1 candidate",
+      "link": "https://github.com/syn-owner/syn-app/issues/50#issuecomment-2002",
+      "record": {
+        "repository": "syn-owner/syn-app",
+        "number": 50,
+        "comment_id": 2002
+      },
+      "since": "2026-11-28T09:20:00Z",
+      "resolved_at": null
+    }
+  ],
+  "unavailable": []
+}

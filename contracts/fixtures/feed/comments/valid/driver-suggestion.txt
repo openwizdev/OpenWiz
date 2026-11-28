@@ -1,0 +1,4 @@
+openwiz:driver-suggestion v1
+driver: boat
+reason: home full
+listing: https://openwiz.dev/market/drivers/boat

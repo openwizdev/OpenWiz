@@ -1,0 +1,104 @@
+{
+  "spec-to-approve-no-comment-id.json": {
+    "rule": "spec_comment_id",
+    "by": "schema",
+    "at": "$.cards[0]",
+    "from": "spec-to-approve.json"
+  },
+  "pr-ready-to-merge-bad-id.json": {
+    "rule": "pr_id_shape",
+    "by": "schema",
+    "at": "$.cards[0].id",
+    "from": "pr-ready-to-merge.json"
+  },
+  "release-not-needs-owner.json": {
+    "rule": "needs_owner_open",
+    "by": "schema",
+    "at": "$.cards[0].needs_owner",
+    "from": "release.json"
+  },
+  "key-needed-not-needs-owner.json": {
+    "rule": "needs_owner_open",
+    "by": "schema",
+    "at": "$.cards[0].needs_owner",
+    "from": "key-needed.json"
+  },
+  "setting-proposal-no-comment-id.json": {
+    "rule": "setting_comment_id",
+    "by": "schema",
+    "at": "$.cards[0]",
+    "from": "setting-proposal.json"
+  },
+  "blocker-bad-link.json": {
+    "rule": "link_matches_record",
+    "by": "rule",
+    "at": "$.cards[0].link",
+    "from": "blocker-scroll-only.json"
+  },
+  "quota-switch-needs-owner.json": {
+    "rule": "scroll_only",
+    "by": "schema",
+    "at": "$.cards[0].needs_owner",
+    "from": "quota-switch.json"
+  },
+  "driver-suggestion-needs-owner.json": {
+    "rule": "scroll_only",
+    "by": "schema",
+    "at": "$.cards[0].needs_owner",
+    "from": "driver-suggestion.json"
+  },
+  "resolved-still-needs-owner.json": {
+    "rule": "resolved_leaves_needs_you",
+    "by": "schema",
+    "at": "$.cards[0].needs_owner",
+    "from": "resolved-leaves-needs-you.json"
+  },
+  "resolved-before-since.json": {
+    "rule": "time_order",
+    "by": "rule",
+    "at": "$.cards[0].resolved_at",
+    "from": "resolved-leaves-needs-you.json"
+  },
+  "duplicate-card-id.json": {
+    "rule": "unique_card_id",
+    "by": "rule",
+    "at": "$.cards[1].id",
+    "from": "spec-to-approve.json"
+  },
+  "budget-over-allowed.json": {
+    "rule": "budget_within_allowed",
+    "by": "rule",
+    "at": "$.budget.used",
+    "from": "spec-to-approve.json"
+  },
+  "missing-unavailable.json": {
+    "rule": "unavailable_required",
+    "by": "schema",
+    "at": "$",
+    "from": "spec-to-approve.json"
+  },
+  "unknown-field.json": {
+    "rule": "unknown_field",
+    "by": "schema",
+    "at": "$.cards[0].chat_excerpt",
+    "from": "spec-to-approve.json"
+  },
+  "card-key-shaped.json": {
+    "rule": "privacy_key",
+    "by": "schema",
+    "at": "$.cards[0].title",
+    "from": "key-needed.json"
+  },
+  "card-email.json": {
+    "rule": "privacy_email",
+    "by": "schema",
+    "at": "$.cards[0].title",
+    "from": "blocker-needs-owner.json"
+  },
+  "card-account-id.json": {
+    "rule": "privacy_account_id",
+    "by": "schema",
+    "at": "$.cards[0].title",
+    "from": "quota-switch.json"
+  }
+}

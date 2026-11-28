@@ -1,0 +1,25 @@
+{
+  "schema": "openwiz.feed.v1",
+  "read_at": "2026-11-28T10:30:00Z",
+  "budget": {
+    "used": 4,
+    "allowed": 60
+  },
+  "cards": [
+    {
+      "id": "driver:syn-owner/syn-app#81:2007",
+      "kind": "driver-suggestion",
+      "needs_owner": true,
+      "title": "Overflow driver suggested while home is full",
+      "link": "https://github.com/syn-owner/syn-app/issues/81#issuecomment-2007",
+      "record": {
+        "repository": "syn-owner/syn-app",
+        "number": 81,
+        "comment_id": 2007
+      },
+      "since": "2026-11-28T09:55:00Z",
+      "resolved_at": null
+    }
+  ],
+  "unavailable": []
+}

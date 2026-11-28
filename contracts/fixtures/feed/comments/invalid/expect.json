@@ -1,0 +1,50 @@
+{
+  "setting-proposal-unknown-path.txt": {
+    "form": "setting-proposal",
+    "rule": "settings_path"
+  },
+  "setting-proposal-fixed-path.txt": {
+    "form": "setting-proposal",
+    "rule": "settings_path"
+  },
+  "setting-proposal-noop.txt": {
+    "form": "setting-proposal",
+    "rule": "proposal_differs"
+  },
+  "setting-proposal-email.txt": {
+    "form": "setting-proposal",
+    "rule": "privacy_email"
+  },
+  "key-needed-with-value.txt": {
+    "form": "key-needed",
+    "rule": "fields_exact"
+  },
+  "key-needed-key-shaped.txt": {
+    "form": "key-needed",
+    "rule": "privacy_key"
+  },
+  "quota-switch-account-id.txt": {
+    "form": "quota-switch",
+    "rule": "privacy_account_id"
+  },
+  "quota-switch-bad-reset.txt": {
+    "form": "quota-switch",
+    "rule": "utc_time"
+  },
+  "quota-switch-same-choice.txt": {
+    "form": "quota-switch",
+    "rule": "switch_differs"
+  },
+  "driver-suggestion-bad-reason.txt": {
+    "form": "driver-suggestion",
+    "rule": "suggestion_reason"
+  },
+  "driver-suggestion-non-https.txt": {
+    "form": "driver-suggestion",
+    "rule": "listing_url"
+  },
+  "unknown-marker.txt": {
+    "form": "unknown",
+    "rule": "unknown_marker"
+  }
+}
