@@ -572,6 +572,7 @@ class Boat(unittest.TestCase):
                 err = json.loads(started.stdout)
                 run_id = re.search(r'openwiz-(run-[0-9a-f]{12})', err['next']).group(1)
                 self.assertIn('sandbox id', err['error'])
+                self.assertIn('boat list --all', err['next'])
                 self.assertNotIn('stopped', err)
                 self.assertNotIn(bad, started.stdout + started.stderr)
                 state_dir = self.env['OPENWIZ_BOAT_STATE']
@@ -594,6 +595,7 @@ class Boat(unittest.TestCase):
                 self.assertNotIn('stopped', answer)
                 self.assertIn('was not stopped', answer['error'])
                 self.assertIn('openwiz-' + run_id, answer['next'])
+                self.assertIn('boat list --all', answer['next'])
                 self.assertNotIn(bad, stopped.stdout + stopped.stderr)
                 with open(args) as f:
                     self.assertEqual([json.loads(row)[0] for row in f], ['new'])
@@ -606,6 +608,80 @@ class Boat(unittest.TestCase):
                     self.assertEqual([json.loads(row)[0] for row in f], ['new'])
                 self.assertEqual(self.sandboxes()[other], 'running')
                 self.assertEqual(self.sandboxes()[decoy], 'running')
+
+    def test_saved_unusable_ids_are_refused_on_stop_and_wake_even_without_stop_marker(self):
+        breaks = self.wrapper('breaks-unusable-id', RAISES)
+        state_dir = self.env['OPENWIZ_BOAT_STATE']
+        os.makedirs(state_dir, mode=0o700, exist_ok=True)
+        ended_turn = {'pid': 999999, 'since': None, 'supervisor': 999999, 'supervisor_since': None}
+
+        def seed(run_id, sandbox_id, convo_id):
+            with open(self.env['FAKE_BOAT_STATE'], 'w') as f:
+                json.dump({'sandboxes': {
+                    sandbox_id: {'name': 'openwiz-' + run_id, 'state': 'running',
+                                 'conversations': {convo_id: {'note': None}}, 'interrupts': 0}}}, f)
+            with open(os.path.join(state_dir, run_id + '.json'), 'w') as f:
+                json.dump({'request': REQUEST, 'sandbox': sandbox_id, 'conversation': convo_id,
+                           'turns': [ended_turn], 'stopped': False, 'starting': False}, f)
+            with open(os.path.join(state_dir, run_id + '.lock'), 'w') as f:
+                f.write('')
+
+        bad_sandbox_cases = (
+            ('credential-marked', 'run-000000000001', 'sk-' + 'Synthetic0Boat0Id' + self.mark, False),
+            ('credential-read-only', 'run-000000000002', 'sk-' + 'Synthetic0Boat0Id' + self.mark, True),
+            ('malformed-direct-wake', 'run-000000000003', 'bx ' + self.mark, None),
+        )
+        for label, run_id, bad, read_only in bad_sandbox_cases:
+            with self.subTest(case=label):
+                seed(run_id, bad, 'c1')
+                args = os.path.join(self.folder, 'boat-args-' + label)
+                env = dict(self.env, FAKE_BOAT_ARGS=args)
+                if read_only is not None:
+                    stop_prog = breaks if read_only else DRIVER
+                    stop_env = dict(env, READ_ONLY='1') if read_only else env
+                    stopped = subprocess.run([stop_prog, 'stop'], input=json.dumps({'run': run_id}),
+                                             env=stop_env, capture_output=True, text=True, timeout=120)
+                    self.assertEqual(stopped.returncode, 1, stopped.stdout + stopped.stderr)
+                    answer = json.loads(stopped.stdout)
+                    self.assertNotIn('stopped', answer)
+                    self.assertIn('was not stopped', answer['error'])
+                    self.assertIn('openwiz-' + run_id, answer['next'])
+                    self.assertNotIn(bad, stopped.stdout + stopped.stderr)
+                    self.assertFalse(os.path.exists(args))
+                woken = subprocess.run([DRIVER, 'wake'], input=json.dumps({'run': run_id}),
+                                       env=env, capture_output=True, text=True, timeout=120)
+                self.assertEqual(woken.returncode, 1, woken.stdout + woken.stderr)
+                woke_ans = json.loads(woken.stdout)
+                self.assertNotIn('woke', woke_ans)
+                self.assertNotIn(bad, woken.stdout + woken.stderr)
+                self.assertFalse(os.path.exists(args), 'wake must not call boat with an unusable sandbox id')
+                if read_only is not None:
+                    self.assertIn('boat list --all', answer['next'])
+                    if not read_only:
+                        with open(os.path.join(state_dir, run_id + '.lock'), 'rb') as f:
+                            self.assertEqual(f.read(9), b'stopping\n')
+
+        for kind, bad_convo in (('credential', 'sk-' + 'Synthetic0Convo0Id' + self.mark),
+                                ('malformed', 'conv ' + self.mark)):
+            with self.subTest(bad_conversation=kind):
+                run_id = 'run-00000000001' + ('a' if kind == 'credential' else 'b')
+                good_box = 'bx_good_' + kind + self.mark
+                seed(run_id, good_box, bad_convo)
+                args = os.path.join(self.folder, 'boat-args-convo-' + kind)
+                env = dict(self.env, FAKE_BOAT_ARGS=args)
+                woken = subprocess.run([DRIVER, 'wake'], input=json.dumps({'run': run_id}),
+                                       env=env, capture_output=True, text=True, timeout=120)
+                self.assertEqual(woken.returncode, 1, woken.stdout + woken.stderr)
+                self.assertNotIn('woke', json.loads(woken.stdout))
+                self.assertNotIn(bad_convo, woken.stdout + woken.stderr)
+                self.assertFalse(os.path.exists(args), 'wake must not call boat with an unusable conversation id')
+                stopped = subprocess.run([DRIVER, 'stop'], input=json.dumps({'run': run_id}),
+                                         env=env, capture_output=True, text=True, timeout=120)
+                self.assertEqual(stopped.returncode, 0, stopped.stdout + stopped.stderr)
+                self.assertEqual(json.loads(stopped.stdout), {'run': run_id, 'stopped': True})
+                self.assertEqual(self.sandboxes()[good_box], 'stopped')
+                with open(args) as f:
+                    self.assertNotIn(bad_convo, f.read())
 
     def test_a_start_that_fails_leaves_no_sandbox_running(self):
         # catches: a sandbox left running (and billing) when the agent can't start, or created for a
