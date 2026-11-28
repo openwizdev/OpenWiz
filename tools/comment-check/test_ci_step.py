@@ -7,6 +7,7 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
+SELF = Path(__file__).resolve().relative_to(ROOT).as_posix()
 WORKFLOW = ROOT / '.github' / 'workflows' / 'ci.yml'
 STEP = '      - name: The comment check (#1817)'
 CARRIED = ['tools/comment-check/check.py', 'tools/comment-check/test_check.py',
@@ -24,7 +25,7 @@ def step_script():
     for line in body[1:]:
         if line and not line.startswith('          '):
             break
-        if 'docs/evidence/1817/' not in line:
+        if SELF not in line:
             script.append(line[10:])
     return '\n'.join(script) + '\n'
 
