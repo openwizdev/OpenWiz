@@ -1,0 +1,21 @@
+FF
+======================================================================
+FAIL: test_contract_pins_owner_policy_and_kernel_swap_point (__main__.HotUpdateFixtures.test_contract_pins_owner_policy_and_kernel_swap_point)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/hot-update/test_fixtures.py", line 47, in test_contract_pins_owner_policy_and_kernel_swap_point
+    self.assertTrue(path.is_file(), "hot-update contract must state the owner and swap rules")
+AssertionError: False is not true : hot-update contract must state the owner and swap rules
+
+======================================================================
+FAIL: test_fixture_pairs (__main__.HotUpdateFixtures.test_fixture_pairs)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/hot-update/test_fixtures.py", line 29, in test_fixture_pairs
+    self.assertTrue(path.is_file(), "hot-update schema must exist for the fixture pairs")
+AssertionError: False is not true : hot-update schema must exist for the fixture pairs
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.002s
+
+FAILED (failures=2)
