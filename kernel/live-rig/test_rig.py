@@ -472,6 +472,93 @@ class Rig(unittest.TestCase):
         self.assertEqual((code, out, self.records()), (2, [], []), err)
         self.assertIn('git does not track', err)
 
+    def moved_host(self):
+        with open(os.path.join(self.hosts, 'template.json')) as f:
+            config = json.load(f)
+        self.commit_host('moved.json', dict(config, host='fixture-moved', driver='adapters/moved/driver'))
+        self.head = git(self.checkout, 'rev-parse', 'HEAD')
+
+    def package(self, folder):
+        os.makedirs(folder)
+        for name in ('driver', 'README.md', 'schema.json'):
+            shutil.copy2(os.path.join(ROOT, 'adapters', 'template', name), os.path.join(folder, name))
+        return folder
+
+    def test_a_moved_driver_runs_from_a_drivers_folder_and_a_driver_it_lacks_is_skipped_as_not_installed(self):
+        self.moved_host()
+        drivers = os.path.join(self.folder, 'drivers')
+        self.package(os.path.join(drivers, 'moved'))
+        code, out, err = self.rig('--drivers', drivers, '--host', 'fixture-moved')
+        self.assertEqual((code, out), (0, ['ran fixture-moved fake-harness: 5 of 5']), err)
+        record = self.record('fixture-moved')
+        self.assertEqual({k: record[k] for k in KEYS[6:10]},
+                         {'outcome': 'ran', 'skipped': None, 'kit_exit': 0, 'stdout': '\n'.join(PASS) + '\n'})
+        self.assertTrue(self.kit_calls())
+        os.remove(self.gh_log)
+        shutil.rmtree(self.out)
+        for extra in (('--drivers', drivers, '--host', 'fixture-template'), ('--host', 'fixture-moved')):
+            with self.subTest(extra):
+                name = 'template' if 'fixture-template' in extra else 'moved'
+                code, out, err = self.rig(*extra)
+                self.assertEqual((code, out), (0, ['skipped %s fake-harness: not installed: driver %s' % (
+                    extra[-1], name)]), err)
+                self.assertEqual(self.record(extra[-1])['skipped'], 'not installed: driver ' + name)
+                self.assertEqual(self.kit_calls(), [])
+                shutil.rmtree(self.out)
+
+    def test_a_moved_driver_runs_from_an_unpacked_release_for_the_one_host_named(self):
+        self.moved_host()
+        release = self.package(os.path.join(self.folder, 'release'))
+        code, out, err = self.rig('--release', release, '--host', 'fixture-moved')
+        self.assertEqual((code, out), (0, ['ran fixture-moved fake-harness: 5 of 5']), err)
+        self.assertEqual(self.record('fixture-moved')['stdout'], '\n'.join(PASS) + '\n')
+        os.remove(self.gh_log)
+        shutil.rmtree(self.out)
+        for extra in (('--release', release), ('--release', release, '--drivers', self.folder, '--host',
+                                                'fixture-moved')):
+            with self.subTest(extra):
+                code, out, err = self.rig(*extra)
+                self.assertEqual((code, out), (2, []), err)
+                self.assertIn('rig.py: ', err)
+                self.assertEqual((self.kit_calls(), self.records()), ([], []))
+
+    def test_a_linked_or_irregular_driver_in_a_drivers_folder_or_release_exits_2_and_runs_nothing(self):
+        self.moved_host()
+        real = self.package(os.path.join(self.folder, 'real'))
+        drivers = os.path.join(self.folder, 'drivers')
+        linked_folder, linked_driver, not_file = (os.path.join(self.folder, n) for n in ('a', 'b', 'c'))
+        os.makedirs(os.path.join(linked_folder))
+        os.symlink(real, os.path.join(linked_folder, 'moved'))
+        os.makedirs(os.path.join(linked_driver, 'moved'))
+        os.symlink(os.path.join(real, 'driver'), os.path.join(linked_driver, 'moved', 'driver'))
+        os.makedirs(os.path.join(not_file, 'moved', 'driver'))
+        os.makedirs(drivers)
+        os.symlink(os.path.join(real, 'driver'), os.path.join(drivers, 'driver'))
+        for extra in (('--drivers', linked_folder), ('--drivers', linked_driver), ('--drivers', not_file),
+                      ('--release', drivers), ('--release', os.path.join(not_file, 'moved'))):
+            with self.subTest(extra):
+                code, out, err = self.rig(*extra + ('--host', 'fixture-moved'))
+                self.assertEqual((code, out), (2, []), err)
+                self.assertIn('rig.py: ', err)
+                self.assertEqual((self.kit_calls(), self.records()), ([], []))
+
+    def test_every_tracked_host_config_still_validates_and_names_its_driver_by_host(self):
+        rig = self.module()
+        for folder in ('hosts', os.path.join('vps', 'hosts')):
+            with self.subTest(folder):
+                names = sorted(n for n in os.listdir(os.path.join(HERE, folder)) if n.endswith('.json'))
+                hosts = [rig.load_host(os.path.join(HERE, folder, n)) for n in names]
+                self.assertTrue(hosts)
+                for host in hosts:
+                    name = host['driver'].split('/')[1]
+                    self.assertEqual(rig.driver_name(host), name)
+                    self.assertEqual(rig.driver_path(host, None, None),
+                                     os.path.join(rig.ROOT, 'adapters', name, 'driver'))
+                    self.assertEqual(rig.driver_path(host, self.folder, None),
+                                     os.path.join(os.path.realpath(self.folder), name, 'driver'))
+                    self.assertEqual(rig.driver_path(host, None, self.folder),
+                                     os.path.join(os.path.realpath(self.folder), 'driver'))
+
     def test_a_lock_error_other_than_another_run_exits_2(self):
         rig = self.module()
 
