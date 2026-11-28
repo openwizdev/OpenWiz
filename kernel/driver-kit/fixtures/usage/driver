@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import time
+
+fixtures = Path(__file__).resolve().parents[4] / "contracts" / "fixtures" / "usage"
+mode = os.environ["USAGE_FIXTURE"]
+assert sys.argv[1:] == ["usage"]
+request = json.load(sys.stdin)
+assert request == {"accounts": [{"label": "demo", "harness": "claude"}]}
+answer = json.loads((fixtures / "valid" / "response.json").read_text())
+fake = "token" + "=" + "fixture-value"
+
+if mode == "none":
+    print(json.dumps({"error": "unknown command", "next": "run one of: version, schema, start, wake, stop"}))
+    sys.exit(1)
+if mode == "refused":
+    print(json.dumps({"error": "probe failed", "next": "check the meter"}))
+    sys.exit(1)
+if mode == "lane":
+    answer = answer["lanes"][0]
+if mode == "stdout":
+    answer["lanes"][0]["label"] = fake
+if mode == "escaped":
+    print(json.dumps(answer).replace('"demo"', r'"tok\u0065n=fixture-value"'))
+    sys.exit(0)
+if mode == "stderr":
+    print(fake, file=sys.stderr)
+if mode == "unavailable":
+    answer["lanes"] = [json.loads((fixtures / "invalid" / "unavailable-zero.json").read_text())]
+if mode == "environment":
+    subprocess.run([sys.executable, "-c", "import time; time.sleep(0.3)"], check=True,
+                   env={"PATH": os.defpath, "USAGE_EXAMPLE": fake})
+if mode in ("leftover", "timeout"):
+    child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"],
+                             start_new_session=True, env={})
+    Path(os.environ["USAGE_PID_FILE"]).write_text(str(child.pid))
+if mode == "timeout":
+    time.sleep(30)
+print(json.dumps(answer))

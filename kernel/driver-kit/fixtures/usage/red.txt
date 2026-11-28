@@ -1,0 +1,115 @@
+FFFFFFFFFFF
+======================================================================
+FAIL: test_child_environment_is_sampled_during_the_probe (__main__.UsageCheck.test_child_environment_is_sampled_during_the_probe)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/runner/OpenWiz/kernel/driver-kit/test_usage_check.py", line 60, in test_child_environment_is_sampled_during_the_probe
+    self.check("environment", "usage: fail process environment contained a credential", 1)
+  File "/home/runner/OpenWiz/kernel/driver-kit/test_usage_check.py", line 15, in check
+    self.assertTrue(script.is_file(), "usage_check.py is missing")
+AssertionError: False is not true : usage_check.py is missing
+
+======================================================================
+FAIL: test_credential_output_is_not_echoed (__main__.UsageCheck.test_credential_output_is_not_echoed) (mode='stdout')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/runner/OpenWiz/kernel/driver-kit/test_usage_check.py", line 57, in test_credential_output_is_not_echoed
+    self.check(mode, "usage: fail output contained a credential", 1)
+  File "/home/runner/OpenWiz/kernel/driver-kit/test_usage_check.py", line 15, in check
+    self.assertTrue(script.is_file(), "usage_check.py is missing")
+AssertionError: False is not true : usage_check.py is missing
+
+======================================================================
+FAIL: test_credential_output_is_not_echoed (__main__.UsageCheck.test_credential_output_is_not_echoed) (mode='escaped')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/runner/OpenWiz/kernel/driver-kit/test_usage_check.py", line 57, in test_credential_output_is_not_echoed
+    self.check(mode, "usage: fail output contained a credential", 1)
+  File "/home/runner/OpenWiz/kernel/driver-kit/test_usage_check.py", line 15, in check
+    self.assertTrue(script.is_file(), "usage_check.py is missing")
+AssertionError: False is not true : usage_check.py is missing
+
+======================================================================
+FAIL: test_credential_output_is_not_echoed (__main__.UsageCheck.test_credential_output_is_not_echoed) (mode='stderr')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/runner/OpenWiz/kernel/driver-kit/test_usage_check.py", line 57, in test_credential_output_is_not_echoed
+    self.check(mode, "usage: fail output contained a credential", 1)
+  File "/home/runner/OpenWiz/kernel/driver-kit/test_usage_check.py", line 15, in check
+    self.assertTrue(script.is_file(), "usage_check.py is missing")
+AssertionError: False is not true : usage_check.py is missing
+
+======================================================================
+FAIL: test_detached_child_is_reported_and_reaped (__main__.UsageCheck.test_detached_child_is_reported_and_reaped)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/runner/OpenWiz/kernel/driver-kit/test_usage_check.py", line 63, in test_detached_child_is_reported_and_reaped
+    self.check("leftover", "usage: fail a driver process is still running", 1, child=True)
+  File "/home/runner/OpenWiz/kernel/driver-kit/test_usage_check.py", line 15, in check
+    self.assertTrue(script.is_file(), "usage_check.py is missing")
+AssertionError: False is not true : usage_check.py is missing
+
+======================================================================
+FAIL: test_driver_must_return_a_response_envelope (__main__.UsageCheck.test_driver_must_return_a_response_envelope)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/runner/OpenWiz/kernel/driver-kit/test_usage_check.py", line 52, in test_driver_must_return_a_response_envelope
+    self.check("lane", "usage: fail response does not match the usage schema", 1)
+  File "/home/runner/OpenWiz/kernel/driver-kit/test_usage_check.py", line 15, in check
+    self.assertTrue(script.is_file(), "usage_check.py is missing")
+AssertionError: False is not true : usage_check.py is missing
+
+======================================================================
+FAIL: test_no_usage (__main__.UsageCheck.test_no_usage)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/runner/OpenWiz/kernel/driver-kit/test_usage_check.py", line 43, in test_no_usage
+    self.check("none", "usage: none", 0)
+  File "/home/runner/OpenWiz/kernel/driver-kit/test_usage_check.py", line 15, in check
+    self.assertTrue(script.is_file(), "usage_check.py is missing")
+AssertionError: False is not true : usage_check.py is missing
+
+======================================================================
+FAIL: test_other_refusal_is_a_failure (__main__.UsageCheck.test_other_refusal_is_a_failure)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/runner/OpenWiz/kernel/driver-kit/test_usage_check.py", line 46, in test_other_refusal_is_a_failure
+    self.check("refused", "usage: fail driver refused usage", 1)
+  File "/home/runner/OpenWiz/kernel/driver-kit/test_usage_check.py", line 15, in check
+    self.assertTrue(script.is_file(), "usage_check.py is missing")
+AssertionError: False is not true : usage_check.py is missing
+
+======================================================================
+FAIL: test_timeout_reports_the_limit_and_reaps_children (__main__.UsageCheck.test_timeout_reports_the_limit_and_reaps_children)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/runner/OpenWiz/kernel/driver-kit/test_usage_check.py", line 66, in test_timeout_reports_the_limit_and_reaps_children
+    self.check("timeout", "usage: fail driver timed out", 1, timeout="0.5", child=True)
+  File "/home/runner/OpenWiz/kernel/driver-kit/test_usage_check.py", line 15, in check
+    self.assertTrue(script.is_file(), "usage_check.py is missing")
+AssertionError: False is not true : usage_check.py is missing
+
+======================================================================
+FAIL: test_unavailable_cannot_report_zero (__main__.UsageCheck.test_unavailable_cannot_report_zero)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/runner/OpenWiz/kernel/driver-kit/test_usage_check.py", line 49, in test_unavailable_cannot_report_zero
+    self.check("unavailable", "usage: fail response does not match the usage schema", 1)
+  File "/home/runner/OpenWiz/kernel/driver-kit/test_usage_check.py", line 15, in check
+    self.assertTrue(script.is_file(), "usage_check.py is missing")
+AssertionError: False is not true : usage_check.py is missing
+
+======================================================================
+FAIL: test_valid_response (__main__.UsageCheck.test_valid_response)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/runner/OpenWiz/kernel/driver-kit/test_usage_check.py", line 40, in test_valid_response
+    self.check("good", "usage: pass", 0)
+  File "/home/runner/OpenWiz/kernel/driver-kit/test_usage_check.py", line 15, in check
+    self.assertTrue(script.is_file(), "usage_check.py is missing")
+AssertionError: False is not true : usage_check.py is missing
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.003s
+
+FAILED (failures=11)
