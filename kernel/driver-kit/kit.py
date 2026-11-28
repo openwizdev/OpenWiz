@@ -223,8 +223,12 @@ def read_bytes(path):
         os.close(fd)
 
 
+def lines(text):
+    return text.replace('\r\n', '\n').replace('\r', '\n')
+
+
 def read_text(path):
-    return read_bytes(path).decode(TEXT_ENCODING).replace('\r\n', '\n').replace('\r', '\n')
+    return lines(read_bytes(path).decode(TEXT_ENCODING))
 
 
 def started_at(pid):
@@ -343,7 +347,7 @@ class FakeHost:
                                         if not isinstance(req_body, dict):
                                             raise ValueError('not an object')
                                     rendered = _render_echo(a['body'], req_body, start)
-                                except (UnicodeDecodeError, ValueError):
+                                except (UnicodeDecodeError, ValueError, RecursionError):
                                     code, data = 400, json.dumps({'error': 'request body is not a JSON object'}).encode()
                                 except KeyError:
                                     code, data = 400, json.dumps({'error': 'echo field missing from request'}).encode()
@@ -457,10 +461,12 @@ class Kit:
 
     def call(self, cmd, request=None, env=None, canary=None):
         try:
-            p = subprocess.run([self.args.driver, cmd], input='' if request is None else json.dumps(request),
-                               env=env or self.env, capture_output=True, text=True, timeout=120)
+            p = subprocess.run([self.args.driver, cmd], input=('' if request is None else json.dumps(request)).encode(
+                TEXT_ENCODING), env=env or self.env, capture_output=True, timeout=120)
         except (OSError, subprocess.TimeoutExpired) as e:
             return 'bad', '%s did not finish: %s' % (cmd, e)
+        raw = p.stdout
+        p.stdout, p.stderr = (lines(b.decode(TEXT_ENCODING, 'replace')) for b in (p.stdout, p.stderr))
         if canary and canary[1] in p.stdout + p.stderr:
             # SECURITY: the kit's key canary; nothing of this output is shown.
             self.leak('the driver printed the %s key' % canary[0])
@@ -472,9 +478,11 @@ class Kit:
             # SECURITY: nothing of it is parsed or shown; any part could carry the credential into the kit's output.
             return held
         try:
-            out = parse(p.stdout)
+            out = parse(lines(raw.decode(TEXT_ENCODING)))
         except ValueError:
             return 'bad', '%s printed no single JSON value' % cmd
+        except RecursionError:
+            return 'bad', '%s printed JSON nested too deeply for the kit to read' % cmd
         if any(holds_credential(text) for text in texts(out)):
             self.leak('the driver printed a credential')
             return held
@@ -1036,7 +1044,7 @@ class Kit:
             return answers
         except FileNotFoundError:
             return []
-        except (OSError, ValueError, re.error, records_kit.Unreadable) as e:
+        except (OSError, ValueError, RecursionError, re.error, records_kit.Unreadable) as e:
             raise Unusable("cannot read the driver's fixtures/kit-host.json: %s" % e)
 
     def peer(self, port, server):
@@ -1238,7 +1246,7 @@ def listed(text):
 def holds_field(body, name, word):
     try:
         value = json.loads(body)
-    except ValueError:
+    except (ValueError, RecursionError):
         return False
     found = [value]
     while found:

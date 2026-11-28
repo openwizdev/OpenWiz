@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import http.client
 import importlib.machinery
 import importlib.util
 import json
@@ -684,6 +685,57 @@ class Kit(unittest.TestCase):
                     os.environ['PATH'] = real_path
                     self.tearDown()
                     self.setUp()
+
+    def unreadable_driver(self, out, err=b''):
+        driver = os.path.join(self.folder, 'odd-driver')
+        for name, data in (('out', out), ('err', err)):
+            with open(os.path.join(self.folder, name), 'wb') as f:
+                f.write(data)
+        with open(driver, 'w') as f:
+            f.write('#!/bin/sh\n%s "%s"\n%s "%s" >&2\n' % (shutil.which('cat'), os.path.join(self.folder, 'out'),
+                                                            shutil.which('cat'), os.path.join(self.folder, 'err')))
+        os.chmod(driver, 0o700)
+        return driver
+
+    def test_a_driver_answer_that_is_not_utf8_or_nests_too_deep_fails_its_call_and_the_kit_goes_on(self):
+        kit = module(os.path.join(HERE, 'kit.py'))
+        k = kit.Kit.__new__(kit.Kit)
+        k.env, k.schema, k.leaks, k.lock = dict(self.env), kit.load_schema(), [], threading.RLock()
+        answer = b'{"run": "run-1", "stopped": true}'
+        for out, err, want in ((b'{"run": "run-\xff"}', b'', ('bad', 'stop printed no single JSON value')),
+                               (b'[' * 100000, b'', ('bad', 'stop printed JSON nested too deeply for the kit to read')),
+                               (answer, b'\xff\xfe', ('ok', {'run': 'run-1', 'stopped': True}))):
+            with self.subTest(out[:20]):
+                k.args = argparse.Namespace(driver=self.unreadable_driver(out, err))
+                self.assertEqual(k.call('stop', {'run': 'run-1'}), want)
+        code, out, err = self.kit(self.unreadable_driver(b'{"driver": "\xff"}'), guard=False)
+        self.assertEqual((code, out[0]), (1, 'fail version: version printed no single JSON value'))
+        self.assertNotIn('Traceback', err)
+
+    def test_a_request_body_that_nests_too_deep_holds_no_field_and_gets_an_answer(self):
+        kit = module(os.path.join(HERE, 'kit.py'))
+        deep = b'{"effort": ' + b'[' * 100000 + b'}'
+        self.assertIs(kit.holds_field(deep, 'effort', 'medium'), False)
+        host = kit.FakeHost(answers=[{'method': 'POST', 'path': '/v1/.*', 'status': 200,
+                                      'body': {'id': '{{request.effort}}'}}])
+        self.addCleanup(host.close)
+        c = http.client.HTTPConnection('127.0.0.1', host.server.server_address[1], timeout=10)
+        c.request('POST', '/v1/sessions', body=deep)
+        r = c.getresponse()
+        self.assertEqual((r.status, json.loads(r.read())), (400, {'error': 'request body is not a JSON object'}))
+
+    def test_a_kit_host_file_that_nests_too_deep_stops_the_kit(self):
+        kit = module(os.path.join(HERE, 'kit.py'))
+        os.makedirs(os.path.join(self.folder, 'fixtures'))
+        k = kit.Kit.__new__(kit.Kit)
+        k.args = argparse.Namespace(driver=os.path.join(self.folder, 'driver'))
+        for depth in (100000, 990):
+            with self.subTest(depth):
+                with open(os.path.join(self.folder, 'fixtures', 'kit-host.json'), 'w') as f:
+                    f.write('{"answers": [{"method": "GET", "path": "/", "status": 200, "body": %s}]}'
+                            % ('[' * depth + ']' * depth))
+                with self.assertRaisesRegex(kit.Unusable, "cannot read the driver's fixtures/kit-host.json"):
+                    k.lifecycle()
 
     def test_a_path_diagnostic_never_prints_the_active_canary(self):
         kit = module(os.path.join(HERE, 'kit.py'))
