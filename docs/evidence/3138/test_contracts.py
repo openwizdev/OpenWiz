@@ -1,9 +1,3 @@
-"""Proofs for the records, release-manifest and fleet OpenWiz contracts.
-
-Needs `jsonschema` (Draft 2020-12). A stock Python has no such module.
-How to run it: docs/evidence/3239/README.md.
-"""
-
 import json
 import re
 import unittest
