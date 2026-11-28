@@ -95,11 +95,7 @@ and the pinned runtime by itself. No source checkout is needed.
 
 `python3 tools/install/setup/setup.py check --state-dir STATE` checks each connection
 independently and records one result code per component:
-CloudRoom (a live read through the installed `openwiz`; an inventory read alone never verifies
-it, so even a complete read stays unknown until a current login source exists, and a partial
-read is unknown too), the chosen harness, model and effort (`openwiz models`: a catalogue that may be
-CloudRoom's saved copy, so a listed harness stays unknown and an unlisted one is refused; no
-check here proves a harness login yet), your agents' own GitHub login (`gh`: a person's account
+CloudRoom (`cloudroom_not_needed` when `--host` is not `cloud`; otherwise `runtime/cloudroom/cloudroom.py status` when installed beside `setup.py`, which verifies sign-in as `cloudroom_login_verified`, falling back to `openwiz ls --json --limit 1` when `cloudroom.py` is absent), the chosen harness, model and effort (`openwiz models --json` for CloudRoom, or `claude`/`codex` on `PATH` plus `openwiz models --json --host <host>` for another host: a listed harness proves only that it is offered, and no check here proves a harness login yet), your agents' own GitHub login (`gh`: a person's account
 with push access), the App, and the project. For the App it signs a short JWT with the saved
 key, finds this App's installation for the selected repository's owner (capturing its id),
 requires it to be active, on selected repositories only and with exactly the service
@@ -112,8 +108,9 @@ check saves a result for each component, failures included, so a broken connecti
 earlier positive evidence. Each check takes a generation when it starts; one that finishes
 after a later-started check has saved exits 7 and saves nothing. Project settings come
 from `setup.py prepare` (preview, then `--yes --operation`): an explicit operator, an
-open service record issue, the orchestrator thread in the selected CloudRoom project,
-the repository's filled-in `docs/agents/fleet.md` from the setup skill (a harness, model and
+open service record issue, `--host` (default `cloud`; with `cloud`, the orchestrator thread
+in the selected CloudRoom project, and with any other host `--project` and `--answer-thread`
+omitted), the repository's filled-in `docs/agents/fleet.md` from the setup skill (a harness, model and
 effort for the builder and a reviewer, at least one test command and CI check, a merge rule,
 every builder table present (small-ticket builders included) filled in, a merge rule as a filled
 table row or the template's `None yet: every merge waits for the user.` line, a `Source:` line in

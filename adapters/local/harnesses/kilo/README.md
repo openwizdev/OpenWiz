@@ -29,7 +29,7 @@ The fake models both sides: without `KILO_NO_DAEMON` it hands its work to the ru
 
 ## Effort
 
-The row takes form (b): `"effort": "none: ..."`. Any start that carries an effort is a D3 refusal that starts nothing, with `next` exactly `this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default`.
+The row takes form (b): `"effort": "none: ..."`. Once the local driver's `effort` start field is on, any start that carries an effort is a D3 refusal that starts nothing, with `next` exactly `this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default` (today the local driver's request check refuses any start carrying `effort` and starts nothing either).
 
 - **The flag exists:** `kilo run --help` (v7.8.32) lists `--variant` ("model variant (provider-specific reasoning effort, e.g., high, max, minimal)").
 - **Kilo's per-model behaviour:** variants belong to each model. Kilo applies `model.variants[variant]` and adds nothing when the chosen model doesn't define that variant ([`packages/opencode/src/session/llm/request.ts`](https://github.com/Kilo-Org/kilocode/blob/v7.8.32/packages/opencode/src/session/llm/request.ts), lines 98-101). The values every reasoning provider shares are `low`, `medium` and `high` (`WIDELY_SUPPORTED_EFFORTS` in `packages/opencode/src/provider/transform.ts`); others exist only for some models. Passing the flag unchecked would be a silent fallback, which the harness-row contract forbids.

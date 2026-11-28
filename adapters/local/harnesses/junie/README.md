@@ -38,7 +38,7 @@ So an owner who approves Junie approves a run that can run commands and edit fil
 
 ## Effort
 
-**Resolved: none.** The row's `effort` is `"none: ..."`. A start that names an effort gets a D3 error and starts nothing. Its `next` is `this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default`. Junie has an `--effort` flag, but a headless run can drop an effort without an error, and the row can't check first.
+**Resolved: none.** The row's `effort` is `"none: ..."`. Once the local driver's `effort` start field is on, a start that names an effort gets a D3 error and starts nothing, with `next` `this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default` (today the local driver's request check refuses any start that carries `effort` and starts nothing either). Junie has an `--effort` flag, but a headless run can drop an effort without an error, and the row can't check first.
 
 1. `junie --help` (26.9.7): `--effort=<text>  Effort level to use. Possible values: low, medium, high.`
 2. The [CLI reference](https://junie.jetbrains.com/docs/parameters.html) and [Model selection](https://junie.jetbrains.com/docs/junie-cli-model-selection.html) (both dated 21 November 2026) say `--effort` (env `JUNIE_EFFORT`) "Fails with an error listing the model's supported efforts if the value is unsupported or blank. Requires `--model` ...".
@@ -60,4 +60,4 @@ So an owner who approves Junie approves a run that can run commands and edit fil
 
 ## Live check
 
-The row merges only after its live check records 5 of 5 on a real signed-in Junie (contract section 7).
+Live check: #2455 (records 5 of 5 on a real signed-in Junie; contract section 7).

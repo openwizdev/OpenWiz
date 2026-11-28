@@ -15,15 +15,17 @@ Your installing agent takes you through six steps:
    [Install OpenWiz](install.md).
 2. **Connect your accounts.** Your installing agent checks each connection on
    its own with `setup.py check` ([Install OpenWiz](install.md), step 3), and
-   opens CloudRoom's own sign-in only if you pick CloudRoom. Setup checks your
-   agent harness login. It does not check a reviewer from the other model
-   family. Once the connections are verified, setup says which identity
+   opens CloudRoom's own sign-in only if you pick CloudRoom. Setup checks that
+   your chosen harness, model and effort are offered by `openwiz models` (and,
+   on non-CloudRoom hosts, that the harness CLI is installed); no check here
+   proves a harness login yet, and it does not check a reviewer from the other
+   model family. Once the connections are verified, setup says which identity
    acts: your own OpenWiz App, or your personal GitHub login if you chose to
    skip the App. A skipped App needs nothing more, and there is no engine to
    choose. The private brain is made by your installing agent (`openwiz init`)
    and checked as part of the project.
 3. **Give your first idea.** Your installing agent continues through
-   [install's onboarding road](../skills/install/SKILL.md#6-the-onboarding-road) with the same repository, or
+   [install's onboarding road](https://github.com/openwizdev/WizSkills/blob/v0.5.0/skills/install/SKILL.md#6-the-onboarding-road) with the same repository, or
    give it one small idea in a thread on your project. It grills you briefly.
 4. **Confirm the grill.** Your yes to the grill's summary confirms it. The plan
    then checks itself and records its own approval, so you are asked for no
