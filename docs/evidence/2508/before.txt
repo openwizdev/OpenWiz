@@ -1,0 +1,8 @@
+Copied from spec #2474, section BEFORE bench, as that issue stated it. This run did not re-count the hand runs and did not re-time them.
+
+| Measure | Today |
+| --- | --- |
+| Driver and harness listings that could show `verified` today | **3 drivers, 0 harnesses**, once the marketplace seeds land (MK4, #2489): each shipped driver has one public 5-of-5 kit run, by hand, at a head from 2026-11-20: local (PR #1455 comment 7034588211, head `857d107`), Cloudroom (PR #1458 comment 7034556153, head `e7eb017`) and boat.dev (PR #1444 comment 7031553819, head `e22d6dd`). None is at today's `main`, and nothing re-checks them |
+| Candidate listings | 3 drivers (local, boat.dev, Cloudroom) and the harnesses on them (`claude`, `codex` on local), more as harness rows land (#2427, #2424) |
+| A live check by hand | a person's job, unmeasured in minutes: make a throwaway repository and ticket with `fleet.md`'s rows, run the kit (each of start, wake and stop waits up to `--wait`, 900 s by default, so up to 45 minutes), then write the evidence by hand. Reaching 5 of 5 took 3 runs on local (KN3), 7 on boat.dev (KN5; one earlier run is `adapters/boat/evidence/live-b1423db.txt`, 2 of 5) |
+| Re-checks | none: no schedule, and no receipt format until MK1 (#2485) |
