@@ -1,0 +1,9 @@
+{
+  "lane": "local:codex:demo",
+  "label": "demo",
+  "driver": "local",
+  "source": "codex app-server",
+  "status": "signed-out",
+  "windows": [],
+  "checked_at": "2030-01-10T12:00:00Z"
+}

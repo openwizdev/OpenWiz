@@ -1,0 +1,38 @@
+FFF
+======================================================================
+FAIL: test_history_line_and_pace_edges (__main__.UsageFixtures.test_history_line_and_pace_edges)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/usage/test_fixtures.py", line 64, in test_history_line_and_pace_edges
+    schema = self.schema()
+             ^^^^^^^^^^^^^
+  File "contracts/fixtures/usage/test_fixtures.py", line 39, in schema
+    self.assertTrue(SCHEMA.is_file(), "usage.v1.schema.json is missing")
+AssertionError: False is not true : usage.v1.schema.json is missing
+
+======================================================================
+FAIL: test_invalid_readings_and_responses_are_refused_at_the_expected_field (__main__.UsageFixtures.test_invalid_readings_and_responses_are_refused_at_the_expected_field)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/usage/test_fixtures.py", line 52, in test_invalid_readings_and_responses_are_refused_at_the_expected_field
+    schema = self.schema()
+             ^^^^^^^^^^^^^
+  File "contracts/fixtures/usage/test_fixtures.py", line 39, in schema
+    self.assertTrue(SCHEMA.is_file(), "usage.v1.schema.json is missing")
+AssertionError: False is not true : usage.v1.schema.json is missing
+
+======================================================================
+FAIL: test_valid_readings_and_responses_match_the_schema (__main__.UsageFixtures.test_valid_readings_and_responses_match_the_schema)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/usage/test_fixtures.py", line 43, in test_valid_readings_and_responses_match_the_schema
+    schema = self.schema()
+             ^^^^^^^^^^^^^
+  File "contracts/fixtures/usage/test_fixtures.py", line 39, in schema
+    self.assertTrue(SCHEMA.is_file(), "usage.v1.schema.json is missing")
+AssertionError: False is not true : usage.v1.schema.json is missing
+
+----------------------------------------------------------------------
+Ran 3 tests
+
+FAILED (failures=3)
