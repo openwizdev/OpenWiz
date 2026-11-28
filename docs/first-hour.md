@@ -78,6 +78,8 @@ adds:
   heartbeat to keep running after chat closes), on **boat.dev** (via the local
   heartbeat), or in **CloudRoom** (via a fleet thread's loop).
 
+[Choose CI for your project](ci.md).
+
 ## When something goes wrong
 
 - **Interrupted:** start a new session of your coding agent and say
