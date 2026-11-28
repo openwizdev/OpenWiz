@@ -1,0 +1,7 @@
+$ python3 -I kernel/driver-kit/kit.py --driver adapters/ona/driver (the template, copied and renamed) --repo example/site --ticket 7 --harness codex --model gpt-6.1-sol --tracker <synthetic tracker> --wait 8, on the fake Ona (agent CLI stubs first on PATH; KY1 at 4a8dfe81 and EF1 at 371c9cbf merged in)
+pass version: openwiz:records v1, and the schema is driver v1
+fail start: no builder status note appeared within 8 seconds
+fail wake: not run: start failed
+fail stop: not run: start failed
+fail token: the ona key never reached the kit's fake host
+exit 1

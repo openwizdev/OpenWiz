@@ -61,7 +61,8 @@ REFUSAL = ("this host can't set effort: remove the effort for this harness in yo
 CANT = "Effort: the host can't set it"
 NOT_DECLARED = 'not declared yet; required from EF14'
 PLACEHOLDER = re.compile(r'<[a-z][a-z-]*>')
-LISTED = re.compile(r'\s*,? for ([a-z][a-z0-9-]*(?:, [a-z][a-z0-9-]*)*(?:,? and [a-z][a-z0-9-]*)?)(?=[,.;]| with|$)')
+WORD_ITEM = r'[a-z][a-z0-9-]*(?: \(`[^`\s]+`\))?'
+LISTED = re.compile(r'\s*,? for (%s(?:, %s)*(?:,? and %s)?)(?=[,.;]| with|$)' % ((WORD_ITEM,) * 3))
 PROBE = ['-I', '-c', "import sys; sys.stdout.write('.'); sys.stdout.flush(); sys.stdin.read()"]
 
 
@@ -1094,7 +1095,9 @@ class Kit:
         finally:
             host.close()
         field = self.setting and self.setting[0] == 'field' and self.setting[1]
-        reached = bool(field) and bool(start_posts) and holds_field(start_posts[0], field, request['effort'])
+        want = self.setting[2] if self.setting and self.setting[0] == 'field' and len(self.setting) > 2 else \
+            request['effort']
+        reached = bool(field) and bool(start_posts) and holds_field(start_posts[0], field, want)
         return kind, v, bool(start_posts), reached
 
     def key_hosts(self):
@@ -1387,14 +1390,23 @@ def setting(text, word):
     tokens = span.group(1).split()
     at = next((i for i, x in reversed(list(enumerate(tokens))) if PLACEHOLDER.search(x)), None)
     if at is None:
-        return ('field', tokens[0]) if len(tokens) == 1 else None
+        if len(tokens) != 1:
+            return None
+        value = mapped(text).get(word)
+        return ('field', tokens[0], value) if value is not None else ('field', tokens[0])
     return 'argv', tokens[at - 1] if at else None, PLACEHOLDER.sub(word, tokens[at])
 
 
 def listed(text):
     span = re.search(r'`[^`]*`', text or '')
     found = span and LISTED.match(text, span.end())
-    return re.split(r',? and |, ', found.group(1)) if found else None
+    return [item.split(' ', 1)[0] for item in re.split(r',? and |, ', found.group(1))] if found else None
+
+
+def mapped(text):
+    span = re.search(r'`[^`]*`', text or '')
+    found = span and LISTED.match(text, span.end())
+    return dict(re.findall(r'([a-z][a-z0-9-]*) \(`([^`\s]+)`\)', found.group(1))) if found else {}
 
 
 def holds_field(body, name, word):

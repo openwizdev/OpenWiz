@@ -1147,10 +1147,15 @@ class Kit(unittest.TestCase):
                   ('argv', '-c', 'model_reasoning_effort=medium'), ['low', 'high']),
                  ('passed as `--effort <level>`, for low, medium, high, xhigh and max, with any harness',
                   ('argv', '--effort', 'medium'), ['low', 'medium', 'high', 'xhigh', 'max']),
-                 ('the `effort` field of the start request', ('field', 'effort'), None)]
+                 ('the `effort` field of the start request', ('field', 'effort'), None),
+                 ('passed as `reasoningEffort`, for low (`CODEX_REASONING_EFFORT_LOW`), medium '
+                  '(`CODEX_REASONING_EFFORT_MEDIUM`) and xhigh (`CODEX_REASONING_EFFORT_EXTRA_HIGH`); other refused',
+                  ('field', 'reasoningEffort', 'CODEX_REASONING_EFFORT_MEDIUM'), ['low', 'medium', 'xhigh'])]
         for text, want, words in cases:
             with self.subTest(text):
                 self.assertEqual((kit.setting(text, 'medium'), kit.listed(text)), (want, words))
+        self.assertEqual(kit.setting(cases[-1][0], 'xhigh'),
+                         ('field', 'reasoningEffort', 'CODEX_REASONING_EFFORT_EXTRA_HIGH'))
 
     def test_effort_given_only_to_a_one_shot_host_command_during_start_is_seen(self):
         args = os.path.join(self.folder, 'args')
@@ -1192,6 +1197,31 @@ class Kit(unittest.TestCase):
                 self.setUp()
                 code, out, _ = self.keyed(os.path.join(FIXTURES, name, 'driver'), KIT_EFFORT_RECEIPT=mode)
                 self.assertEqual((code, out), (1, EFFORT_KEY[name]))
+
+    def test_key_host_effort_checks_a_mapped_field_value_from_the_readme(self):
+        for mapped, want in ((False, (1, EFFORT_KEY['planted/effort-dropped-key-host'])),
+                             (True, (0, EFFORT_KEY['effort-key-host']))):
+            with self.subTest(mapped=mapped):
+                self.tearDown()
+                self.setUp()
+                copy = os.path.join(self.folder, 'mapped')
+                shutil.copytree(os.path.join(FIXTURES, 'effort-key-host'), copy)
+                readme = os.path.join(copy, 'README.md')
+                with open(readme) as f:
+                    text = f.read()
+                with open(readme, 'w') as f:
+                    f.write(text.replace('Effort: passed as the `effort` field of the start request',
+                                         'Effort: passed as `effort`, for medium (`EFFORT_MEDIUM`)'))
+                driver = os.path.join(copy, 'driver')
+                with open(driver) as f:
+                    src = f.read().replace('os.path.dirname(os.path.abspath(__file__))',
+                                           repr(os.path.join(FIXTURES, 'effort-key-host')))
+                if mapped:
+                    src = src.replace("{'effort': req['effort']}", "{'effort': 'EFFORT_' + req['effort'].upper()}")
+                with open(driver, 'w') as f:
+                    f.write(src)
+                code, out, _ = self.keyed(driver)
+                self.assertEqual((code, out), want)
 
     def stock_copies(self):
         with open(TEMPLATE) as f:

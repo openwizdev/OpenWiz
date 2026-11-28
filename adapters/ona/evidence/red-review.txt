@@ -1,0 +1,116 @@
+.F.F.F.FFFF.F.............
+======================================================================
+FAIL: test_a_lookup_off_its_documented_shape_is_refused_before_wake_or_stop_acts (__main__.Driver.test_a_lookup_off_its_documented_shape_is_refused_before_wake_or_stop_acts)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/ona/test_driver.py", line 262, in test_a_lookup_off_its_documented_shape_is_refused_before_wake_or_stop_acts
+    self.refused_with('wake', run, [AGENT + 'SendToAgentExecution'])
+  File "adapters/ona/test_driver.py", line 247, in refused_with
+    self.assertIn(run, out['next'])
+AssertionError: '5670ab1c-3f2e-404a-89c9-1c0902c9cf83' not found in 'start a new run'
+
+======================================================================
+FAIL: test_a_phase_ona_does_not_document_is_refused_before_wake_or_stop_acts (__main__.Driver.test_a_phase_ona_does_not_document_is_refused_before_wake_or_stop_acts)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/ona/test_driver.py", line 271, in test_a_phase_ona_does_not_document_is_refused_before_wake_or_stop_acts
+    self.refused_with('wake', run, [AGENT + 'SendToAgentExecution'])
+  File "adapters/ona/test_driver.py", line 245, in refused_with
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': '5892154a-8632-4fda-a76f-d82c0063f8da', 'woke': True}
+
+======================================================================
+FAIL: test_a_rejected_environment_stop_is_refused_with_the_run (__main__.Driver.test_a_rejected_environment_stop_is_refused_with_the_run)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/ona/test_driver.py", line 327, in test_a_rejected_environment_stop_is_refused_with_the_run
+    out = self.refused_with('stop', run)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "adapters/ona/test_driver.py", line 245, in refused_with
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'b03934cb-5fca-47b4-ba3d-17fb623f1ebb', 'stopped': True}
+
+======================================================================
+FAIL: test_an_environment_ona_no_longer_has_or_already_stopped_counts_as_stopped (__main__.Driver.test_an_environment_ona_no_longer_has_or_already_stopped_counts_as_stopped)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/ona/test_driver.py", line 342, in test_an_environment_ona_no_longer_has_or_already_stopped_counts_as_stopped
+    self.assertEqual(self.host.calls(), [AGENT + 'GetAgentExecution', ENVIRONMENT + 'StopEnvironment',
+AssertionError: Lists differ: ['/ap[86 chars]vironment'] != ['/ap[86 chars]vironment', '/api/gitpod.v1.EnvironmentService/GetEnvironment']
+
+Second list contains 1 additional elements.
+First extra element 2:
+'/api/gitpod.v1.EnvironmentService/GetEnvironment'
+
+  ['/api/gitpod.v1.AgentService/GetAgentExecution',
+-  '/api/gitpod.v1.EnvironmentService/StopEnvironment']
+?                                                     ^
+
++  '/api/gitpod.v1.EnvironmentService/StopEnvironment',
+?                                                     ^
+
++  '/api/gitpod.v1.EnvironmentService/GetEnvironment']
+
+======================================================================
+FAIL: test_an_unreadable_start_acknowledgement_starts_nothing_more (__main__.Driver.test_an_unreadable_start_acknowledgement_starts_nothing_more)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/ona/test_driver.py", line 301, in test_an_unreadable_start_acknowledgement_starts_nothing_more
+    self.assertEqual(self.host.calls(), [AGENT + 'StartAgent'])
+AssertionError: Lists differ: ['/ap[26 chars]tartAgent', '/api/gitpod.v1.AgentService/SendToAgentExecution'] != ['/ap[26 chars]tartAgent']
+
+First list contains 1 additional elements.
+First extra element 1:
+'/api/gitpod.v1.AgentService/SendToAgentExecution'
+
+- ['/api/gitpod.v1.AgentService/StartAgent',
+?                                          ^
+
++ ['/api/gitpod.v1.AgentService/StartAgent']
+?                                          ^
+
+-  '/api/gitpod.v1.AgentService/SendToAgentExecution']
+
+======================================================================
+FAIL: test_an_unreadable_write_acknowledgement_is_refused_with_the_run (__main__.Driver.test_an_unreadable_write_acknowledgement_is_refused_with_the_run)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/ona/test_driver.py", line 283, in test_an_unreadable_write_acknowledgement_is_refused_with_the_run
+    self.refused_with('wake', run)
+  File "adapters/ona/test_driver.py", line 245, in refused_with
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': '91bef152-e888-41d6-9f65-14c7fc02f7e1', 'woke': True}
+
+======================================================================
+FAIL: test_another_harness_with_effort_gets_the_exact_effort_refusal (__main__.Driver.test_another_harness_with_effort_gets_the_exact_effort_refusal)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/ona/test_driver.py", line 158, in test_another_harness_with_effort_gets_the_exact_effort_refusal
+    self.assertEqual((code, out), (1, {'error': 'Ona cannot set effort %s for harness %s' % (effort, harness),
+AssertionError: Tuples differ: (1, {'error': 'harness claude-code is not one Ona runs t[41 chars]ex'}) != (1, {'error': 'Ona cannot set effort medium for harness [146 chars]lt"})
+
+First differing element 1:
+{'error': 'harness claude-code is not one Ona runs t[40 chars]dex'}
+{'error': 'Ona cannot set effort medium for harness [145 chars]ult"}
+
+  (1,
+-  {'error': 'harness claude-code is not one Ona runs through its API',
+-   'next': 'use harness codex'})
++  {'error': 'Ona cannot set effort medium for harness claude-code',
++   'next': "this host can't set effort: remove the effort for this harness in "
++           "your Models table or Roster to run it at the host's default"})
+
+======================================================================
+FAIL: test_environment_data_off_its_shape_is_refused_before_stop_writes (__main__.Driver.test_environment_data_off_its_shape_is_refused_before_stop_writes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/ona/test_driver.py", line 309, in test_environment_data_off_its_shape_is_refused_before_stop_writes
+    self.refused_with('stop', run, [AGENT + 'StopAgentExecution', ENVIRONMENT + 'StopEnvironment'])
+  File "adapters/ona/test_driver.py", line 245, in refused_with
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': '638668bc-cb8d-469c-88f7-87955302d1a7', 'stopped': True}
+
+----------------------------------------------------------------------
+Ran 26 tests in 20.310s
+
+FAILED (failures=8)
