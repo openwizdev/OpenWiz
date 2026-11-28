@@ -1296,8 +1296,11 @@ impl World {
                     return Err("review output partial");
                 }
                 match output.output {
-                    Fact::Known(Some(text)) => openwiz_core::fleet::fleets::verdict(&[text])
-                        .map_err(|_| "malformed reviewer output")?,
+                    Fact::Known(Some(text)) => super::typesafe::reviewer_verdict(
+                        text,
+                        super::typesafe::env_decider(deadline).as_ref(),
+                    )
+                    .map_err(|_| "malformed reviewer output")?,
                     Fact::Known(None) => None,
                     _ => return Err("review output unread"),
                 }

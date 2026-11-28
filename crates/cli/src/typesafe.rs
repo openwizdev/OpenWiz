@@ -10,6 +10,11 @@ const MAX_VERDICT_WORD_CHARS: usize = 40;
 
 pub trait Decisions {
     fn ask(&self, state: &str, questions: &Value) -> Option<Value>;
+
+    #[cfg(test)]
+    fn live(&self) -> bool {
+        false
+    }
 }
 
 pub struct Absent;
@@ -35,6 +40,11 @@ struct Http {
 }
 
 impl Decisions for Http {
+    #[cfg(test)]
+    fn live(&self) -> bool {
+        true
+    }
+
     fn ask(&self, state: &str, questions: &Value) -> Option<Value> {
         let body = json!({
             "model": MODEL,
@@ -126,7 +136,11 @@ fn run_ask(
 }
 
 pub fn env_decider(deadline: std::time::Instant) -> Box<dyn Decisions> {
-    if jev_enabled() {
+    decider(jev_enabled(), deadline)
+}
+
+fn decider(enabled: bool, deadline: std::time::Instant) -> Box<dyn Decisions> {
+    if enabled {
         Box::new(Http { deadline })
     } else {
         Box::new(Absent)
@@ -321,6 +335,17 @@ pub fn rewrite_newest_verdict<T, K: Ord>(
         let body = text(newest);
         *body = verdict_text(body, decider);
     }
+}
+
+pub fn reviewer_verdict(
+    text: String,
+    decider: &dyn Decisions,
+) -> Result<Option<openwiz_core::fleet::model::Review>, openwiz_core::fleet::fleets::NotAVerdict> {
+    let exact = openwiz_core::fleet::fleets::verdict(std::slice::from_ref(&text));
+    if exact.is_ok() {
+        return exact;
+    }
+    openwiz_core::fleet::fleets::verdict(&[verdict_text(&text, decider)])
 }
 
 pub fn verdict_text(body: &str, decider: &dyn Decisions) -> String {
@@ -670,6 +695,51 @@ mod tests {
         assert_eq!(*calls.0.borrow(), ["VERDICT: LGTM"]);
         assert_eq!(reports[1].1, format!("VERDICT: APPROVE at {sha}"));
         assert_eq!(reports[0].1, format!("VERDICT: APPROVED at {sha}"));
+    }
+
+    #[test]
+    fn a_near_miss_in_the_reviewer_output_is_renamed_and_an_exact_one_is_not_sent() {
+        let sha = "ab".repeat(20);
+        let calls = Calls(
+            std::cell::RefCell::new(vec![]),
+            Some(verdict_body("approve", 0.99, 0.99, 0.99)),
+        );
+        let near = reviewer_verdict(format!("VERDICT: APPROVED at {sha}\nnotes"), &calls)
+            .unwrap()
+            .unwrap();
+        assert_eq!(near.commit.as_str(), sha);
+        assert!(matches!(
+            near.verdict,
+            openwiz_core::fleet::model::Verdict::Approve
+        ));
+        assert!(
+            reviewer_verdict(format!("VERDICT: CHANGES at {sha}"), &calls)
+                .unwrap()
+                .is_some()
+        );
+        assert_eq!(*calls.0.borrow(), ["VERDICT: APPROVED"]);
+        assert!(reviewer_verdict(format!("VERDICT: APPROVED at {sha}"), &Absent).is_err());
+        assert_eq!(
+            reviewer_verdict("no verdict here".into(), &calls).unwrap(),
+            None
+        );
+    }
+
+    #[test]
+    fn without_the_opt_in_or_a_key_fleet_tick_gets_no_helper() {
+        let some = |text: &str| Some(std::ffi::OsString::from(text));
+        let deadline = soon(1_000);
+        for (opt_in, key) in [
+            (None, some("synthetic")),
+            (some("1"), None),
+            (some("1"), some("")),
+            (some("1"), some("  ")),
+        ] {
+            let chosen = decider(enabled(opt_in, key), deadline);
+            assert!(!chosen.live());
+            assert_eq!(chosen.ask("VERDICT: APPROVED", &json!({})), None);
+        }
+        assert!(decider(enabled(some("1"), some("synthetic")), deadline).live());
     }
 
     #[test]
