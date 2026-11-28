@@ -1,15 +1,10 @@
-//! Jev decisions for fleet tick. The key is read only from `TYPESAFE_API_KEY`.
-//! A missing key or a failed call returns no answer, and the caller keeps its
-//! previous rule. The HTTP call is the documented `POST /v1/systemone`, done
-//! by `tools/typesafe/ask.py` so the key stays in the environment and off the
-//! command line.
-
 use serde_json::{Value, json};
-use std::path::PathBuf;
-use std::process::{Command, Stdio};
 
 const MODEL: &str = "jev-1.14.0";
 const MAX_STATE_CHARS: usize = 24_000;
+const TAIL_CHARS: usize = 4_000;
+const MAX_ANSWER_BYTES: usize = 1_048_576;
+const ANSWER_SECONDS: u64 = 20;
 
 pub trait Decisions {
     fn ask(&self, state: &str, questions: &Value) -> Option<Value>;
@@ -37,76 +32,89 @@ struct Http;
 
 impl Decisions for Http {
     fn ask(&self, state: &str, questions: &Value) -> Option<Value> {
-        let script = ask_script()?;
         let body = json!({
             "model": MODEL,
             "state": bounded(state),
             "questions": questions,
         });
-        let mut child = Command::new("python3")
-            .arg("-I")
-            .arg(&script)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .spawn()
-            .ok()?;
-        {
-            let stdin = child.stdin.as_mut()?;
-            use std::io::Write as _;
-            stdin.write_all(body.to_string().as_bytes()).ok()?;
-        }
-        let output = child.wait_with_output().ok()?;
-        if !output.status.success() || output.stdout.len() > 1_048_576 {
+        let output = jev_process(body.to_string().as_bytes())?;
+        if !output.status.success() || output.stdout.len() > MAX_ANSWER_BYTES {
             return None;
         }
         serde_json::from_slice(&output.stdout).ok()
     }
 }
 
+fn jev_process(request: &[u8]) -> Option<std::process::Output> {
+    let exe = std::env::current_exe().ok()?.canonicalize().ok()?;
+    let target = exe.ancestors().nth(2)?;
+    if target.file_name()? != "target" {
+        return None;
+    }
+    let tool = target.parent()?.join("tools/typesafe/ask.py");
+    let meta = std::fs::symlink_metadata(&tool).ok()?;
+    if !meta.is_file() || meta.file_type().is_symlink() {
+        return None;
+    }
+    if tool
+        .ancestors()
+        .skip(1)
+        .any(|p| !std::fs::symlink_metadata(p).is_ok_and(|m| !m.file_type().is_symlink()))
+    {
+        return None;
+    }
+    let key = std::env::var_os("TYPESAFE_API_KEY")?;
+    let mut child = std::process::Command::new("/usr/bin/python3")
+        .arg("-I")
+        .arg(tool)
+        .env_clear()
+        .env("OPENWIZ_JEV", "1")
+        .env("TYPESAFE_API_KEY", key)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .ok()?;
+    let sent = std::io::Write::write_all(&mut child.stdin.take()?, request);
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(ANSWER_SECONDS);
+    while child.try_wait().ok()?.is_none() {
+        if sent.is_err() || std::time::Instant::now() > deadline {
+            let _ = child.kill();
+            let _ = child.wait();
+            return None;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+    child.wait_with_output().ok()
+}
+
 pub fn env_decider() -> Box<dyn Decisions> {
-    if key_present() {
+    if jev_enabled() {
         Box::new(Http)
     } else {
         Box::new(Absent)
     }
 }
 
-fn key_present() -> bool {
-    std::env::var_os("TYPESAFE_API_KEY").is_some_and(|value| {
-        std::str::from_utf8(value.as_encoded_bytes())
-            .ok()
-            .is_some_and(|text| !text.trim().is_empty())
-    })
+fn jev_enabled() -> bool {
+    let opted_in = std::env::var_os("OPENWIZ_JEV").is_some_and(|value| value == "1");
+    opted_in
+        && std::env::var_os("TYPESAFE_API_KEY").is_some_and(|value| {
+            std::str::from_utf8(value.as_encoded_bytes())
+                .ok()
+                .is_some_and(|text| !text.trim().is_empty())
+        })
 }
 
 fn bounded(state: &str) -> String {
     state.chars().take(MAX_STATE_CHARS).collect()
 }
 
-fn ask_script() -> Option<PathBuf> {
-    let mut starts = Vec::new();
-    if let Ok(cwd) = std::env::current_dir() {
-        starts.push(cwd);
-    }
-    if let Ok(exe) = std::env::current_exe()
-        && let Some(dir) = exe.parent()
-    {
-        starts.push(dir.to_path_buf());
-    }
-    for start in starts {
-        let mut dir = start;
-        for _ in 0..8 {
-            let candidate = dir.join("tools/typesafe/ask.py");
-            if candidate.is_file() {
-                return Some(candidate);
-            }
-            if !dir.pop() {
-                break;
-            }
-        }
-    }
-    None
+fn tail(text: &str) -> &str {
+    let skip = text.chars().count().saturating_sub(TAIL_CHARS);
+    text.char_indices()
+        .nth(skip)
+        .map_or(text, |(at, _)| &text[at..])
 }
 
 pub fn noul(response: &Value, name: &str) -> Option<f64> {
@@ -134,8 +142,6 @@ fn config() -> Value {
         .expect("tools/typesafe/config.json is json")
 }
 
-/// Weighted sum or noisy-or from `config.json`. `None` is the uncertain band
-/// or a response that does not match the site, and the caller falls back.
 fn combined(response: &Value, config: &Value, site_name: &str) -> Option<f64> {
     let site = config.get("sites")?.get(site_name)?;
     let no = config.get("noul")?.get("no")?.as_f64()?;
@@ -178,7 +184,7 @@ pub fn plan_limit_with(text: &str, decider: &dyn Decisions) -> bool {
     let Some(questions) = site.get("questions") else {
         return false;
     };
-    let Some(response) = decider.ask(text, questions) else {
+    let Some(response) = decider.ask(tail(text), questions) else {
         return false;
     };
     let Some(act) = site.get("act").and_then(Value::as_f64) else {
@@ -269,27 +275,21 @@ mod tests {
     }
 
     #[test]
-    fn ask_without_a_key_exits_without_printing() {
-        let Some(script) = ask_script() else {
-            panic!("tools/typesafe/ask.py was not found by walking up from the process");
-        };
-        let output = Command::new("python3")
-            .arg("-I")
-            .arg(&script)
-            .env_remove("TYPESAFE_API_KEY")
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .and_then(|mut child| {
-                use std::io::Write as _;
-                child.stdin.as_mut().unwrap().write_all(b"{}")?;
-                drop(child.stdin.take());
-                child.wait_with_output()
-            })
-            .unwrap();
-        assert!(!output.status.success());
-        assert!(output.stdout.is_empty());
-        assert!(output.stderr.is_empty());
+    fn only_the_tail_of_a_long_output_is_sent() {
+        struct Seen(std::cell::RefCell<String>);
+        impl Decisions for Seen {
+            fn ask(&self, state: &str, _: &Value) -> Option<Value> {
+                *self.0.borrow_mut() = state.to_owned();
+                None
+            }
+        }
+        let text = format!("{}é{}", "x".repeat(10_000), "y".repeat(TAIL_CHARS - 1));
+        let seen = Seen(std::cell::RefCell::new(String::new()));
+        assert!(!plan_limit_with(&text, &seen));
+        let sent = seen.0.borrow();
+        assert_eq!(sent.chars().count(), TAIL_CHARS);
+        assert!(sent.starts_with('é'));
+        assert_eq!(tail("short"), "short");
+        assert_eq!(tail(""), "");
     }
 }
