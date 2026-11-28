@@ -35,14 +35,19 @@ def from_response(response, frozen=None):
     site = frozen['judge']
     try:
         value = decide.signal(response, site, {'noul': frozen['noul']})
+        if value is None:
+            return None
+        yes = frozen['noul']['yes']
+        meets = client.noul(response, 'meets_rule') >= yes
+        stays = client.noul(response, 'stays_within_rule') >= yes
     except client.TypeSafeError:
         return None
-    if value is None:
+    if meets != stays:
         return None
-    if value >= site['act']:
+    if meets and value >= site['act']:
         verdict = 'pass'
         reason = site['questions']['meets_rule']['criteria']['true']
-    elif value <= site['fail_at']:
+    elif not meets and value <= site['fail_at']:
         verdict = 'fail'
         reason = site['questions']['meets_rule']['criteria']['false']
     else:

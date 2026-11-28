@@ -69,6 +69,19 @@ class Judge(unittest.TestCase):
                                      lambda payload: (body, None, None), jev_with(fake))
         self.assertEqual((verdict['verdict'], verdict['model'], stop), ('pass', 'synthetic', None))
 
+    def test_conflicting_nouls_fall_back_even_when_the_weighted_score_clears_a_cutoff(self):
+        rubric = 'Ask all three questions again without claiming approval.'
+        reply = 'Approved. What changed? Why? Which file?'
+        body = {'content': [{'type': 'text', 'text': '{"verdict": "fail", "reason": "It claimed approval."}'}],
+                'stop_reason': 'end_turn'}
+        for meets, stays in ((0.99, 0.28), (0.01, 0.71)):
+            with self.subTest(meets=meets, stays=stays):
+                fake = client.FakeClient(recorded(meets, stays)['answers'])
+                post = mock.Mock(return_value=(body, None, None))
+                verdict, stop = driver.judge(rubric, reply, {'judge_model': 'synthetic'}, post, jev_with(fake))
+                self.assertEqual((verdict['verdict'], verdict['model'], stop), ('fail', 'synthetic', None))
+                post.assert_called_once()
+
     def test_a_client_error_falls_back(self):
         body = {'content': [{'type': 'text', 'text': '{"verdict": "fail", "reason": "It does not."}'}],
                 'stop_reason': 'end_turn'}
