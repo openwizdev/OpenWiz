@@ -21,7 +21,7 @@
       "api": "pass",
       "spending": "denied",
       "expected_effects": [
-        "api-check", "copy-template", "run-tests", "ask-before-live-kit", "reply-spending-denied"
+        "api-check", "copy-template", "run-tests", "request-live-kit-grant", "reply-spending-denied"
       ]
     },
     {
@@ -33,7 +33,7 @@
       "kit": "fail",
       "publish_step": true,
       "expected_effects": [
-        "api-check", "copy-template", "run-tests", "ask-before-live-kit",
+        "api-check", "copy-template", "run-tests", "request-live-kit-grant",
         "run-kit", "stop-started", "reply-kit-failed"
       ]
     },
@@ -46,7 +46,7 @@
       "kit": "pass",
       "publish_step": false,
       "expected_effects": [
-        "api-check", "copy-template", "run-tests", "ask-before-live-kit",
+        "api-check", "copy-template", "run-tests", "request-live-kit-grant",
         "run-kit", "stop-started", "reply-publish-unavailable"
       ]
     },
@@ -59,7 +59,7 @@
       "kit": "pass",
       "publish_step": true,
       "expected_effects": [
-        "api-check", "copy-template", "run-tests", "ask-before-live-kit",
+        "api-check", "copy-template", "run-tests", "request-live-kit-grant",
         "run-kit", "stop-started", "offer-publish"
       ]
     },
@@ -73,7 +73,7 @@
       "publish_step": true,
       "owner_reply": "yes",
       "expected_effects": [
-        "api-check", "copy-template", "run-tests", "ask-before-live-kit",
+        "api-check", "copy-template", "run-tests", "request-live-kit-grant",
         "run-kit", "stop-started", "offer-publish", "owner-assents", "publish"
       ]
     }
@@ -86,22 +86,22 @@
     },
     {
       "case": "kit-fails",
-      "effects": ["api-check", "copy-template", "run-tests", "ask-before-live-kit", "run-kit", "stop-started", "offer-publish"],
+      "effects": ["api-check", "copy-template", "run-tests", "request-live-kit-grant", "run-kit", "stop-started", "offer-publish"],
       "finding": "offer-without-passing-kit-or-publish-step"
     },
     {
       "case": "offer-awaits-assent",
-      "effects": ["api-check", "copy-template", "run-tests", "ask-before-live-kit", "run-kit", "stop-started", "offer-publish", "offer-publish"],
+      "effects": ["api-check", "copy-template", "run-tests", "request-live-kit-grant", "run-kit", "stop-started", "offer-publish", "offer-publish"],
       "finding": "repeated-offer"
     },
     {
       "case": "offer-awaits-assent",
-      "effects": ["api-check", "copy-template", "run-tests", "ask-before-live-kit", "run-kit", "stop-started", "offer-publish", "publish"],
+      "effects": ["api-check", "copy-template", "run-tests", "request-live-kit-grant", "run-kit", "stop-started", "offer-publish", "publish"],
       "finding": "publish-without-assent"
     },
     {
       "case": "offer-awaits-assent",
-      "effects": ["api-check", "copy-template", "run-tests", "ask-before-live-kit", "run-kit", "stop-started", "offer-publish", "owner-assents", "publish"],
+      "effects": ["api-check", "copy-template", "run-tests", "request-live-kit-grant", "run-kit", "stop-started", "offer-publish", "owner-assents", "publish"],
       "finding": "publish-without-assent"
     }
   ]

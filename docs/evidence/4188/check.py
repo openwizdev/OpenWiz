@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-CASES = ROOT / "tests/fixtures/drivers/3474/add-driver-cases.json"
+CASES = ROOT / "tests/driver-cases/3474/add-driver-cases.json"
 
 
 def finding(case, effects):
@@ -43,7 +43,7 @@ def main():
     assert later["expected_effects"] == ["api-check", "reply-later"]
     assert cases["non-owner"]["expected_effects"] == []
     assert cases["spending-denied"]["expected_effects"][-2:] == [
-        "ask-before-live-kit", "reply-spending-denied",
+        "request-live-kit-grant", "reply-spending-denied",
     ]
     assert cases["kit-fails"]["expected_effects"][-3:] == [
         "run-kit", "stop-started", "reply-kit-failed",

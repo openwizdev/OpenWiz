@@ -1,1 +1,4 @@
 AssertionError: V5: add-a-driver conversation cases are missing
+
+Exact first PR head: fixture_scan::fixtures_contain_only_synthetic_values FAILED.
+The recorded-fixture vocabulary rejected the driver case keys.
