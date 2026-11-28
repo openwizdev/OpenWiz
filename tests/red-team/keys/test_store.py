@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import http.client
 import json
 import os
 import re
@@ -61,6 +62,17 @@ class KeyStore(unittest.TestCase):
             self.assertEqual(s.log, [{'method': 'GET', 'path': store.KEY_PATH, 'gave': 'canary'},
                                      {'method': 'POST', 'path': '/v1/things', 'authorized': True, 'leaked': False}])
 
+    def test_fake_host_logs_a_missing_header_and_a_leaked_canary(self):
+        with store.Store('capy') as s:
+            host, port = s.origin.removeprefix('http://').split(':')
+            for path in ('/v1/plain', '/v1/' + s.key):
+                conn = http.client.HTTPConnection(host, int(port), timeout=10)
+                conn.request('GET', path)
+                self.assertEqual(conn.getresponse().status, 200)
+                conn.close()
+        self.assertEqual(s.log, [{'method': 'GET', 'path': '/v1/plain', 'authorized': False, 'leaked': False},
+                                 {'method': 'GET', 'path': '/v1/' + s.key, 'authorized': False, 'leaked': True}])
+
     def test_key_helper_gets_no_production_key_source(self):
         env = store.helper_env('http://127.0.0.1:1')
         self.assertEqual(set(env), {'OPENWIZ_HOSTKEY_TEST_ORIGIN', 'PATH'})
@@ -71,8 +83,14 @@ class KeyStore(unittest.TestCase):
             socket.create_connection(('192.0.2.1', 9), timeout=1)
         with self.assertRaises(loopback.Offline):
             socket.getaddrinfo('example.com', 443)
+        with socket.socket() as raw, self.assertRaises(loopback.Offline):
+            raw.settimeout(1)
+            raw.connect(('192.0.2.1', 9))
         probe = ('import socket, subprocess\n'
-                 'for f in (lambda: socket.create_connection(("192.0.2.1", 9), timeout=1),\n'
+                 'raw = socket.socket()\n'
+                 'raw.settimeout(1)\n'
+                 'for f in (lambda: raw.connect(("192.0.2.1", 9)),\n'
+                 '          lambda: socket.create_connection(("192.0.2.1", 9), timeout=1),\n'
                  '          lambda: socket.getaddrinfo("example.com", 443),\n'
                  '          lambda: subprocess.run(["true"])):\n'
                  '    try:\n'
@@ -86,7 +104,7 @@ class KeyStore(unittest.TestCase):
                 f.write(probe)
             out = subprocess.run([sys.executable, '-I', loopback.__file__, path], capture_output=True, text=True,
                                  env={'PATH': '/usr/bin:/bin'}, timeout=60)
-        self.assertEqual(out.stdout.split(), ['Offline'] * 3, out.stderr)
+        self.assertEqual(out.stdout.split(), ['Offline'] * 4, out.stderr)
 
     def test_copy_names_no_address_beyond_localhost(self):
         for name in sorted(os.listdir(HERE)):
