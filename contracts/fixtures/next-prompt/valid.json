@@ -1,0 +1,67 @@
+{
+  "request": {"surface": "t3-code"},
+  "open-decision": {
+    "schema": "openwiz.next-prompt.v1",
+    "prediction": {
+      "id": "syn-decision",
+      "prompt": "Review the recommendation for the sample decision.",
+      "source": "open_decision_request",
+      "confidence": 0.30
+    }
+  },
+  "factory-feed": {
+    "schema": "openwiz.next-prompt.v1",
+    "prediction": {
+      "id": "syn-feed",
+      "prompt": "Summarize the latest sample factory update.",
+      "source": "factory_feed",
+      "confidence": 0.78
+    }
+  },
+  "factory-states": {
+    "schema": "openwiz.next-prompt.v1",
+    "prediction": {
+      "id": "syn-states",
+      "prompt": "What is blocking the sample ticket?",
+      "source": "factory_states",
+      "confidence": 1
+    }
+  },
+  "recent-ask": {
+    "schema": "openwiz.next-prompt.v1",
+    "prediction": {
+      "id": "syn-recent",
+      "prompt": "Continue the sample plan.",
+      "source": "recent_owner_ask",
+      "confidence": 0.62
+    }
+  },
+  "blank": {"schema": "openwiz.next-prompt.v1", "prediction": null},
+  "shown": {
+    "schema": "openwiz.next-prompt.v1",
+    "prediction_id": "syn-decision",
+    "at": "2026-01-05T09:00:00Z",
+    "surface": "t3-code",
+    "outcome": "shown",
+    "storage": "local",
+    "opt_in": true
+  },
+  "accepted": {
+    "schema": "openwiz.next-prompt.v1",
+    "prediction_id": "syn-decision",
+    "at": "2026-01-05T09:01:00Z",
+    "surface": "t3-code",
+    "outcome": "accepted",
+    "storage": "local",
+    "opt_in": true
+  },
+  "accepted-then-edited": {
+    "schema": "openwiz.next-prompt.v1",
+    "prediction_id": "syn-decision",
+    "at": "2026-01-05T09:02:00Z",
+    "surface": "t3-code",
+    "outcome": "accepted_then_edited",
+    "storage": "local",
+    "opt_in": true
+  }
+}
