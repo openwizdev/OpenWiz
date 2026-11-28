@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# External: the routes and shapes follow Capy's OpenAPI document (https://docs.capy.ai/openapi.json), and a message
+# External: the routes and shapes follow Capy's endpoint schemas (https://docs.capy.ai/api-reference/overview), and a message
 # unarchives and wakes an archived thread (https://docs.capy.ai/threads#archive-is-dormant).
 import http.server
 import json
@@ -81,7 +81,8 @@ class FakeCapy:
                 if held:
                     host.held.set()
                     host.release.wait(60)
-                self.reply(code, host.widened(body))
+                if code is not None:
+                    self.reply(code, host.widened(body))
 
             def reply(self, code, body):
                 data = json.dumps(body).encode()
@@ -186,12 +187,17 @@ class FakeCapy:
                 self.lose_creates -= 1
                 return 503, {'_tag': 'synthetic/Unavailable'}
             return 200, self._thread(t)
-        m = re.fullmatch(r'/api/v1/threads/([^/]+)(/message|/interrupt|/archive)?', path)
+        m = re.fullmatch(r'/api/v1/threads/([^/]+)(/messages?|/interrupt|/archive)?', path)
         t = self.threads.get(m.group(1)) if m else None
         if m and t is None:
             return 404, tag('ThreadNotFound', threadId=m.group(1))
         if method == 'GET' and m and not m.group(2):
             return 200, self._thread(t)
+        if method == 'GET' and m and m.group(2) == '/messages':
+            items = [{'id': '01SYNTHETIC%015d' % index, 'source': 'user', 'text': message['text'],
+                      'clientKey': message.get('clientKey'), 'createdAt': '2030-01-01T00:00:00Z'}
+                     for index, message in enumerate(t['messages'])]
+            return 200, {'items': items, 'cursor': None, 'beforeCursor': None}
         if method == 'POST' and m and m.group(2) == '/message':
             if not isinstance(body, dict) or set(body) - SEND or not isinstance(body.get('text'), str):
                 return 400, tag('InvalidRequest', message='synthetic: not a SendMessageRequest')

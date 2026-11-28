@@ -20,10 +20,10 @@ PROJECT = r'[A-Za-z0-9][A-Za-z0-9_.:-]{0,190}'
 PROVIDERS = {'claude': 'anthropic', 'claude-code': 'anthropic', 'codex': 'openai'}
 POLL = float(os.environ.get('OPENWIZ_CAPY_POLL') or 3)
 WAIT_AT_MOST = 30
-START_TIMEOUT, START_CALL_TIMEOUT = 110, 60
+COMMAND_TIMEOUT, CALL_TIMEOUT = 110, 60
 STATE = os.environ.get('OPENWIZ_CAPY_STATE') or os.path.expanduser('~/.local/state/openwiz/capy')
-START_EXPIRED = 'the start ran out of time before '
-UNSENT = (START_EXPIRED,) + tuple('the key helper refused: ' + why for why in (
+EXPIRED = 'the command ran out of time before '
+UNSENT = (EXPIRED,) + tuple('the key helper refused: ' + why for why in (
     'no key in either ', 'the key in ', "the kit's fake host gave no test key", 'the request holds the key',
     'OPENWIZ_HOSTKEY_TEST_ORIGIN is not'))
 NO_EFFORT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster to run it "
@@ -32,14 +32,20 @@ WOKEN = 'You were woken: read the ticket again and carry on.'
 STOPPED = 'start a new run'
 UNSURE = 'open the run in Capy to see its state, then retry'
 STATE_NEXT = 'make OPENWIZ_CAPY_STATE (or ~/.local/state/openwiz/capy) a folder you can write'
-# External: the shapes below are Capy's documented answers (https://docs.capy.ai/openapi.json): every field a
-# schema requires; a field Capy adds later is ignored. An answer off its shape is never read as success or absence.
+# External: required fields from Capy's endpoint schemas (https://docs.capy.ai/api-reference/overview).
 REASONING = ('none', 'instant', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max')
 STATUSES = ('working', 'waiting', 'idle', 'failed', 'archived')
 THREAD = set('id projectId authorId previousAuthorId title titleCustom status archived lastModelId queuedAt linearIssue '
              'pullRequestAuthor usage createdAt updatedAt lastActivityAt hasUnreads mentionCount owed member'.split())
 PROJECT_KEYS = set('id name description code visibility repos createdAt updatedAt'.split())
 MODEL_KEYS = set('id name billing route reasoningModes fast pro ultrafast'.split())
+WAKE_REJECTED = {
+    400: ('capy/InvalidRequest', 'ModelSelection.Rejected'),
+    401: ('capy/Unauthorized',),
+    403: ('capy/DeviceAccessDenied', 'capy/Forbidden'),
+    404: ('capy/ThreadNotFound', 'capy/FileNotFound'),
+    409: ('capy/EditNotAllowed',),
+}
 
 
 class Refused(Exception):
@@ -70,14 +76,13 @@ def read(fields):
     return req
 
 
-def ask(method, path, body=None, also=(), *, deadline=None):
+def ask(method, path, body=None, also=(), *, deadline):
     request = {'host': HOST, 'method': method, 'path': path}
     if body is not None:
         request['body'] = body
-    timeout = 110 if deadline is None else min(START_CALL_TIMEOUT, deadline - time.monotonic())
+    timeout = min(CALL_TIMEOUT, deadline - time.monotonic())
     if timeout <= 0:
-        raise Refused(START_EXPIRED + method + ' ' + path,
-                      'check Capy\'s status, then start again')
+        raise Refused(EXPIRED + method + ' ' + path, 'check Capy\'s status, then retry')
     try:
         p = subprocess.run([sys.executable, '-I', HELPER], input=json.dumps(request), capture_output=True,
                            text=True, timeout=timeout)
@@ -202,7 +207,7 @@ def wait_to_retry(got, deadline):
 
 
 def create(req):
-    deadline = time.monotonic() + START_TIMEOUT
+    deadline = time.monotonic() + COMMAND_TIMEOUT
     model = {'modelId': model_id(req)}
     if 'effort' in req:
         if req['effort'] not in REASONING:
@@ -265,8 +270,8 @@ def create(req):
     return run
 
 
-def thread(run):
-    status, found = ask('GET', '/api/v1/threads/' + run, also=(404,))
+def thread(run, deadline):
+    status, found = ask('GET', '/api/v1/threads/' + run, also=(404,), deadline=deadline)
     if status == 404 and shaped(found, {'_tag', 'threadId'}) and (found['_tag'], found['threadId']) == (
             'capy/ThreadNotFound', run):
         raise Refused('Capy has no run ' + run, STOPPED)
@@ -278,7 +283,7 @@ def thread(run):
 
 def lock(run, register=False):
     # External: a message can unarchive a Capy thread (https://docs.capy.ai/threads#archive-is-dormant).
-    flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
+    flags = os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK
     path = os.path.join(STATE, run + '.controller')
     fd = None
     try:
@@ -292,35 +297,122 @@ def lock(run, register=False):
         if not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid():
             raise OSError
         fcntl.flock(fd, fcntl.LOCK_EX)
-        return os.fdopen(fd, 'rb')
+        return os.fdopen(fd, 'r+b', buffering=0)
     except OSError:
         if fd is not None:
             os.close(fd)
         raise Refused('the driver cannot lock run ' + run, STATE_NEXT) from None
 
 
+def read_wake(owned, run):
+    try:
+        data = owned.read(37) if owned is not None else b''
+        if data and not re.fullmatch(rb'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', data):
+            raise ValueError
+        return data
+    except (OSError, ValueError):
+        raise Refused('the driver cannot read the pending wake for run ' + run,
+                      'check the controller file and the run in Capy') from None
+
+
+def record_wake(owned, run, key):
+    try:
+        owned.seek(0)
+        if key:
+            if owned.write(key) != len(key):
+                raise OSError
+        else:
+            owned.truncate()
+        os.fsync(owned.fileno())
+    except OSError:
+        raise Refused('the driver cannot record the state of the wake for run ' + run,
+                      'check the controller file and the run in Capy') from None
+
+
+def wake_reached_capy(run, key, deadline):
+    # External: the committed transcript exposes each send's clientKey and can stall on unsettled messages.
+    # https://docs.capy.ai/api-reference/messages/list-thread-messages
+    path = '/api/v1/threads/%s/messages' % run
+    after = ''
+    seen = set()
+    try:
+        while after not in seen:
+            seen.add(after)
+            status, page = ask('GET', path + ('?after=' + after if after else ''), deadline=deadline)
+            if status != 200 or not isinstance(obj(page).get('items'), list):
+                return False
+            if any(obj(item).get('source') == 'user' and item.get('clientKey') == key
+                   and item.get('text') == WOKEN for item in page['items']):
+                return True
+            after = page.get('cursor')
+            if not isinstance(after, str) or not re.fullmatch(r'[A-Za-z0-9]{26}', after):
+                return False
+    except Refused:
+        pass
+    return False
+
+
+def send_wake(owned, run, deadline):
+    key = str(uuid.uuid4())
+    record_wake(owned, run, key.encode('ascii'))
+    try:
+        status, receipt = ask('POST', '/api/v1/threads/%s/message' % run,
+                              {'text': WOKEN, 'delivery': 'steer', 'clientKey': key},
+                              also=(*WAKE_REJECTED, 429), deadline=deadline)
+    except Refused as e:
+        if e.args[0].startswith(UNSENT):
+            record_wake(owned, run, b'')
+            raise
+        raise pending_wake(run) from None
+    if obj(receipt).get('_tag') in WAKE_REJECTED.get(status, ()):
+        record_wake(owned, run, b'')
+        raise Refused('Capy refused the wake for run %s with status %d' % (run, status),
+                      'check access to the run and its model in Capy, then retry')
+    delay = retry_after(receipt) if status == 429 else None
+    if delay is not None:
+        record_wake(owned, run, b'')
+        raise Refused('Capy rate-limited the wake for run ' + run, 'wait %d seconds, then wake it again' % delay)
+    if not admitted(status, receipt):
+        raise pending_wake(run)
+    record_wake(owned, run, b'')
+
+
+def pending_wake(run):
+    return Refused('the wake for run %s is still unconfirmed' % run,
+                   'check the run in Capy for the wake message, then retry the command')
+
+
 def control(cmd, run):
+    deadline = time.monotonic() + COMMAND_TIMEOUT
     with lock(run) or nullcontext() as owned:
-        if thread(run)['archived']:
-            if cmd == 'wake':
-                raise Refused('run %s is stopped' % run, STOPPED)
-            return {'run': run, 'stopped': True}
+        pending = read_wake(owned, run)
+        settled = bool(pending) and wake_reached_capy(run, pending.decode('ascii'), deadline)
+        archived = thread(run, deadline)['archived']
+        if cmd == 'wake' and archived:
+            raise Refused('run %s is stopped' % run, STOPPED)
         if owned is None:
             raise Refused('run %s has no controller here' % run,
                           'use the controller and state folder that started the run, or manage it in Capy')
         if cmd == 'wake':
-            if not admitted(*ask('POST', '/api/v1/threads/%s/message' % run, {'text': WOKEN, 'delivery': 'steer'})):
-                raise Refused('Capy did not confirm it took the wake for run ' + run,
-                              'open the run in Capy to see if the message arrived before you wake it again')
-            return {'run': run, 'woke': True}
-        if not admitted(*ask('POST', '/api/v1/threads/%s/interrupt' % run)):
-            raise Refused('Capy did not confirm it interrupted run %s, so it may still be running' % run,
-                          'stop the run in Capy itself, then stop it here again')
-        status, got = ask('POST', '/api/v1/threads/%s/archive' % run)
-        if not (status == 200 and a_thread(got, run, {'automation'}) and got['archived']):
-            raise Refused('Capy did not confirm it archived run ' + run,
-                          'archive the run in Capy itself, then stop it here again')
-        return {'run': run, 'stopped': True}
+            if not pending:
+                send_wake(owned, run, deadline)
+        elif not archived or settled:
+            interrupt_and_archive(run, deadline)
+        if pending and not settled:
+            raise pending_wake(run)
+        if settled:
+            record_wake(owned, run, b'')
+        return {'run': run, ('woke' if cmd == 'wake' else 'stopped'): True}
+
+
+def interrupt_and_archive(run, deadline):
+    if not admitted(*ask('POST', '/api/v1/threads/%s/interrupt' % run, deadline=deadline)):
+        raise Refused('Capy did not confirm it interrupted run %s, so it may still be running' % run,
+                      'stop the run in Capy itself, then stop it here again')
+    status, got = ask('POST', '/api/v1/threads/%s/archive' % run, deadline=deadline)
+    if not (status == 200 and a_thread(got, run, {'automation'}) and got['archived']):
+        raise Refused('Capy did not confirm it archived run ' + run,
+                      'archive the run in Capy itself, then stop it here again')
 
 
 def answer(cmd):
