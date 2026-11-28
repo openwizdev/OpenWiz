@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fmt;
 
 use serde::de::{self, Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
@@ -84,11 +85,28 @@ impl<'de> Visitor<'de> for JsonVisitor {
 
     fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Json, A::Error> {
         let mut entries: Vec<(String, Json)> = Vec::new();
+        let mut seen: Option<HashSet<String>> = None;
         while let Some(key) = map.next_key::<String>()? {
-            if entries.iter().any(|(k, _)| *k == key) {
+            let duplicate = match &mut seen {
+                Some(set) => set.contains(&key),
+                None if entries.len() >= 16 => {
+                    let mut set = HashSet::with_capacity(entries.len() * 2);
+                    for (existing, _) in &entries {
+                        set.insert(existing.clone());
+                    }
+                    let dup = set.contains(&key);
+                    seen = Some(set);
+                    dup
+                }
+                None => entries.iter().any(|(k, _)| *k == key),
+            };
+            if duplicate {
                 return Err(de::Error::custom(format!("the key {key:?} is given twice")));
             }
             let StrictJson(value) = map.next_value()?;
+            if let Some(set) = &mut seen {
+                set.insert(key.clone());
+            }
             entries.push((key, value));
         }
         Ok(Json::Object(entries))
@@ -655,6 +673,96 @@ mod tests {
                 err.0,
                 "record.binding: has a key that is not one of its keys"
             );
+        }
+    }
+
+    #[derive(Clone, Debug, PartialEq, Eq)]
+    struct FeedError(String);
+
+    impl fmt::Display for FeedError {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str(&self.0)
+        }
+    }
+
+    impl std::error::Error for FeedError {}
+
+    impl de::Error for FeedError {
+        fn custom<T: fmt::Display>(msg: T) -> Self {
+            Self(msg.to_string())
+        }
+    }
+
+    struct MapFeed<'a> {
+        entries: &'a [(String, i64)],
+        index: usize,
+    }
+
+    impl<'de> MapAccess<'de> for MapFeed<'_> {
+        type Error = FeedError;
+
+        fn next_key_seed<K: de::DeserializeSeed<'de>>(
+            &mut self,
+            seed: K,
+        ) -> Result<Option<K::Value>, Self::Error> {
+            let Some((key, _)) = self.entries.get(self.index) else {
+                return Ok(None);
+            };
+            seed.deserialize(de::value::StrDeserializer::<FeedError>::new(key))
+                .map(Some)
+        }
+
+        fn next_value_seed<V: de::DeserializeSeed<'de>>(
+            &mut self,
+            seed: V,
+        ) -> Result<V::Value, Self::Error> {
+            let (_, value) = self.entries[self.index];
+            self.index += 1;
+            seed.deserialize(de::value::I64Deserializer::<FeedError>::new(value))
+        }
+    }
+
+    fn oracle_visit_map<'de, A: MapAccess<'de>>(mut map: A) -> Result<Json, A::Error> {
+        let mut entries: Vec<(String, Json)> = Vec::new();
+        while let Some(key) = map.next_key::<String>()? {
+            if entries.iter().any(|(k, _)| *k == key) {
+                return Err(de::Error::custom(format!("the key {key:?} is given twice")));
+            }
+            let StrictJson(value) = map.next_value()?;
+            entries.push((key, value));
+        }
+        Ok(Json::Object(entries))
+    }
+
+    #[test]
+    fn strict_json_matches_linear_scan_oracle_across_object_widths() {
+        for width in [0, 1, 15, 16, 17, 32, 128] {
+            let unique: Vec<(String, i64)> =
+                (0..width).map(|i| (format!("k{i}"), i as i64)).collect();
+            let old = oracle_visit_map(MapFeed {
+                entries: &unique,
+                index: 0,
+            });
+            let new = JsonVisitor.visit_map(MapFeed {
+                entries: &unique,
+                index: 0,
+            });
+            assert_eq!(new, old, "unique mismatch at width={width}");
+            if width > 0 {
+                for dup_at in [0, width / 2, width - 1] {
+                    let mut dup = unique.clone();
+                    dup.push((format!("k{dup_at}"), 999));
+                    let old = oracle_visit_map(MapFeed {
+                        entries: &dup,
+                        index: 0,
+                    });
+                    let new = JsonVisitor.visit_map(MapFeed {
+                        entries: &dup,
+                        index: 0,
+                    });
+                    assert_eq!(new, old, "dup mismatch at width={width} dup_at={dup_at}");
+                }
+            }
         }
     }
 }

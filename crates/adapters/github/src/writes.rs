@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fmt;
 use std::path::Path;
 use std::time::Instant;
@@ -486,12 +487,29 @@ impl<'de> Visitor<'de> for JsonVisitor {
 
     fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Json, A::Error> {
         let mut entries: Vec<(String, Json)> = Vec::new();
+        let mut seen: Option<HashSet<String>> = None;
         while let Some(key) = map.next_key::<String>()? {
-            if entries.iter().any(|(k, _)| *k == key) {
+            let duplicate = match &mut seen {
+                Some(set) => set.contains(&key),
+                None if entries.len() >= 16 => {
+                    let mut set = HashSet::with_capacity(entries.len() * 2);
+                    for (existing, _) in &entries {
+                        set.insert(existing.clone());
+                    }
+                    let dup = set.contains(&key);
+                    seen = Some(set);
+                    dup
+                }
+                None => entries.iter().any(|(k, _)| *k == key),
+            };
+            if duplicate {
                 let _: IgnoredAny = map.next_value()?;
                 return Err(de::Error::custom("a key given twice"));
             }
             let Strict(value) = map.next_value()?;
+            if let Some(set) = &mut seen {
+                set.insert(key.clone());
+            }
             entries.push((key, value));
         }
         Ok(Json::Object(entries))
@@ -751,5 +769,21 @@ mod before_write_tests {
         let (result, calls) = perform_answering(&merge, [&queue("null"), "", &merged]);
         assert!(matches!(result, Err(WriteError::CheckFailed(_))));
         assert_eq!(calls, merge.calls()[..1], "only the check ran");
+    }
+
+    #[test]
+    fn wide_objects_reject_duplicates_across_hash_promotion_boundary() {
+        for width in [15, 16, 17, 64] {
+            let mut obj = String::from("{");
+            for i in 0..width {
+                if i > 0 {
+                    obj.push(',');
+                }
+                obj.push_str(&format!("\"k{i}\":{i}"));
+            }
+            assert!(document(format!("{obj}}}").as_bytes()).is_ok());
+            assert!(document(format!("{obj},\"k0\":99}}").as_bytes()).is_err());
+            assert!(document(format!("{obj},\"k{}\":99}}", width - 1).as_bytes()).is_err());
+        }
     }
 }

@@ -143,12 +143,13 @@ impl Reader {
         let captured = process::run_plan_graphql(Path::new(&self.program), &invocation, deadline)
             .map_err(source_failure)?;
         let failed = captured.failure.is_some();
-        let value = strict(&captured.stdout)?;
-        let root = value.as_object().ok_or_else(malformed)?;
+        let mut value = strict(&captured.stdout)?;
+        let root = value.as_object_mut().ok_or_else(malformed)?;
         if !root.contains_key("data") || root.keys().any(|k| k != "data" && k != "errors") {
             return Err(malformed());
         }
-        let gaps = if failed || root.contains_key("errors") {
+        let has_errors = root.contains_key("errors");
+        let gaps = if failed || has_errors {
             vec![failure(
                 GapKind::CommandFailed,
                 "GitHub reported an incomplete plan read",
@@ -156,14 +157,21 @@ impl Reader {
         } else {
             vec![]
         };
-        let mut data = root["data"].clone();
-        if failed || root.contains_key("errors") {
-            mask_errors(&mut data, root.get("errors"));
+        let errors = root.remove("errors");
+        let mut data = root.remove("data").ok_or_else(malformed)?;
+        if failed || has_errors {
+            mask_errors(&mut data, errors.as_ref());
         }
-        let data = object(&data, &["repository"])?;
-        let repo = data["repository"]
-            .as_object()
-            .ok_or_else(|| failure(GapKind::NotFound, "GitHub repository was not returned"))?;
+        let mut data = take_object(data, &["repository"])?;
+        let repo = match data.remove("repository") {
+            Some(Value::Object(repo)) => repo,
+            _ => {
+                return Err(failure(
+                    GapKind::NotFound,
+                    "GitHub repository was not returned",
+                ));
+            }
+        };
         let (field, subject) = match r {
             Request::Milestones => ("milestones", None),
             Request::Issues => ("issues", None),
@@ -181,12 +189,16 @@ impl Reader {
             ),
         };
         let parent = if let Some(subject) = subject {
-            let o = object(&Value::Object(repo.clone()), &[subject])?;
-            o[subject].as_object().cloned().ok_or_else(malformed)?
+            let mut o = take_object(Value::Object(repo), &[subject])?;
+            match o.remove(subject) {
+                Some(Value::Object(map)) => map,
+                _ => return Err(malformed()),
+            }
         } else {
-            repo.clone()
+            repo
         };
-        let value = object(&Value::Object(parent), &[field])?[field].clone();
+        let mut container = take_object(Value::Object(parent), &[field])?;
+        let value = container.remove(field).ok_or_else(malformed)?;
         if value.is_null() {
             return Err(failure(
                 GapKind::NotFound,
@@ -233,10 +245,10 @@ impl Reader {
                 list.rows.extend(nodes.iter().cloned());
             }
             let parsed = (|| {
-                let o = object(&value, &["nodes", "totalCount", "pageInfo"])?;
+                let o = object_ref(&value, &["nodes", "totalCount", "pageInfo"])?;
                 o["nodes"].as_array().ok_or_else(malformed)?;
                 let count = o["totalCount"].as_u64().ok_or_else(malformed)?;
-                let info = object(&o["pageInfo"], &["hasNextPage", "endCursor"])?;
+                let info = object_ref(&o["pageInfo"], &["hasNextPage", "endCursor"])?;
                 let more = info["hasNextPage"].as_bool().ok_or_else(malformed)?;
                 let next = if info["endCursor"].is_null() {
                     None
@@ -366,7 +378,7 @@ impl Reader {
                 }
             }),
             labels: convert(connection("labels", Relation::Labels), |v| {
-                let o = object(&v, &["name"])?;
+                let o = object_ref(&v, &["name"])?;
                 string(&o["name"])
             }),
             children: links("subIssues", Relation::SubIssues),
@@ -379,7 +391,7 @@ impl Reader {
         if let Some(gap) = gaps.first() {
             return Err(gap.clone());
         }
-        let o = object(
+        let o = object_ref(
             &v,
             &[
                 "number",
@@ -405,9 +417,7 @@ impl Reader {
         let o = v.as_object_mut().ok_or_else(malformed)?;
         o.remove("url");
         o.insert("closingIssuesReferences".to_owned(), Value::Array(links));
-        let answer =
-            crate::tickets::pull_request(&serde_json::to_vec(&v).map_err(|_| malformed())?)
-                .map_err(source_failure)?;
+        let answer = crate::tickets::pull_request_from_map(o, true).map_err(source_failure)?;
         if answer.number != n {
             return Err(malformed());
         }
@@ -421,7 +431,7 @@ impl Reader {
                 deadline,
             ),
             |v| {
-                let o = object(&v, &["body"])?;
+                let o = object_ref(&v, &["body"])?;
                 let s = o["body"].as_str().ok_or_else(malformed)?;
                 Ok(s.to_owned())
             },
@@ -452,7 +462,7 @@ pub fn source_failure(e: SourceError) -> Failure {
     };
     failure(kind, "GitHub plan read failed (detail withheld)")
 }
-pub fn object(v: &Value, keys: &[&str]) -> Answer<Map<String, Value>> {
+fn object_ref<'a>(v: &'a Value, keys: &[&str]) -> Answer<&'a Map<String, Value>> {
     let o = v.as_object().ok_or_else(malformed)?;
     if keys.iter().any(|k| !o.contains_key(*k)) {
         return Err(failure(
@@ -463,7 +473,25 @@ pub fn object(v: &Value, keys: &[&str]) -> Answer<Map<String, Value>> {
     if o.len() != keys.len() {
         return Err(malformed());
     }
-    Ok(o.clone())
+    Ok(o)
+}
+fn take_object(v: Value, keys: &[&str]) -> Answer<Map<String, Value>> {
+    let Value::Object(o) = v else {
+        return Err(malformed());
+    };
+    if keys.iter().any(|k| !o.contains_key(*k)) {
+        return Err(failure(
+            GapKind::MissingField,
+            "GitHub plan field is missing",
+        ));
+    }
+    if o.len() != keys.len() {
+        return Err(malformed());
+    }
+    Ok(o)
+}
+pub fn object(v: &Value, keys: &[&str]) -> Answer<Map<String, Value>> {
+    object_ref(v, keys).cloned()
 }
 pub fn positive(v: &Value) -> Answer<Number> {
     v.as_u64().and_then(Number::new).ok_or_else(malformed)
@@ -488,7 +516,7 @@ fn milestone(v: Value) -> Answer<Milestone> {
     })
 }
 fn link(v: Value) -> Answer<Link> {
-    let o = object(&v, &["number", "url"])?;
+    let o = object_ref(&v, &["number", "url"])?;
     Ok(Link {
         number: positive(&o["number"])?,
         url: string(&o["url"])?,

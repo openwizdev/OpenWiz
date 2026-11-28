@@ -12,7 +12,7 @@ use openwiz_core::messaging::send::Messenger;
 use openwiz_core::model::{Fact, SessionId};
 use openwiz_core::source::{SessionRecord, SessionScope, SessionSource};
 use std::cell::RefCell;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::Path;
 use std::rc::Rc;
 use std::time::Instant;
@@ -116,12 +116,82 @@ struct Reviewers {
     agents: Vec<(u64, Reviewer)>,
     retired_rechecks: BTreeSet<Number>,
 }
+struct PrIndex {
+    merges: BTreeMap<Number, Commit>,
+    open_by_issue: HashMap<Number, Vec<usize>>,
+    merged_by_issue: HashMap<Number, Vec<usize>>,
+    open_or_merged_by_issue: HashMap<Number, Vec<usize>>,
+    closed_by_issue: HashMap<Number, Vec<Number>>,
+}
+
+impl PrIndex {
+    fn build(prs: &[PrRow], closed_prs: &BTreeMap<Number, ClosedPrReferences>) -> Self {
+        let mut merges = BTreeMap::new();
+        let mut open_by_issue: HashMap<Number, Vec<usize>> = HashMap::new();
+        let mut merged_by_issue: HashMap<Number, Vec<usize>> = HashMap::new();
+        let mut open_or_merged_by_issue: HashMap<Number, Vec<usize>> = HashMap::new();
+        let mut closed_by_issue: HashMap<Number, Vec<Number>> = HashMap::new();
+        for (idx, p) in prs.iter().enumerate() {
+            match p {
+                PrRow::Open(facts) => {
+                    for r in &facts.closes {
+                        let open = open_by_issue.entry(r.number).or_default();
+                        if open.last() != Some(&idx) {
+                            open.push(idx);
+                        }
+                        let both = open_or_merged_by_issue.entry(r.number).or_default();
+                        if both.last() != Some(&idx) {
+                            both.push(idx);
+                        }
+                    }
+                }
+                PrRow::Merged {
+                    facts,
+                    merge_commit,
+                    ..
+                } => {
+                    merges.insert(facts.number, merge_commit.clone());
+                    for r in &facts.closes {
+                        let merged = merged_by_issue.entry(r.number).or_default();
+                        if merged.last() != Some(&idx) {
+                            merged.push(idx);
+                        }
+                        let both = open_or_merged_by_issue.entry(r.number).or_default();
+                        if both.last() != Some(&idx) {
+                            both.push(idx);
+                        }
+                    }
+                }
+                PrRow::Closed { .. } => {}
+            }
+        }
+        for (&pr, refs) in closed_prs {
+            if let Ok(targets) = &refs.targets {
+                for &issue in targets {
+                    let list = closed_by_issue.entry(issue).or_default();
+                    if list.last() != Some(&pr) {
+                        list.push(pr);
+                    }
+                }
+            }
+        }
+        Self {
+            merges,
+            open_by_issue,
+            merged_by_issue,
+            open_or_merged_by_issue,
+            closed_by_issue,
+        }
+    }
+}
+
 pub struct World {
     legacy_records: bool,
     cache: Rc<RefCell<MergeCache>>,
     base: Commit,
     unread_comments: BTreeSet<Number>,
     closed_prs: BTreeMap<Number, ClosedPrReferences>,
+    pr_index: PrIndex,
     pr_reads: BTreeMap<Number, Result<OpenReads>>,
     pub deadline: Instant,
     pub repository: openwiz_adapter_github::tick::Repository,
@@ -313,12 +383,14 @@ impl World {
         .and_then(|call| gh.executor().run(&call, deadline).ok())
         .and_then(|bytes| openwiz_adapter_github::tick::document(&bytes).ok())
         .is_some_and(|metadata| records::private_repository(&repository.name, &metadata));
+        let pr_index = PrIndex::build(&prs, &closed_prs);
         let mut world = Self {
             legacy_records,
             cache,
             base: branch,
             unread_comments,
             closed_prs,
+            pr_index,
             pr_reads: BTreeMap::new(),
             deadline,
             snapshot: Snapshot {
@@ -512,23 +584,18 @@ impl World {
             for link in &row.sub_issues.nodes {
                 let ticket = &self.issues[&link.number];
                 if ticket.state == openwiz_core::fleet::model::IssueState::Open {
-                    let prs = self
-                        .prs
-                        .iter()
-                        .filter_map(|p| match p {
-                            PrRow::Open(p)
-                                if p.closes.iter().any(|l| l.number == ticket.number) =>
-                            {
-                                Some(p)
-                            }
-                            _ => None,
-                        })
-                        .collect::<Vec<_>>();
-                    if let [p] = prs.as_slice() {
-                        open.insert(p.number, (*p).clone());
+                    let open_indices = self
+                        .pr_index
+                        .open_by_issue
+                        .get(&ticket.number)
+                        .map_or(&[][..], Vec::as_slice);
+                    if let &[idx] = open_indices
+                        && let PrRow::Open(p) = &self.prs[idx]
+                    {
+                        open.insert(p.number, p.clone());
                     }
                     targets.extend(ticket.blocked_by.nodes.iter().map(|l| l.number));
-                    if !self.prs.iter().any(|p| matches!(p, PrRow::Open(p) if p.closes.iter().any(|l| l.number == ticket.number))) {
+                    if open_indices.is_empty() {
                         targets.insert(ticket.number);
                     }
                     contracts |= records::relies(&ticket.body).is_ok_and(|p| !p.is_empty());
@@ -556,14 +623,17 @@ impl World {
             }
         }
         for target in targets {
-            let matched = self.prs.iter().filter(|p| matches!(p, PrRow::Merged { facts, .. } if facts.closes.iter().any(|l| l.number == target))).collect::<Vec<_>>();
-            if let [
-                PrRow::Merged {
+            let matched = self
+                .pr_index
+                .merged_by_issue
+                .get(&target)
+                .map_or(&[][..], Vec::as_slice);
+            if let &[idx] = matched
+                && let PrRow::Merged {
                     facts,
                     merge_commit,
                     ..
-                },
-            ] = matched.as_slice()
+                } = &self.prs[idx]
                 && facts.base_branch == self.repository.default
             {
                 commits.insert(merge_commit.clone());
@@ -754,11 +824,15 @@ impl World {
         gh: &TickReads,
         deadline: Instant,
     ) -> Result<Option<MergeInput>> {
-        let matching = self.prs.iter().filter(|p| matches!(p,PrRow::Merged {facts,..} if facts.closes.iter().any(|r| r.number == issue))).collect::<Vec<_>>();
+        let matching = self
+            .pr_index
+            .merged_by_issue
+            .get(&issue)
+            .map_or(&[][..], Vec::as_slice);
         if matching.len() > 1 {
             return Err("multiple merged PRs");
         }
-        match matching.first() {
+        match matching.first().map(|&idx| &self.prs[idx]) {
             Some(PrRow::Merged {
                 facts,
                 merge_commit,
@@ -989,32 +1063,35 @@ impl World {
             .map(|id| agent(room, &id, archived, deadline))
             .transpose()?;
         let open = self
-            .prs
+            .pr_index
+            .open_by_issue
+            .get(&id)
+            .map_or(&[][..], Vec::as_slice)
             .iter()
-            .filter_map(|p| match p {
-                PrRow::Open(p) if p.closes.iter().any(|r| r.number == id) => Some(p.clone()),
+            .filter_map(|&idx| match &self.prs[idx] {
+                PrRow::Open(p) => Some(p.clone()),
                 _ => None,
             })
             .collect::<Vec<_>>();
         let mut reviewers = vec![];
         let ticket_prs = self
-            .prs
+            .pr_index
+            .open_or_merged_by_issue
+            .get(&id)
+            .map_or(&[][..], Vec::as_slice)
             .iter()
-            .filter_map(|p| match p {
-                PrRow::Open(p) | PrRow::Merged { facts: p, .. }
-                    if p.closes.iter().any(|r| r.number == id) =>
-                {
-                    Some(p.number)
-                }
+            .filter_map(|&idx| match &self.prs[idx] {
+                PrRow::Open(p) | PrRow::Merged { facts: p, .. } => Some(p.number),
                 _ => None,
             })
-            .chain(self.closed_prs.iter().filter_map(|(pr, refs)| {
-                refs.targets
-                    .as_ref()
-                    .ok()
-                    .filter(|ns| ns.contains(&id))
-                    .map(|_| *pr)
-            }))
+            .chain(
+                self.pr_index
+                    .closed_by_issue
+                    .get(&id)
+                    .map_or(&[][..], Vec::as_slice)
+                    .iter()
+                    .copied(),
+            )
             .collect::<Vec<_>>();
         let mut pr_comments = BTreeMap::new();
         let mut retired_rechecks = BTreeMap::new();
@@ -1070,19 +1147,8 @@ impl World {
         } else {
             vec![]
         };
-        let merges = self
-            .prs
-            .iter()
-            .filter_map(|p| match p {
-                PrRow::Merged {
-                    facts,
-                    merge_commit,
-                    ..
-                } => Some((facts.number, merge_commit.clone())),
-                _ => None,
-            })
-            .collect();
-        let (holds, held_label_comment) = records::holds(&comments, &events, &merges)?;
+        let (holds, held_label_comment) =
+            records::holds(&comments, &events, &self.pr_index.merges)?;
         let question = comments
             .iter()
             .rev()
@@ -1450,5 +1516,169 @@ mod budget_tests {
             PlanningDeadline::Initial(original).with_work(5).unwrap(),
             observed - Duration::from_secs(90)
         );
+    }
+
+    #[test]
+    fn pr_index_matches_linear_scan_oracle() {
+        use openwiz_core::fleet::fleets::Link;
+        use openwiz_core::model::Timestamp;
+        let n = |v: u64| Number::new(v).unwrap();
+        let ne = |s: &str| NonEmpty::new(s).unwrap();
+        let c = |v: u64| Commit::parse(&format!("{v:040x}")).unwrap();
+        let link = |v: u64| Link {
+            number: n(v),
+            id: ne(&format!("I_syn_{v}")),
+        };
+        let prs = vec![
+            PrRow::Open(PrFacts {
+                number: n(10),
+                draft: false,
+                head_branch: ne("room/syn-1"),
+                head_commit: c(10),
+                base_branch: ne("main"),
+                closes: vec![link(1), link(2)],
+            }),
+            PrRow::Merged {
+                facts: PrFacts {
+                    number: n(11),
+                    draft: false,
+                    head_branch: ne("room/syn-2"),
+                    head_commit: c(11),
+                    base_branch: ne("main"),
+                    closes: vec![link(2), link(3)],
+                },
+                merge_commit: c(110),
+                merged_at: Timestamp(1_793_385_000_000),
+            },
+            PrRow::Open(PrFacts {
+                number: n(12),
+                draft: true,
+                head_branch: ne("room/syn-3"),
+                head_commit: c(12),
+                base_branch: ne("main"),
+                closes: vec![link(1)],
+            }),
+            PrRow::Merged {
+                facts: PrFacts {
+                    number: n(13),
+                    draft: false,
+                    head_branch: ne("room/syn-4"),
+                    head_commit: c(13),
+                    base_branch: ne("main"),
+                    closes: vec![link(3)],
+                },
+                merge_commit: c(130),
+                merged_at: Timestamp(1_793_386_000_000),
+            },
+            PrRow::Closed { number: n(14) },
+        ];
+        let mut closed_prs = BTreeMap::new();
+        closed_prs.insert(
+            n(14),
+            ClosedPrReferences {
+                candidates: BTreeSet::from([n(1), n(4)]),
+                targets: Ok(vec![n(1), n(4)]),
+            },
+        );
+        closed_prs.insert(
+            n(15),
+            ClosedPrReferences {
+                candidates: BTreeSet::from([n(2)]),
+                targets: Err("closed PR references incomplete"),
+            },
+        );
+        let index = PrIndex::build(&prs, &closed_prs);
+        let oracle_merges: BTreeMap<Number, Commit> = prs
+            .iter()
+            .filter_map(|p| match p {
+                PrRow::Merged {
+                    facts,
+                    merge_commit,
+                    ..
+                } => Some((facts.number, merge_commit.clone())),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(index.merges, oracle_merges);
+        for issue_id in 1..=5 {
+            let id = n(issue_id);
+            let old_open: Vec<Number> = prs
+                .iter()
+                .filter_map(|p| match p {
+                    PrRow::Open(p) if p.closes.iter().any(|r| r.number == id) => Some(p.number),
+                    _ => None,
+                })
+                .collect();
+            let new_open: Vec<Number> = index
+                .open_by_issue
+                .get(&id)
+                .map_or(&[][..], Vec::as_slice)
+                .iter()
+                .filter_map(|&idx| match &prs[idx] {
+                    PrRow::Open(p) => Some(p.number),
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(new_open, old_open);
+
+            let old_merged: Vec<Number> = prs
+                .iter()
+                .filter_map(|p| match p {
+                    PrRow::Merged { facts, .. } if facts.closes.iter().any(|r| r.number == id) => {
+                        Some(facts.number)
+                    }
+                    _ => None,
+                })
+                .collect();
+            let new_merged: Vec<Number> = index
+                .merged_by_issue
+                .get(&id)
+                .map_or(&[][..], Vec::as_slice)
+                .iter()
+                .filter_map(|&idx| match &prs[idx] {
+                    PrRow::Merged { facts, .. } => Some(facts.number),
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(new_merged, old_merged);
+
+            let old_ticket_prs: Vec<Number> = prs
+                .iter()
+                .filter_map(|p| match p {
+                    PrRow::Open(p) | PrRow::Merged { facts: p, .. }
+                        if p.closes.iter().any(|r| r.number == id) =>
+                    {
+                        Some(p.number)
+                    }
+                    _ => None,
+                })
+                .chain(closed_prs.iter().filter_map(|(pr, refs)| {
+                    refs.targets
+                        .as_ref()
+                        .ok()
+                        .filter(|ns| ns.contains(&id))
+                        .map(|_| *pr)
+                }))
+                .collect();
+            let new_ticket_prs: Vec<Number> = index
+                .open_or_merged_by_issue
+                .get(&id)
+                .map_or(&[][..], Vec::as_slice)
+                .iter()
+                .filter_map(|&idx| match &prs[idx] {
+                    PrRow::Open(p) | PrRow::Merged { facts: p, .. } => Some(p.number),
+                    _ => None,
+                })
+                .chain(
+                    index
+                        .closed_by_issue
+                        .get(&id)
+                        .map_or(&[][..], Vec::as_slice)
+                        .iter()
+                        .copied(),
+                )
+                .collect();
+            assert_eq!(new_ticket_prs, old_ticket_prs);
+        }
     }
 }

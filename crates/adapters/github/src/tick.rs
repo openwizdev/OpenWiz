@@ -138,8 +138,6 @@ impl TickReads {
         &self.executor
     }
     pub fn pull_requests(&self, deadline: Instant) -> Result<PullRequests> {
-        use openwiz_core::fleet::fleets::{Link, PrFacts, PrRow};
-        use openwiz_core::fleet::tickets::PrState;
         let v = self.json(
             &[
                 "pr",
@@ -153,75 +151,7 @@ impl TickReads {
             ],
             deadline,
         )?;
-        let mut rows = Vec::new();
-        let mut closed = BTreeMap::new();
-        for v in array(&v)? {
-            let row = object(v, &crate::fleets::PR_FIELDS.split(',').collect::<Vec<_>>())?;
-            if string(&row["title"])?.is_empty() {
-                return Err("empty PR title");
-            }
-            let mut references = Vec::new();
-            for r in array(&v["closingIssuesReferences"])? {
-                let r = object(r, &["id", "number", "repository", "url"])?;
-                let repo = object(&r["repository"], &["id", "name", "owner"])?;
-                string(&repo["id"])?;
-                string(&repo["name"])?;
-                let owner = object(&repo["owner"], &["id", "login"])?;
-                string(&owner["id"])?;
-                string(&owner["login"])?;
-                references.push((
-                    Link {
-                        number: number(&r["number"])?,
-                        id: NonEmpty::new(string(&r["id"])?.to_owned()).ok_or("empty issue id")?,
-                    },
-                    string(&r["url"])?.to_owned(),
-                ));
-            }
-            unique(references.iter().map(|(r, _)| r.number.get()))?;
-            unique(references.iter().map(|(r, _)| &r.id))?;
-            if string(&row["state"])? == "CLOSED" {
-                let number = number(&row["number"])?;
-                row["isDraft"].as_bool().ok_or("invalid draft flag")?;
-                for key in ["baseRefName", "headRefName", "headRefOid"] {
-                    string(&row[key])?;
-                }
-                if !row["mergeCommit"].is_null() || !row["mergedAt"].is_null() {
-                    return Err("closed PR has merge facts");
-                }
-                closed.insert(number, references);
-                rows.push(PrRow::Closed { number });
-                continue;
-            }
-            let mut view = v.clone();
-            view.as_object_mut()
-                .ok_or("PR is not an object")?
-                .remove("title");
-            let p = crate::tickets::pull_request(
-                &serde_json::to_vec(&view).map_err(|_| "PR encoding failed")?,
-            )
-            .map_err(|_| "PR inventory unread")?;
-            let facts = PrFacts {
-                number: p.number,
-                draft: p.draft,
-                head_branch: p.head_branch,
-                head_commit: p.head_commit,
-                base_branch: p.base_branch,
-                closes: references.iter().map(|(r, _)| r.clone()).collect(),
-            };
-            rows.push(match p.state {
-                PrState::Open => PrRow::Open(facts),
-                PrState::Merged {
-                    merge_commit,
-                    merged_at,
-                } => PrRow::Merged {
-                    facts,
-                    merge_commit,
-                    merged_at,
-                },
-                PrState::Closed => return Err("PR state changed while parsing"),
-            });
-        }
-        Ok(PullRequests { rows, closed })
+        parse_pull_requests(&v)
     }
     fn call(&self, argv: &[&str], deadline: Instant) -> Result<Vec<u8>> {
         let call = Invocation::new(argv).ok_or("tick read is not allowlisted")?;
@@ -727,6 +657,97 @@ pub fn comments(v: &Value) -> Result<Vec<Comment>> {
     Ok(out)
 }
 
+const PR_FIELD_KEYS: [&str; 10] = [
+    "baseRefName",
+    "closingIssuesReferences",
+    "headRefName",
+    "headRefOid",
+    "isDraft",
+    "mergeCommit",
+    "mergedAt",
+    "number",
+    "state",
+    "title",
+];
+
+fn parse_pull_requests(v: &Value) -> Result<PullRequests> {
+    use openwiz_core::fleet::fleets::{Link, PrFacts, PrRow};
+    use openwiz_core::fleet::tickets::PrState;
+    let items = array(v)?;
+    let mut rows = Vec::with_capacity(items.len());
+    let mut closed = BTreeMap::new();
+    for item in items {
+        let row = object(item, &PR_FIELD_KEYS)?;
+        if string(&row["title"])?.is_empty() {
+            return Err("empty PR title");
+        }
+        let is_closed = row["state"].as_str() == Some("CLOSED");
+        let closing = array(&row["closingIssuesReferences"])?;
+        let mut references = Vec::with_capacity(closing.len());
+        for r in closing {
+            let r = object(r, &["id", "number", "repository", "url"])?;
+            let repo = object(&r["repository"], &["id", "name", "owner"])?;
+            string(&repo["id"])?;
+            string(&repo["name"])?;
+            let owner = object(&repo["owner"], &["id", "login"])?;
+            string(&owner["id"])?;
+            string(&owner["login"])?;
+            let url = string(&r["url"])?;
+            references.push((
+                Link {
+                    number: number(&r["number"])?,
+                    id: NonEmpty::new(string(&r["id"])?.to_owned()).ok_or("empty issue id")?,
+                },
+                if is_closed {
+                    url.to_owned()
+                } else {
+                    String::new()
+                },
+            ));
+        }
+        if references.len() > 1 {
+            unique(references.iter().map(|(r, _)| r.number.get()))?;
+            unique(references.iter().map(|(r, _)| &r.id))?;
+        }
+        if string(&row["state"])? == "CLOSED" {
+            let number = number(&row["number"])?;
+            row["isDraft"].as_bool().ok_or("invalid draft flag")?;
+            for key in ["baseRefName", "headRefName", "headRefOid"] {
+                string(&row[key])?;
+            }
+            if !row["mergeCommit"].is_null() || !row["mergedAt"].is_null() {
+                return Err("closed PR has merge facts");
+            }
+            closed.insert(number, references);
+            rows.push(PrRow::Closed { number });
+            continue;
+        }
+        let p =
+            crate::tickets::pull_request_from_map(row, false).map_err(|_| "PR inventory unread")?;
+        let facts = PrFacts {
+            number: p.number,
+            draft: p.draft,
+            head_branch: p.head_branch,
+            head_commit: p.head_commit,
+            base_branch: p.base_branch,
+            closes: references.into_iter().map(|(r, _)| r).collect(),
+        };
+        rows.push(match p.state {
+            PrState::Open => PrRow::Open(facts),
+            PrState::Merged {
+                merge_commit,
+                merged_at,
+            } => PrRow::Merged {
+                facts,
+                merge_commit,
+                merged_at,
+            },
+            PrState::Closed => return Err("PR state changed while parsing"),
+        });
+    }
+    Ok(PullRequests { rows, closed })
+}
+
 fn comment(o: &Map<String, Value>) -> Result<Comment> {
     let created = uint(&o["created"])?;
     let updated = uint(&o["updated"])?;
@@ -744,4 +765,214 @@ fn comment(o: &Map<String, Value>) -> Result<Comment> {
         created,
         updated,
     })
+}
+
+#[cfg(test)]
+mod pull_request_oracle {
+    use super::*;
+
+    fn old_parse_pull_requests(v: &Value) -> Result<PullRequests> {
+        use openwiz_core::fleet::fleets::{Link, PrFacts, PrRow};
+        use openwiz_core::fleet::tickets::PrState;
+        let mut rows = Vec::new();
+        let mut closed = BTreeMap::new();
+        for v in array(v)? {
+            let row = object(v, &crate::fleets::PR_FIELDS.split(',').collect::<Vec<_>>())?;
+            if string(&row["title"])?.is_empty() {
+                return Err("empty PR title");
+            }
+            let mut references = Vec::new();
+            for r in array(&v["closingIssuesReferences"])? {
+                let r = object(r, &["id", "number", "repository", "url"])?;
+                let repo = object(&r["repository"], &["id", "name", "owner"])?;
+                string(&repo["id"])?;
+                string(&repo["name"])?;
+                let owner = object(&repo["owner"], &["id", "login"])?;
+                string(&owner["id"])?;
+                string(&owner["login"])?;
+                references.push((
+                    Link {
+                        number: number(&r["number"])?,
+                        id: NonEmpty::new(string(&r["id"])?.to_owned()).ok_or("empty issue id")?,
+                    },
+                    string(&r["url"])?.to_owned(),
+                ));
+            }
+            unique(references.iter().map(|(r, _)| r.number.get()))?;
+            unique(references.iter().map(|(r, _)| &r.id))?;
+            if string(&row["state"])? == "CLOSED" {
+                let number = number(&row["number"])?;
+                row["isDraft"].as_bool().ok_or("invalid draft flag")?;
+                for key in ["baseRefName", "headRefName", "headRefOid"] {
+                    string(&row[key])?;
+                }
+                if !row["mergeCommit"].is_null() || !row["mergedAt"].is_null() {
+                    return Err("closed PR has merge facts");
+                }
+                closed.insert(number, references);
+                rows.push(PrRow::Closed { number });
+                continue;
+            }
+            let mut view = v.clone();
+            view.as_object_mut()
+                .ok_or("PR is not an object")?
+                .remove("title");
+            let p = crate::tickets::pull_request(
+                &serde_json::to_vec(&view).map_err(|_| "PR encoding failed")?,
+            )
+            .map_err(|_| "PR inventory unread")?;
+            let facts = PrFacts {
+                number: p.number,
+                draft: p.draft,
+                head_branch: p.head_branch,
+                head_commit: p.head_commit,
+                base_branch: p.base_branch,
+                closes: references.iter().map(|(r, _)| r.clone()).collect(),
+            };
+            rows.push(match p.state {
+                PrState::Open => PrRow::Open(facts),
+                PrState::Merged {
+                    merge_commit,
+                    merged_at,
+                } => PrRow::Merged {
+                    facts,
+                    merge_commit,
+                    merged_at,
+                },
+                PrState::Closed => return Err("PR state changed while parsing"),
+            });
+        }
+        Ok(PullRequests { rows, closed })
+    }
+
+    #[test]
+    fn direct_pr_parser_matches_reserialize_oracle() {
+        let head = "1".repeat(40);
+        let merge = "2".repeat(40);
+        let ref_obj = |n: u64, id: &str| {
+            serde_json::json!({
+                "id": id,
+                "number": n,
+                "repository": {
+                    "id": "R_1",
+                    "name": "example",
+                    "owner": {"id": "O_1", "login": "synthetic"}
+                },
+                "url": format!("https://example.invalid/synthetic/example/issues/{n}")
+            })
+        };
+        let cases = [
+            serde_json::json!([]),
+            serde_json::json!([
+                {
+                    "baseRefName": "main",
+                    "closingIssuesReferences": [ref_obj(10, "I_10")],
+                    "headRefName": "room/syn-1",
+                    "headRefOid": head,
+                    "isDraft": false,
+                    "mergeCommit": {"oid": merge},
+                    "mergedAt": "2026-10-30T18:30:00Z",
+                    "number": 1,
+                    "state": "MERGED",
+                    "title": "#10: merged"
+                },
+                {
+                    "baseRefName": "main",
+                    "closingIssuesReferences": [ref_obj(11, "I_11")],
+                    "headRefName": "room/syn-2",
+                    "headRefOid": head,
+                    "isDraft": true,
+                    "mergeCommit": null,
+                    "mergedAt": null,
+                    "number": 2,
+                    "state": "OPEN",
+                    "title": "#11: open"
+                },
+                {
+                    "baseRefName": "main",
+                    "closingIssuesReferences": [ref_obj(12, "I_12")],
+                    "headRefName": "room/syn-3",
+                    "headRefOid": "not-a-sha",
+                    "isDraft": false,
+                    "mergeCommit": null,
+                    "mergedAt": null,
+                    "number": 3,
+                    "state": "CLOSED",
+                    "title": "#12: closed"
+                }
+            ]),
+            serde_json::json!([{
+                "baseRefName": "main",
+                "closingIssuesReferences": [],
+                "headRefName": "room/syn-4",
+                "headRefOid": head,
+                "isDraft": false,
+                "mergeCommit": {"oid": merge},
+                "mergedAt": "1969-12-31T23:59:59Z",
+                "number": 4,
+                "state": "MERGED",
+                "title": "pre-epoch"
+            }]),
+            serde_json::json!([{
+                "baseRefName": "main",
+                "closingIssuesReferences": [ref_obj(10, "I_10"), ref_obj(10, "I_11")],
+                "headRefName": "room/syn-5",
+                "headRefOid": head,
+                "isDraft": false,
+                "mergeCommit": null,
+                "mergedAt": null,
+                "number": 5,
+                "state": "OPEN",
+                "title": "dup issue number"
+            }]),
+            serde_json::json!([{
+                "baseRefName": "main",
+                "closingIssuesReferences": [],
+                "headRefName": "room/syn-6",
+                "headRefOid": head,
+                "isDraft": false,
+                "mergeCommit": null,
+                "mergedAt": null,
+                "number": 6,
+                "state": "MERGED",
+                "title": "merged without commit"
+            }]),
+            serde_json::json!([{
+                "baseRefName": "main",
+                "closingIssuesReferences": [],
+                "headRefName": "room/syn-7",
+                "headRefOid": head,
+                "isDraft": false,
+                "mergeCommit": {"oid": merge},
+                "mergedAt": null,
+                "number": 7,
+                "state": "OPEN",
+                "title": "open with merge"
+            }]),
+            serde_json::json!([{
+                "baseRefName": "main",
+                "closingIssuesReferences": [],
+                "headRefName": "room/syn-8",
+                "headRefOid": head,
+                "isDraft": false,
+                "mergeCommit": null,
+                "mergedAt": null,
+                "number": 8,
+                "state": "OPEN",
+                "title": ""
+            }]),
+        ];
+        assert_eq!(
+            PR_FIELD_KEYS.as_slice(),
+            crate::fleets::PR_FIELDS
+                .split(',')
+                .collect::<Vec<_>>()
+                .as_slice()
+        );
+        for case in &cases {
+            let old = old_parse_pull_requests(case).map(|r| (r.rows, r.closed));
+            let new = parse_pull_requests(case).map(|r| (r.rows, r.closed));
+            assert_eq!(new, old, "mismatch on {case}");
+        }
+    }
 }
