@@ -30,6 +30,8 @@ KEY_NEXT = 'check your Conductor API key, as adapters/conductor/README.md says, 
 SAVE_NEXT = 'make OPENWIZ_CONDUCTOR_STATE (or ~/.local/state/openwiz-conductor) a folder you can write'
 UNKNOWN_NEXT = ('look for workspace %s in Conductor and archive it if it is there, then `driver stop` run %s, '
                 'before you start again: a second start makes a second workspace')
+WAKE_UNKNOWN_NEXT = ('read the ticket for what its agent did; if it did not wake, `driver stop` run %s and start a '
+                     'new run')
 
 
 class Refused(Exception):
@@ -187,7 +189,7 @@ def start():
         raise Refused('Conductor runs no such harness; nothing was started',
                       'use one of: ' + ', '.join(HARNESSES))
     state = {'name': name, 'asked': hashlib.sha256(json.dumps(req, sort_keys=True).encode()).hexdigest(),
-             'workspace': None, 'session': None, 'starting': True, 'stopped': False, 'archived': False}
+             'workspace': None, 'session': None, 'starting': True, 'waking': False, 'stopped': False, 'archived': False}
     try:
         hold(run, state)
     except OSError:
@@ -241,16 +243,28 @@ def wake(run, state):
         raise Refused('run %s is stopped' % run, 'start a new run')
     if state['starting']:
         raise Refused('run %s never finished starting' % run, 'stop it, then start a new run')
+    if state.get('waking'):
+        raise Refused('run %s\'s last wake may have reached Conductor; its outcome is still unknown, so nothing was '
+                      'sent' % run, WAKE_UNKNOWN_NEXT % run)
+    try:
+        saved(run, dict(state, waking=True))
+    except OSError:
+        raise Refused('the driver cannot save run %s in its state folder; nothing was sent' % run, SAVE_NEXT)
+    unknown = Refused('Conductor may have accepted the wake for run %s, but its answer was lost; its outcome is '
+                      'unknown' % run, WAKE_UNKNOWN_NEXT % run)
     # External: a message sent while the agent works is steered into its running turn, so a wake never makes a
     # second agent, https://www.conductor.build/docs/api
     try:
         status, out = api('POST', '/v0/sessions/%s/messages' % state['session'],
                           {'message': message(state['request'], True)})
     except Unsent as e:
+        forget(run, dict(state, waking=False))
         raise Refused('%s; nothing was sent' % e.args[0], e.args[1])
     except Lost:
-        raise Refused('the wake for run %s reached Conductor but its answer was lost' % run,
-                      'read the ticket: if the agent\'s status note did not change, wake it again')
+        raise unknown
+    if status >= 500 or status == 408:
+        raise unknown
+    forget(run, dict(state, waking=False))
     if not 200 <= status < 300:
         key_refused(status, 'nothing was sent')
         raise Refused('Conductor refused the wake for run %s (%s)' % (run, said(status, out)),

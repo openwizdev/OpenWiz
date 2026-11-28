@@ -407,6 +407,39 @@ class Conductor(unittest.TestCase):
         self.assertIn('openwiz-' + run, out['next'])
         self.assertEqual(self.driver('start', dict(REQUEST, ticket=3))[0], 0, 'a stopped run still holds its start')
 
+    def test_the_fleet_caller_sends_one_wake_when_the_answer_is_lost(self):
+        for n, fault in enumerate(({'lose': True}, {'status': 503}, {'status': 408}), 1):
+            with self.subTest(fault=fault):
+                self.fault({})
+                code, started = self.driver('start', dict(REQUEST, ticket=n))
+                self.assertEqual(code, 0, started)
+                run, sid = started['run'], 'se_fake%04d' % n
+                before = [c for c in self.calls()[0] if c[1].endswith('/messages')]
+                self.fault({'POST /v0/sessions/{id}/messages': fault})
+                out = self.caller('wake', {'run': run})
+                self.assertIn('refused', out, out)
+                self.assertRegex(out['refused'][0], 'outcome is (still )?unknown')
+                self.assertIn('read the ticket', out['refused'][1])
+                self.assertIn(run, out['refused'][1])
+                after = [c for c in self.calls()[0] if c[1].endswith('/messages')]
+                self.assertEqual(len(after) - len(before), 1, 'the caller sent the wake again')
+                if fault.get('lose'):
+                    self.assertEqual(self.sessions()[sid]['messages'], 2, 'a lost wake delivered more than one message')
+                self.fault({})
+                code, again = self.driver('wake', {'run': run})
+                self.assertEqual(code, 1, again)
+                self.assertIn('outcome is still unknown', again['error'])
+                self.assertIn('nothing was sent', again['error'])
+                self.assertEqual(len([c for c in self.calls()[0] if c[1].endswith('/messages')]), len(after))
+                self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
+        code, started = self.driver('start', dict(REQUEST, ticket=9))
+        self.assertEqual(code, 0, started)
+        run = started['run']
+        self.fault({'POST /v0/sessions/{id}/messages': {'status': 400}})
+        self.assertEqual(self.driver('wake', {'run': run})[0], 1)
+        self.fault({})
+        self.assertEqual(self.driver('wake', {'run': run}), (0, {'run': run, 'woke': True}))
+
     def test_a_stop_conductor_does_not_confirm_never_says_the_run_stopped(self):
         run = self.driver('start', REQUEST)[1]['run']
         self.fault({'POST /v0/sessions/{id}/cancel': {'status': 503},
