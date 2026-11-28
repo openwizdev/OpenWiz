@@ -2,6 +2,7 @@ import hashlib
 import json
 import os
 import re
+import time
 from pathlib import Path
 import subprocess
 import sys
@@ -465,6 +466,32 @@ elif cmd == 'stop':
     out = {'run': json.loads(body)['run'], 'stopped': True}
 print(json.dumps(out))
 """
+SLOW_DRIVER = """#!/usr/bin/env python3
+import json, os, pathlib, secrets, sys, time
+root = pathlib.Path(__file__).parent
+state = pathlib.Path(os.environ['OPENWIZ_CLOUDROOM_STATE'])
+cmd = sys.argv[1]
+body = sys.stdin.read()
+with (root / 'driver-calls').open('a') as log:
+    log.write(json.dumps([cmd, json.loads(body) if body else None]) + '\\n')
+if cmd == 'start':
+    req = json.loads(body)
+    (root / 'entered-start').write_text('1')
+    while (root / 'hold-start').exists():
+        time.sleep(0.02)
+    rid = 'run-' + secrets.token_hex(6)
+    (state / (rid + '.json')).write_text(json.dumps(
+        {'thread': 'synthetic-child-thread', 'request': req, 'archived': False}))
+    out = {'run': rid}
+elif cmd == 'stop':
+    name = json.loads(body)['run']
+    record = state / (name + '.json')
+    record.write_text(json.dumps(dict(json.loads(record.read_text()), archived=True)))
+    out = {'run': name, 'stopped': True}
+else:
+    sys.exit('unexpected ' + cmd)
+print(json.dumps(out))
+"""
 FAKE_ROOM = """#!/usr/bin/env python3
 import json, pathlib, sys
 root = pathlib.Path(__file__).parent
@@ -682,6 +709,129 @@ class Sheet(unittest.TestCase):
         self.assertEqual([c[0] for c in self.driver_calls()], ['version', 'start', 'wake', 'stop'])
         self.assertEqual(self.driver_calls()[3][1], {'run': 'run-0123456789ab'})
         self.assertEqual(json.loads(late.read_text()), other)
+
+    def slow_steps(self):
+        kit = self.bound()
+        driver = self.program('slow-driver', SLOW_DRIVER)
+        env = {k: v for k, v in os.environ.items() if k != 'ROOM_PROJECT_ID'}
+        env['OPENWIZ_CLOUDROOM_STATE'] = self.env['OPENWIZ_CLOUDROOM_STATE']
+        steps = {s['id']: list(s['argv']) for s in kit['steps']}
+        for step_id, command in (('new_once', 'start'), ('driver_stop', 'stop')):
+            self.assertEqual(steps[step_id][4], command)
+            self.assertTrue(steps[step_id][7].endswith('/driver'))
+            steps[step_id][7] = driver
+        procs = []
+        self.addCleanup(lambda: [p.kill() for p in procs if p.poll() is None])
+        self.addCleanup(lambda: (self.root / 'hold-start').unlink(missing_ok=True))
+
+        def spawn(name):
+            cwd = self.root / name
+            cwd.mkdir()
+            proc = subprocess.Popen(steps['new_once'], cwd=cwd, env=env, stdin=subprocess.DEVNULL,
+                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            procs.append(proc)
+            return cwd, proc
+
+        def step(step_id, cwd):
+            done = subprocess.run(steps[step_id], cwd=cwd, env=env, stdin=subprocess.DEVNULL,
+                                  capture_output=True, text=True, timeout=10)
+            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+            return json.loads(done.stdout)
+        return steps, env, spawn, step
+
+    def wait_for(self, ready, what):
+        deadline = time.monotonic() + 10
+        while not ready():
+            if time.monotonic() > deadline:
+                self.fail(what)
+            time.sleep(0.02)
+
+    def saved_runs(self):
+        saved = {}
+        for path in sorted((self.root / 'state').glob('run-*.json')):
+            try:
+                saved[path.name[:-5]] = json.loads(path.read_text())
+            except ValueError:
+                pass
+        return saved
+
+    def test_concurrent_same_request_starts_refuse_the_second_and_the_first_run_survives(self):
+        steps, env, spawn, _step = self.slow_steps()
+        (self.root / 'hold-start').write_text('1')
+        first_cwd, first = spawn('caller-a')
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline and not (self.root / 'entered-start').exists():
+            time.sleep(0.02)
+        second_cwd, second = spawn('caller-b')
+        while time.monotonic() < deadline:
+            try:
+                waiting = Path(f'/proc/{second.pid}/wchan').read_text() == 'locks_lock_inode_wait'
+            except OSError:
+                waiting = False
+            overlapped = len(self.driver_calls()) >= 2 or (second.poll() is None and waiting)
+            if (self.root / 'entered-start').exists() and overlapped:
+                break
+            time.sleep(0.02)
+        else:
+            self.fail('the second start never overlapped the first on the synthetic host')
+        during = [c[0] for c in self.driver_calls()]
+        (self.root / 'hold-start').unlink()
+        finished = []
+        for cwd, proc in ((first_cwd, first), (second_cwd, second)):
+            out, err = proc.communicate(timeout=10)
+            finished.append((cwd, proc.returncode, out, err))
+        self.assertEqual(sorted(item[1] for item in finished), [0, 2], (during, finished))
+        self.assertEqual(during, ['start'], during)
+        refused = next(item for item in finished if item[1] == 2)
+        winner = next(item for item in finished if item[1] == 0)
+        self.assertEqual(json.loads(refused[2]), {'refused': 'same_request'})
+        self.assertEqual(json.loads(winner[2])['saved'], True)
+        self.assertFalse((refused[0] / 'driver-claim.json').exists())
+        runs = sorted((self.root / 'state').glob('run-*.json'))
+        self.assertEqual(len(runs), 1)
+        record = json.loads(runs[0].read_text())
+        self.assertIs(record['archived'], False)
+        claim = json.loads((winner[0] / 'driver-claim.json').read_text())
+        self.assertEqual(claim['runs'], [runs[0].name[:-5]])
+        stop = subprocess.run(steps['driver_stop'], cwd=refused[0], env=env, stdin=subprocess.DEVNULL,
+                              capture_output=True, text=True, timeout=10)
+        self.assertEqual(stop.returncode, 0, stop.stdout + stop.stderr)
+        self.assertEqual(json.loads(stop.stdout), {'stopped': True, 'runs': 0})
+        self.assertIs(json.loads(runs[0].read_text())['archived'], False)
+        self.assertEqual([c[0] for c in self.driver_calls()], ['start'])
+        stop = subprocess.run(steps['driver_stop'], cwd=winner[0], env=env, stdin=subprocess.DEVNULL,
+                              capture_output=True, text=True, timeout=10)
+        self.assertEqual(stop.returncode, 0, stop.stdout + stop.stderr)
+        self.assertEqual(json.loads(runs[0].read_text())['archived'], True)
+        self.assertEqual([c[1] for c in self.driver_calls() if c[0] == 'stop'], [{'run': runs[0].name[:-5]}])
+        late_cwd, late = spawn('caller-c')
+        out, _err = late.communicate(timeout=10)
+        self.assertEqual((late.returncode, json.loads(out)), (2, {'refused': 'same_request'}))
+        self.assertFalse((late_cwd / 'driver-claim.json').exists())
+
+    def test_an_interrupted_start_still_refuses_a_same_request_caller_and_recovers_only_its_own_run(self):
+        steps, env, spawn, step = self.slow_steps()
+        (self.root / 'hold-start').write_text('1')
+        first_cwd, first = spawn('caller-a')
+        self.wait_for(lambda: (self.root / 'entered-start').exists(), 'the first start never reached the driver')
+        first.kill()
+        first.communicate(timeout=10)
+        self.assertEqual(json.loads((first_cwd / 'driver-claim.json').read_text()).keys(), {'request'})
+        second_cwd, second = spawn('caller-b')
+        self.wait_for(lambda: second.poll() is not None or [c[0] for c in self.driver_calls()].count('start') > 1,
+                      'the second start neither ended nor reached the driver')
+        (self.root / 'hold-start').unlink()
+        out, err = second.communicate(timeout=10)
+        self.assertEqual((second.returncode, out), (2, json.dumps({'refused': 'same_request'}) + '\n'), err)
+        self.assertFalse((second_cwd / 'driver-claim.json').exists())
+        self.wait_for(lambda: self.saved_runs(), "the interrupted start's driver never saved its run")
+        [run] = self.saved_runs()
+        self.assertEqual(step('driver_stop', second_cwd), {'stopped': True, 'runs': 0})
+        self.assertIs(self.saved_runs()[run]['archived'], False)
+        self.assertEqual(step('driver_stop', first_cwd), {'stopped': True, 'runs': 1})
+        self.assertEqual(list(self.saved_runs()), [run])
+        self.assertIs(self.saved_runs()[run]['archived'], True)
+        self.assertEqual([c for c in self.driver_calls() if c[0] == 'stop'], [['stop', {'run': run}]])
 
     def test_driver_steps_call_only_driver_v1_commands_on_the_pinned_driver(self):
         contract = (RUNNER.resolve().parents[2] / 'kernel/driver.v1.md').read_text()
