@@ -121,8 +121,8 @@ class OpenClaw(unittest.TestCase):
         return calls
 
     def adapter(self, run):
-        script = "cd '%s' && exec %s" % (os.path.join(self.state, 'work', run), ' '.join(CLAUDE))
-        return ['env', 'HOME=' + self.home, 'sh', '-c', script]
+        return [os.path.realpath(sys.executable), '-I', DRIVER, '--acp', self.home,
+                os.path.join(self.state, 'work', run), os.path.join(self.state, 'acpx', run), '--'] + CLAUDE
 
     def acpx(self):
         return [c['args'] for c in self.seen()]

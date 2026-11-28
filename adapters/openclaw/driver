@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import ctypes, fcntl, json, os, re, secrets, select, shutil, signal, subprocess, sys, time
+import ctypes, fcntl, json, os, re, secrets, select, shutil, signal, subprocess, sys, threading, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATE = os.environ.get('OPENWIZ_OPENCLAW_STATE') or os.path.expanduser('~/.local/state/openwiz-openclaw')
@@ -53,25 +53,125 @@ class Project(Refused):
     pass
 
 
-def shell(text):
-    return "'" + text.replace("'", "'\\''") + "'"
+def escape(text):
+    return ''.join('\\' + c for c in text)
 
 
 def acpx(run, *args, harness):
-    work = os.path.join(STATE, 'work', run)
+    work = os.path.abspath(os.path.join(STATE, 'work', run))
     project = os.path.join(work, '.acpxrc.json')
     if os.path.lexists(project):
         raise Project('the run\'s folder holds %s, an acpx project config, so acpx was not run' % project,
                       'delete that file without opening it (the driver never reads it), then try again')
-    folder = os.path.join(STATE, 'acpx', run)
+    folder = os.path.abspath(os.path.join(STATE, 'acpx', run))
     os.makedirs(folder, mode=0o700, exist_ok=True)
     launch = os.path.join(folder, '.acpxrc.json')
     if os.path.lexists(launch):
         raise Project('the acpx launch folder holds %s, an acpx project config, so acpx was not run' % launch,
                       'delete that file without opening it (the driver never reads it), then try again')
-    home = ''.join('\\' + c for c in os.path.expanduser('~'))
-    agent = 'env HOME=%s sh -c %s' % (home, shell('cd %s && exec %s' % (shell(work), AGENTS[harness])))
+    cmd = [os.path.realpath(sys.executable), '-I', os.path.abspath(__file__), '--acp', os.path.expanduser('~'), work,
+           folder, '--']
+    agent = ' '.join(escape(part) for part in cmd + AGENTS[harness].split())
     return ['acpx', '--cwd', folder, '--agent', agent] + list(args)
+
+
+def rewrite_to_agent(line, work, launch):
+    try:
+        msg = json.loads(line)
+    except ValueError:
+        return line
+    if not isinstance(msg, dict):
+        return line
+    params = msg.get('params')
+    if msg.get('method') in ('session/new', 'session/load', 'session/resume') and isinstance(params, dict):
+        cwd = params.get('cwd')
+        if isinstance(cwd, str) and os.path.normpath(cwd) == launch:
+            params['cwd'] = work
+            return (json.dumps(msg, separators=(',', ':')) + '\n').encode('utf-8')
+    return line
+
+
+def rewrite_to_client(line, work, launch):
+    try:
+        msg = json.loads(line)
+    except ValueError:
+        return line, None
+    if not isinstance(msg, dict):
+        return line, None
+    method, params = msg.get('method'), msg.get('params')
+    if not isinstance(params, dict):
+        return line, None
+    if method in ('fs/read_text_file', 'fs/write_text_file') and isinstance(params.get('path'), str):
+        norm = os.path.normpath(params['path'])
+        real_work = os.path.join(launch, 'work')
+        if norm == work or norm.startswith(work + os.sep):
+            rel = os.path.relpath(norm, work)
+            params['path'] = real_work if rel == '.' else os.path.join(real_work, rel)
+            return (json.dumps(msg, separators=(',', ':')) + '\n').encode('utf-8'), None
+        if (norm == launch or norm.startswith(launch + os.sep)) and not (
+                norm == real_work or norm.startswith(real_work + os.sep)):
+            if 'id' in msg:
+                err = {'jsonrpc': '2.0', 'id': msg['id'],
+                       'error': {'code': -32602, 'message': 'path is outside the work folder'}}
+                return None, (json.dumps(err, separators=(',', ':')) + '\n').encode('utf-8')
+            return None, None
+    elif method == 'terminal/create':
+        cwd = params.get('cwd')
+        if cwd in (None, '') or (isinstance(cwd, str) and os.path.normpath(cwd) == launch):
+            params['cwd'] = work
+            return (json.dumps(msg, separators=(',', ':')) + '\n').encode('utf-8'), None
+    return line, None
+
+
+def relay(home, work, launch, cmd):
+    work, launch = os.path.abspath(work), os.path.abspath(launch)
+    try:
+        child = subprocess.Popen(cmd, cwd=work, env=dict(os.environ, HOME=home),
+                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    except OSError:
+        sys.exit(127)
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        signal.signal(sig, lambda signum, _: child.send_signal(signum) if child.poll() is None else None)
+    stdin_lock = threading.Lock()
+
+    def send(data):
+        with stdin_lock:
+            if not child.stdin.closed:
+                child.stdin.write(data)
+                child.stdin.flush()
+
+    def to_agent():
+        try:
+            while True:
+                line = sys.stdin.buffer.readline()
+                if not line:
+                    break
+                send(rewrite_to_agent(line, work, launch))
+        except OSError:
+            pass
+        finally:
+            try:
+                with stdin_lock:
+                    child.stdin.close()
+            except OSError:
+                pass
+
+    threading.Thread(target=to_agent, daemon=True).start()
+    try:
+        while True:
+            line = child.stdout.readline()
+            if not line:
+                break
+            out, reply = rewrite_to_client(line, work, launch)
+            if reply is not None:
+                send(reply)
+            elif out is not None:
+                sys.stdout.buffer.write(out)
+                sys.stdout.buffer.flush()
+    except OSError:
+        pass
+    rc = child.wait()
+    sys.exit(128 - rc if rc < 0 else rc)
 
 
 def opening(req, run):
@@ -284,7 +384,9 @@ def answer(cmd):
         try:
             saved(run, state)
             os.close(os.open(os.path.join(STATE, run + '.lock'), os.O_WRONLY | os.O_CREAT, 0o600))
-            os.makedirs(os.path.join(STATE, 'work', run), mode=0o700)
+            os.makedirs(os.path.join(STATE, 'acpx', run, 'work'), mode=0o700)
+            os.makedirs(os.path.join(STATE, 'work'), mode=0o700, exist_ok=True)
+            os.symlink(os.path.join('..', 'acpx', run, 'work'), os.path.join(STATE, 'work', run))
         except OSError:
             raise Refused('the driver cannot save runs in its state folder; nothing was started',
                           'make OPENWIZ_OPENCLAW_STATE (or ~/.local/state/openwiz-openclaw) a folder you can write')
@@ -351,6 +453,8 @@ def answer(cmd):
 def main():
     if len(sys.argv) > 2 and sys.argv[1] == '--turn':
         return supervise(sys.argv[2:])
+    if len(sys.argv) > 6 and sys.argv[1] == '--acp' and sys.argv[5] == '--':
+        return relay(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[6:])
     try:
         out, code = answer(sys.argv[1] if len(sys.argv) == 2 else ''), 0
     except Refused as e:

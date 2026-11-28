@@ -17,6 +17,36 @@ FAKE = os.path.join(ROOT, 'adapters', 'openclaw', 'fixtures', 'bin', 'acpx')
 REQUEST = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'claude',
            'model': 'claude-opus-5-5'}
 MARKER = {'auth': {'synthetic-race-marker': 'marker'}}
+CLAUDE = ['npx', '-y', '--package=@agentclientprotocol/claude-agent-acp@^0.95.0', '--', 'claude-agent-acp']
+STAND_IN = '''import json, os, sys
+log, work, launch = sys.argv[1], sys.argv[2], sys.argv[3]
+seen = {'cwd': os.getcwd(), 'home': os.environ.get('HOME'), 'requests': [], 'replies': []}
+for raw in sys.stdin:
+    msg = json.loads(raw)
+    if 'method' not in msg:
+        seen['replies'].append(msg)
+        continue
+    seen['requests'].append({'method': msg.get('method'), 'cwd': (msg.get('params') or {}).get('cwd')})
+    if msg.get('method') == 'session/new':
+        for out in (
+            {'jsonrpc': '2.0', 'id': 10, 'method': 'fs/read_text_file',
+             'params': {'sessionId': 's1', 'path': os.path.join(work, 'note.txt')}},
+            {'jsonrpc': '2.0', 'id': 11, 'method': 'fs/write_text_file',
+             'params': {'sessionId': 's1', 'path': os.path.join(work, 'note.txt'), 'content': 'hi'}},
+            {'jsonrpc': '2.0', 'id': 12, 'method': 'fs/read_text_file',
+             'params': {'sessionId': 's1', 'path': os.path.join(work, '..', 'outside.txt')}},
+            {'jsonrpc': '2.0', 'id': 13, 'method': 'terminal/create',
+             'params': {'sessionId': 's1', 'command': 'pwd'}},
+            {'jsonrpc': '2.0', 'id': 14, 'method': 'fs/write_text_file',
+             'params': {'sessionId': 's1', 'path': os.path.join(launch, '.acpxrc.json'), 'content': '{}'}},
+            {'jsonrpc': '2.0', 'id': msg['id'], 'result': {'sessionId': 's1'}},
+        ):
+            print(json.dumps(out), flush=True)
+    else:
+        print(json.dumps({'jsonrpc': '2.0', 'id': msg['id'], 'result': {}}), flush=True)
+with open(log, 'w') as handle:
+    json.dump(seen, handle)
+'''
 
 ctypes.CDLL(None, use_errno=True).prctl(36, 1, 0, 0, 0)
 
@@ -106,6 +136,69 @@ class AcpxProjectConfig(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(work, '.acpxrc.json')))
         self.assertEqual(self.seen()[before]['auth'], [], 'acpx loaded the project config')
         self.assertNotIn('synthetic-race-marker', json.dumps(self.seen()[before]))
+
+    def swap_adapter(self, ran, replacement):
+        if ran[-len(CLAUDE):] == CLAUDE:
+            return ran[:-len(CLAUDE)] + replacement
+        old = ' '.join(CLAUDE)
+        new = ' '.join("'" + part.replace("'", "'\\''") + "'" for part in replacement)
+        return [part.replace(old, new) for part in ran]
+
+    def test_acp_session_workspace_and_tool_requests_use_the_work_folder(self):
+        code, out = self.driver('start', REQUEST)
+        self.assertEqual(code, 0, out)
+        first = self.seen()[0]
+        launch = first['args'][first['args'].index('--cwd') + 1]
+        work = os.path.join(self.state, 'work', out['run'])
+        self.assertNotEqual(os.path.realpath(launch), os.path.realpath(work))
+        agent = os.path.join(self.folder, 'stand_in.py')
+        with open(agent, 'w') as handle:
+            handle.write(STAND_IN)
+        log = os.path.join(self.folder, 'agent.json')
+        cmd = self.swap_adapter(first['ran'], [sys.executable, '-I', agent, log, work, launch])
+        env = dict(os.environ, HOME=os.path.join(self.state, 'home'))
+        messages = []
+        with subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                              cwd=launch, env=env, text=True) as proc:
+            for req in (
+                {'jsonrpc': '2.0', 'id': 1, 'method': 'session/new', 'params': {'cwd': launch, 'mcpServers': []}},
+                {'jsonrpc': '2.0', 'id': 2, 'method': 'session/load',
+                 'params': {'sessionId': 's1', 'cwd': launch, 'mcpServers': []}},
+                {'jsonrpc': '2.0', 'id': 3, 'method': 'session/resume',
+                 'params': {'sessionId': 's1', 'cwd': launch, 'mcpServers': []}},
+            ):
+                proc.stdin.write(json.dumps(req) + '\n')
+                proc.stdin.flush()
+                while True:
+                    line = proc.stdout.readline()
+                    if not line:
+                        self.fail(proc.stderr.read())
+                    msg = json.loads(line)
+                    messages.append(msg)
+                    if msg.get('id') == req['id']:
+                        break
+            proc.stdin.close()
+            stderr = proc.stderr.read()
+            self.assertEqual(proc.wait(timeout=30), 0, stderr)
+        with open(log) as handle:
+            recorded = json.load(handle)
+        self.assertEqual(recorded['cwd'], os.path.realpath(work))
+        self.assertEqual(recorded['home'], self.home)
+        self.assertEqual(recorded['requests'], [
+            {'method': 'session/new', 'cwd': work},
+            {'method': 'session/load', 'cwd': work},
+            {'method': 'session/resume', 'cwd': work},
+        ])
+        by_id = {m['id']: m for m in messages if 'method' in m}
+        for mid in (10, 11):
+            rewritten = by_id[mid]['params']['path']
+            self.assertTrue(rewritten.startswith(os.path.abspath(launch) + os.sep), rewritten)
+            self.assertEqual(os.path.realpath(rewritten), os.path.realpath(os.path.join(work, 'note.txt')))
+        self.assertFalse(by_id[12]['params']['path'].startswith(os.path.abspath(launch) + os.sep))
+        self.assertEqual(by_id[13]['params']['cwd'], work)
+        self.assertNotIn(14, by_id)
+        self.assertEqual([r['id'] for r in recorded['replies']], [14])
+        self.assertIn('error', recorded['replies'][0])
 
 
 if __name__ == '__main__':
