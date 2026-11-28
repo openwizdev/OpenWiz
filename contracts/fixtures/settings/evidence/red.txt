@@ -1,0 +1,16 @@
+Red run (#3376), before the contract and schema existed.
+Command: python3 -I contracts/fixtures/settings/test_fixtures.py (exit 1)
+
+test_a_new_file_is_local_only_opt_in_off_telemetry_off_updates_ask (__main__.Settings.test_a_new_file_is_local_only_opt_in_off_telemetry_off_updates_ask) ... FAIL
+test_any_free_string_refuses_a_key_shaped_value (__main__.Settings.test_any_free_string_refuses_a_key_shaped_value) ... FAIL
+test_each_invalid_fixture_is_a_valid_one_with_one_change (__main__.Settings.test_each_invalid_fixture_is_a_valid_one_with_one_change) ... FAIL
+test_every_invalid_fixture_is_refused_for_its_rule (__main__.Settings.test_every_invalid_fixture_is_refused_for_its_rule) ... FAIL
+test_every_valid_fixture_is_accepted (__main__.Settings.test_every_valid_fixture_is_accepted) ... FAIL
+test_models_v1_points_here_in_one_paragraph (__main__.Settings.test_models_v1_points_here_in_one_paragraph) ... FAIL
+test_nothing_real_in_the_contract_schema_or_fixtures (__main__.Settings.test_nothing_real_in_the_contract_schema_or_fixtures) ... FAIL
+test_the_contract_names_every_field_with_type_default_and_writer (__main__.Settings.test_the_contract_names_every_field_with_type_default_and_writer) ... FAIL
+test_the_cross_family_reason_is_the_contracts (__main__.Settings.test_the_cross_family_reason_is_the_contracts) ... FAIL
+test_the_key_use_log_holds_names_and_times_only (__main__.Settings.test_the_key_use_log_holds_names_and_times_only) ... FAIL
+AssertionError: False is not true : settings.v1.md is missing
+Ran 10 tests in 0.001s
+FAILED (failures=10)
