@@ -1,0 +1,25 @@
+{
+  "source": {
+    "framing": "Synthetic update.",
+    "facts": "syn-count:  02\r\nsyn-status: ready\r\n",
+    "next_command": "Next: syn-check --slot 02\r\n",
+    "json_output": "{\"syn-count\": 2}\n",
+    "record": "{\"syn-status\":\"ready\"}\n",
+    "contract": "syn-contract.v1\n"
+  },
+  "styled": {
+    "framing": "At your service.\nRelay standing by.",
+    "facts": "syn-count:  02\r\nsyn-status: ready\r\n",
+    "next_command": "Next: syn-check --slot 02\r\n",
+    "json_output": "{\"syn-count\": 2}\n",
+    "record": "{\"syn-status\":\"ready\"}\n",
+    "contract": "syn-contract.v1\n"
+  },
+  "broken": [
+    {"path": ["facts"], "value": "syn-count: 02\r\nsyn-status: ready\r\n"},
+    {"path": ["next_command"], "value": "Next: syn-check --slot 02\n"},
+    {"path": ["json_output"], "value": "{\"syn-count\":2}\n"},
+    {"path": ["record"], "value": "{\"syn-status\": \"ready\"}\n"},
+    {"path": ["contract"], "value": "syn-contract.v2\n"}
+  ]
+}

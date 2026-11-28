@@ -1,0 +1,4 @@
+Command: python3 -I contracts/fixtures/persona/test_fixtures.py
+AssertionError: False is not true : persona.v1.schema.json is missing
+Ran 2 tests in 0.000s
+FAILED (failures=1)
