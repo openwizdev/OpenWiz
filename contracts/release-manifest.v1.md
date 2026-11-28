@@ -13,7 +13,7 @@ Authority: ADR 0021 (`docs/adr/0021-app-skills-kernel-ship-as-a-matched-set.md`)
 | `schema` | string | Always `openwiz.release-manifest.v1`. |
 | `kernel_version` | string | Kernel semver `MAJOR.MINOR.PATCH` matching `^(0\|[1-9][0-9]*)\.(0\|[1-9][0-9]*)\.(0\|[1-9][0-9]*)$`. No leading `v`, no leading zeroes. |
 | `wizskills` | object | Exact keys `version`, `commit`, `tree`, equal to `wizskills.lock`. |
-| `wizskills.version` | string | WizSkills semver `MAJOR.MINOR.PATCH`, same pattern as `kernel_version`. |
+| `wizskills.version` | string | WizSkills semver matching [`wizskills.v1`](wizskills.v1.md)'s `version_pattern` (no leading `v`, no leading zeroes; allows prerelease and build suffixes, forbids `0.0.z`), equal to `wizskills.lock`. |
 | `wizskills.commit` | string | 40 lowercase hexadecimal characters (`^[0-9a-f]{40}$`), the pinned WizSkills commit. |
 | `wizskills.tree` | string | 40 lowercase hexadecimal characters (`^[0-9a-f]{40}$`), the pinned WizSkills Git tree. |
 | `records_contract` | integer | Positive whole number (`>= 1`), matching the records-contract version under [records v1](records.v1.md) (D3). For v1, `1`. |
