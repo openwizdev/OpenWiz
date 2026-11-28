@@ -893,14 +893,15 @@ class Kit:
         return lines[at].rstrip(), rows
 
     def effort_on_host(self, name, request):
+        probe = dict(request, repository=PROBE_REPO)
         canary, server = (name, 'kit-canary-' + secrets.token_hex(16)), []
         host = FakeHost(answers=self.lifecycle(), test_key=canary[1],
-                        trust=lambda port: self.trusted_helper(port, server[0]))
+                        trust=lambda port: self.trusted_helper(port, server[0]), start=probe)
         server.append(host.server.server_address[1])
         env = {k: v for k, v in self.env.items() if k != self.hosts[name]['variable']}
         env[OVERRIDE] = host.origin
         try:
-            kind, v = self.call('start', request, env, canary)
+            kind, v = self.call('start', probe, env, canary)
             with host.lock:
                 start_posts = [body for line, _, body in host.requests if line.startswith('POST ')]
             if kind == 'ok':

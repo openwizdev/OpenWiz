@@ -104,16 +104,32 @@ class Driver(unittest.TestCase):
     def posts(self):
         return [p for m, p in self.host.calls() if m != 'GET']
 
-    def kit(self):
-        p = subprocess.run([sys.executable, '-I', KIT, '--driver', DRIVER, '--repo', 'example/site', '--ticket', '7',
-                            '--harness', 'claude-code', '--model', 'synthetic-model-1', '--tracker', self.tracker,
-                            '--wait', '8'], env=self.env, capture_output=True, text=True, timeout=300)
+    def kit(self, repo='example/site', harness='claude-code', effort=None):
+        cmd = [sys.executable, '-I', KIT, '--driver', DRIVER, '--repo', repo, '--ticket', '7',
+               '--harness', harness, '--model', 'synthetic-model-1', '--tracker', self.tracker, '--wait', '8']
+        if effort is not None:
+            cmd += ['--effort', effort]
+        p = subprocess.run(cmd, env=self.env, capture_output=True, text=True, timeout=300)
         return p.returncode, p.stdout.splitlines(), p.stderr
 
     def test_kit_passes_all_five_on_the_fake_host(self):
         code, out, err = self.kit()
         self.assertEqual((out, err), (KIT_PASS, ''))
         self.assertEqual(code, 0)
+
+    def test_codex_kit_passes_with_a_different_outer_repository(self):
+        self.use(repositories=[{
+            'id': REPO, 'owner': 'fixture-org', 'name': 'fixture-repo',
+            'url': 'https://github.com/fixture-org/fixture-repo', 'provider': fake.GITHUB}])
+        code, out, err = self.kit(repo='fixture-org/fixture-repo', harness='codex', effort='high')
+        want = list(KIT_PASS)
+        want[1] = "pass start: the run posted builder status note 2; effort: high reached the kit's fake tembo host"
+        self.assertEqual((out, err), (want, ''))
+        self.assertEqual(code, 0)
+        self.assertEqual(len(self.host.sessions), 1)
+        [session] = self.host.sessions.values()
+        self.assertEqual(session['request']['agent'], 'codex:synthetic-model-1')
+        self.assertEqual(session['request']['agentOptions'], {'reasoningLevel': 'high'})
 
     def test_every_request_reaches_the_host_with_the_key_header_only(self):
         run = self.started()
@@ -141,6 +157,71 @@ class Driver(unittest.TestCase):
         run = self.started()
         self.assertEqual(self.host.sessions[run]['request']['codeRepositoryIds'], [REPO])
         self.assertIn(('GET', '/v1/repositories?search=site&limit=100'), self.host.calls())
+
+    def test_start_matches_github_repository_identity_and_refuses_ambiguous_matches(self):
+        gitlab = {'type': 'gitlab', 'displayName': 'GitLab',
+                  'integrationId': '00000000-0000-4000-8000-000000000002'}
+        gl_repo = {'id': '00000000-0000-4000-8000-0000000000b1', 'owner': 'example', 'name': 'site',
+                   'url': 'https://gitlab.com/example/site', 'provider': gitlab}
+        gh_repo = {'id': REPO, 'owner': 'example', 'name': 'site',
+                   'url': 'https://github.com/example/site', 'provider': fake.GITHUB}
+        gh_repo_2 = {'id': '00000000-0000-4000-8000-0000000000b2', 'owner': 'Example', 'name': 'Site',
+                     'url': 'https://github.com/Example/Site.git',
+                     'provider': {'type': 'github', 'displayName': 'GitHub 2',
+                                  'integrationId': '00000000-0000-4000-8000-000000000003'}}
+        ghe_repo = {'id': '00000000-0000-4000-8000-0000000000b3', 'owner': 'example', 'name': 'site',
+                    'url': 'https://ghe.example.com/example/site', 'provider': fake.GITHUB}
+        for order in ([gl_repo, gh_repo], [gh_repo, gl_repo]):
+            self.use(repositories=order)
+            run = self.started()
+            self.assertEqual(self.host.sessions[run]['request']['codeRepositoryIds'], [REPO])
+        for non_gh in ([gl_repo], [ghe_repo]):
+            self.use(repositories=non_gh)
+            code, out = self.driver('start', START)
+            self.assertEqual((code, out), (1, {
+                'error': 'Tembo has no connected repository example/site',
+                'next': 'connect example/site to Tembo (Settings, Integrations, GitHub), then start again'}))
+            self.assertEqual(self.posts(), [])
+        self.use(repositories=[gh_repo, gh_repo_2])
+        code, out = self.driver('start', START)
+        self.assertEqual((code, out), (1, {
+            'error': 'Tembo has more than one connected GitHub repository for example/site',
+            'next': 'leave only one GitHub integration connected to example/site in Tembo, then start again'}))
+        self.assertEqual(self.posts(), [])
+
+    def test_start_follows_repository_pagination_cursor(self):
+        filler = [{'id': '00000000-0000-4000-8000-%012d' % i, 'owner': 'other-%d' % i, 'name': 'site',
+                   'url': 'https://github.com/other-%d/site' % i, 'provider': fake.GITHUB}
+                  for i in range(1, 101)]
+        target = {'id': REPO, 'owner': 'example', 'name': 'site',
+                  'url': 'https://github.com/example/site', 'provider': fake.GITHUB}
+        self.use(repositories=filler + [target])
+        run = self.started()
+        self.assertEqual(self.host.sessions[run]['request']['codeRepositoryIds'], [REPO])
+        gets = [p for m, p in self.host.calls() if m == 'GET']
+        self.assertEqual(gets, [
+            '/v1/repositories?search=site&limit=100',
+            '/v1/repositories?search=site&limit=100&cursor=' + filler[-1]['id']])
+        dup = dict(target, id='00000000-0000-4000-8000-0000000000b2')
+        self.use(repositories=[target] + filler + [dup])
+        code, out = self.driver('start', START)
+        self.assertEqual(code, 1)
+        self.assertIn('more than one connected GitHub repository', out['error'])
+        self.assertEqual(self.posts(), [])
+        self.host.replies = {('GET', '/v1/repositories'): (200, {'items': [], 'nextCursor': filler[0]['id']}, False)}
+        code, out = self.driver('start', START)
+        self.assertEqual(code, 1)
+        self.assertEqual(out['error'], self.unreadable('GET', '/v1/repositories', 200))
+        self.assertEqual(self.posts(), [])
+
+    def test_start_accepts_provider_qualified_model_up_to_100_chars(self):
+        model = 'openai/' + 'm' * 93
+        self.assertEqual(len(model), 100)
+        run = self.started(harness='codex', model=model)
+        self.assertEqual(self.host.sessions[run]['request']['agent'], 'codex:' + model)
+        code, out = self.driver('start', dict(START, harness='codex', model=model + 'x'))
+        self.assertEqual(code, 1)
+        self.assertEqual(out['error'], 'model is not valid')
 
     def test_start_refuses_a_repository_tembo_has_not_connected(self):
         code, out = self.driver('start', dict(START, repository='example/elsewhere'))
@@ -274,11 +355,21 @@ class Driver(unittest.TestCase):
         self.assertEqual((self.host.sessions[run]['level'], self.host.sessions[run]['messages']), (1, []))
 
     def test_an_unreadable_repository_list_refuses_start(self):
-        good = {'id': REPO, 'owner': 'example', 'name': 'site', 'url': 'synthetic'}
-        for code, body in ((200, None), (200, {}), (200, []), (200, {'items': None}), (200, {'items': {}}),
-                           (200, {'items': [None]}), (200, {'items': [dict(good, id=1)]}),
-                           (200, {'items': [dict(good, name=None)]}), (200, {'items': [dict(good, owner=7)]}),
-                           (200, {'items': [good, 'x']}), (201, {'items': [good]})):
+        good = {'id': REPO, 'owner': 'example', 'name': 'site',
+                'url': 'https://github.com/example/site', 'provider': fake.GITHUB}
+        for code, body in ((200, None), (200, {}), (200, []), (200, {'items': None, 'nextCursor': None}),
+                           (200, {'items': {}, 'nextCursor': None}),
+                           (200, {'items': [None], 'nextCursor': None}),
+                           (200, {'items': [dict(good, id=1)], 'nextCursor': None}),
+                           (200, {'items': [dict(good, name=None)], 'nextCursor': None}),
+                           (200, {'items': [dict(good, owner=7)], 'nextCursor': None}),
+                           (200, {'items': [dict(good, url=7)], 'nextCursor': None}),
+                           (200, {'items': [dict(good, provider=None)], 'nextCursor': None}),
+                           (200, {'items': [dict(good, provider={'type': 7})], 'nextCursor': None}),
+                           (200, {'items': [good]}),
+                           (200, {'items': [good], 'nextCursor': 7}),
+                           (200, {'items': [good], 'nextCursor': ''}),
+                           (200, {'items': [good, 'x'], 'nextCursor': None}), (201, {'items': [good]})):
             self.host.replies = {('GET', '/v1/repositories'): (code, body, False)}
             want = {'error': self.unreadable('GET', '/v1/repositories', code),
                     'next': "check Tembo's status, then retry"} if code == 200 else \
@@ -340,7 +431,7 @@ class Driver(unittest.TestCase):
                  (('DELETE', archive), 200, {'deleted': False, 'id': run}), (('DELETE', archive), 200, None),
                  (('DELETE', archive), 200, {'deleted': 1, 'id': run}), (('DELETE', archive), 200, {'deleted': True}),
                  (('DELETE', archive), 200, {'deleted': True, 'id': other}), (('DELETE', archive), 404, {}),
-                 (('DELETE', archive), 204, None)]
+                 (('DELETE', archive), 404, {'deleted': True, 'id': run}), (('DELETE', archive), 204, None)]
         for (method, path), code, body in cases:
             self.host.replies = {(method, path): (code, body, False)}
             why = self.unreadable(method, path, code) if code in (200, 404) else \

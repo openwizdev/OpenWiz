@@ -11,7 +11,7 @@ HOST = 'tembo'
 VERSION = {'driver': 'tembo', 'records': ['openwiz:records v1'], 'can': ['start', 'wake', 'stop', 'effort']}
 START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
          'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
-         'model': r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'}
+         'model': r'(?=.{1,100}$)[A-Za-z0-9][A-Za-z0-9 ._:@+-]*(/[A-Za-z0-9][A-Za-z0-9 ._:@+-]*)*'}
 RUN = {'run': r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'}
 AGENTS = {'claude': 'claudeCode', 'claude-code': 'claudeCode', 'codex': 'codex'}
 EFFORT = r'[a-z][a-z0-9-]{0,19}'
@@ -80,18 +80,55 @@ def not_found(status, found):
     return status == 404 and isinstance(found, dict) and set(found) == {'error'} and is_str(found['error'])
 
 
+def github_repo(r, owner, name):
+    if r['provider']['type'].lower() != 'github':
+        return False
+    if not (is_str(r['owner']) and r['owner'].lower() == owner.lower() and r['name'].lower() == name.lower()):
+        return False
+    try:
+        u = urllib.parse.urlsplit(r['url'])
+    except ValueError:
+        return False
+    if u.scheme.lower() != 'https' or u.netloc.lower() != 'github.com' or u.query or u.fragment:
+        return False
+    path = u.path.rstrip('/')
+    if path.lower().endswith('.git'):
+        path = path[:-4]
+    return path.lower() == ('/' + owner + '/' + name).lower()
+
+
 def repository(full):
     owner, name = full.split('/')
-    path = '/v1/repositories?' + urllib.parse.urlencode({'search': name, 'limit': 100})
-    status, found = ask('GET', path)
-    items = found.get('items') if isinstance(found, dict) else None
-    if not isinstance(items, list) or not all(
-            isinstance(r, dict) and is_str(r.get('id')) and is_str(r.get('name'))
-            and (r.get('owner') is None or is_str(r['owner'])) for r in items):
-        raise Refused(unreadable(status, 'GET', path), 'check Tembo\'s status, then retry')
-    for r in items:
-        if is_str(r['owner']) and r['owner'].lower() == owner.lower() and r['name'].lower() == name.lower():
-            return r['id']
+    cursor, seen, matches = None, set(), []
+    while True:
+        params = {'search': name, 'limit': 100}
+        if cursor is not None:
+            params['cursor'] = cursor
+        path = '/v1/repositories?' + urllib.parse.urlencode(params)
+        status, found = ask('GET', path)
+        items = found.get('items') if isinstance(found, dict) else None
+        has_cursor = isinstance(found, dict) and 'nextCursor' in found
+        next_cursor = found['nextCursor'] if has_cursor else None
+        if not has_cursor or (next_cursor is not None and not (is_str(next_cursor) and next_cursor)) \
+                or not isinstance(items, list) or not all(
+                isinstance(r, dict) and is_str(r.get('id')) and is_str(r.get('name'))
+                and (r.get('owner') is None or is_str(r['owner'])) and is_str(r.get('url'))
+                and isinstance(r.get('provider'), dict) and is_str(r['provider'].get('type')) for r in items):
+            raise Refused(unreadable(status, 'GET', path), 'check Tembo\'s status, then retry')
+        for r in items:
+            if github_repo(r, owner, name) and r['id'] not in matches:
+                matches.append(r['id'])
+        if next_cursor is None:
+            break
+        if next_cursor in seen or len(seen) >= 100:
+            raise Refused(unreadable(status, 'GET', path), 'check Tembo\'s status, then retry')
+        seen.add(next_cursor)
+        cursor = next_cursor
+    if len(matches) == 1:
+        return matches[0]
+    if len(matches) > 1:
+        raise Refused('Tembo has more than one connected GitHub repository for ' + full,
+                      'leave only one GitHub integration connected to %s in Tembo, then start again' % full)
     raise Refused('Tembo has no connected repository ' + full,
                   'connect %s to Tembo (Settings, Integrations, GitHub), then start again' % full)
 
@@ -137,7 +174,7 @@ def end(run):
     if not_found(status, done):
         if session(run) == 'live':
             raise Refused('Tembo answered 404 to DELETE %s, yet the run is still live' % path, '')
-    elif not (isinstance(done, dict) and done.get('deleted') is True and done.get('id') == run):
+    elif not (status == 200 and isinstance(done, dict) and done.get('deleted') is True and done.get('id') == run):
         raise Refused(unreadable(status, 'DELETE', path), '')
 
 
