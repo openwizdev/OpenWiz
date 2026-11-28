@@ -172,27 +172,83 @@ fn b2_1196_all_conditional_tables_are_strict_and_other_family() {
     }
     let wrong = RULES.replace("--provider claude-code", "--provider codex");
     assert!(Rules::parse(&wrong, &flags()).is_err());
-    let rules = Rules::parse(include_str!("../../docs/agents/fleet.md"), &flags()).unwrap();
-    assert_eq!(rules.builder().harness, "claude-code");
-    assert_eq!(rules.builder().model, "claude-opus-5-5");
+    let fleet = include_str!("../../docs/agents/fleet.md");
+    let rules = Rules::parse(fleet, &flags()).unwrap();
+    assert_eq!(rules.builder().harness, "antigravity");
+    assert_eq!(rules.builder().model, "default");
     assert_eq!(rules.builder().effort, "medium");
-    assert_eq!(rules.small_builder().harness, "claude-code");
-    assert_eq!(rules.small_builder().model, "claude-opus-5-5");
+    assert_eq!(rules.small_builder().harness, "antigravity");
+    assert_eq!(rules.small_builder().model, "default");
     assert_eq!(rules.small_builder().effort, "medium");
-    assert_eq!(
-        rules
-            .reviewer_for(openwiz_core::fleet::tick::BuilderFamily::Claude)
-            .unwrap()
-            .harness,
-        "codex"
-    );
-    assert_eq!(
-        rules
-            .reviewer_for(openwiz_core::fleet::tick::BuilderFamily::Gpt)
-            .unwrap()
-            .harness,
-        "claude-code"
-    );
+    let reviewer = rules
+        .reviewer_for(openwiz_core::fleet::tick::BuilderFamily::Gpt)
+        .unwrap();
+    assert_eq!(reviewer.harness, "claude-code");
+    assert_eq!(reviewer.model, "claude-opus-5-5");
+    assert_eq!(reviewer.effort, "medium");
+    for (case, bad) in [
+        (
+            "skipped fallback index",
+            fleet.replacen("| Reviewer fall-back 1 |", "| Reviewer fall-back 2 |", 1),
+        ),
+        (
+            "fallback follows builder",
+            fleet.replacen(
+                "| Reviewer fall-back 1 | Antigravity | Gemini 4 Neon | High | `--provider antigravity --reasoning-level high` |",
+                "| Reviewer fall-back 1 | follows Builder | | | |",
+                1,
+            ),
+        ),
+        (
+            "missing reasoning-level",
+            fleet.replacen(
+                "`--provider antigravity --reasoning-level medium`",
+                "`--provider antigravity`",
+                1,
+            ),
+        ),
+    ] {
+        assert!(Rules::parse(&bad, &flags()).is_err(), "{case}");
+    }
+    fallback_rows_survive_set(fleet);
+    let older = RULES.split("## CI checks").next().unwrap();
+    let older = older.replace("--provider codex", "--provider claude-code");
+    let row = "`--provider codex --model syn --reasoning-level high` |";
+    fallback_rows_survive_set(&format!(
+        "{fleet}\n{older}## Fixer\n| Builder family | Harness | Model | Effort | `room-cli thread spawn` flags |\n| --- | --- | --- | --- | --- |\n| Claude | S | S | S | {row}\n| GPT | S | S | S | {row}\n"
+    ));
+}
+
+fn fallback_rows_survive_set(fleet: &str) {
+    use openwiz_core::models::{Choice, Role, write};
+    let fallbacks = |text: &str| -> Vec<String> {
+        text.lines()
+            .filter(|l| l.starts_with("| Reviewer fall-back "))
+            .map(str::to_owned)
+            .collect()
+    };
+    assert_eq!(fallbacks(fleet).len(), 2);
+    let mut text = fleet.to_owned();
+    for effort in ["high", "low"] {
+        let asked = write::Asked::Choice(Choice::named("antigravity", "default", effort).unwrap());
+        text = write::set(&text, Role::Builder, &asked, &flags())
+            .unwrap_or_else(|e| panic!("set refused: {e}"))
+            .text
+            .unwrap();
+        assert_eq!(
+            fallbacks(&text),
+            fallbacks(fleet),
+            "set kept the fall-back rows"
+        );
+        assert!(
+            text.contains(&format!(
+                "`--provider antigravity --reasoning-level {effort}`"
+            )),
+            "set wrote no --model"
+        );
+        assert!(!text.contains("--model default"), "no row names a model");
+        assert!(Rules::parse(&text, &flags()).is_ok());
+    }
 }
 
 fn b2_1196_setup_template_can_produce_the_strict_rules() {

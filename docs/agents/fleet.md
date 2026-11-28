@@ -4,74 +4,27 @@ The fleet skills read this file. Keep every table's headings, columns and rows u
 
 ## Models
 
-Each role's model, under the [models contract](../../contracts/models.v1.md). The Builder starts each ticket and the Small builder each ticket with an exact `polish`, `huntr` or `proposal` label; the Orchestrator starts a spec's fleet thread. A pull request is reviewed by the Reviewer, or by the Builder when the Reviewer is of the pull request's builder's family (ADR 0008); otherwise the review waits. Change a role with `openwiz models set` and commit it: agents started after it reaches `main` use it; an agent already started keeps its model.
+Each role's model, under the [models contract](../../contracts/models.v1.md). The Builder starts each ticket and the Small builder each ticket with an exact `polish`, `huntr` or `proposal` label; the Orchestrator starts a spec's fleet thread. Every pull request is reviewed first by the Reviewer (`Opus 5.5 Medium`). Only when a Claude start is refused or stops on a positively reported usage limit does the fleet fall back to `Reviewer fall-back 1` (`Gemini 4 Neon, High`, through Antigravity, in a fresh thread that did not build the pull request), and only when Antigravity also refuses does it fall back to `Reviewer fall-back 2` (`Codex Sol 6.2 Medium`). The verdict names its reviewer's model and effort in its first lines (for example `reviewer: Neon High`). A review already started keeps its reviewer. The thread that built a pull request never reviews it. The next review goes back to Opus 5.5 Medium as soon as Claude has usage. Change a role with `openwiz models set` and commit it: agents started after it reaches `main` use it; an agent already started keeps its model.
 
 | Role | Harness | Model | Effort | `room-cli thread spawn` flags |
 | --- | --- | --- | --- | --- |
 | Orchestrator | Claude Code | Opus 5.5 | Medium | `--provider claude-code --model claude-opus-5-5 --reasoning-level medium` |
-| Builder | Claude Code | Opus 5.5 | Medium | `--provider claude-code --model claude-opus-5-5 --reasoning-level medium` |
-| Reviewer | Codex | Sol 6.2 | Medium | `--provider codex --model gpt-6.2-sol --reasoning-level medium` |
+| Builder | Antigravity | Gemini 4 Neon | Medium | `--provider antigravity --reasoning-level medium` |
+| Reviewer | Claude Code | Opus 5.5 | Medium | `--provider claude-code --model claude-opus-5-5 --reasoning-level medium` |
 | Small builder | follows Builder | | | |
 | Fixer | follows Builder | | | |
+| Reviewer fall-back 1 | Antigravity | Gemini 4 Neon | High | `--provider antigravity --reasoning-level high` |
+| Reviewer fall-back 2 | Codex | Sol 6.2 | Medium | `--provider codex --model gpt-6.2-sol --reasoning-level medium` |
 
-Source: Jake, 2026-11-19 (J255: builders Opus 5.5 Medium, reviewers Codex Sol 6.2 Medium; [private record](https://github.com/jparker2006/ClosedWiz/issues/3065#issuecomment-7031528626)); the Fixer as J119 (2026-11-15; [private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6906276883)); the Orchestrator as the Builder, which starts the fleet thread today.
+Source: Jake, 2026-11-24: builders and fixers Gemini 4 Neon Medium through Antigravity; the first-choice reviewer Opus 5.5 Medium, then the fall-back order above ([private record](https://github.com/jparker2006/ClosedWiz/issues/3065#issuecomment-7137061380)). The Fixer and the Orchestrator rows keep J119 and J255 (2026-11-15 and 2026-11-19; [private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6906276883); [private record](https://github.com/jparker2006/ClosedWiz/issues/3065#issuecomment-7031528626)).
 
-**Kept for older skills:** the five tables below, from `## Builder` to `## Fixer`, are what the pinned WizSkills release reads. Keep them equal to this table (`openwiz models set` does; `openwiz models show` warns when they differ) until they go in #2205.
+- **Builder:** one per ticket, on its own branch. It never reviews or merges.
+- **Reviewer:** one per pull request. It reviews the exact head and never edits. If it can't start, the review waits; it is never swapped for another model, except along the recorded fall-back order above.
+- **Fixer:** the fresh builder for the review-loops contract's one fresh round, of the original builder's family. An unknown or conflicting family waits.
 
-## Builder
-
-One per ticket, on its own branch. It never reviews or merges. Tickets without an exact `polish`, `huntr` or `proposal` label use this table.
-
-| Setting | Value | `room-cli thread spawn` flag |
-| --- | --- | --- |
-| Harness | Claude Code | `--provider claude-code` |
-| Model | Opus 5.5 | `--model claude-opus-5-5` |
-| Effort | Medium | `--reasoning-level medium` |
-
-## Builder for small tickets
-
-Tickets with an exact `polish`, `huntr` or `proposal` label use this table.
-
-| Setting | Value | `room-cli thread spawn` flag |
-| --- | --- | --- |
-| Harness | Claude Code | `--provider claude-code` |
-| Model | Opus 5.5 | `--model claude-opus-5-5` |
-| Effort | Medium | `--reasoning-level medium` |
+Source of these rules: Jake, 2026-10-30, 2026-11-01 and 2026-11-06 ([private record](https://github.com/jparker2006/ClosedWiz/issues/1275#issuecomment-6704671951)); 2026-11-15 (J119; [private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6906276883)).
 
 Codex runs at the default service tier: no fast mode, no `--service-tier` override. Source: Jake, 2026-11-05 and 2026-11-07 ([private record](https://github.com/jparker2006/ClosedWiz/issues/1275#issuecomment-6704671951); [private record](https://github.com/jparker2006/ClosedWiz/issues/1988#issuecomment-6712108296)).
-
-## Reviewer for Claude-built
-
-One per pull request, from the other model family than the builder (ADR 0008). It reviews the exact head and never edits. If it can't start, the review waits; it is never swapped for another model.
-
-| Setting | Value | `room-cli thread spawn` flag |
-| --- | --- | --- |
-| Harness | Codex | `--provider codex` |
-| Model | Sol 6.2 | `--model gpt-6.2-sol` |
-| Effort | Medium | `--reasoning-level medium` |
-
-## Reviewer for GPT-built
-
-The builder's family comes from the ticket's branch-matching `launch-fleet: start checked` record and that exact thread's provider. Unknown or conflicting family waits.
-
-| Setting | Value | `room-cli thread spawn` flag |
-| --- | --- | --- |
-| Harness | Claude Code | `--provider claude-code` |
-| Model | Opus 5.5 | `--model claude-opus-5-5` |
-| Effort | Medium | `--reasoning-level medium` |
-
-Source: Jake, 2026-11-19 (J255: builders Opus 5.5 Medium, reviewers Codex Sol 6.2 Medium; [private record](https://github.com/jparker2006/ClosedWiz/issues/3065#issuecomment-7031528626)), 2026-10-30, 2026-11-01 and 2026-11-06 ([private record](https://github.com/jparker2006/ClosedWiz/issues/1275#issuecomment-6704671951)). An agent already started keeps its model.
-
-## Fixer
-
-The fresh builder for the review-loops contract's one fresh round, of the original builder's family. An unknown or conflicting family waits.
-
-| Builder family | Harness | Model | Effort | `room-cli thread spawn` flags |
-| --- | --- | --- | --- | --- |
-| Claude | Claude Code | Opus 5.5 | Medium | `--provider claude-code --model claude-opus-5-5 --reasoning-level medium` |
-| GPT | Codex | Sol 6.2 | Medium | `--provider codex --model gpt-6.2-sol --reasoning-level medium` |
-
-Source: Jake, 2026-11-15 (J119; [private record](https://github.com/jparker2006/ClosedWiz/issues/325#issuecomment-6906276883)).
 
 ## Loop
 

@@ -145,6 +145,12 @@ impl Choice {
     }
 
     fn flags(&self, flags: &SpawnFlags) -> String {
+        if self.model == NO_MODEL {
+            return format!(
+                "`{} {} {} {}`",
+                flags.provider, self.provider, flags.effort, self.effort
+            );
+        }
         format!(
             "`{} {} {} {} {} {}`",
             flags.provider, self.provider, flags.model, self.model, flags.effort, self.effort
@@ -160,12 +166,13 @@ pub struct SpawnFlags {
 }
 
 pub fn older_form(c: &Choice) -> bool {
-    [&c.provider, &c.model, &c.effort].iter().all(|id| {
-        let lower = |b: u8| b.is_ascii_lowercase() || b.is_ascii_digit();
-        id.len() <= 128
-            && id.bytes().next().is_some_and(lower)
-            && id.bytes().all(|b| lower(b) || b"._-".contains(&b))
-    })
+    c.model != NO_MODEL
+        && [&c.provider, &c.model, &c.effort].iter().all(|id| {
+            let lower = |b: u8| b.is_ascii_lowercase() || b.is_ascii_digit();
+            id.len() <= 128
+                && id.bytes().next().is_some_and(lower)
+                && id.bytes().all(|b| lower(b) || b"._-".contains(&b))
+        })
 }
 
 pub fn is_id(word: &str) -> bool {
@@ -322,6 +329,7 @@ const OLDER: [&str; 5] = [
     "Fixer",
 ];
 const FOLLOWS: &str = "follows Builder";
+const NO_MODEL: &str = "default";
 
 fn cells(line: &str) -> Option<Vec<String>> {
     let inner = line.strip_prefix('|')?.strip_suffix('|')?;
@@ -356,6 +364,9 @@ fn flags<'a>(cell: &'a str, f: &SpawnFlags) -> Result<[&'a str; 3], String> {
                 && is_id(e) =>
         {
             Ok([p, m, e])
+        }
+        [a, p, c, e] if [a, c] == [&f.provider, &f.effort] && is_id(p) && is_id(e) => {
+            Ok([p, NO_MODEL, e])
         }
         _ => Err(format!("bad flags {inner:?}")),
     }
@@ -393,9 +404,21 @@ fn models_table(
     }
     let mut out = Vec::new();
     let mut next = 0;
+    let mut next_fallback = 1usize;
+    let mut roles_end = end;
     for (i, row) in rows.iter().enumerate().skip(2) {
         if row.len() != 5 {
             return Err("a Models row without five cells".into());
+        }
+        if next >= 3 && row[0] == format!("Reviewer fall-back {next_fallback}") {
+            if row[1] == FOLLOWS && row[2..].iter().all(String::is_empty) {
+                return Err(format!("{} cannot follow", row[0]));
+            }
+            choice([&row[1], &row[2], &row[3]], flags(&row[4], f)?)?;
+            next = Role::ALL.len();
+            roles_end = roles_end.min(start + i);
+            next_fallback += 1;
+            continue;
         }
         let at = Role::ALL[next..]
             .iter()
@@ -420,7 +443,10 @@ fn models_table(
     if next < 3 {
         return Err("a required row is missing".into());
     }
-    Ok(ModelsTable { rows: out, end })
+    Ok(ModelsTable {
+        rows: out,
+        end: roles_end,
+    })
 }
 
 struct Older {

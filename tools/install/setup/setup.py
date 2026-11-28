@@ -218,7 +218,7 @@ def table(lines):
 PLACEHOLDER = re.compile(r'<[A-Za-z][^<>\n]*>')
 MODELS_HEADER = ['Role', 'Harness', 'Model', 'Effort', '`room-cli thread spawn` flags']
 MODEL_ID = r'[A-Za-z0-9._-]+'
-MODEL_FLAGS = re.compile(r'`--provider %s --model %s(?:/%s)* --reasoning-level %s`' % ((MODEL_ID,) * 4))
+MODEL_FLAGS = re.compile(r'`--provider %s(?: --model %s(?:/%s)*)? --reasoning-level %s`' % ((MODEL_ID,) * 4))
 
 
 def models_usable(text, body):
@@ -233,8 +233,13 @@ def models_usable(text, body):
     if len(rows) < 2 or rows[0] != MODELS_HEADER or rows[1] != ['---'] * 5 or None in rows:
         return False
     names = [row[0] if len(row) == 5 else None for row in rows[2:]]
-    if names[:3] != ['Orchestrator', 'Builder', 'Reviewer'] or names[3:] not in (
-            [], ['Small builder'], ['Fixer'], ['Small builder', 'Fixer']):
+    if names[:3] != ['Orchestrator', 'Builder', 'Reviewer']:
+        return False
+    rest = names[3:]
+    for opt in ('Small builder', 'Fixer'):
+        if rest and rest[0] == opt:
+            rest = rest[1:]
+    if rest != [f'Reviewer fall-back {i}' for i in range(1, len(rest) + 1)]:
         return False
     for role, harness, model, effort, flags in rows[2:]:
         if harness == 'follows Builder':
