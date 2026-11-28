@@ -1122,6 +1122,12 @@ impl World {
                 matches!(detail.session.status, Fact::Known(ref s) if s == "idle" || s == "error");
             let plan_limit = family == BuilderFamily::Claude
                 && stopped
+                && may_restart(
+                    matches!(row.state, openwiz_core::fleet::model::IssueState::Open),
+                    row.labels.iter().any(|l| l.as_str() == "held") || !holds.is_empty(),
+                    builder.as_ref().is_some_and(|b| b.archived),
+                    records::fallback_due(&comments),
+                )
                 && room
                     .session_output(&SessionId(thread.as_str().into()), deadline)
                     .ok()
@@ -1290,8 +1296,11 @@ impl World {
                     return Err("review output partial");
                 }
                 match output.output {
-                    Fact::Known(Some(text)) => openwiz_core::fleet::fleets::verdict(&[text])
-                        .map_err(|_| "malformed reviewer output")?,
+                    Fact::Known(Some(text)) => super::typesafe::reviewer_verdict(
+                        text,
+                        super::typesafe::env_decider(deadline).as_ref(),
+                    )
+                    .map_err(|_| "malformed reviewer output")?,
                     Fact::Known(None) => None,
                     _ => return Err("review output unread"),
                 }
@@ -1438,6 +1447,24 @@ fn start_facts(r: &StartRecord, comments: &[Comment]) -> Vec<Start> {
             }
         })
         .collect()
+}
+
+fn may_restart(open: bool, held: bool, archived: bool, fallback_due: bool) -> bool {
+    open && !held && !archived && !fallback_due
+}
+
+#[cfg(test)]
+mod restart_gate_tests {
+    use super::may_restart;
+
+    #[test]
+    fn session_text_is_read_only_when_a_restart_could_follow() {
+        assert!(may_restart(true, false, false, false));
+        assert!(!may_restart(false, false, false, false));
+        assert!(!may_restart(true, true, false, false));
+        assert!(!may_restart(true, false, true, false));
+        assert!(!may_restart(true, false, false, true));
+    }
 }
 
 #[cfg(test)]

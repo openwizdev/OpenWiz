@@ -1978,7 +1978,7 @@ fn jev_asker_problems(text: &str) -> Vec<String> {
             ("Command::new(", 1),
             ("process::{", 0),
             ("jev_process", 2),
-            ("run_ask(", 6),
+            ("run_ask(", 8),
             (".arg(", 2),
             (".args(", 0),
             (".env_clear(", 1),
@@ -2003,6 +2003,8 @@ fn jev_asker_problems(text: &str) -> Vec<String> {
                 "letuntil=answer_until(std::time::Instant::now(),self.deadline);",
                 1,
             ),
+            ("constMAX_ANSWER_BYTES:usize=1_048_576;", 1),
+            ("constANSWER_SECONDS:u64=10;", 1),
         ],
     );
     l3_exact_function(
@@ -2072,14 +2074,15 @@ fn jev_asker_problems(text: &str) -> Vec<String> {
         }
         answer
     });
-    let sent = child
-        .stdin
-        .take()
-        .map(|mut input| std::io::Write::write_all(&mut input, request));
+    let stdin = child.stdin.take();
+    let request = request.to_vec();
+    let writer = std::thread::spawn(move || {
+        stdin.is_some_and(|mut input| std::io::Write::write_all(&mut input, &request).is_ok())
+    });
     let finished = loop {
         match child.try_wait() {
             Ok(Some(status)) => break Some(status),
-            Ok(None) if matches!(sent, Some(Ok(()))) && std::time::Instant::now() < until => {
+            Ok(None) if std::time::Instant::now() < until => {
                 std::thread::sleep(std::time::Duration::from_millis(20));
             }
             _ => break None,
@@ -2089,9 +2092,10 @@ fn jev_asker_problems(text: &str) -> Vec<String> {
         let _ = child.kill();
         let _ = child.wait();
     }
+    let sent = writer.join().unwrap_or(false);
     let answer = reader.join().ok()?;
     finished
-        .filter(|status| status.success() && answer.len() <= MAX_ANSWER_BYTES)
+        .filter(|status| sent && status.success() && answer.len() <= MAX_ANSWER_BYTES)
         .map(|_| answer)
 }
 "#,
@@ -2138,7 +2142,19 @@ fn jv1_jev_asker_exception_rejects_planted_widening() {
         ),
         (".spawn()", ".output()"),
         ("std::io::Read::take(out, limit)", "out"),
-        (" && std::time::Instant::now() < until", ""),
+        (
+            "const MAX_ANSWER_BYTES: usize = 1_048_576;",
+            "const MAX_ANSWER_BYTES: usize = 104_857_600;",
+        ),
+        (
+            "const ANSWER_SECONDS: u64 = 10;",
+            "const ANSWER_SECONDS: u64 = 600;",
+        ),
+        ("Ok(None) if std::time::Instant::now() < until", "Ok(None)"),
+        (
+            "let sent = writer.join().unwrap_or(false);",
+            "let sent = true;",
+        ),
         (
             "run_ask(&tool, &key, request, until)",
             r#"run_ask(std::path::Path::new("/tmp/ask.py"), &key, request, until)"#,

@@ -65,23 +65,45 @@ class Unresolved(unittest.TestCase):
 
 
 class Command(unittest.TestCase):
-    def test_eval_mentions_runs_end_to_end_on_a_skills_checkout(self):
+    def run_mentions(self, skills):
         import tempfile
         import eval as E
-        fake = Counting()
+
+        class Answers(Counting):
+            def system_one(self, state, questions, model=client.MODEL):
+                super().system_one(state, questions, model)
+                return {'model': client.MODEL, 'answers': {
+                    name: {'type': 'noul', 'noul': 0.95 if name == 'project_instructions' else 0.05}
+                    for name in questions}}
+        fake = Answers()
+        synthetic_map = {'alpha': {'required': ['skills/alpha/SKILL.md'],
+                                   'conditional': {'AGENTS.md': 'project rules'}, 'not_loaded': {}}}
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
-            name = sorted(tokens.load_map(HERE.parent / 'skills-eval' / 'required-text.json'))[0]
             (root / '.claude-plugin').mkdir()
-            (root / '.claude-plugin' / 'plugin.json').write_text(json.dumps({'skills': [f'./skills/{name}']}))
-            (root / 'skills' / name).mkdir(parents=True)
-            (root / 'skills' / name / 'SKILL.md').write_text('Follow the project agent instructions.\n')
+            (root / '.claude-plugin' / 'plugin.json').write_text(
+                json.dumps({'skills': [f'./skills/{name}' for name in skills]}))
+            for name in skills:
+                (root / 'skills' / name).mkdir(parents=True)
+                (root / 'skills' / name / 'SKILL.md').write_text('Follow the project agent instructions.\n')
             with mock.patch.dict(os.environ, ON), mock.patch.object(client, 'from_env', lambda: fake), \
+                    mock.patch.object(E.T, 'load_map', lambda path: synthetic_map), \
                     redirect_stdout(io.StringIO()) as out:
                 code = E.main(['mentions', '--jev', '--skills', folder])
-        self.assertIn(code, (0, 1))
-        self.assertEqual([state for state, _ in fake.calls], ['Follow the project agent instructions.\n'])
-        self.assertIn('mentions:', out.getvalue())
+        return code, out.getvalue(), fake
+
+    def test_eval_mentions_scans_every_shipped_skill_and_passes_when_all_are_classified(self):
+        code, printed, fake = self.run_mentions(['alpha'])
+        self.assertEqual(code, 0, printed)
+        self.assertIn('scanned 1 shipped skill(s), 0 problem(s)', printed)
+        self.assertEqual(len(fake.calls), 1)
+
+    def test_eval_mentions_reports_a_shipped_skill_the_map_misses(self):
+        code, printed, fake = self.run_mentions(['alpha', 'beta'])
+        self.assertEqual(code, 1)
+        self.assertIn('scanned 2 shipped skill(s), 1 problem(s)', printed)
+        self.assertIn('beta: shipped but not in required-text.json; its SKILL.md names AGENTS.md', printed)
+        self.assertEqual(len(fake.calls), 2)
 
     def test_eval_mentions_needs_a_skills_checkout(self):
         import eval as E

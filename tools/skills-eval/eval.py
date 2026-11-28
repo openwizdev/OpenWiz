@@ -385,20 +385,49 @@ def folder_snapshot(root):
     return read, lst
 
 
+def mention_problems(skills_map, names, read, lst, extra):
+    problems = []
+    for s in names:
+        text = read(f'skills/{s}/SKILL.md')
+        if text is None:
+            problems.append(f'{s}: shipped, but skills/{s}/SKILL.md is not in the skills checkout')
+            continue
+        found = T.mentions(s, text, lambda q: read(q) is not None, lst, extra)
+        v = skills_map.get(s)
+        if v is None:
+            problems.append(f"{s}: shipped but not in required-text.json; its SKILL.md names {', '.join(sorted(found)) or 'nothing'}")
+            continue
+        flat = list(v['required']) + list(v['conditional']) + list(v['not_loaded'])
+        covered = [f for f in flat if f.endswith('/')]
+        for path in sorted(found - set(flat)):
+            if not any(path.startswith(f) for f in covered):
+                problems.append(f'{s}: SKILL.md names {path}, which the map does not classify')
+    return problems
+
+
 def cmd_mentions(a):
     ask = jev_mentions.client.from_env() if a.jev else None
     if ask is None:
         sys.exit('eval.py mentions sends SKILL.md text to TypeSafe: pass --jev with OPENWIZ_JEV=1 and TYPESAFE_API_KEY set')
     if not a.skills or not (Path(a.skills) / '.claude-plugin' / 'plugin.json').is_file():
         sys.exit('eval.py mentions needs --skills DIR: a WizSkills checkout with .claude-plugin/plugin.json '
-                 '(the skills moved to WizSkills in #555)')
-    read, lst = folder_snapshot(a.skills)
-    errs = T.map_problems(T.load_map(HERE / 'required-text.json'), shipped(read), read, lst,
-                          lambda text, found: jev_mentions.extra(text, ask, found))
-    for e in errs:
-        print(e)
-    print(f'mentions: {len(errs)} problem(s) with keyword and Jev mentions')
-    return 1 if errs else 0
+                 '(the skills moved to WizSkills in #555; wizskills.lock names the pinned commit)')
+    skills_read, skills_lst = folder_snapshot(a.skills)
+    project_read, project_lst = snapshot(a.rev)
+
+    def read(p):
+        text = skills_read(p)
+        return project_read(p) if text is None else text
+
+    def lst(prefix):
+        return sorted(set(skills_lst(prefix)) | set(project_lst(prefix)))
+    names = shipped(skills_read)
+    problems = mention_problems(T.load_map(HERE / 'required-text.json'), names, read, lst,
+                                lambda text, found: jev_mentions.extra(text, ask, found))
+    for problem in problems:
+        print(problem)
+    print(f'mentions: scanned {len(names)} shipped skill(s), {len(problems)} problem(s)')
+    return 1 if problems else 0
 
 
 def cmd_token_diff(a):
@@ -429,6 +458,7 @@ def main(argv=None):
             q.add_argument('--results', help='results folder whose provider usage is reported; makes no API call')
     q = sub.add_parser('mentions')
     q.add_argument('--skills', help='a WizSkills checkout to read the shipped skills from')
+    q.add_argument('--rev', default='HEAD', help='the OpenWiz commit that holds the project docs (default HEAD)')
     q.add_argument('--jev', action='store_true', help='send SKILL.md text to TypeSafe Jev')
     q = sub.add_parser('compare')
     q.add_argument('a')
