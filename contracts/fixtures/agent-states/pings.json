@@ -1,0 +1,37 @@
+{
+  "valid": {
+    "accepted": true,
+    "comment": "openwiz:ping v1\nSender: fleet-9001\nTarget: reviewer-9201-1\nMessage: Can you share an ETA for the review?"
+  },
+  "delivered": {
+    "accepted": true,
+    "comment": "openwiz:ping v1\nSender: fleet-9001\nTarget: reviewer-9201-1\nMessage: Can you share an ETA for the review?\nDelivered: 2030-01-03T12:00:00Z"
+  },
+  "key": {"accepted": false, "comment": "openwiz:ping v1\nSender: fleet-9001\nTarget: reviewer-9201-1\nMessage: api_key=synthetic-value"},
+  "claim-word": {
+    "accepted": false,
+    "comment": "openwiz:ping v1\nSender: fleet-9001\nTarget: reviewer-9201-1\nMessage: Please claim this ticket."
+  },
+  "two-targets": {
+    "accepted": false,
+    "comment": "openwiz:ping v1\nSender: wiz\nTarget: reviewer-9201-1, builder-9101\nMessage: Can you share an ETA?"
+  },
+  "two-target-lines": {
+    "accepted": false,
+    "comment": "openwiz:ping v1\nSender: fleet-9001\nTarget: reviewer-9201-1\nMessage: Can you share an ETA?\nTarget: builder-9101"
+  },
+  "multiline-transcript": {
+    "accepted": false,
+    "comment": "openwiz:ping v1\nSender: fleet-9001\nTarget: reviewer-9201-1\nMessage: Synthetic transcript\nSpeaker: synthetic"
+  },
+  "account": {
+    "accepted": false,
+    "comment": "openwiz:ping v1\nSender: fleet-9001\nTarget: reviewer-9201-1\nMessage: Use account=@example-account"
+  },
+  "routing-record": {
+    "accepted": false,
+    "comment": "openwiz:ping v1\nSender: fleet-9001\nTarget: reviewer-9201-1\nMessage: launch-fleet: start checked"
+  },
+  "blank-message": {"accepted": false, "comment": "openwiz:ping v1\nSender: fleet-9001\nTarget: reviewer-9201-1\nMessage:    "},
+  "unversioned": {"accepted": false, "comment": "openwiz:ping\nSender: fleet-9001\nTarget: reviewer-9201-1\nMessage: Can you share an ETA?"}
+}
