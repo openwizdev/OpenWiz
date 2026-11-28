@@ -1,0 +1,29 @@
+$ python3 -I adapters/pane/test_driver.py
+Ran 24 tests
+OK
+
+$ cmp adapters/pane/schema.json kernel/driver-kit/schema.json
+Exit 0, including at the red commit.
+
+Driver kit on the synthetic runpane fixture, selecting each harness, model, and effort:
+
+claude claude-opus-5-5 medium: 5 of 5 checks passed
+pass start: the run posted builder status note 1; effort: medium reached a process the run started
+codex gpt-6.2-sol xhigh: 5 of 5 checks passed
+pass start: the run posted builder status note 1; effort: xhigh reached a process the run started
+claude claude-opus-4-6 max: 5 of 5 checks passed
+pass start: the run posted builder status note 1; effort: max reached a process the run started
+codex gpt-6.2-sol ultra: 5 of 5 checks passed
+pass start: the run posted builder status note 1; effort: ultra reached a process the run started
+claude claude-opus-4-6 xhigh: 5 of 5 checks passed
+pass start: the run posted builder status note 1; effort: refused xhigh with the refusal text, a word its README does not list for claude
+codex gpt-5.5 max: 5 of 5 checks passed
+pass start: the run posted builder status note 1; effort: refused max with the refusal text, a word its README does not list for codex
+claude claude-opus-5-5 turbo: 5 of 5 checks passed
+pass start: the run posted builder status note 1; effort: refused turbo with the refusal text, a word its README does not list for claude
+cursor synthetic-model medium: 5 of 5 checks passed
+pass start: the run posted builder status note 1; effort: refused for cursor with the refusal text, as the README says
+opencode synthetic-model medium: 5 of 5 checks passed
+pass start: the run posted builder status note 1; effort: refused for opencode with the refusal text, as the README says
+pi synthetic-model medium: 5 of 5 checks passed
+pass start: the run posted builder status note 1; effort: refused for pi with the refusal text, as the README says

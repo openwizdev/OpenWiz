@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 
 sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -39,8 +40,7 @@ class Pane(unittest.TestCase):
     def tools(self):
         folder = os.path.join(self.folder, 'tools')
         os.mkdir(folder)
-        for name, found in (('python3', sys.executable), ('sleep', shutil.which('sleep'))):
-            os.symlink(found, os.path.join(folder, name))
+        os.symlink(sys.executable, os.path.join(folder, 'python3'))
         self.git_seen = os.path.join(self.folder, 'git-seen')
         with open(os.path.join(folder, 'git'), 'w') as f:
             f.write('#!%s -I\nimport json, os, sys\nwith open(%r, "a") as f:\n    f.write(json.dumps(sorted(os.environ)) + "\\n")\n'
@@ -55,7 +55,7 @@ class Pane(unittest.TestCase):
             for pid in agents:
                 try:
                     with open('/proc/%d/cmdline' % pid, 'rb') as f:
-                        if f.read().split(b'\0')[:2] == [b'sleep', b'300']:
+                        if f.read().split(b'\0')[1:4] == [b'-I', b'-c', b'import time; time.sleep(300)']:
                             os.kill(pid, signal.SIGKILL)
                 except OSError:
                     pass
@@ -104,7 +104,7 @@ class Pane(unittest.TestCase):
                            env=self.env, capture_output=True, text=True, timeout=300)
         self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
             'pass version: openwiz:records v1, and the schema is driver v1',
-            'pass start: the run posted builder status note 1; effort: a start with it was refused, as the README\'s Effort: line says',
+            'pass start: the run posted builder status note 1; effort: medium reached a process the run started',
             'pass wake: the run edited builder status note 1',
             'pass stop: the run ended, and a wake after it is refused',
             'pass token: no login or token passed through the driver']), p.stderr)
@@ -225,14 +225,70 @@ class Pane(unittest.TestCase):
         self.assertIn('model is not valid', out['error'])
         self.assertEqual(len([c for c in self.called() if c[:2] == ['panes', 'create']]), 2)
 
-    def test_the_effort_line_is_directly_under_the_login_line(self):
-        with open(os.path.join(HERE, 'README.md')) as f:
-            lines = f.read().splitlines()
+    def test_effort_is_declared_and_schema_matches_the_kit(self):
+        lines = (Path(HERE) / 'README.md').read_text().splitlines()
         login = next(i for i, line in enumerate(lines) if line.startswith('Login:'))
-        self.assertTrue(lines[login + 1].startswith("Effort: the host can't set it"), lines[login:login + 2])
-        code, out = self.driver('start', dict(REQUEST, effort='medium'))
-        self.assertEqual(code, 1, out)
-        self.assertFalse([c for c in self.called() if c[:2] == ['panes', 'create']])
+        self.assertEqual(lines[login + 1], 'Effort: passed as harness options via `runpane panes create --tool-command`.')
+        self.assertEqual([line for line in lines if line.startswith('Effort:')], [lines[login + 1]])
+        code, out = self.driver('version', None)
+        self.assertEqual((code, out['can'].count('effort')), (0, 1))
+        self.assertEqual((Path(HERE) / 'schema.json').read_bytes(), Path(KIT).with_name('schema.json').read_bytes())
+
+    def test_effort_reaches_the_pane_agent_command_and_is_recorded(self):
+        cases = (('claude', 'claude-opus-5-5', 'medium',
+                  'CLAUDE_CODE_EFFORT_LEVEL=medium claude --model claude-opus-5-5 --effort medium', {}),
+                 ('codex', 'gpt-6.2-sol', 'xhigh', 'codex --model gpt-6.2-sol -c model_reasoning_effort=xhigh',
+                  {'FAKE_PANE_QUEUE': '1'}))
+        for i, (harness, model, effort, command, env) in enumerate(cases, 1):
+            with self.subTest(harness=harness):
+                code, run = self.driver('start', dict(REQUEST, harness=harness, model=model, effort=effort),
+                                        **env)
+                self.assertEqual(code, 0, run)
+                create = [c for c in self.called() if c[:2] == ['panes', 'create']]
+                self.assertEqual(len(create), i)
+                self.assertEqual(create[-1][create[-1].index('--tool-command') + 1], command)
+                self.assertEqual(self.pane()['panels']['panel-%d' % i]['effort'], effort)
+                self.assertEqual(self.driver('stop', run), (0, dict(run, stopped=True)))
+
+    def test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run(self):
+        next_step = ("this host can't set effort: remove the effort for this harness in your Models table or Roster "
+                     "to run it at the host's default")
+        for harness, effort in (('claude', 'minimal'), ('codex', 'turbo'), ('cursor', 'medium'),
+                                ('opencode', 'medium'), ('pi', 'medium'), ('gemini', 'medium')):
+            with self.subTest(harness=harness, effort=effort):
+                model = 'gpt-6.2-sol' if harness == 'codex' else REQUEST['model']
+                code, out = self.driver('start', dict(REQUEST, harness=harness, model=model, effort=effort))
+                self.assertEqual((code, set(out), out['next']), (1, {'error', 'next'}, next_step))
+                self.assertIn(harness, out['error'])
+                self.assertIn(effort, out['error'])
+        self.assertEqual(self.called(), [])
+        self.assertFalse(os.path.exists(self.env['OPENWIZ_PANE_STATE']))
+
+    def test_effort_is_refused_when_the_selected_model_cannot_take_it(self):
+        next_step = ("this host can't set effort: remove the effort for this harness in your Models table or Roster "
+                     "to run it at the host's default")
+        for harness, model, effort in (('claude', 'claude-opus-4-6', 'xhigh'),
+                                       ('codex', 'gpt-5.5', 'max'),
+                                       ('codex', 'example/custom-model', 'medium')):
+            with self.subTest(harness=harness, model=model, effort=effort):
+                code, out = self.driver('start', dict(REQUEST, harness=harness, model=model, effort=effort))
+                self.assertEqual(code, 1, out)
+                self.assertEqual(out['next'], next_step)
+                self.assertIn(harness, out['error'])
+                self.assertIn(effort, out['error'])
+        self.assertEqual(self.called(), [])
+        self.assertFalse(os.path.exists(self.env['OPENWIZ_PANE_STATE']))
+
+    def test_malformed_or_credential_shaped_effort_is_not_echoed_or_sent(self):
+        for effort in ('MEDIUM', 'a' * 21, None, 'xoxb-synthetic'):
+            with self.subTest(effort=effort):
+                code, out = self.driver('start', dict(REQUEST, effort=effort))
+                self.assertEqual((code, set(out)), (1, {'error', 'next'}))
+                self.assertIn('effort ', out['error'])
+                if isinstance(effort, str):
+                    self.assertNotIn(effort, json.dumps(out))
+        self.assertEqual(self.called(), [])
+        self.assertFalse(os.path.exists(self.env['OPENWIZ_PANE_STATE']))
 
     def runs(self):
         return sorted(name[:-5] for name in os.listdir(self.env['OPENWIZ_PANE_STATE']) if name.endswith('.json'))

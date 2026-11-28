@@ -1,7 +1,20 @@
 # Pane driver
 
 Login: stays on your machine
-Effort: the host can't set it (Pane's `panes create` has no effort flag, and this driver adds none, so a start that names an effort is refused and creates nothing)
+Effort: passed as harness options via `runpane panes create --tool-command`.
+
+| Harness | Effort setting |
+| --- | --- |
+| `claude` | `--effort <level>` for low, medium, high, and max. The terminal command also sets `CLAUDE_CODE_EFFORT_LEVEL` to the same value. Some models take `xhigh` as listed below. |
+| `codex` | `-c model_reasoning_effort=<level>` for low, medium, high, and xhigh. Some models take `max` or `ultra` as listed below. |
+| `cursor` | can't (Cursor selects reasoning through model variants) |
+| `opencode` | can't (OpenCode's variants are defined per model and can map to different settings) |
+| `pi` | can't (Pi can clamp the requested level to the model's capabilities) |
+
+The driver accepts effort for these explicit model IDs. Claude Code or Codex may apply managed settings on the machine running the tab.
+
+- Claude Code accepts the table's levels for `claude-opus-4-6` and `claude-sonnet-4-6`. These models also accept `xhigh`: `claude-opus-4-7`, `claude-opus-4-8`, `claude-opus-5`, `claude-opus-5-5`, `claude-sonnet-5`, `claude-sonnet-5-5`, `claude-haiku-5-5`, `claude-fable-5`, `claude-fable-5-1`, and `claude-fable-5-2`.
+- Codex accepts the table's levels for `gpt-5.5`. It also accepts `max` for `gpt-5.6-luna` and `gpt-6-luna`, and both `max` and `ultra` for `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-6-sol`, `gpt-6-astra`, `gpt-6.1-sol`, `gpt-6.1-terra`, `gpt-6.2-sol`, and `gpt-6.2-astra`.
 
 A [driver v1](../../kernel/driver.v1.md) that runs each builder in its own Pane, through your own `runpane` CLI and the [Pane](https://runpane.com) app on your computer. A Pane is a git worktree on its own branch, with tabs; each run is one Pane with one agent tab. One Python file, standard library only. **Platforms:** Linux and macOS, Python 3.9 or later, wherever Pane runs; its fixture tests run on Linux (they check their own fake agents through `/proc`). Runs are saved in `$OPENWIZ_PANE_STATE` (default `~/.local/state/openwiz-pane`), owner-only.
 
@@ -13,7 +26,7 @@ A [driver v1](../../kernel/driver.v1.md) that runs each builder in its own Pane,
 | `wake` | `runpane panels submit --panel <the run's tab>`: the same agent, in the same tab, reads its ticket again and edits its own status note. A stopped run, or one whose start never finished, is never woken. |
 | `stop` | For a run whose `panes create` never answered or stayed queued without a tab, `runpane panes list` checks whether Pane `openwiz-<run>` (or the saved Pane id) is still active and `runpane panels list` looks for its one agent tab. If that Pane is already absent or archived, nothing is running; if it is still queued with no agent tab yet, `stop` answers `stopped` only once `runpane panes archive --remove-worktree` succeeds, and otherwise refuses while keeping the run recoverable. If the lookup cannot tell, stop refuses and the run stays recoverable: it does not answer `stopped`. Otherwise `runpane panels close --force` closes the tab, which ends its agent even mid-turn. Then `runpane panes archive --remove-worktree` removes the Pane and its worktree; Pane keeps the local branch. The driver never forces an archive. When Pane refuses it, for example because the worktree holds work not yet committed or pushed, the driver keeps the Pane `openwiz-<run>` and its worktree on disk and still answers `stopped`: the agent has ended. Push or discard that work; a later stop of the same run tries the archive again, and also answers `stopped`. A tab Pane could not close also makes stop answer an error. |
 
-`version` adds `many-at-once` to `can`: Pane runs many Panes side by side. It does not list `effort`: a start that names one is refused and creates nothing.
+`version` adds `many-at-once` and `effort` to `can`. Pane runs many Panes side by side. For a start with effort, the driver adds the setting from the table to the terminal command. It refuses an unlisted harness, model, or level before contacting Pane or saving a run. A start without effort uses the harness default.
 
 Each `runpane` call waits up to 100 seconds, or `OPENWIZ_PANE_RUNPANE_SECONDS` when that is a whole number from 1 to 100. A call that does not answer has an unknown outcome, and the driver does not call that run stopped.
 
@@ -49,7 +62,7 @@ python3 -I kernel/driver-kit/kit.py --driver adapters/pane/driver \
 
 `fixtures/bin/runpane` is a synthetic `runpane` CLI, written for these tests. Its JSON answers follow the shapes `runpane help` and its published JSON schemas name (runpane 2.4.246). No answer in it was observed on a live Pane; the live check on the real host is the proof.
 
-It plays Pane and its agents. It keeps its Panes in the JSON file `FAKE_PANE_STATE`. `panes create` starts the tab's agent, a `sleep` that inherits the caller's environment and ends when its tab closes, and, when the prompt names a skill, posts one builder status note in the kit's local tracker (`KIT_TRACKER`); each `panels submit` edits that note. It takes only the flags the driver passes and exits 2 on any other. Its failure texts carry the word `synthetic`, so a test can show that the driver's errors keep only Pane's error code and its own fixed text. Its settings:
+It plays Pane and its agents. It keeps its Panes in the JSON file `FAKE_PANE_STATE`. `panes create` starts a synthetic agent process with the tool command's arguments and records the parsed effort in the panel state. The process inherits the caller's environment and ends when its tab closes. When the prompt names a skill, the fake posts one builder status note in the kit's local tracker (`KIT_TRACKER`). Each `panels submit` edits that note. It takes only the flags the driver passes and exits 2 on any other. Its failure texts carry the word `synthetic`, so a test can show that the driver's errors keep only Pane's error code and its own fixed text. Its settings:
 
 | Variable | What it plants |
 | --- | --- |

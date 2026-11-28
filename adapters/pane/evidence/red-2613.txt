@@ -1,0 +1,62 @@
+$ python3 -I adapters/pane/test_driver.py Pane.test_effort_is_declared_and_schema_matches_the_kit Pane.test_effort_reaches_the_pane_agent_command_and_is_recorded Pane.test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run Pane.test_malformed_or_credential_shaped_effort_is_not_echoed_or_sent Pane.test_kit_passes_all_five
+
+test_effort_is_declared_and_schema_matches_the_kit (__main__.Pane.test_effort_is_declared_and_schema_matches_the_kit) ... FAIL
+test_effort_reaches_the_pane_agent_command_and_is_recorded (__main__.Pane.test_effort_reaches_the_pane_agent_command_and_is_recorded) ...
+  test_effort_reaches_the_pane_agent_command_and_is_recorded (__main__.Pane.test_effort_reaches_the_pane_agent_command_and_is_recorded) (harness='claude') ... FAIL
+  test_effort_reaches_the_pane_agent_command_and_is_recorded (__main__.Pane.test_effort_reaches_the_pane_agent_command_and_is_recorded) (harness='codex') ... FAIL
+test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run (__main__.Pane.test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run) ...
+  test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run (__main__.Pane.test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run) (harness='claude', effort='minimal') ... FAIL
+  test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run (__main__.Pane.test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run) (harness='codex', effort='turbo') ... FAIL
+  test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run (__main__.Pane.test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run) (harness='cursor', effort='medium') ... FAIL
+  test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run (__main__.Pane.test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run) (harness='opencode', effort='medium') ... FAIL
+  test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run (__main__.Pane.test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run) (harness='pi', effort='medium') ... FAIL
+  test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run (__main__.Pane.test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run) (harness='gemini', effort='medium') ... FAIL
+test_malformed_or_credential_shaped_effort_is_not_echoed_or_sent (__main__.Pane.test_malformed_or_credential_shaped_effort_is_not_echoed_or_sent) ...
+  test_malformed_or_credential_shaped_effort_is_not_echoed_or_sent (__main__.Pane.test_malformed_or_credential_shaped_effort_is_not_echoed_or_sent) (effort='MEDIUM') ... FAIL
+  test_malformed_or_credential_shaped_effort_is_not_echoed_or_sent (__main__.Pane.test_malformed_or_credential_shaped_effort_is_not_echoed_or_sent) (effort='aaaaaaaaaaaaaaaaaaaaa') ... FAIL
+  test_malformed_or_credential_shaped_effort_is_not_echoed_or_sent (__main__.Pane.test_malformed_or_credential_shaped_effort_is_not_echoed_or_sent) (effort=None) ... FAIL
+  test_malformed_or_credential_shaped_effort_is_not_echoed_or_sent (__main__.Pane.test_malformed_or_credential_shaped_effort_is_not_echoed_or_sent) (effort='xoxb-synthetic') ... FAIL
+test_kit_passes_all_five (__main__.Pane.test_kit_passes_all_five) ... FAIL
+FAIL: test_effort_is_declared_and_schema_matches_the_kit (__main__.Pane.test_effort_is_declared_and_schema_matches_the_kit)
+AssertionError: "Effort: the host can't set it (Pane's `p[119 chars]ing)" != 'Effort: passed as harness options via `r[32 chars]nd`.'
+FAIL: test_effort_reaches_the_pane_agent_command_and_is_recorded (__main__.Pane.test_effort_reaches_the_pane_agent_command_and_is_recorded) (harness='claude')
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+FAIL: test_effort_reaches_the_pane_agent_command_and_is_recorded (__main__.Pane.test_effort_reaches_the_pane_agent_command_and_is_recorded) (harness='codex')
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+FAIL: test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run (__main__.Pane.test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run) (harness='claude', effort='minimal')
+AssertionError: Tuples differ: (1, {[13 chars]t'}, 'send only those fields; never a login') != (1, {[13 chars]t'}, "this host can't set effort: remove the e[82 chars]ult")
+FAIL: test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run (__main__.Pane.test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run) (harness='codex', effort='turbo')
+AssertionError: Tuples differ: (1, {[13 chars]t'}, 'send only those fields; never a login') != (1, {[13 chars]t'}, "this host can't set effort: remove the e[82 chars]ult")
+FAIL: test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run (__main__.Pane.test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run) (harness='cursor', effort='medium')
+AssertionError: Tuples differ: (1, {[13 chars]t'}, 'send only those fields; never a login') != (1, {[13 chars]t'}, "this host can't set effort: remove the e[82 chars]ult")
+FAIL: test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run (__main__.Pane.test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run) (harness='opencode', effort='medium')
+AssertionError: Tuples differ: (1, {[13 chars]t'}, 'send only those fields; never a login') != (1, {[13 chars]t'}, "this host can't set effort: remove the e[82 chars]ult")
+FAIL: test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run (__main__.Pane.test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run) (harness='pi', effort='medium')
+AssertionError: Tuples differ: (1, {[13 chars]t'}, 'send only those fields; never a login') != (1, {[13 chars]t'}, "this host can't set effort: remove the e[82 chars]ult")
+FAIL: test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run (__main__.Pane.test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run) (harness='gemini', effort='medium')
+AssertionError: Tuples differ: (1, {[13 chars]t'}, 'send only those fields; never a login') != (1, {[13 chars]t'}, "this host can't set effort: remove the e[82 chars]ult")
+FAIL: test_malformed_or_credential_shaped_effort_is_not_echoed_or_sent (__main__.Pane.test_malformed_or_credential_shaped_effort_is_not_echoed_or_sent) (effort='MEDIUM')
+AssertionError: 'effort ' not found in 'the input needs exactly repository, ticket, skill, harness, model'
+FAIL: test_malformed_or_credential_shaped_effort_is_not_echoed_or_sent (__main__.Pane.test_malformed_or_credential_shaped_effort_is_not_echoed_or_sent) (effort='aaaaaaaaaaaaaaaaaaaaa')
+AssertionError: 'effort ' not found in 'the input needs exactly repository, ticket, skill, harness, model'
+FAIL: test_malformed_or_credential_shaped_effort_is_not_echoed_or_sent (__main__.Pane.test_malformed_or_credential_shaped_effort_is_not_echoed_or_sent) (effort=None)
+AssertionError: 'effort ' not found in 'the input needs exactly repository, ticket, skill, harness, model'
+FAIL: test_malformed_or_credential_shaped_effort_is_not_echoed_or_sent (__main__.Pane.test_malformed_or_credential_shaped_effort_is_not_echoed_or_sent) (effort='xoxb-synthetic')
+AssertionError: 'effort ' not found in 'the input needs exactly repository, ticket, skill, harness, model'
+FAIL: test_kit_passes_all_five (__main__.Pane.test_kit_passes_all_five)
+AssertionError: Tuples differ: (0, [[60 chars]v1', "pass start: the run posted builder statu[248 chars]er']) != (0, [[60 chars]v1', 'pass start: the run posted builder statu[226 chars]er'])
+Ran 5 tests in 0.758s
+FAILED (failures=14)
+
+$ python3 -I adapters/pane/test_driver.py Pane.test_effort_is_refused_when_the_selected_model_cannot_take_it Pane.test_effort_reaches_the_pane_agent_command_and_is_recorded
+
+FAIL: test_effort_is_refused_when_the_selected_model_cannot_take_it (__main__.Pane.test_effort_is_refused_when_the_selected_model_cannot_take_it) (harness='claude', model='claude-opus-4-6', effort='xhigh')
+AssertionError: 0 != 1 : {'run': 'run-d537f721ff0f'}
+FAIL: test_effort_is_refused_when_the_selected_model_cannot_take_it (__main__.Pane.test_effort_is_refused_when_the_selected_model_cannot_take_it) (harness='codex', model='gpt-5.5', effort='max')
+AssertionError: 0 != 1 : {'run': 'run-531098397595'}
+FAIL: test_effort_is_refused_when_the_selected_model_cannot_take_it (__main__.Pane.test_effort_is_refused_when_the_selected_model_cannot_take_it) (harness='codex', model='example/custom-model', effort='medium')
+AssertionError: 0 != 1 : {'run': 'run-f662c2b4a227'}
+FAIL: test_effort_is_refused_when_the_selected_model_cannot_take_it (__main__.Pane.test_effort_is_refused_when_the_selected_model_cannot_take_it)
+FAIL: test_effort_reaches_the_pane_agent_command_and_is_recorded (__main__.Pane.test_effort_reaches_the_pane_agent_command_and_is_recorded) (harness='claude')
+Ran 2 tests in 0.472s
+FAILED (failures=5)
