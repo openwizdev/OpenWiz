@@ -1,0 +1,4 @@
+$ python3 -I adapters/openhands/test_driver.py -k effort   (agent CLI stubs first on PATH)
+AssertionError: Tuples differ: (1, {'error': 'the input needs exactly repository, ticke[71 chars]in'}) != (1, {'error': 'OpenHands Cloud cannot set effort high fo[156 chars]lt"})
+Ran 1 test in 0.503s
+FAILED (failures=1)

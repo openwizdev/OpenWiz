@@ -1,0 +1,41 @@
+# Green (#2567 review at fc4da9e): the driver takes the driver v1 model grammar, and fixtures/kit-host.json's profiles name the kit's --model.
+# test_start_takes_a_provider_qualified_or_long_model_on_its_exact_profile: openrouter/anthropic/claude-sonnet-4.6 and a 62-character model each start on their exact saved profile; 101 characters and malformed segments are refused before any request.
+# test_kit_passes_all_five_on_the_users_saved_profile_model: the kit passes all five, its key check included, with --model claude-sonnet-4.6 and with --model openrouter/anthropic/claude-sonnet-4.6.
+# 35 refusing agent CLI stubs first on PATH; OPENWIZ_GITHUB_APP_KEY unset. Synthetic fake OpenHands Cloud; no host reached.
+
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/openhands/test_driver.py -v
+test_a_host_error_is_a_fixed_refusal (__main__.Driver.test_a_host_error_is_a_fixed_refusal) ... ok
+test_a_lost_start_names_its_run_so_stop_can_end_it (__main__.Driver.test_a_lost_start_names_its_run_so_stop_can_end_it) ... ok
+test_a_run_absent_from_both_lookups_is_stopped_but_not_woken (__main__.Driver.test_a_run_absent_from_both_lookups_is_stopped_but_not_woken) ... ok
+test_every_request_reaches_the_host_with_the_key_header_only (__main__.Driver.test_every_request_reaches_the_host_with_the_key_header_only) ... ok
+test_inputs_off_the_schema_are_refused_before_any_request (__main__.Driver.test_inputs_off_the_schema_are_refused_before_any_request) ... ok
+test_kit_passes_all_five_on_the_fake_host (__main__.Driver.test_kit_passes_all_five_on_the_fake_host) ... ok
+test_kit_passes_all_five_on_the_users_saved_profile_model (__main__.Driver.test_kit_passes_all_five_on_the_users_saved_profile_model) ... ok
+test_start_creates_one_conversation_on_the_harness_profile (__main__.Driver.test_start_creates_one_conversation_on_the_harness_profile) ... ok
+test_start_refuses_an_unacknowledged_create_naming_the_run (__main__.Driver.test_start_refuses_an_unacknowledged_create_naming_the_run) ... ok
+test_start_refuses_effort_before_any_request (__main__.Driver.test_start_refuses_effort_before_any_request) ... ok
+test_start_refuses_when_only_a_default_model_profile_exists (__main__.Driver.test_start_refuses_when_only_a_default_model_profile_exists) ... ok
+test_start_refuses_without_a_profile_for_the_harness (__main__.Driver.test_start_refuses_without_a_profile_for_the_harness) ... ok
+test_start_takes_a_provider_qualified_or_long_model_on_its_exact_profile (__main__.Driver.test_start_takes_a_provider_qualified_or_long_model_on_its_exact_profile) ... ok
+test_stop_and_wake_refuse_an_unreadable_conversation_lookup (__main__.Driver.test_stop_and_wake_refuse_an_unreadable_conversation_lookup) ... ok
+test_stop_and_wake_refuse_an_unreadable_task_lookup (__main__.Driver.test_stop_and_wake_refuse_an_unreadable_task_lookup) ... ok
+test_stop_pauses_then_deletes_and_wake_after_is_refused (__main__.Driver.test_stop_pauses_then_deletes_and_wake_after_is_refused) ... ok
+test_stop_refuses_an_unconfirmed_pause_or_delete (__main__.Driver.test_stop_refuses_an_unconfirmed_pause_or_delete) ... ok
+test_stop_takes_a_delete_404_only_when_the_conversation_is_confirmed_gone (__main__.Driver.test_stop_takes_a_delete_404_only_when_the_conversation_is_confirmed_gone) ... ok
+test_stop_takes_a_pause_404_only_when_the_sandbox_is_confirmed_stopped (__main__.Driver.test_stop_takes_a_pause_404_only_when_the_sandbox_is_confirmed_stopped) ... ok
+test_stop_while_starting_waits_for_the_conversation_then_ends_it (__main__.Driver.test_stop_while_starting_waits_for_the_conversation_then_ends_it) ... ok
+test_unknown_run_is_refused_by_wake (__main__.Driver.test_unknown_run_is_refused_by_wake) ... ok
+test_version_and_schema (__main__.Driver.test_version_and_schema) ... ok
+test_wake_of_a_running_sandbox_sends_without_resuming (__main__.Driver.test_wake_of_a_running_sandbox_sends_without_resuming) ... ok
+test_wake_refuses_an_unconfirmed_send_or_resume (__main__.Driver.test_wake_refuses_an_unconfirmed_send_or_resume) ... ok
+test_wake_resumes_the_paused_sandbox_then_sends_the_message (__main__.Driver.test_wake_resumes_the_paused_sandbox_then_sends_the_message) ... ok
+test_wake_still_starting_after_the_wait_refuses_with_a_retry (__main__.Driver.test_wake_still_starting_after_the_wait_refuses_with_a_retry) ... ok
+test_wake_while_starting_waits_then_sends_the_follow_up (__main__.Driver.test_wake_while_starting_waits_then_sends_the_follow_up) ... ok
+
+----------------------------------------------------------------------
+Ran 27 tests in 35.197s
+
+OK
+
+$ cmp adapters/openhands/schema.json kernel/driver-kit/schema.json
+(no output, exit 0)

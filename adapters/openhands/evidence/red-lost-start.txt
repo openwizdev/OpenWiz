@@ -1,0 +1,4 @@
+$ python3 -I adapters/openhands/test_driver.py -k lost_start
+AssertionError: {'error': 'OpenHands Cloud answered 503 to POST /api[85 chars]try"} != {'error': 'run 16d5c59e-ba9c-47b0-9db8-575e97737075 [171 chars]ain'}
+Ran 1 test in 1.003s
+FAILED (failures=1)

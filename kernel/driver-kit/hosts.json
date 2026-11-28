@@ -16,5 +16,11 @@
     "variable": "CAPY_API_KEY",
     "keychain": "openwiz-capy",
     "header": "authorization-bearer"
+  },
+  "openhands": {
+    "origin": "https://app.all-hands.dev",
+    "variable": "OPENHANDS_API_KEY",
+    "keychain": "openwiz-openhands",
+    "header": "authorization-bearer"
   }
 }

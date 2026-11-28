@@ -1,0 +1,42 @@
+  test_stop_and_wake_refuse_an_unreadable_conversation_lookup (reply=None) ... FAIL
+  test_stop_and_wake_refuse_an_unreadable_conversation_lookup (reply={}) ... FAIL
+  test_stop_and_wake_refuse_an_unreadable_conversation_lookup (reply=[]) ... FAIL
+  test_stop_and_wake_refuse_an_unreadable_conversation_lookup (reply=[None, None]) ... FAIL
+  test_stop_and_wake_refuse_an_unreadable_conversation_lookup (reply=['x']) ... FAIL
+  test_stop_and_wake_refuse_an_unreadable_conversation_lookup (reply=[{'sandbox_id': 'sandbox-synthetic-0'}]) ... FAIL
+  test_stop_and_wake_refuse_an_unreadable_conversation_lookup (reply=[{'id': '00000000-0000-4000-8000-0000000000aa', 'sandbox_id': 'sandbox-synthetic-0', 'sandbox_status': 'RUNNING'}]) ... FAIL
+  test_stop_and_wake_refuse_an_unreadable_conversation_lookup (reply=[{'id': 'RUN', 'sandbox_id': 'sandbox-synthetic-0', 'sandbox_status': 'BOGUS'}]) ... FAIL
+  test_stop_and_wake_refuse_an_unreadable_conversation_lookup (reply=[{'id': 'RUN', 'sandbox_id': None, 'sandbox_status': 'RUNNING'}]) ... FAIL
+  test_start_refuses_an_unacknowledged_create_naming_the_run (reply=None) ... FAIL
+  test_start_refuses_an_unacknowledged_create_naming_the_run (reply=[]) ... FAIL
+  test_start_refuses_an_unacknowledged_create_naming_the_run (reply={}) ... FAIL
+  test_start_refuses_an_unacknowledged_create_naming_the_run (reply={'status': 'BOGUS', 'id': 'task-synthetic'}) ... FAIL
+  test_start_refuses_an_unacknowledged_create_naming_the_run (reply={'status': 'WORKING', 'id': None}) ... FAIL
+  test_start_refuses_an_unacknowledged_create_naming_the_run (reply={'status': 'READY', 'id': 'task-synthetic', 'app_conversation_id': '00000000-0000-4000-8000-0000000000aa'}) ... FAIL
+  test_wake_refuses_an_unconfirmed_send_or_resume (path='/api/v1/app-conversations/[^/]+/send-message', reply={'success': False, 'sandbox_status': 'RUNNING'}) ... FAIL
+  test_wake_refuses_an_unconfirmed_send_or_resume (path='/api/v1/app-conversations/[^/]+/send-message', reply=None) ... FAIL
+  test_wake_refuses_an_unconfirmed_send_or_resume (path='/api/v1/app-conversations/[^/]+/send-message', reply={}) ... FAIL
+  test_wake_refuses_an_unconfirmed_send_or_resume (path='/api/v1/sandboxes/[^/]+/resume', reply={'success': False, 'sandbox_status': 'RUNNING'}) ... FAIL
+  test_wake_refuses_an_unconfirmed_send_or_resume (path='/api/v1/sandboxes/[^/]+/resume', reply=None) ... FAIL
+  test_wake_refuses_an_unconfirmed_send_or_resume (path='/api/v1/sandboxes/[^/]+/resume', reply={}) ... FAIL
+  test_stop_refuses_an_unconfirmed_pause_or_delete (path='/api/v1/sandboxes/[^/]+/pause', code=200, reply={'success': False}) ... FAIL
+  test_stop_refuses_an_unconfirmed_pause_or_delete (path='/api/v1/sandboxes/[^/]+/pause', code=200, reply=None) ... FAIL
+  test_stop_refuses_an_unconfirmed_pause_or_delete (path='/api/v1/sandboxes/[^/]+/pause', code=409, reply={'detail': 'synthetic conflict'}) ... FAIL
+  test_stop_refuses_an_unconfirmed_pause_or_delete (path='/api/v1/app-conversations/[^/]+', code=200, reply={'success': False}) ... FAIL
+  test_stop_refuses_an_unconfirmed_pause_or_delete (path='/api/v1/app-conversations/[^/]+', code=200, reply=None) ... FAIL
+test_stop_takes_a_pause_404_only_when_the_sandbox_is_confirmed_stopped ... FAIL
+test_stop_takes_a_delete_404_only_when_the_conversation_is_confirmed_gone ... FAIL
+test_wake_while_starting_waits_then_sends_the_follow_up ... FAIL
+test_wake_still_starting_after_the_wait_refuses_with_a_retry ... FAIL
+test_start_refuses_when_only_a_default_model_profile_exists ... ERROR
+test_a_run_absent_from_both_lookups_is_stopped_but_not_woken ... ok
+  test_stop_and_wake_refuse_an_unreadable_task_lookup (reply=None) ... FAIL
+  test_stop_and_wake_refuse_an_unreadable_task_lookup (reply={}) ... FAIL
+  test_stop_and_wake_refuse_an_unreadable_task_lookup (reply={'items': None}) ... FAIL
+  test_stop_and_wake_refuse_an_unreadable_task_lookup (reply={'items': ['x']}) ... FAIL
+  test_stop_and_wake_refuse_an_unreadable_task_lookup (reply={'items': [{'status': 'BOGUS'}]}) ... FAIL
+  test_stop_and_wake_refuse_an_unreadable_task_lookup (reply={'items': [{'status': 'READY', 'app_conversation_id': '00000000-0000-4000-8000-0000000000aa'}]}) ... FAIL
+  test_stop_and_wake_refuse_an_unreadable_task_lookup (reply={'items': [{'status': 'WORKING'}, {'status': 'WORKING'}]}) ... FAIL
+FAILED (failures=37, errors=1)
+Ran 11 tests in 310.541s
+FAILED (failures=37, errors=1)

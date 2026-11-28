@@ -1,0 +1,9 @@
+$ python3 -I kernel/driver-kit/kit.py --driver adapters/openhands/driver (the template, copied and renamed, with only its README's login line changed to "Login: held by OpenHands Cloud") --repo example/site --ticket 7 --harness fake-harness --model "Synthetic 1" --tracker <synthetic tracker> --wait 8
+(OPENWIZ_TEMPLATE_LIVE=1 and the kit's working synthetic harness kernel/driver-kit/fixtures/fake-harness on PATH, after 35 refusing agent CLI stubs; OPENWIZ_GITHUB_APP_KEY unset. The harness posts its status note, but the template never calls OpenHands Cloud, so the run never reaches the host.)
+pass version: openwiz:records v1, and the schema is driver v1
+fail start: effort: medium never reached the kit's fake openhands host
+fail wake: not run: start failed
+fail stop: not run: start failed
+fail token: the openhands key never reached the kit's fake host
+exit 1
+stderr: ''

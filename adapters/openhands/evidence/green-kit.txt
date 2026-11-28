@@ -1,0 +1,7 @@
+$ python3 -I kernel/driver-kit/kit.py --driver adapters/openhands/driver --repo example/site --ticket 7 --harness claude-code --model "Synthetic 1" --tracker <synthetic tracker> --wait 8, on the fake OpenHands Cloud (agent CLI stubs first on PATH; KY1 at 2292b177 and EF1 at 371c9cbf merged in)
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 2
+pass wake: the run edited builder status note 2
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver, and on start, wake and stop the openhands key reached its host only from the key helper, in its header
+exit 0
