@@ -1,0 +1,37 @@
+name: Routing failures
+on: push
+jobs:
+  hardcoded:
+    runs-on: ubuntu-24.04
+  self-hosted:
+    runs-on: [self-hosted, linux]
+  jog:
+    runs-on: jog-4vcpu
+  wrong-fallback:
+    runs-on: ${{ vars.OPENWIZ_RUNS_ON || 'ubuntu-latest' }}
+  unknown:
+    runs-on: ${{ inputs.runner }}
+  dynamic-matrix:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix: ${{ fromJSON(inputs.matrix) }}
+  mixed-matrix:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        runner: [macos-15, ubuntu-24.04]
+  incomplete-matrix:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        target: [a, b]
+        include:
+          - runner: macos-15
+  unresolved-include:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        runner: [windows-latest]
+        target: [a]
+        include:
+          - target: b
