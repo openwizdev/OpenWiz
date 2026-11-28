@@ -1,0 +1,136 @@
+{
+  "owner-scene": {
+    "schema": "openwiz.room.v1",
+    "read_at": "2031-01-02T03:04:05Z",
+    "mode": "owner",
+    "stations": [
+      {"family": "alpha", "label": "Alpha family", "text": "Alpha family station: 2 agents."},
+      {"family": "beta", "label": "Beta family", "text": "Beta family station: 2 agents."}
+    ],
+    "figures": [
+      {"name": "builder-4101", "role": "builder", "state": "building", "ticket": 4101, "station": "alpha",
+       "text": "builder-4101 at the Alpha station is building ticket 4101.",
+       "taps": [{"label": "Prioritize", "line": "prioritize #4101"}, {"label": "Pause spec", "line": "pause spec #4100"}]},
+      {"name": "reviewer-4201-1", "role": "reviewer", "state": "review", "ticket": 4102, "station": "beta",
+       "text": "reviewer-4201-1 at the Beta station is reviewing pull request 4201.",
+       "taps": [{"label": "Prioritize", "line": "prioritize #4102"}]},
+      {"name": "fixer-4202-2", "role": "fixer", "state": "fix", "ticket": 4103, "station": "alpha",
+       "text": "fixer-4202-2 at the Alpha station is fixing pull request 4202.", "taps": []},
+      {"name": "fleet-4100", "role": "fleet", "state": "queued", "ticket": null, "station": "beta",
+       "text": "fleet-4100 at the Beta station is queued for spec 4100.",
+       "taps": [{"label": "Pause spec", "line": "pause spec #4100"}]}
+    ],
+    "pipeline": {
+      "build": [{"repository": "synthetic-owner/synthetic-repo", "number": 4203, "ticket": 4101,
+                 "text": "Pull request 4203 for ticket 4101 is building."}],
+      "review": [{"repository": "synthetic-owner/synthetic-repo", "number": 4201, "ticket": 4102,
+                  "text": "Pull request 4201 for ticket 4102 is in review."}],
+      "merge": [{"repository": "synthetic-owner/synthetic-repo", "number": 4199, "ticket": null,
+                 "text": "Pull request 4199 is waiting to merge."}]
+    },
+    "meters": [
+      {"lane": "local:alpha:main", "window": "five-hour", "used_percent": 42, "resets_at": "2031-01-02T06:00:00Z",
+       "budget": {"spent": 42, "target": 80, "unit": "percent", "by": "2031-01-02T06:00:00Z", "pace": "behind"},
+       "text": "Alpha main five-hour window: 42 percent used of an 80 percent target, behind pace."},
+      {"lane": "local:beta:main", "window": "week", "used_percent": 61.5, "resets_at": null, "budget": null,
+       "text": "Beta main weekly window: 61.5 percent used, no target."}
+    ],
+    "requests": [
+      {"repository": "synthetic-owner/synthetic-repo", "number": 4150, "stage": "building", "eta": "2031-01-03T12:00:00Z",
+       "text": "Request 4150 is building, estimated 2031-01-03 12:00 UTC."},
+      {"repository": "synthetic-owner/synthetic-repo", "number": 4151, "stage": "submitted", "eta": null,
+       "text": "Request 4151 is submitted, no estimate yet."}
+    ],
+    "beacons": [
+      {"id": "spec:synthetic-owner/synthetic-repo#4100@0123456789ab", "kind": "spec-to-approve",
+       "text": "Spec 4100 waits for plan approval.",
+       "taps": [{"label": "Approve", "line": "approve plan #4100 fingerprint 0123456789ab"}]},
+      {"id": "pr:synthetic-owner/synthetic-repo#4199@0123456789abcdef0123456789abcdef01234567", "kind": "pr-ready-to-merge",
+       "text": "Pull request 4199 is approved and green.",
+       "taps": [{"label": "Merge", "line": "merge synthetic-owner/synthetic-repo#4199 at 0123456789abcdef0123456789abcdef01234567"}]},
+      {"id": "decision:synthetic-decision-1", "kind": "decision-request",
+       "text": "Decision synthetic-decision-1 asks keep or drop.",
+       "taps": [{"label": "Keep", "line": "answer decision synthetic-decision-1 keep"},
+                {"label": "Drop", "line": "answer decision synthetic-decision-1 drop"}]},
+      {"id": "grant:9001", "kind": "grant-request", "text": "builder-4101 asks for one more path.",
+       "taps": [{"label": "Grant", "line": "grant 9001"}, {"label": "Refuse", "line": "refuse 9001"}]},
+      {"id": "setting:9002", "kind": "setting-proposal", "text": "An agent proposes one setting change.",
+       "taps": [{"label": "Yes", "line": "yes to setting proposal 9002"}, {"label": "No", "line": "no to setting proposal 9002"}]},
+      {"id": "key:9003", "kind": "key-needed", "text": "A synthetic key is needed.", "taps": [], "opens": "key-card"},
+      {"id": "release:0.0.99", "kind": "release", "text": "Release candidate 0.0.99 waits for the ship instruction.", "taps": []}
+    ],
+    "unavailable": []
+  },
+  "owner-scene-unavailable": {
+    "schema": "openwiz.room.v1",
+    "read_at": "2031-01-02T03:04:05Z",
+    "mode": "owner",
+    "stations": null,
+    "figures": null,
+    "pipeline": null,
+    "meters": null,
+    "requests": [],
+    "beacons": null,
+    "unavailable": [
+      {"source": "states", "reason": "The states file is missing."},
+      {"source": "usage", "reason": "The usage command exited with an error."},
+      {"source": "feed", "reason": "The feed file failed its schema."}
+    ]
+  },
+  "public-scene": {
+    "schema": "openwiz.room.v1",
+    "mode": "public",
+    "read_at": "2031-01-02T03:00:00Z",
+    "prs_merged_total": 1234,
+    "prs_merged_7d": 56,
+    "drivers_verified": 7,
+    "agents_running": 12
+  },
+  "public-scene-unavailable": {
+    "schema": "openwiz.room.v1",
+    "mode": "public",
+    "read_at": "2031-01-02T03:00:00Z",
+    "prs_merged_total": null,
+    "prs_merged_7d": 0,
+    "drivers_verified": null,
+    "agents_running": null
+  },
+  "steer-approve": {"schema": "openwiz.room.v1", "kind": "steer", "sent_as": "owner-message",
+                    "line": "approve plan #4100 fingerprint 0123456789ab"},
+  "steer-merge": {"schema": "openwiz.room.v1", "kind": "steer", "sent_as": "owner-message",
+                  "line": "merge synthetic-owner/synthetic-repo#4199 at 0123456789abcdef0123456789abcdef01234567"},
+  "steer-answer": {"schema": "openwiz.room.v1", "kind": "steer", "sent_as": "owner-message",
+                   "line": "answer decision synthetic-decision-1 keep"},
+  "steer-grant": {"schema": "openwiz.room.v1", "kind": "steer", "sent_as": "owner-message", "line": "grant 9001"},
+  "steer-refuse": {"schema": "openwiz.room.v1", "kind": "steer", "sent_as": "owner-message", "line": "refuse 9001"},
+  "steer-yes": {"schema": "openwiz.room.v1", "kind": "steer", "sent_as": "owner-message", "line": "yes to setting proposal 9002"},
+  "steer-no": {"schema": "openwiz.room.v1", "kind": "steer", "sent_as": "owner-message", "line": "no to setting proposal 9002"},
+  "steer-pause": {"schema": "openwiz.room.v1", "kind": "steer", "sent_as": "owner-message", "line": "pause spec #4100"},
+  "steer-prioritize": {"schema": "openwiz.room.v1", "kind": "steer", "sent_as": "owner-message", "line": "prioritize #4101"},
+  "frame-phone-3d": {"schema": "openwiz.room.v1", "kind": "frame", "profile": "phone", "view": "3d", "fps": 42.5,
+                     "figures_drawn": 24, "draw_calls": 120, "triangles": 150000, "reduced_motion": false,
+                     "moving": ["figure-idle", "pipeline-flow", "beacon-pulse"]},
+  "frame-phone-2d": {"schema": "openwiz.room.v1", "kind": "frame", "profile": "phone", "view": "2d", "fps": 22,
+                     "figures_drawn": 0, "draw_calls": 0, "triangles": 0, "reduced_motion": false, "moving": []},
+  "frame-desktop-reduced": {"schema": "openwiz.room.v1", "kind": "frame", "profile": "desktop", "view": "3d", "fps": 60,
+                            "figures_drawn": 40, "draw_calls": 300, "triangles": 400000, "reduced_motion": true,
+                            "moving": ["state-change"]},
+  "theme-default": {
+    "schema": "openwiz.room.v1",
+    "kind": "theme",
+    "look": "holo-butler",
+    "colours": {"background": "#0b1020", "surface": "#141c33", "text": "#e6f1ff", "accent": "#5ad1ff",
+                "ok": "#4fd18b", "warn": "#f2c14e", "alert": "#ff6b6b"},
+    "materials": {"figure": "glass", "station": "metal", "panel": "emissive", "floor": "matte"},
+    "sound": {"on": false, "set_by": "default", "cues": {"beacon": "soft-chime", "merge": "two-note-rise", "alert": "low-pulse"}}
+  },
+  "theme-sound-on": {
+    "schema": "openwiz.room.v1",
+    "kind": "theme",
+    "look": "tide-glass",
+    "colours": {"background": "#f4f7f6", "surface": "#ffffff", "text": "#10201c", "accent": "#1f8a70",
+                "ok": "#2e7d32", "warn": "#b26a00", "alert": "#c62828"},
+    "materials": {"figure": "satin", "station": "matte", "panel": "glass", "floor": "gloss"},
+    "sound": {"on": true, "set_by": "owner", "cues": {"beacon": "wood-tap", "merge": "bright-bell", "alert": "low-pulse"}}
+  }
+}
