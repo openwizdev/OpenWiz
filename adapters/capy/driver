@@ -2,7 +2,7 @@
 # SECURITY: driver v1 N4. Every Capy call goes through the kit's key helper, which alone reads the key and picks the
 # address; this driver sends it only a host name, a method, a path and a body, and never names, reads or prints the
 # key. It shows no text the host answered: each error names only the status, the method and the path.
-import fcntl, json, os, re, stat, subprocess, sys, time, uuid
+import fcntl, json, math, os, re, stat, subprocess, sys, time, urllib.parse, uuid
 from contextlib import nullcontext
 
 sys.dont_write_bytecode = True
@@ -19,8 +19,10 @@ EFFORT = r'[a-z][a-z0-9-]{0,19}'
 PROJECT = r'[A-Za-z0-9][A-Za-z0-9_.:-]{0,190}'
 PROVIDERS = {'claude': 'anthropic', 'claude-code': 'anthropic', 'codex': 'openai'}
 POLL = float(os.environ.get('OPENWIZ_CAPY_POLL') or 3)
+WAKE_SETTLE = max(0.0, float(os.environ.get('OPENWIZ_CAPY_WAKE_SETTLE') or 120))
 WAIT_AT_MOST = 30
 COMMAND_TIMEOUT, CALL_TIMEOUT = 110, 60
+PENDING_RE = re.compile(rb'([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})(?: ([0-9]+(?:\.[0-9]+)?))?')
 STATE = os.environ.get('OPENWIZ_CAPY_STATE') or os.path.expanduser('~/.local/state/openwiz/capy')
 EXPIRED = 'the command ran out of time before '
 UNSENT = (EXPIRED,) + tuple('the key helper refused: ' + why for why in (
@@ -306,23 +308,29 @@ def lock(run, register=False):
 
 def read_wake(owned, run):
     try:
-        data = owned.read(37) if owned is not None else b''
-        if data and not re.fullmatch(rb'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', data):
+        if owned is None:
+            return None
+        owned.seek(0)
+        data = owned.read(128)
+        if not data:
+            return None
+        m = PENDING_RE.fullmatch(data)
+        if not m:
             raise ValueError
-        return data
+        return m.group(1).decode('ascii'), (float(m.group(2)) if m.group(2) else None)
     except (OSError, ValueError):
         raise Refused('the driver cannot read the pending wake for run ' + run,
                       'check the controller file and the run in Capy') from None
 
 
-def record_wake(owned, run, key):
+def record_wake(owned, run, key, sent_at=None):
     try:
         owned.seek(0)
         if key:
-            if owned.write(key) != len(key):
+            data = ('%s %.3f' % (key, time.time() if sent_at is None else sent_at)).encode('ascii')
+            if owned.write(data) != len(data):
                 raise OSError
-        else:
-            owned.truncate()
+        owned.truncate()
         os.fsync(owned.fileno())
     except OSError:
         raise Refused('the driver cannot record the state of the wake for run ' + run,
@@ -336,57 +344,66 @@ def wake_reached_capy(run, key, deadline):
     after = ''
     seen = set()
     try:
-        while after not in seen:
+        while True:
             seen.add(after)
-            status, page = ask('GET', path + ('?after=' + after if after else ''), deadline=deadline)
-            if status != 200 or not isinstance(obj(page).get('items'), list):
-                return False
-            if any(obj(item).get('source') == 'user' and item.get('clientKey') == key
+            query = '?after=' + urllib.parse.quote(after, safe='') if after else ''
+            status, page = ask('GET', path + query, deadline=deadline)
+            if (status != 200 or not shaped(page, {'items', 'cursor'}) or not isinstance(page['items'], list)
+                    or not all(isinstance(item, dict) for item in page['items'])):
+                return 'unknown'
+            if any(item.get('source') == 'user' and item.get('clientKey') == key
                    and item.get('text') == WOKEN for item in page['items']):
-                return True
-            after = page.get('cursor')
-            if not isinstance(after, str) or not re.fullmatch(r'[A-Za-z0-9]{26}', after):
-                return False
+                return 'found'
+            after = page['cursor']
+            if after is None:
+                return 'absent'
+            if not isinstance(after, str) or not after or after in seen:
+                return 'unknown'
     except Refused:
-        pass
-    return False
+        return 'unknown'
 
 
-def send_wake(owned, run, deadline):
-    key = str(uuid.uuid4())
-    record_wake(owned, run, key.encode('ascii'))
+def send_wake(owned, run, deadline, key=None, previous_at=None):
+    # External: retrying POST /message with the same clientKey dedupes on Capy instead of posting twice.
+    # https://docs.capy.ai/api-reference/messages/send-message
+    retrying = key is not None
+    key = key or str(uuid.uuid4())
+    record_wake(owned, run, key)
     try:
         status, receipt = ask('POST', '/api/v1/threads/%s/message' % run,
                               {'text': WOKEN, 'delivery': 'steer', 'clientKey': key},
                               also=(*WAKE_REJECTED, 429), deadline=deadline)
     except Refused as e:
         if e.args[0].startswith(UNSENT):
-            record_wake(owned, run, b'')
+            record_wake(owned, run, key if retrying else None, previous_at)
             raise
         raise pending_wake(run) from None
     if obj(receipt).get('_tag') in WAKE_REJECTED.get(status, ()):
-        record_wake(owned, run, b'')
+        record_wake(owned, run, key if retrying else None, previous_at)
         raise Refused('Capy refused the wake for run %s with status %d' % (run, status),
                       'check access to the run and its model in Capy, then retry')
     delay = retry_after(receipt) if status == 429 else None
     if delay is not None:
-        record_wake(owned, run, b'')
+        record_wake(owned, run, key if retrying else None, previous_at)
         raise Refused('Capy rate-limited the wake for run ' + run, 'wait %d seconds, then wake it again' % delay)
     if not admitted(status, receipt):
         raise pending_wake(run)
-    record_wake(owned, run, b'')
+    record_wake(owned, run, None)
 
 
-def pending_wake(run):
+def pending_wake(run, wait=None):
+    if wait is not None and wait > 0:
+        return Refused('the wake for run %s is still unconfirmed' % run,
+                       'check Capy for the wake, or wait %d seconds and retry stop' % wait)
     return Refused('the wake for run %s is still unconfirmed' % run,
-                   'check the run in Capy for the wake message, then retry the command')
+                   'retry wake to resend with the same key, or check Capy and retry stop')
 
 
 def control(cmd, run):
     deadline = time.monotonic() + COMMAND_TIMEOUT
     with lock(run) or nullcontext() as owned:
         pending = read_wake(owned, run)
-        settled = bool(pending) and wake_reached_capy(run, pending.decode('ascii'), deadline)
+        key, sent_at = pending if pending else (None, None)
         archived = thread(run, deadline)['archived']
         if cmd == 'wake' and archived:
             raise Refused('run %s is stopped' % run, STOPPED)
@@ -394,15 +411,21 @@ def control(cmd, run):
             raise Refused('run %s has no controller here' % run,
                           'use the controller and state folder that started the run, or manage it in Capy')
         if cmd == 'wake':
-            if not pending:
-                send_wake(owned, run, deadline)
-        elif not archived or settled:
+            send_wake(owned, run, deadline, key=key, previous_at=sent_at)
+            return {'run': run, 'woke': True}
+        checked_at = time.time()
+        state = wake_reached_capy(run, key, deadline) if key is not None else 'none'
+        if not archived or state == 'found':
             interrupt_and_archive(run, deadline)
-        if pending and not settled:
-            raise pending_wake(run)
-        if settled:
-            record_wake(owned, run, b'')
-        return {'run': run, ('woke' if cmd == 'wake' else 'stopped'): True}
+        if key is not None:
+            elapsed = None if sent_at is None else checked_at - sent_at
+            if state == 'found' or (state == 'absent' and elapsed is not None and elapsed >= WAKE_SETTLE):
+                record_wake(owned, run, None)
+            else:
+                wait = None if (state != 'absent' or sent_at is None) else max(
+                    1, math.ceil(WAKE_SETTLE - max(0.0, time.time() - sent_at)))
+                raise pending_wake(run, wait)
+        return {'run': run, 'stopped': True}
 
 
 def interrupt_and_archive(run, deadline):
