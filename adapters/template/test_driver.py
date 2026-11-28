@@ -111,12 +111,27 @@ while True:
 '''
 LEGACY_STOP_WRAPPER = '''import importlib.machinery, importlib.util, os, re, signal, sys
 sys.dont_write_bytecode = True
-if os.environ.get('DENY_ENVIRON'):
+if os.environ.get('DENY_ENVIRON') or os.environ.get('DENY_ENVIRON_PID'):
+    deny_all = bool(os.environ.get('DENY_ENVIRON'))
+    deny_pid = int(os.environ['DENY_ENVIRON_PID']) if os.environ.get('DENY_ENVIRON_PID') else None
     def audit(event, args):
         if event == 'open' and isinstance(args[0], (str, bytes)):
-            if re.fullmatch(r'/proc/[0-9]+/environ', os.fsdecode(args[0])):
+            path = os.fsdecode(args[0])
+            if deny_all and re.fullmatch(r'/proc/[0-9]+/environ', path):
                 raise PermissionError('synthetic environ refusal')
+            if deny_pid is not None and path == '/proc/%%d/environ' %% deny_pid:
+                raise PermissionError('synthetic mixed-cred environ refusal')
     sys.addaudithook(audit)
+if os.environ.get('MIXED_CRED_PID'):
+    import builtins, io
+    mixed_pid = int(os.environ['MIXED_CRED_PID'])
+    real_open = open
+    def fake_open(file, *args, **kwargs):
+        if isinstance(file, (str, bytes)) and os.fsdecode(file) == '/proc/%%d/status' %% mixed_pid:
+            uid, gid = os.geteuid(), os.getegid()
+            return io.StringIO('Uid:\\t0\\t%%d\\t0\\t%%d\\nGid:\\t%%d\\t%%d\\t%%d\\t%%d\\n' %% (uid, uid, gid, gid, gid, gid))
+        return real_open(file, *args, **kwargs)
+    builtins.open = fake_open
 spec = importlib.util.spec_from_loader('template', importlib.machinery.SourceFileLoader('template', %r))
 t = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(t)
@@ -866,6 +881,24 @@ class Template(unittest.TestCase):
         self.assertEqual(self.call('stop', started), (0, dict(started, stopped=True)))
         self.assertEqual((alive(turn), alive(child)), (False, False))
         self.assertEqual(self.call('stop', started, **macos), (0, dict(started, stopped=True)))
+
+    def test_stop_skips_unrelated_mixed_credential_processes_like_sd_pam(self):
+        old_driver = self.script('pre-1590-driver', PRE_1590_TEMPLATE)
+        code, started = self.call('start', START, driver=old_driver)
+        self.assertEqual(code, 0, started)
+        [(turn, child, _)] = self.logged(1)
+        self.assertTrue(self.until(lambda: not alive(turn)), 'the legacy harness did not exit')
+        self.assertTrue(alive(child))
+        sd_pam = subprocess.Popen(
+            ['sleep', '120'], start_new_session=True,
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.addCleanup(lambda p=sd_pam: (p.kill(), p.wait()))
+        driver = self.wrapper('legacy-mixed-cred', LEGACY_STOP_WRAPPER)
+        code, out = self.call('stop', started, driver=driver,
+                              DENY_ENVIRON_PID=str(sd_pam.pid), MIXED_CRED_PID=str(sd_pam.pid))
+        self.assertEqual((code, out), (0, dict(started, stopped=True)))
+        self.assertFalse(alive(child))
+        self.assertTrue(alive(sd_pam.pid))
 
     def test_stop_does_not_signal_an_unrelated_process_that_reused_a_legacy_pid(self):
         run = 'run-' + secrets.token_hex(6)

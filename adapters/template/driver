@@ -329,6 +329,34 @@ def proc_table(run):
     return table, children
 
 
+def cap_prm(pid):
+    try:
+        with open('/proc/%s/status' % pid) as f:
+            for line in f:
+                if line.startswith('CapPrm:'):
+                    return int(line.split()[1], 16)
+    except (OSError, ValueError, IndexError):
+        pass
+    return 0
+
+
+def same_creds(pid, uid, gid, my_cap):
+    try:
+        with open('/proc/%d/status' % pid) as f:
+            uids = gids = None
+            caps = 0
+            for line in f:
+                if line.startswith('Uid:'):
+                    uids = [int(x) for x in line.split()[1:5]]
+                elif line.startswith('Gid:'):
+                    gids = [int(x) for x in line.split()[1:5]]
+                elif line.startswith('CapPrm:'):
+                    caps = int(line.split()[1], 16)
+    except (OSError, ValueError, IndexError):
+        return False
+    return uids == [uid, uid, uid, uid] and gids == [gid, gid, gid, gid] and (caps & ~my_cap) == 0
+
+
 # PRIVACY: legacy pre-#1590 records store only turn pids, so detached workers can outlive their turn
 # in a new session; inspect own-UID /proc/<pid>/environ solely for OPENWIZ_RUN=<run>, never retaining it.
 def scan_legacy(turn_ids, run, mark, tracked, checked_unmarked):
@@ -339,17 +367,14 @@ def scan_legacy(turn_ids, run, mark, tracked, checked_unmarked):
         cur = table[cur][0]
     for p in [p for p, st in tracked.items() if p not in table or table[p][3] != st]:
         del tracked[p]
-    uid = os.geteuid()
+    uid, gid, my_cap = os.geteuid(), os.getegid(), cap_prm('self')
     unreadable = set()
     for p, (_, pgid, sid, st) in table.items():
         if p in self_chain or p in tracked or (p, st) in checked_unmarked:
             continue
         tied = p in turn_ids or pgid in turn_ids or sid in turn_ids
-        try:
-            if os.stat('/proc/%d' % p).st_uid != uid:
-                checked_unmarked.add((p, st))
-                continue
-        except OSError:
+        if not same_creds(p, uid, gid, my_cap):
+            checked_unmarked.add((p, st))
             continue
         try:
             with open('/proc/%d/environ' % p, 'rb') as f:
