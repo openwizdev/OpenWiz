@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import importlib.machinery
+import importlib.util
 import json
 import os
 import re
@@ -10,6 +12,7 @@ import sys
 import tempfile
 import threading
 import time
+import types
 import unittest
 
 sys.dont_write_bytecode = True
@@ -19,6 +22,7 @@ KIT = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit')
 sys.path.insert(0, KIT)
 import kit
 NO_PROC = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'fixtures', 'no-proc')
+LISTED_ROWS = 'agy amp auggie copilot gemini goose junie kilo kimi oz pi qwen'.split()
 
 TOKEN = 'gh' + 'p_' + 'Synthetic0Local0Value' * 2 + '00'
 OPAQUE = 'opaque-fixture-value-7Kq2Zr9w'
@@ -26,7 +30,7 @@ NO_LSOF = ('driver: lsof could not run or failed, so the driver could not check 
            "run's output file open; it ended only the turns' process groups and the processes their "
            'supervisors recorded')
 PASS = ['pass version: openwiz:records v1, and the schema is driver v1',
-        'pass start: the run posted builder status note 1',
+        'pass start: the run posted builder status note 1; effort: medium reached a process the run started',
         'pass wake: the run edited builder status note 1',
         'pass stop: the run ended, and a wake after it is refused',
         'pass token: no login or token passed through the driver']
@@ -92,9 +96,11 @@ class Local(unittest.TestCase):
         self.mark = secrets.token_hex(8)
         self.log = os.path.join(self.folder, 'turns')
         self.env = dict(os.environ, KIT_TRACKER=self.tracker, LOCAL_TEST=self.mark, GH_TOKEN=TOKEN, FAKE_TURNS=self.log,
+                        FAKE_ARGS=os.path.join(self.folder, 'argv'),
                         FAKE_REPOS=repos, OPENWIZ_LOCAL_SETTLE='2',
                         OPENWIZ_LOCAL_STATE=os.path.join(self.folder, 'state'),
                         PATH=self.bin + os.pathsep + os.environ.get('PATH', ''))
+        self.env.pop('CLAUDE_CODE_EFFORT_LEVEL', None)
         self.approve(self.env['OPENWIZ_LOCAL_STATE'])
 
     def approve(self, state):
@@ -147,9 +153,10 @@ class Local(unittest.TestCase):
                            env=env or self.env, capture_output=True, text=True, timeout=60)
         return p.returncode, json.loads(p.stdout)
 
-    def start(self, harness='claude', env=None, program=DRIVER, repository='example/site'):
-        return self.driver('start', {'repository': repository, 'ticket': 7, 'skill': 'build-ticket',
-                                     'harness': harness, 'model': 'synthetic-1'}, env, program)
+    def start(self, harness='claude', env=None, program=DRIVER, repository='example/site', effort=None):
+        request = {'repository': repository, 'ticket': 7, 'skill': 'build-ticket', 'harness': harness,
+                   'model': 'synthetic-1'}
+        return self.driver('start', request if effort is None else dict(request, effort=effort), env, program)
 
     def first_turn(self, **env):
         code, out = self.start(env=dict(self.env, **env))
@@ -228,15 +235,37 @@ class Local(unittest.TestCase):
                 self.no_new_turn(count)
 
     def test_kit_passes_all_five_with_each_harness(self):
-        for harness in ('claude', 'codex'):
-            with self.subTest(harness):
+        for harness, effort in (('claude', 'medium'), ('codex', 'medium'), ('claude', 'ultra'), ('codex', 'minimal')):
+            with self.subTest(harness=harness, effort=effort):
                 self.tearDown()
                 self.setUp()
                 p = subprocess.run([sys.executable, '-I', os.path.join(KIT, 'kit.py'), '--driver', DRIVER,
                                     '--repo', 'example/site', '--ticket', '7', '--harness', harness,
-                                    '--model', 'synthetic-1', '--tracker', self.tracker, '--wait', '15'],
-                                   env=self.env, capture_output=True, text=True, timeout=180)
-                self.assertEqual((p.returncode, p.stdout.splitlines()), (0, PASS), p.stderr)
+                                    '--model', 'synthetic-1', '--tracker', self.tracker, '--wait', '15',
+                                    '--effort', effort], env=self.env, capture_output=True, text=True, timeout=180)
+                said = PASS if effort == 'medium' else [PASS[0], PASS[1].replace(
+                    'medium reached a process the run started',
+                    'refused %s with the refusal text, a word its README does not list for %s' % (effort, harness))
+                ] + PASS[2:]
+                self.assertEqual((p.returncode, p.stdout.splitlines()), (0, said), p.stderr)
+
+    def test_kit_passes_all_five_with_each_listed_row_reading_this_readme(self):
+        loader = importlib.machinery.SourceFileLoader('harness_rows', os.path.join(HERE, 'test_harnesses.py'))
+        runner = importlib.util.module_from_spec(importlib.util.spec_from_loader('harness_rows', loader))
+        loader.exec_module(runner)
+
+        class ThisReadme(runner.ThrowawayMachine):
+            def stage_effort(self):
+                os.symlink(os.path.join(HERE, 'README.md'), os.path.join(os.path.dirname(self.driver_path), 'README.md'))
+
+        for name in LISTED_ROWS:
+            with self.subTest(name):
+                folder, row = runner.check_row(runner.ROWS, name)
+                names = set(row['env']) | {k for s in row['effort'].values() if isinstance(s, dict) for k in s['env']} \
+                    if isinstance(row['effort'], dict) else set(row['env'])
+                with ThisReadme(runner.ROWS, name, row['program'], runner.check_folder(folder, row),
+                                next(iter(row['modes'])), sorted(names)) as machine:
+                    self.assertEqual(machine.kit(), runner.passes(name, row))
 
     def test_several_runs_at_once_stop_only_their_own(self):
         answers = []
@@ -615,6 +644,118 @@ class Local(unittest.TestCase):
                 self.assertEqual(self.start(harness, repository=aligned)[0], 0)
                 self.until(lambda: len(self.logged()) and self.logged()[-1][4] == mode)
         self.assertEqual([t[4] for t in self.logged()], ['acceptEdits', 'workspace-write'])
+    def argv_seen(self):
+        try:
+            with open(self.env['FAKE_ARGS']) as f:
+                return [json.loads(line) for line in f]
+        except FileNotFoundError:
+            return []
+
+    def test_version_lists_effort(self):
+        code, out = self.driver('version')
+        self.assertEqual(code, 0, out)
+        self.assertIn('effort', out['can'])
+        self.assertIsNone(kit.invalid(out, kit.load_schema()['commands']['version']['output']), out)
+
+    def test_each_built_in_gets_the_effort_flag_at_start_and_at_wake(self):
+        expected = {'claude': lambda argv: argv[-2:] == ['--effort', 'medium'],
+                    'codex': lambda argv: argv[:3] == ['exec', '-c', 'model_reasoning_effort=medium']}
+        for harness, flagged in expected.items():
+            with self.subTest(harness):
+                self.tearDown()
+                self.setUp()
+                env = dict(self.env, CLAUDE_CODE_EFFORT_LEVEL='low')
+                code, out = self.start(harness, env, effort='medium')
+                self.assertEqual(code, 0, out)
+                self.until(lambda: len(self.logged()) == 1 and not alive(self.logged()[0][0]))
+                self.assertEqual(self.driver('wake', out, env), (0, dict(out, woke=True)))
+                self.until(lambda: len(self.argv_seen()) == 2)
+                seen = self.argv_seen()
+                self.assertEqual([r['woken'] for r in seen], [False, True])
+                for record in seen:
+                    self.assertTrue(flagged(record['argv']), record['argv'])
+                    self.assertEqual(record['effort'], 'medium')
+                if harness == 'claude':
+                    self.assertEqual([r['CLAUDE_CODE_EFFORT_LEVEL'] for r in seen], ['medium', 'medium'],
+                                     'an exported CLAUDE_CODE_EFFORT_LEVEL outranks --effort, so it must match')
+
+    def test_a_start_without_effort_adds_no_effort_flag_or_setting(self):
+        for harness in ('claude', 'codex'):
+            with self.subTest(harness):
+                self.assertEqual(self.start(harness, repository='example/quick')[0], 0)
+        seen = self.argv_seen()
+        self.assertEqual(len(seen), 2)
+        for record in seen:
+            self.assertIsNone(record['effort'], record['argv'])
+            self.assertIsNone(record['CLAUDE_CODE_EFFORT_LEVEL'])
+
+    def documented(self, help_file, listed):
+        with open(os.path.join(HERE, 'fixtures', 'help', help_file)) as f:
+            found = re.search(listed, f.read())
+        self.assertIsNotNone(found, '%s does not hold the CLI\'s own effort lines' % help_file)
+        return re.split(r',\s*(?:or\s+)?', found.group(1))
+
+    def test_every_level_each_cli_documents_reaches_it(self):
+        claude = self.documented('claude.txt', r'--effort <level> .*\n +\((.*?)\)')
+        codex = self.documented('codex-exec.txt', r'model_reasoning_effort: .*?such as (.*?)\. ')
+        self.assertEqual((claude, codex), (['low', 'medium', 'high', 'xhigh', 'max'],
+                                           ['low', 'medium', 'high', 'xhigh', 'max', 'ultra']))
+        passed = [('claude', level) for level in claude] + [('codex', l) for l in codex]
+        for harness, level in passed:
+            with self.subTest(harness=harness, level=level):
+                code, out = self.start(harness, repository='example/quick', effort=level)
+                self.assertEqual(code, 0, out)
+                self.assertEqual((self.argv_seen()[-1]['cli'], self.argv_seen()[-1]['effort']), (harness, level))
+        self.assertEqual(len(self.argv_seen()), len(passed))
+
+    def test_an_effort_the_driver_cant_set_is_refused_before_anything_runs(self):
+        calls, logging = os.path.join(self.folder, 'calls'), os.path.join(self.folder, 'logging-bin')
+        os.mkdir(logging)
+        for name in ('claude', 'codex', 'gh'):
+            with open(os.path.join(logging, name), 'w') as f:
+                f.write('#!/bin/sh\nprintf \'%%s\\n\' "$*" >> %s\nexec %s "$@"\n' % (calls, os.path.join(self.bin, name)))
+            os.chmod(os.path.join(logging, name), 0o700)
+        env = dict(self.env, PATH=logging + os.pathsep + self.env['PATH'])
+        schema = kit.load_schema()['error']
+        for harness, effort in (('claude', 'ultracode'), ('claude', 'minimal'), ('claude', 'ultra'),
+                                ('codex', 'minimal'), ('codex', 'none'), ('codex', 'ultracode'),
+                                ('fake-harness', 'medium'), ('no-such-cli', 'high')):
+            with self.subTest(harness=harness, effort=effort):
+                code, out = self.start(harness, env, effort=effort)
+                self.assertEqual(code, 1, out)
+                self.assertIsNone(kit.invalid(out, schema), out)
+                self.assertEqual(out['next'], "this host can't set effort: remove the effort for this harness in "
+                                              "your Models table or Roster to run it at the host's default")
+                self.assertIn(harness, out['error'])
+                self.assertIn(effort, out['error'])
+                self.assertFalse(os.path.exists(calls), 'a harness or gh ran')
+                self.assertEqual(sorted(os.listdir(self.env['OPENWIZ_LOCAL_STATE'])), ['approvals.json'])
+        self.assertEqual((self.logged(), self.argv_seen()), ([], []))
+
+    def test_readme_has_the_effort_line_and_table_under_its_login_line(self):
+        lines = read(os.path.join(HERE, 'README.md')).splitlines()
+        login = lines.index('Login: stays on your machine')
+        self.assertTrue(lines[login + 1].startswith('Effort: passed as '), lines[login + 1])
+        line, rows = kit.Kit.effort_readme(types.SimpleNamespace(args=types.SimpleNamespace(driver=DRIVER)))
+        self.assertEqual(line, lines[login + 1])
+        self.assertIn('`CLAUDE_CODE_EFFORT_LEVEL`', rows['claude'])
+        for harness, levels, flag in (('claude', ['low', 'medium', 'high', 'xhigh', 'max'], '--effort'),
+                                      ('codex', ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'], '-c')):
+            self.assertEqual(kit.listed(rows[harness]), levels, rows[harness])
+            for level in levels:
+                value = level if harness == 'claude' else 'model_reasoning_effort=' + level
+                self.assertEqual(kit.setting(rows[harness], level), ('argv', flag, value))
+        for name in LISTED_ROWS:
+            with self.subTest(name):
+                effort = json.loads(read(os.path.join(HERE, 'harnesses', name, 'row.json')))['effort']
+                if isinstance(effort, str):
+                    self.assertTrue(rows[name].startswith("can't"), rows[name])
+                    continue
+                self.assertEqual(kit.listed(rows[name]), list(effort), rows[name])
+                for level, args in effort.items():
+                    self.assertEqual(list(kit.setting(rows[name], level)[1:]), args)
+        self.assertIn('harness-row.md', ' '.join(rows.values()))
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

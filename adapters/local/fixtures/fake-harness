@@ -5,6 +5,22 @@ OPAQUE = 'opaque-fixture-value-7Kq2Zr9w'
 
 worker = sys.argv[1:2] == ['--worker']
 name, args = os.path.basename(sys.argv[0]), sys.argv[2 if worker else 1:]
+HELP = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'help', name + ('.txt' if name == 'claude' else '-exec.txt'))
+
+
+def documented():
+    with open(HELP) as f:
+        listed = re.search(r'--effort <level> .*\n +\((.*?)\)' if name == 'claude' else r'such as (.*?)\. ', f.read()).group(1)
+    return re.split(r',\s*(?:or\s+)?', listed)
+
+
+effort = None
+if name == 'claude' and args[-2:-1] == ['--effort']:
+    effort, args = args[-1], args[:-2]
+elif name == 'codex' and args[1:2] == ['-c'] and args[2:3] and args[2].startswith('model_reasoning_effort='):
+    effort, args = args[2].partition('=')[2], args[:1] + args[3:]
+if '--effort' in args or '-c' in args or (effort is not None and effort not in documented()):
+    sys.exit(2)
 if len(args) == 4:
     args = args + ['--permission-mode', '-'] if name == 'claude' else args[:3] + ['--sandbox', '-', args[3]]
 if name == 'claude' and len(args) == 6 and args[0] == '-p' and args[2:5:2] == ['--model', '--permission-mode']:
@@ -15,6 +31,10 @@ else:
     sys.exit(2)
 skill = re.search(r'with the ([a-z0-9-]+) skill', prompt).group(1)
 woken = prompt.startswith('You were woken')
+if not worker and os.environ.get('FAKE_ARGS'):
+    with open(os.environ['FAKE_ARGS'], 'a') as f:
+        f.write(json.dumps({'cli': name, 'argv': sys.argv[1:], 'effort': effort, 'woken': woken,
+                            'CLAUDE_CODE_EFFORT_LEVEL': os.environ.get('CLAUDE_CODE_EFFORT_LEVEL')}) + '\n')
 
 if not worker:
     quick = {'refuse': ('Fake harness: permission to use Bash was denied (%s).' % OPAQUE, 0),

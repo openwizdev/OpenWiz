@@ -5,7 +5,7 @@ sys.path.insert(0, os.environ['FAKE_CLI_LIB'])
 import fake_cli
 
 HELP = '''The fake example-cli: its synthetic --help allows only:
-  example-cli run --format json --model <m> [--yes] [--effort low|high] <prompt>
+  example-cli run --format json --model <m> [--yes] [--effort low|medium|high] <prompt>
   example-cli run --session <id> --model <m> [--yes] <prompt>
 with EXAMPLE_CLI_BACKEND=local and, optionally, EXAMPLE_CLI_THINKING=max.'''
 
@@ -28,7 +28,7 @@ if args[:1] != ['--model'] or len(args) < 3:
 model, args = args[1], args[2:]
 if args[:1] == ['--yes']:
     args = args[1:]
-if session is None and args[:1] == ['--effort'] and len(args) > 1 and args[1] in ('low', 'high'):
+if session is None and args[:1] == ['--effort'] and len(args) > 1 and args[1] in ('low', 'medium', 'high'):
     args = args[2:]
 if len(args) != 1:
     fake_cli.refuse()

@@ -1,0 +1,115 @@
+red at the red commit's driver (072077a6, driver unchanged from main) with the green commit's tests: env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/local/test_driver.py -k ultracode, no-op stubs for every known agent CLI first on PATH
+test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused (__main__.Local.test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused) ... 
+  test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused (__main__.Local.test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused) (harness='claude', level='low') ... FAIL
+  test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused (__main__.Local.test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused) (harness='claude', level='medium') ... FAIL
+  test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused (__main__.Local.test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused) (harness='claude', level='high') ... FAIL
+  test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused (__main__.Local.test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused) (harness='claude', level='xhigh') ... FAIL
+  test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused (__main__.Local.test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused) (harness='claude', level='max') ... FAIL
+  test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused (__main__.Local.test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused) (harness='codex', level='low') ... FAIL
+  test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused (__main__.Local.test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused) (harness='codex', level='medium') ... FAIL
+  test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused (__main__.Local.test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused) (harness='codex', level='high') ... FAIL
+  test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused (__main__.Local.test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused) (harness='codex', level='xhigh') ... FAIL
+  test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused (__main__.Local.test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused) (harness='codex', level='max') ... FAIL
+  test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused (__main__.Local.test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused) (harness='codex', level='ultra') ... FAIL
+test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused (__main__.Local.test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused) ... FAIL
+
+======================================================================
+FAIL: test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused (__main__.Local.test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused) (harness='claude', level='low')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 656, in test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+
+======================================================================
+FAIL: test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused (__main__.Local.test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused) (harness='claude', level='medium')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 656, in test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+
+======================================================================
+FAIL: test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused (__main__.Local.test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused) (harness='claude', level='high')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 656, in test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+
+======================================================================
+FAIL: test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused (__main__.Local.test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused) (harness='claude', level='xhigh')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 656, in test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+
+======================================================================
+FAIL: test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused (__main__.Local.test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused) (harness='claude', level='max')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 656, in test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+
+======================================================================
+FAIL: test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused (__main__.Local.test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused) (harness='codex', level='low')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 656, in test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+
+======================================================================
+FAIL: test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused (__main__.Local.test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused) (harness='codex', level='medium')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 656, in test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+
+======================================================================
+FAIL: test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused (__main__.Local.test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused) (harness='codex', level='high')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 656, in test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+
+======================================================================
+FAIL: test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused (__main__.Local.test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused) (harness='codex', level='xhigh')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 656, in test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+
+======================================================================
+FAIL: test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused (__main__.Local.test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused) (harness='codex', level='max')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 656, in test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+
+======================================================================
+FAIL: test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused (__main__.Local.test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused) (harness='codex', level='ultra')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 656, in test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+
+======================================================================
+FAIL: test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused (__main__.Local.test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/local/test_driver.py", line 658, in test_every_level_in_each_clis_help_reaches_it_and_ultracode_is_refused
+    self.assertEqual(len(self.argv_seen()), len(passed))
+AssertionError: 0 != 11
+
+----------------------------------------------------------------------
+Ran 1 test in 0.414s
+
+FAILED (failures=12)

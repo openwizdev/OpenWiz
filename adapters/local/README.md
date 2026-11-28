@@ -1,6 +1,28 @@
 # The local driver
 
 Login: stays on your machine
+Effort: passed as each harness's own flag, as the table below says, on the start's turn and every wake's; any other harness or level is refused with driver v1's refusal text before anything is saved, cloned or started, and a start without an effort runs at the harness's default.
+
+| Harness | Effort (`claude`'s levels as its `--help` lists them, `codex`'s as its configuration reference does, since `codex exec --help` lists none; both recorded in `fixtures/help/`) |
+| --- | --- |
+| `claude` | `--effort <level>`, for low, medium, high, xhigh and max, with `CLAUDE_CODE_EFFORT_LEVEL` set to the same level (it outranks the flag) |
+| `codex` | `codex exec -c model_reasoning_effort=<level>`, for low, medium, high, xhigh, max and ultra |
+| `agy` | `--effort <level>`, for low, medium, high, xhigh and max, at start and at each wake ([its row](harnesses/agy/README.md)) |
+| `amp` | `--effort <level>`, for none, minimal, low, medium, high, xhigh and max, with the model from `--model`, at start only ([its row](harnesses/amp/README.md)) |
+| `auggie` | can't: its row's effort is none ([why](harnesses/auggie/README.md)) |
+| `copilot` | can't: its row's effort is none ([why](harnesses/copilot/README.md)) |
+| `gemini` | can't: its row's effort is none ([why](harnesses/gemini/README.md)) |
+| `goose` | can't: its row's effort is none ([why](harnesses/goose/README.md)) |
+| `junie` | can't: its row's effort is none ([why](harnesses/junie/README.md)) |
+| `kilo` | can't: its row's effort is none ([why](harnesses/kilo/README.md)) |
+| `kimi` | can't: its row's effort is none ([why](harnesses/kimi/README.md)) |
+| `oz` | can't: its row's effort is none ([why](harnesses/oz/README.md)) |
+| `pi` | can't: its row's effort is none ([why](harnesses/pi/README.md)) |
+| `qwen` | can't: its row's effort is none ([why](harnesses/qwen/README.md)) |
+| a row not listed above | its row's `effort` form ([harness-row.md](harness-row.md), section 4), as its README's `Effort:` line says; until its line is added here, the kit run against this driver can't read its effort and fails `start` |
+| any other harness | can't (the driver runs no other harness) |
+
+Both CLIs say the levels a model takes depend on the model, and Claude Code runs a level a model doesn't support at the highest one below it; the driver passes exactly the level it was sent and can't see a model's own list. `ultracode` is not passed: `claude --help` doesn't list it, and Claude Code documents it as a mode that runs at `xhigh`, not an effort level.
 
 The default host: a [driver v1](../../kernel/driver.v1.md) that runs builders on the machine it runs on, your computer or a VPS, with the harnesses you have already signed into. One Python file, standard library only. **Platforms:** Linux and macOS, Python 3.9 or later (it finds a run's processes through `/proc` on Linux, and through each turn's process group, `ps`'s process table and `lsof`'s list of processes writing to the run's log on macOS, never another process's environment). On macOS, a process that leaves its turn's group, closes or redirects its output (as a daemon does), and is orphaned before the supervisor's next look is out of reach of `stop`. If `lsof` can't run there, or fails other than by finding nothing, macOS uses only the turn groups and the processes the supervisors recorded: a detached worker they never recorded can survive `stop`, even while it holds the log open, and `stop` says on stderr that it could not check the run's output file.
 
@@ -9,10 +31,10 @@ echo '{"repository":"example/site","ticket":7,"skill":"build-ticket","harness":"
   | adapters/local/driver start             # {"run": "run-0123456789ab"}
 echo '{"run":"run-0123456789ab"}' | adapters/local/driver wake
 echo '{"run":"run-0123456789ab"}' | adapters/local/driver stop
-adapters/local/driver version               # {"driver": "local", ..., "can": [..., "many-at-once"]}
+adapters/local/driver version               # {"driver": "local", ..., "can": [..., "many-at-once", "effort"]}
 ```
 
-- **Harnesses:** `claude` runs `claude -p <prompt> --model <model> --permission-mode <mode>`; `codex` runs `codex exec --model <model> --sandbox <mode> <prompt>`. Each is found on `PATH` when the run starts. A harness that isn't installed, or isn't one of these, is a JSON error whose `next` says what to do.
+- **Harnesses:** `claude` runs `claude -p <prompt> --model <model> --permission-mode <mode>`; `codex` runs `codex exec --model <model> --sandbox <mode> <prompt>`. A start with an effort adds that harness's effort option, as the Effort table says. Each is found on `PATH` when the run starts. A harness that isn't installed, or isn't one of these, is a JSON error whose `next` says what to do.
 - **Harness rows:** any other harness is a row, `harnesses/<harness>/row.json`, under the [harness-row contract](harness-row.md): its program, its start and wake command lines, how it knows its session id, its permission modes, its effort and where its login lives. `start` reads the row only for the harness it names; a missing or broken row is a JSON error that names the row file and starts nothing, and the "use one of" error lists the built-ins plus the row folders. A row's turns get its `env` and only the approved mode's arguments; stop (after the row's own `stop` command, when it has one), the approvals, the first-turn watch and the credential check are the same as for the built-ins. A start with an effort its row can't take is refused and starts nothing, never falling back to a default. Each row adds one folder and touches no shared file.
 - **Permission mode:** the owner chooses it once, during setup, for each repository and harness, and saves it in two places. On this machine, outside any repository, it goes in `$OPENWIZ_LOCAL_STATE/approvals.json` (owner-only, mode 600), as `{"<owner>/<name>": {"claude": "<mode>"}}`. In the repository's `docs/agents/fleet.md`, it goes in one row: `| Harness permission mode | `<mode>` |`, or, since Claude Code and Codex take different values, in one row per harness: `| Harness permission mode (claude) | `<mode>` |` and `| Harness permission mode (codex) | `<mode>` |`. Use a `claude --permission-mode` value for claude and a `codex --sandbox` value for codex. `start` checks this machine's approval for the harness it starts before cloning, and the clone's row for that harness (its own row, or else the single row) must match it exactly. A file with both the single row and that harness's own row is refused; once a file has any per-harness row and no single row, a harness without its own row is refused, and both errors name the harness. Once a file has a per-harness row, every row's first cell is read with its spaces trimmed and collapsed, as Markdown tables allow, so an aligned copy of a row still counts as that row. Only the approved value is passed, unchanged, as that harness's own option. The driver never uses a mode it read only from a repository, and never chooses, adds or widens one. With no approval on this machine, an approvals file others can change, or a missing or different row, `start` refuses before anything runs, and its `next` names the setup step that fixes it. Without a mode, a stock harness in `-p`/`exec` refuses every tool and the builder can do nothing.
 - **No credential in a start field:** `start` refuses a field whose value has a credential's shape, by the driver kit's own check (`kernel/driver-kit/kit.py`), before it saves or runs anything, and its error names the field, never the value.

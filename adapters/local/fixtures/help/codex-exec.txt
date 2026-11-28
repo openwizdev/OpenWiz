@@ -1,0 +1,15 @@
+Codex's effort setting. The first part is copied from the installed CLI on 2026-11-24; the second from its published reference, because neither codex exec --help nor codex --help lists an effort setting or its values.
+
+$ codex --version
+codex-cli 0.172.0
+$ codex exec --help   (its -c option)
+  -c, --config <key=value>
+          Override a configuration value that would otherwise be loaded from `~/.codex/config.toml`.
+          Use a dotted path (`foo.bar.baz`) to override nested values. The `value` portion is parsed
+          as TOML. If it fails to parse as TOML, the raw string is used as a literal.
+
+          Examples: - `-c model="o3"` - `-c 'sandbox_permissions=["disk-full-read-access"]'` - `-c
+          shell_environment_policy.inherit=all`
+
+CLI reference (https://developers.openai.com/codex/cli/reference) and configuration reference (https://developers.openai.com/codex/config-reference), read 2026-11-23:
+model_reasoning_effort: string. Reasoning effort advertised by the selected model, such as low, medium, high, xhigh, max, or ultra. Available levels depend on the model and client.

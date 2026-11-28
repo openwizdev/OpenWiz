@@ -10,20 +10,29 @@ STATE = os.path.abspath(os.environ.get('OPENWIZ_LOCAL_STATE') or os.path.expandu
 APPROVALS = os.path.join(STATE, 'approvals.json')
 MODE = r'[A-Za-z][A-Za-z0-9_-]{0,39}'
 WRITABLE = 'make OPENWIZ_LOCAL_STATE (or ~/.local/state/openwiz-local) a folder you can write'
-VERSION = {'driver': 'local', 'records': ['openwiz:records v1'], 'can': ['start', 'wake', 'stop', 'many-at-once']}
+VERSION = {'driver': 'local', 'records': ['openwiz:records v1'], 'can': ['start', 'wake', 'stop', 'many-at-once',
+                                                                            'effort']}
+EFFORT = r'[a-z][a-z0-9-]{0,19}'
 START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
          'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
-         'model': r'(?=.{1,100}$)[A-Za-z0-9][A-Za-z0-9 ._:@+-]*(/[A-Za-z0-9][A-Za-z0-9 ._:@+-]*)*'}
+         'model': r'(?=.{1,100}$)[A-Za-z0-9][A-Za-z0-9 ._:@+-]*(/[A-Za-z0-9][A-Za-z0-9 ._:@+-]*)*', 'effort': EFFORT}
+OPTIONAL = ('effort',)
 RUN = {'run': r'run-[0-9a-f]{12}'}
-HARNESSES = {'claude': lambda model, mode, prompt: ['-p', prompt, '--model', model, '--permission-mode', mode],
-             'codex': lambda model, mode, prompt: ['exec', '--model', model, '--sandbox', mode, prompt]}
+HARNESSES = {'claude': lambda model, mode, prompt, effort: ['-p', prompt, '--model', model, '--permission-mode', mode]
+             + effort,
+             'codex': lambda model, mode, prompt, effort: ['exec'] + effort + ['--model', model, '--sandbox', mode,
+                                                                               prompt]}
+BUILT_IN_EFFORT = {
+    'claude': ({'low', 'medium', 'high', 'xhigh', 'max'},
+               lambda level: (['--effort', level], {'CLAUDE_CODE_EFFORT_LEVEL': level})),
+    'codex': ({'low', 'medium', 'high', 'xhigh', 'max', 'ultra'},
+              lambda level: (['-c', 'model_reasoning_effort=' + level], {}))}
 MODE_ROW = '| Harness permission mode |'
 ROWS = os.path.join(HERE, 'harnesses')
 ROW_FIELDS = ('harness', 'program', 'start', 'wake', 'session', 'modes', 'env', 'effort', 'login', 'daemon')
 OPTIONAL_ROW_FIELDS = ('signed_out', 'login_command', 'login_env', 'precheck', 'stop')
 PLACEHOLDERS = ('{prompt}', '{model}', '{session}', '{mode}', '{effort}')
 SESSION = r'[A-Za-z0-9._:-]{1,100}'
-EFFORT = r'[a-z][a-z0-9-]{0,19}'
 ENV_NAME = r'(?!OPENWIZ_)[A-Z][A-Z0-9_]{0,59}'
 PROGRAM = r'[A-Za-z0-9][A-Za-z0-9._-]{0,59}'
 CANT_SET_EFFORT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster "
@@ -65,10 +74,13 @@ def read(fields):
         req = json.loads(sys.stdin.read(), object_pairs_hook=unique)
     except ValueError:
         raise Refused('the input is not JSON', 'send one JSON object on stdin, as `driver schema` shows')
-    if not isinstance(req, dict) or set(req) != set(fields):
-        raise Refused('the input needs exactly ' + ', '.join(fields), 'send only those fields; never a login')
-    for key, pattern in fields.items():
-        v = req[key]
+    needed = [k for k in fields if k not in OPTIONAL]
+    if not isinstance(req, dict) or not set(needed) <= set(req) <= set(fields):
+        raise Refused('the input needs exactly ' + ', '.join(needed) + (', and optionally ' + ', '.join(
+            k for k in fields if k in OPTIONAL) if len(needed) < len(fields) else ''),
+                      'send only those fields; never a login')
+    for key in req:
+        v, pattern = req[key], fields[key]
         if not (type(v) is int and v > 0 if pattern is None else isinstance(v, str) and re.fullmatch(pattern, v)):
             raise Refused(key + ' is not valid', 'fix ' + key + ' as `driver schema` shows')
     return req
@@ -92,7 +104,7 @@ def holds_credential(text):
 def no_credentials(req):
     # PRIVACY: runs before anything is saved or started, and the refusal names the field, never its value.
     for key in START:
-        if isinstance(req[key], str) and holds_credential(req[key]):
+        if isinstance(req.get(key), str) and holds_credential(req[key]):
             raise Refused('%s looks like a credential, so nothing was saved or started' % key,
                           'send the %s itself in %s; never a login, key or token' % (key, key))
     return req
@@ -334,6 +346,8 @@ def program(harness, effort):
         if row is None and os.path.isdir(os.path.join(ROWS, harness)):
             raise Refused('%s is missing, so harness %s has no row; nothing was started' % (row_file(harness), harness),
                           'add %s as adapters/local/harness-row.md says, then start again' % row_file(harness))
+        if row is None and effort is not None:
+            effort_of(harness, None, effort)
         if row is None:
             names, choices = list(HARNESSES) + row_folders(), 'use one of: '
             for n in names:
@@ -353,6 +367,10 @@ def program(harness, effort):
 def effort_of(harness, row, effort):
     if effort is None:
         return [], {}
+    if harness in BUILT_IN_EFFORT and not row:
+        levels, passed = BUILT_IN_EFFORT[harness]
+        if effort in levels:
+            return passed(effort)
     setting = row['effort'].get(effort) if row and isinstance(row['effort'], dict) else None
     if setting is None:
         raise Refused("harness %s can't set effort %s; nothing was started" % (harness, effort), CANT_SET_EFFORT)
@@ -363,8 +381,8 @@ def command(state, woken):
     req, row = state['request'], state.get('row')
     text = prompt(req, woken)
     if not row:
-        effort_of(req['harness'], None, req.get('effort'))
-        return [state['program']] + HARNESSES[req['harness']](req['model'], state['mode'], text), {}
+        effort, env = effort_of(req['harness'], None, req.get('effort'))
+        return [state['program']] + HARNESSES[req['harness']](req['model'], state['mode'], text, effort), env
     effort, env = effort_of(req['harness'], row, req.get('effort'))
     fills = {'{prompt}': [text], '{model}': [req['model']], '{session}': [state.get('session')],
              '{mode}': row['modes'][state['mode']], '{effort}': effort}

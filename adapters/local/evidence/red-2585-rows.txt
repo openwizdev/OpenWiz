@@ -1,0 +1,357 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/local/test_driver.py -k kit_passes_all_five -k readme_has
+test_kit_passes_all_five_with_each_harness (__main__.Local.test_kit_passes_all_five_with_each_harness) ... 
+  test_kit_passes_all_five_with_each_harness (__main__.Local.test_kit_passes_all_five_with_each_harness) (harness='claude', effort='ultra') ... FAIL
+  test_kit_passes_all_five_with_each_harness (__main__.Local.test_kit_passes_all_five_with_each_harness) (harness='codex', effort='minimal') ... FAIL
+test_kit_passes_all_five_with_each_listed_row_reading_this_readme (__main__.Local.test_kit_passes_all_five_with_each_listed_row_reading_this_readme) ... 
+  test_kit_passes_all_five_with_each_listed_row_reading_this_readme (__main__.Local.test_kit_passes_all_five_with_each_listed_row_reading_this_readme) [agy] ... FAIL
+  test_kit_passes_all_five_with_each_listed_row_reading_this_readme (__main__.Local.test_kit_passes_all_five_with_each_listed_row_reading_this_readme) [amp] ... FAIL
+  test_kit_passes_all_five_with_each_listed_row_reading_this_readme (__main__.Local.test_kit_passes_all_five_with_each_listed_row_reading_this_readme) [auggie] ... FAIL
+  test_kit_passes_all_five_with_each_listed_row_reading_this_readme (__main__.Local.test_kit_passes_all_five_with_each_listed_row_reading_this_readme) [copilot] ... FAIL
+  test_kit_passes_all_five_with_each_listed_row_reading_this_readme (__main__.Local.test_kit_passes_all_five_with_each_listed_row_reading_this_readme) [gemini] ... FAIL
+  test_kit_passes_all_five_with_each_listed_row_reading_this_readme (__main__.Local.test_kit_passes_all_five_with_each_listed_row_reading_this_readme) [goose] ... FAIL
+  test_kit_passes_all_five_with_each_listed_row_reading_this_readme (__main__.Local.test_kit_passes_all_five_with_each_listed_row_reading_this_readme) [junie] ... FAIL
+  test_kit_passes_all_five_with_each_listed_row_reading_this_readme (__main__.Local.test_kit_passes_all_five_with_each_listed_row_reading_this_readme) [kilo] ... FAIL
+  test_kit_passes_all_five_with_each_listed_row_reading_this_readme (__main__.Local.test_kit_passes_all_five_with_each_listed_row_reading_this_readme) [kimi] ... FAIL
+  test_kit_passes_all_five_with_each_listed_row_reading_this_readme (__main__.Local.test_kit_passes_all_five_with_each_listed_row_reading_this_readme) [oz] ... FAIL
+  test_kit_passes_all_five_with_each_listed_row_reading_this_readme (__main__.Local.test_kit_passes_all_five_with_each_listed_row_reading_this_readme) [pi] ... FAIL
+  test_kit_passes_all_five_with_each_listed_row_reading_this_readme (__main__.Local.test_kit_passes_all_five_with_each_listed_row_reading_this_readme) [qwen] ... FAIL
+test_readme_has_the_effort_line_and_table_under_its_login_line (__main__.Local.test_readme_has_the_effort_line_and_table_under_its_login_line) ... FAIL
+
+======================================================================
+FAIL: test_kit_passes_all_five_with_each_harness (__main__.Local.test_kit_passes_all_five_with_each_harness) (harness='claude', effort='ultra')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/local/test_driver.py", line 251, in test_kit_passes_all_five_with_each_harness
+    self.assertEqual((p.returncode, p.stdout.splitlines()), (0, said), p.stderr)
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[254 chars]er']) != (0, ['pass version: openwiz:records v1, an[334 chars]er'])
+
+First differing element 0:
+1
+0
+
+- (1,
++ (0,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+-   'fail start: effort: start refused ultra for claude, but its README says '
+-   'that harness takes ultra',
+-   'fail wake: not run: start failed',
+-   'fail stop: not run: start failed',
++   'pass start: the run posted builder status note 1; effort: refused ultra '
++   'with the refusal text, a word its README does not list for claude',
++   'pass wake: the run edited builder status note 1',
++   'pass stop: the run ended, and a wake after it is refused',
+    'pass token: no login or token passed through the driver']) : 
+
+======================================================================
+FAIL: test_kit_passes_all_five_with_each_harness (__main__.Local.test_kit_passes_all_five_with_each_harness) (harness='codex', effort='minimal')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/local/test_driver.py", line 251, in test_kit_passes_all_five_with_each_harness
+    self.assertEqual((p.returncode, p.stdout.splitlines()), (0, said), p.stderr)
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[257 chars]er']) != (0, ['pass version: openwiz:records v1, an[335 chars]er'])
+
+First differing element 0:
+1
+0
+
+- (1,
++ (0,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+-   'fail start: effort: start refused minimal for codex, but its README says '
+-   'that harness takes minimal',
+-   'fail wake: not run: start failed',
+-   'fail stop: not run: start failed',
++   'pass start: the run posted builder status note 1; effort: refused minimal '
++   'with the refusal text, a word its README does not list for codex',
++   'pass wake: the run edited builder status note 1',
++   'pass stop: the run ended, and a wake after it is refused',
+    'pass token: no login or token passed through the driver']) : 
+
+======================================================================
+FAIL: test_kit_passes_all_five_with_each_listed_row_reading_this_readme (__main__.Local.test_kit_passes_all_five_with_each_listed_row_reading_this_readme) [agy]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/local/test_driver.py", line 269, in test_kit_passes_all_five_with_each_listed_row_reading_this_readme
+    self.assertEqual(machine.kit(), runner.passes(name, row))
+AssertionError: Lists differ: ['pas[57 chars]1', 'fail start: effort: its can lists effort,[179 chars]ver'] != ['pas[57 chars]1', 'pass start: the run posted builder status[224 chars]ver']
+
+First differing element 1:
+'fail start: effort: its can lists effort,[47 chars]flag'
+'pass start: the run posted builder status[53 chars]rted'
+
+  ['pass version: openwiz:records v1, and the schema is driver v1',
+-  'fail start: effort: its can lists effort, but its README has no Effort: line '
+-  'naming the flag',
+-  'fail wake: not run: start failed',
+-  'fail stop: not run: start failed',
++  'pass start: the run posted builder status note 1; effort: medium reached a '
++  'process the run started',
++  'pass wake: the run edited builder status note 1',
++  'pass stop: the run ended, and a wake after it is refused',
+   'pass token: no login or token passed through the driver']
+
+======================================================================
+FAIL: test_kit_passes_all_five_with_each_listed_row_reading_this_readme (__main__.Local.test_kit_passes_all_five_with_each_listed_row_reading_this_readme) [amp]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/local/test_driver.py", line 269, in test_kit_passes_all_five_with_each_listed_row_reading_this_readme
+    self.assertEqual(machine.kit(), runner.passes(name, row))
+AssertionError: Lists differ: ['pas[57 chars]1', 'fail start: effort: its can lists effort,[179 chars]ver'] != ['pas[57 chars]1', 'pass start: the run posted builder status[224 chars]ver']
+
+First differing element 1:
+'fail start: effort: its can lists effort,[47 chars]flag'
+'pass start: the run posted builder status[53 chars]rted'
+
+  ['pass version: openwiz:records v1, and the schema is driver v1',
+-  'fail start: effort: its can lists effort, but its README has no Effort: line '
+-  'naming the flag',
+-  'fail wake: not run: start failed',
+-  'fail stop: not run: start failed',
++  'pass start: the run posted builder status note 1; effort: medium reached a '
++  'process the run started',
++  'pass wake: the run edited builder status note 1',
++  'pass stop: the run ended, and a wake after it is refused',
+   'pass token: no login or token passed through the driver']
+
+======================================================================
+FAIL: test_kit_passes_all_five_with_each_listed_row_reading_this_readme (__main__.Local.test_kit_passes_all_five_with_each_listed_row_reading_this_readme) [auggie]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/local/test_driver.py", line 269, in test_kit_passes_all_five_with_each_listed_row_reading_this_readme
+    self.assertEqual(machine.kit(), runner.passes(name, row))
+AssertionError: Lists differ: ['pas[57 chars]1', 'fail start: effort: its can lists effort,[179 chars]ver'] != ['pas[57 chars]1', 'pass start: the run posted builder status[244 chars]ver']
+
+First differing element 1:
+'fail start: effort: its can lists effort,[47 chars]flag'
+'pass start: the run posted builder status[73 chars]says'
+
+  ['pass version: openwiz:records v1, and the schema is driver v1',
+-  'fail start: effort: its can lists effort, but its README has no Effort: line '
+-  'naming the flag',
+-  'fail wake: not run: start failed',
+-  'fail stop: not run: start failed',
++  'pass start: the run posted builder status note 1; effort: refused for auggie '
++  'with the refusal text, as the README says',
++  'pass wake: the run edited builder status note 1',
++  'pass stop: the run ended, and a wake after it is refused',
+   'pass token: no login or token passed through the driver']
+
+======================================================================
+FAIL: test_kit_passes_all_five_with_each_listed_row_reading_this_readme (__main__.Local.test_kit_passes_all_five_with_each_listed_row_reading_this_readme) [copilot]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/local/test_driver.py", line 269, in test_kit_passes_all_five_with_each_listed_row_reading_this_readme
+    self.assertEqual(machine.kit(), runner.passes(name, row))
+AssertionError: Lists differ: ['pas[57 chars]1', 'fail start: effort: its can lists effort,[179 chars]ver'] != ['pas[57 chars]1', 'pass start: the run posted builder status[245 chars]ver']
+
+First differing element 1:
+'fail start: effort: its can lists effort,[47 chars]flag'
+'pass start: the run posted builder status[74 chars]says'
+
+  ['pass version: openwiz:records v1, and the schema is driver v1',
+-  'fail start: effort: its can lists effort, but its README has no Effort: line '
+-  'naming the flag',
+-  'fail wake: not run: start failed',
+-  'fail stop: not run: start failed',
++  'pass start: the run posted builder status note 1; effort: refused for '
++  'copilot with the refusal text, as the README says',
++  'pass wake: the run edited builder status note 1',
++  'pass stop: the run ended, and a wake after it is refused',
+   'pass token: no login or token passed through the driver']
+
+======================================================================
+FAIL: test_kit_passes_all_five_with_each_listed_row_reading_this_readme (__main__.Local.test_kit_passes_all_five_with_each_listed_row_reading_this_readme) [gemini]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/local/test_driver.py", line 269, in test_kit_passes_all_five_with_each_listed_row_reading_this_readme
+    self.assertEqual(machine.kit(), runner.passes(name, row))
+AssertionError: Lists differ: ['pas[57 chars]1', 'fail start: effort: its can lists effort,[179 chars]ver'] != ['pas[57 chars]1', 'pass start: the run posted builder status[244 chars]ver']
+
+First differing element 1:
+'fail start: effort: its can lists effort,[47 chars]flag'
+'pass start: the run posted builder status[73 chars]says'
+
+  ['pass version: openwiz:records v1, and the schema is driver v1',
+-  'fail start: effort: its can lists effort, but its README has no Effort: line '
+-  'naming the flag',
+-  'fail wake: not run: start failed',
+-  'fail stop: not run: start failed',
++  'pass start: the run posted builder status note 1; effort: refused for gemini '
++  'with the refusal text, as the README says',
++  'pass wake: the run edited builder status note 1',
++  'pass stop: the run ended, and a wake after it is refused',
+   'pass token: no login or token passed through the driver']
+
+======================================================================
+FAIL: test_kit_passes_all_five_with_each_listed_row_reading_this_readme (__main__.Local.test_kit_passes_all_five_with_each_listed_row_reading_this_readme) [goose]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/local/test_driver.py", line 269, in test_kit_passes_all_five_with_each_listed_row_reading_this_readme
+    self.assertEqual(machine.kit(), runner.passes(name, row))
+AssertionError: Lists differ: ['pas[57 chars]1', 'fail start: effort: its can lists effort,[179 chars]ver'] != ['pas[57 chars]1', 'pass start: the run posted builder status[243 chars]ver']
+
+First differing element 1:
+'fail start: effort: its can lists effort,[47 chars]flag'
+'pass start: the run posted builder status[72 chars]says'
+
+  ['pass version: openwiz:records v1, and the schema is driver v1',
+-  'fail start: effort: its can lists effort, but its README has no Effort: line '
+-  'naming the flag',
+-  'fail wake: not run: start failed',
+-  'fail stop: not run: start failed',
++  'pass start: the run posted builder status note 1; effort: refused for goose '
++  'with the refusal text, as the README says',
++  'pass wake: the run edited builder status note 1',
++  'pass stop: the run ended, and a wake after it is refused',
+   'pass token: no login or token passed through the driver']
+
+======================================================================
+FAIL: test_kit_passes_all_five_with_each_listed_row_reading_this_readme (__main__.Local.test_kit_passes_all_five_with_each_listed_row_reading_this_readme) [junie]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/local/test_driver.py", line 269, in test_kit_passes_all_five_with_each_listed_row_reading_this_readme
+    self.assertEqual(machine.kit(), runner.passes(name, row))
+AssertionError: Lists differ: ['pas[57 chars]1', 'fail start: effort: its can lists effort,[179 chars]ver'] != ['pas[57 chars]1', 'pass start: the run posted builder status[243 chars]ver']
+
+First differing element 1:
+'fail start: effort: its can lists effort,[47 chars]flag'
+'pass start: the run posted builder status[72 chars]says'
+
+  ['pass version: openwiz:records v1, and the schema is driver v1',
+-  'fail start: effort: its can lists effort, but its README has no Effort: line '
+-  'naming the flag',
+-  'fail wake: not run: start failed',
+-  'fail stop: not run: start failed',
++  'pass start: the run posted builder status note 1; effort: refused for junie '
++  'with the refusal text, as the README says',
++  'pass wake: the run edited builder status note 1',
++  'pass stop: the run ended, and a wake after it is refused',
+   'pass token: no login or token passed through the driver']
+
+======================================================================
+FAIL: test_kit_passes_all_five_with_each_listed_row_reading_this_readme (__main__.Local.test_kit_passes_all_five_with_each_listed_row_reading_this_readme) [kilo]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/local/test_driver.py", line 269, in test_kit_passes_all_five_with_each_listed_row_reading_this_readme
+    self.assertEqual(machine.kit(), runner.passes(name, row))
+AssertionError: Lists differ: ['pas[57 chars]1', 'fail start: effort: its can lists effort,[179 chars]ver'] != ['pas[57 chars]1', 'pass start: the run posted builder status[242 chars]ver']
+
+First differing element 1:
+'fail start: effort: its can lists effort,[47 chars]flag'
+'pass start: the run posted builder status[71 chars]says'
+
+  ['pass version: openwiz:records v1, and the schema is driver v1',
+-  'fail start: effort: its can lists effort, but its README has no Effort: line '
+-  'naming the flag',
+-  'fail wake: not run: start failed',
+-  'fail stop: not run: start failed',
++  'pass start: the run posted builder status note 1; effort: refused for kilo '
++  'with the refusal text, as the README says',
++  'pass wake: the run edited builder status note 1',
++  'pass stop: the run ended, and a wake after it is refused',
+   'pass token: no login or token passed through the driver']
+
+======================================================================
+FAIL: test_kit_passes_all_five_with_each_listed_row_reading_this_readme (__main__.Local.test_kit_passes_all_five_with_each_listed_row_reading_this_readme) [kimi]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/local/test_driver.py", line 269, in test_kit_passes_all_five_with_each_listed_row_reading_this_readme
+    self.assertEqual(machine.kit(), runner.passes(name, row))
+AssertionError: Lists differ: ['pas[57 chars]1', 'fail start: effort: its can lists effort,[179 chars]ver'] != ['pas[57 chars]1', 'pass start: the run posted builder status[242 chars]ver']
+
+First differing element 1:
+'fail start: effort: its can lists effort,[47 chars]flag'
+'pass start: the run posted builder status[71 chars]says'
+
+  ['pass version: openwiz:records v1, and the schema is driver v1',
+-  'fail start: effort: its can lists effort, but its README has no Effort: line '
+-  'naming the flag',
+-  'fail wake: not run: start failed',
+-  'fail stop: not run: start failed',
++  'pass start: the run posted builder status note 1; effort: refused for kimi '
++  'with the refusal text, as the README says',
++  'pass wake: the run edited builder status note 1',
++  'pass stop: the run ended, and a wake after it is refused',
+   'pass token: no login or token passed through the driver']
+
+======================================================================
+FAIL: test_kit_passes_all_five_with_each_listed_row_reading_this_readme (__main__.Local.test_kit_passes_all_five_with_each_listed_row_reading_this_readme) [oz]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/local/test_driver.py", line 269, in test_kit_passes_all_five_with_each_listed_row_reading_this_readme
+    self.assertEqual(machine.kit(), runner.passes(name, row))
+AssertionError: Lists differ: ['pas[57 chars]1', 'fail start: effort: its can lists effort,[179 chars]ver'] != ['pas[57 chars]1', 'pass start: the run posted builder status[240 chars]ver']
+
+First differing element 1:
+'fail start: effort: its can lists effort,[47 chars]flag'
+'pass start: the run posted builder status[69 chars]says'
+
+  ['pass version: openwiz:records v1, and the schema is driver v1',
+-  'fail start: effort: its can lists effort, but its README has no Effort: line '
+-  'naming the flag',
+-  'fail wake: not run: start failed',
+-  'fail stop: not run: start failed',
++  'pass start: the run posted builder status note 1; effort: refused for oz '
++  'with the refusal text, as the README says',
++  'pass wake: the run edited builder status note 1',
++  'pass stop: the run ended, and a wake after it is refused',
+   'pass token: no login or token passed through the driver']
+
+======================================================================
+FAIL: test_kit_passes_all_five_with_each_listed_row_reading_this_readme (__main__.Local.test_kit_passes_all_five_with_each_listed_row_reading_this_readme) [pi]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/local/test_driver.py", line 269, in test_kit_passes_all_five_with_each_listed_row_reading_this_readme
+    self.assertEqual(machine.kit(), runner.passes(name, row))
+AssertionError: Lists differ: ['pas[57 chars]1', 'fail start: effort: its can lists effort,[179 chars]ver'] != ['pas[57 chars]1', 'pass start: the run posted builder status[240 chars]ver']
+
+First differing element 1:
+'fail start: effort: its can lists effort,[47 chars]flag'
+'pass start: the run posted builder status[69 chars]says'
+
+  ['pass version: openwiz:records v1, and the schema is driver v1',
+-  'fail start: effort: its can lists effort, but its README has no Effort: line '
+-  'naming the flag',
+-  'fail wake: not run: start failed',
+-  'fail stop: not run: start failed',
++  'pass start: the run posted builder status note 1; effort: refused for pi '
++  'with the refusal text, as the README says',
++  'pass wake: the run edited builder status note 1',
++  'pass stop: the run ended, and a wake after it is refused',
+   'pass token: no login or token passed through the driver']
+
+======================================================================
+FAIL: test_kit_passes_all_five_with_each_listed_row_reading_this_readme (__main__.Local.test_kit_passes_all_five_with_each_listed_row_reading_this_readme) [qwen]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/local/test_driver.py", line 269, in test_kit_passes_all_five_with_each_listed_row_reading_this_readme
+    self.assertEqual(machine.kit(), runner.passes(name, row))
+AssertionError: Lists differ: ['pas[57 chars]1', 'fail start: effort: its can lists effort,[179 chars]ver'] != ['pas[57 chars]1', 'pass start: the run posted builder status[242 chars]ver']
+
+First differing element 1:
+'fail start: effort: its can lists effort,[47 chars]flag'
+'pass start: the run posted builder status[71 chars]says'
+
+  ['pass version: openwiz:records v1, and the schema is driver v1',
+-  'fail start: effort: its can lists effort, but its README has no Effort: line '
+-  'naming the flag',
+-  'fail wake: not run: start failed',
+-  'fail stop: not run: start failed',
++  'pass start: the run posted builder status note 1; effort: refused for qwen '
++  'with the refusal text, as the README says',
++  'pass wake: the run edited builder status note 1',
++  'pass stop: the run ended, and a wake after it is refused',
+   'pass token: no login or token passed through the driver']
+
+======================================================================
+FAIL: test_readme_has_the_effort_line_and_table_under_its_login_line (__main__.Local.test_readme_has_the_effort_line_and_table_under_its_login_line)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/adapters/local/test_driver.py", line 745, in test_readme_has_the_effort_line_and_table_under_its_login_line
+    self.assertEqual(kit.listed(rows[harness]), levels, rows[harness])
+AssertionError: None != ['low', 'medium', 'high', 'xhigh', 'max'] : `--effort <level>`, with `CLAUDE_CODE_EFFORT_LEVEL` set to the same level (it outranks the flag), for `low`, `medium`, `high`, `xhigh` and `max`
+
+----------------------------------------------------------------------
+Ran 3 tests in 8.334s
+
+FAILED (failures=15)
