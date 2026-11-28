@@ -5,7 +5,9 @@
   </picture>
 </h1>
 
-**OpenWiz is the open kernel for agent factories. Bring your own everything. Owned by no one.** This repo is the kernel itself; the [other repos](https://github.com/openwizdev) add skills, loops and the app on top.
+<p align="center">🧙‍♂️🪄 the wizard factory</p>
+
+**OpenWiz is the open kernel for agent factories — a wizard factory. Bring your own everything. Owned by no one.** This repo is the kernel itself; the [other repos](https://github.com/openwizdev) add skills, loops and the app on top.
 
 You make the decisions: answer a few questions. The agents run the factory: they write the spec and the tickets, build, review and merge. You watch it ship.
 
@@ -23,7 +25,7 @@ It checks your computer, installs the verified prebuilt 0.1.0 release (no Rust o
 
 ### OpenWiz 0.1.1
 
-OpenWiz 0.1.1 ("OpenWiz 0.02") is coming; it has no release date yet. In 0.1.1 the automatic fleet also runs on this computer or on boat.dev: a scheduled job on this computer, shown first and installed on your yes, checks GitHub every ten minutes and starts or wakes the fleet only when work is due. The [install guide](docs/install.md) already describes its steps.
+OpenWiz 0.1.1 ("OpenWiz 0.02") is coming; it has no release date yet. 🧙‍♂️🪄 That version carries the wizard factory mark on the README, the terminal banner and the guides. In 0.1.1 the automatic fleet also runs on this computer or on boat.dev: a scheduled job on this computer, shown first and installed on your yes, checks GitHub every ten minutes and starts or wakes the fleet only when work is due. The [install guide](docs/install.md) already describes its steps.
 
 ## How it works
 

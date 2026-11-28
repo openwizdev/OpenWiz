@@ -1,6 +1,6 @@
-# OpenWiz
+# OpenWiz 🧙‍♂️🪄
 
-OpenWiz runs coding agents in fleets: the user approves a plan, and agents build, review and merge its tickets. This repository is the `openwiz` command, its adapters and the engine; the app is at [openwiz.dev/app](https://openwiz.dev/app). Words mean what [GLOSSARY.md](GLOSSARY.md) says.
+OpenWiz runs coding agents in fleets: the user approves a plan, and agents build, review and merge its tickets. This repository is the `openwiz` command, its adapters and the engine; the app is at [openwiz.dev/app](https://openwiz.dev/app). Words mean what [GLOSSARY.md](GLOSSARY.md) says. The wizard factory mark is 🧙‍♂️🪄. Where agents use it: [Fleet settings, The mark](docs/agents/fleet.md#the-mark).
 
 ## Start here
 

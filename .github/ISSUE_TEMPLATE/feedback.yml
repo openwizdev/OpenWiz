@@ -1,5 +1,5 @@
 name: Report a problem
-description: Tell OpenWiz about a problem, in public words anyone can read.
+description: "🧙‍♂️🪄 Tell OpenWiz about a problem, in public words anyone can read."
 labels: [feedback]
 body:
   - type: markdown

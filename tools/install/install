@@ -89,6 +89,24 @@ TOOLS = (('room-cli', 'Optional: CloudRoom is needed only if you pick it as the 
 ARCHIVE_NAME = re.compile(r'openwiz-0\.[0-9]+\.[0-9]+-[a-z0-9_]+-[a-z0-9_-]+\.tar\.gz')
 
 
+def utf8_locale(env):
+    for key in ('LC_ALL', 'LC_CTYPE', 'LANG'):
+        value = env.get(key) or ''
+        if value:
+            lowered = value.lower()
+            return 'utf-8' in lowered or 'utf8' in lowered
+    return False
+
+
+def install_success_line(utf8):
+    return ('🧙‍♂️🪄 ' if utf8 else '') + 'OpenWiz is installed.'
+
+
+def say_installed(out):
+    if getattr(out, 'isatty', lambda: False)() and sys.stderr.isatty():
+        print(install_success_line(utf8_locale(os.environ)), file=sys.stderr)
+
+
 class Usage(Exception):
     pass
 
@@ -536,6 +554,8 @@ def main(argv=None, fetch=pull.fetch_bytes, host=None, stdout=None):
                           'reason': reason + kept}), file=out)
         return 5
     print(json.dumps(value, separators=(',', ':')), file=out)
+    if code == 0 and args.command == 'install':
+        say_installed(out)
     return code
 
 

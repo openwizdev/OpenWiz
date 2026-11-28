@@ -86,7 +86,53 @@ pub fn dispatch(discovery: openwiz_adapter_cloudroom::locate::Discovery) -> Exit
     ExitCode::from(u8::try_from(code).unwrap_or(1))
 }
 
+fn locale_is_utf8(lc_all: Option<&str>, lc_ctype: Option<&str>, lang: Option<&str>) -> bool {
+    [lc_all, lc_ctype, lang]
+        .into_iter()
+        .flatten()
+        .find(|value| !value.is_empty())
+        .is_some_and(|value| {
+            let lower = value.to_ascii_lowercase();
+            lower.contains("utf-8") || lower.contains("utf8")
+        })
+}
+
+fn utf8_locale() -> bool {
+    locale_is_utf8(
+        std::env::var("LC_ALL").ok().as_deref(),
+        std::env::var("LC_CTYPE").ok().as_deref(),
+        std::env::var("LANG").ok().as_deref(),
+    )
+}
+
+fn banner_line(args: &[OsString], terminal: bool, utf8: bool) -> Option<&'static str> {
+    let words = args
+        .iter()
+        .map(|arg| arg.to_str())
+        .collect::<Option<Vec<_>>>()?;
+    let human = if words.is_empty() {
+        terminal
+    } else if words.contains(&"--json") {
+        false
+    } else if words.first() == Some(&"help") {
+        words == ["help"]
+    } else {
+        words.iter().any(|word| *word == "--help" || *word == "-h")
+    };
+    if !human || !terminal {
+        return None;
+    }
+    Some(if utf8 {
+        "🧙‍♂️🪄 OpenWiz\n"
+    } else {
+        "OpenWiz\n"
+    })
+}
+
 fn dispatch_args(args: &[OsString], stdout: &mut dyn Write, stderr: &mut dyn Write) -> i32 {
+    if let Some(line) = banner_line(args, io::stdout().is_terminal(), utf8_locale()) {
+        let _ = write!(stdout, "{line}");
+    }
     let terminal = io::stdin().is_terminal() && io::stdout().is_terminal();
     match args.first().and_then(|a| a.to_str()) {
         None if args.is_empty() && terminal => openwiz_cli::run(
@@ -159,5 +205,56 @@ mod product_identity {
         assert_eq!(value["product"], "cli");
         assert_eq!(value["schema"], "openwiz.product.v1");
         assert_eq!(value["version"], env!("CARGO_PKG_VERSION"));
+    }
+}
+
+#[cfg(test)]
+mod banner {
+    use std::ffi::OsString;
+
+    use super::{banner_line, locale_is_utf8};
+
+    fn args(words: &[&str]) -> Vec<OsString> {
+        words.iter().copied().map(OsString::from).collect()
+    }
+
+    #[test]
+    fn utf8_locale_follows_lc_all_then_lc_ctype_then_lang() {
+        assert!(!locale_is_utf8(None, None, None));
+        assert!(!locale_is_utf8(
+            Some("C"),
+            Some("en_US.UTF-8"),
+            Some("en_US.UTF-8")
+        ));
+        assert!(locale_is_utf8(Some("C.UTF-8"), None, None));
+        assert!(locale_is_utf8(None, Some("en_US.utf8"), Some("C")));
+        assert!(locale_is_utf8(None, None, Some("en_US.UTF-8")));
+        assert!(!locale_is_utf8(Some(""), None, Some("C")));
+        assert!(locale_is_utf8(Some(""), None, Some("en_US.UTF-8")));
+    }
+
+    #[test]
+    fn the_mark_is_only_on_human_help_in_a_terminal() {
+        let mark = "🧙‍♂️🪄 OpenWiz\n";
+        let plain = "OpenWiz\n";
+        assert_eq!(banner_line(&args(&[]), true, true), Some(mark));
+        assert_eq!(banner_line(&args(&[]), true, false), Some(plain));
+        assert_eq!(banner_line(&args(&[]), false, true), None);
+        assert_eq!(banner_line(&args(&["--help"]), true, true), Some(mark));
+        assert_eq!(banner_line(&args(&["-h"]), true, false), Some(plain));
+        assert_eq!(banner_line(&args(&["help"]), true, true), Some(mark));
+        assert_eq!(
+            banner_line(&args(&["ls", "--help"]), true, true),
+            Some(mark)
+        );
+        assert_eq!(banner_line(&args(&["--help"]), false, true), None);
+        assert_eq!(banner_line(&args(&["--json", "--help"]), true, true), None);
+        assert_eq!(banner_line(&args(&["help", "--agent"]), true, true), None);
+        assert_eq!(banner_line(&args(&["help", "--json"]), true, true), None);
+        assert_eq!(banner_line(&args(&["ls"]), true, true), None);
+        assert_eq!(
+            banner_line(&args(&["ls", "--limit=--help"]), true, true),
+            None
+        );
     }
 }

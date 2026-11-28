@@ -8,3 +8,4 @@ OpenWiz's command line is for agents, scripts and people alike: explicit command
 - Every command takes `--json` and then prints exactly one document on stdout, its existing report or an `openwiz.cli-error.v1` error. Exit codes are fixed per command in the catalogue.
 - Explicit commands never prompt or wait for a terminal.
 - `openwiz` with no arguments prints the help (`openwiz --help`) in a terminal. Piped, it is a usage error (exit 2), as is `openwiz ui`.
+- On a UTF-8 terminal, human help starts with one banner line, `🧙‍♂️🪄 OpenWiz`. A terminal that is not UTF-8 prints `OpenWiz`. Piped output, `--json` and `help --agent` stay plain text, because scripts parse them. `openwiz --build-identity` prints the version as JSON and stays plain.
