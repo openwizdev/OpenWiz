@@ -247,7 +247,8 @@ def install(assets, target, root, state_root):
         where + ', linked from %s.' % path if state == 'linked' else
         where + '; %s already exists, so no link is offered.' % path if state == 'taken' else
         where + '; it is not on PATH. For a link at %s, run %s to preview it, '
-        'then again with --yes.' % (path, link_command(root, state_root))))
+        'then again with --yes.' % (path, link_command(root, state_root)))
+        + '\nOpenWiz Pro: run openwiz pro.')
 
 
 def link_command(root, state_root):
