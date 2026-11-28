@@ -13,6 +13,7 @@ mod dependencies;
 mod evidence_outside_crates;
 mod fixture_scan;
 mod schema_conformance;
+mod settings_cli;
 mod skills;
 mod strict_json;
 mod test_floor;

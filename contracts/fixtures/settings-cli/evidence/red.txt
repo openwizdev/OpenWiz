@@ -1,0 +1,19 @@
+$ cargo +1.99.1 test --locked -p openwiz-tests --test checks settings_cli
+running 1 test
+test settings_cli::settings_cli_schema_checks_every_fixture ... FAILED
+
+failures:
+
+---- settings_cli::settings_cli_schema_checks_every_fixture stdout ----
+
+thread 'settings_cli::settings_cli_schema_checks_every_fixture' panicked at tests/checks/settings_cli.rs:11:5:
+cannot read settings-cli.v1.schema.json
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    settings_cli::settings_cli_schema_checks_every_fixture
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 39 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p openwiz-tests --test checks`
