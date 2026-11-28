@@ -18,9 +18,13 @@ CANT = ("this host can't set effort: remove the effort for this harness in your 
 LEVELS = 'Reasoning / thinking levels'
 RUN = {'run': r'run-[0-9a-f]{12}'}
 ID = re.compile(r'[A-Za-z0-9_.:-]{1,100}')
-UP = ('running', 'ready', 'idle')  # the sandbox states a wake may prompt in; any other refuses it
-STATES = UP + ('stopped', 'archived')
+UP = ('running', 'ready', 'idle')  # the sandbox states a wake may prompt in
+DOWN = ('stopped', 'archived')  # a stopped sandbox, as boat's CLI and its API name it: a wake starts it first
+STATES = UP + DOWN + ('stopping', 'archiving')
 QUEUED_WAIT = 45  # seconds for boat to queue a turn; the kit gives a command 120
+RESUME_WAIT = 60  # seconds for a stopped sandbox to get ready after `boat resume`
+PERIODS = ('minute', 'hour', 'day')  # boat's start limits (`boat limits --json`'s `starts`)
+FRESH = 'start a new run with `start`; the driver never starts a fresh agent for an old run'
 INSTALL_WAIT = 60  # seconds for the sandbox to install the pinned skills
 PUSH_CHECK_WAIT = 30
 DEFAULT_SETTLE_SECONDS, MAX_SETTLE_SECONDS = 20, 60
@@ -154,11 +158,11 @@ def parse(text):
     return found
 
 
-def boat(then, *args):
-    """Run one `boat ... --json` command to its end; its JSON lines, or Refused."""
+def boat(then, *args, wait=100):
+    """Run one `boat ... --json` command to its end, within wait seconds; its JSON lines, or Refused."""
     try:
         p = subprocess.run([boat_program()] + list(args) + ['--json'], stdin=subprocess.DEVNULL,
-                           capture_output=True, text=True, timeout=100)
+                           capture_output=True, text=True, timeout=wait)
     except subprocess.TimeoutExpired:
         raise Refused('boat %s took too long; its outcome is unknown' % args[0],
                       'check `boat list --all`, then %s' % then)
@@ -874,6 +878,95 @@ def start(req):
     return {'run': run}
 
 
+def gone(error):
+    """Whether a Refused from `boat info` says boat.dev has no such sandbox: it was deleted."""
+    return error.args[0] == 'boat info failed: sandbox_not_found'
+
+
+def sandbox_name(sandbox):
+    """The sandbox's name from `boat info --json`, or None: the run's mark on boat's side (`openwiz-<run>`)."""
+    found = None
+    for x in boat('wake it again', 'info', sandbox):
+        box = x.get('sandbox') if isinstance(x.get('sandbox'), dict) else x
+        found = box.get('name') if isinstance(box.get('name'), str) else found
+    return found
+
+
+def holds(item, value):
+    """Whether value is anywhere in one JSON line, so the check does not hang on boat's field names."""
+    if isinstance(item, dict):
+        return any(holds(v, value) for v in item.values())
+    if isinstance(item, list):
+        return any(holds(v, value) for v in item)
+    return item == value
+
+
+# External: `boat limits --json` prints the API's payload, with `starts.minute.remaining` (and so each hour and
+# day); a create, a fork and a resume each count as one start. https://docs.boat.dev/cli-reference
+def starts_left_or_refuse(run):
+    not_read = Refused("run %s: boat's start limits could not be read, so its stopped sandbox was not started and "
+                       'the run is not woken' % run, 'check that `boat limits --json` runs, then wake it again')
+    try:
+        lines = boat('wake it again', 'limits')
+    except Refused:
+        raise not_read
+    left = {}
+    for x in lines:
+        starts = x.get('starts') if isinstance(x.get('starts'), dict) else {}
+        for period in PERIODS:
+            count = starts.get(period).get('remaining') if isinstance(starts.get(period), dict) else None
+            if type(count) is int:
+                left[period] = count
+    if set(left) != set(PERIODS):
+        raise not_read
+    for period in PERIODS:
+        if left[period] < 1:
+            raise Refused("run %s: boat's start limit for this %s is used up, so its stopped sandbox was not "
+                          'started and the run is not woken' % (run, period),
+                          'wake it again once `boat limits --all` shows a start left this %s' % period)
+
+
+def wake_stopped(run, state):
+    """Wake a run whose sandbox boat.dev stopped by itself: check the run's mark and the plan's start limits, start
+    the sandbox with `boat resume`, check that it still holds the run's conversation, then resume that same
+    conversation on the start's model. Whatever fails once the sandbox was started stops it again."""
+    sandbox, talk = state['sandbox'], state['conversation']
+    lost = Refused("run %s: its sandbox no longer holds the run's agent session, so it was not woken and its "
+                   'sandbox is left stopped' % run, FRESH)
+    # A stop of the run removes its turn logs, even when it could save and mark nothing else: a sandbox that is
+    # stopped while the last turn's log is gone was stopped by the driver, and stays stopped.
+    if not os.path.exists(path(run, '%d.log' % (len(state['turns']) - 1))):
+        raise Refused('the sandbox of run %s is stopped, and a stop of the run removed its turn log, so the run is '
+                      'not woken' % run, 'a stopped run stays stopped: start a new run')
+    if sandbox_name(sandbox) != 'openwiz-' + run or not talk:
+        raise lost
+    starts_left_or_refuse(run)
+    try:  # from here on the sandbox may run: any failure stops it again
+        try:
+            boat('wake it again', 'resume', sandbox, wait=RESUME_WAIT)  # boat answers once the sandbox is ready
+        except Refused as e:
+            if 'took too long' not in e.args[0]:
+                raise
+        if sandbox_state(sandbox) not in UP:
+            raise Refused('run %s: its sandbox did not get ready within %d seconds of `boat resume`, so it was '
+                          'stopped again and the run is not woken' % (run, RESUME_WAIT),
+                          'wake it again later, and check the sandbox in `boat list --all`')
+        if not any(holds(x, talk) for x in boat('wake it again', 'conversations', sandbox)):
+            raise lost
+        turn, _ = prompt(state, run)
+        try:
+            saved(run, dict(state, turns=state['turns'] + [turn]))
+        except OSError:
+            unsaved(run, sandbox, turn, talk, 'wake', path(run, '%d.log' % len(state['turns'])), state['turns'])
+    except Exception as e:
+        failures = shutdown(run, [], sandbox, talk, True, [path(run, '%d.log' % len(state['turns']))], state['turns'])
+        what = e.args[0] if isinstance(e, Refused) else 'the driver failed: ' + type(e).__name__
+        if failures:
+            raise reported(what, failures, '') from e
+        raise
+    return {'run': run, 'woke': True}
+
+
 def wake(run):
     lock(run, False)
     state = saved(run)
@@ -898,7 +991,15 @@ def wake(run):
     except OSError:
         raise Refused('the driver cannot save run %s; nothing was started' % run, UNWRITABLE + ', then wake it')
     # Ask boat, not only this machine's state: a stop that could write nothing here still stopped the sandbox.
-    now = sandbox_state(state['sandbox'])
+    try:
+        now = sandbox_state(state['sandbox'])
+    except Refused as e:
+        if gone(e):
+            raise Refused('run %s: its sandbox is gone from boat.dev (deleted), so it was not woken and nothing was '
+                          'started' % run, FRESH)
+        raise
+    if now in DOWN:
+        return wake_stopped(run, state)
     if now not in UP:
         raise Refused('the sandbox of run %s is %s, not running, so the run is not woken' % (run, now),
                       'a stopped run stays stopped: start a new run')
