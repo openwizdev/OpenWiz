@@ -1,0 +1,13 @@
+{
+  "opt-in-joined-after-no.json": "$.joined: not None",
+  "opt-in-left-without-time.json": "$.left: not string or null",
+  "case-review-same-family.json": "is not the rule's",
+  "case-size-100-as-m.json": "is not the rule's",
+  "case-daily-cap-ignored.json": "is not the rule's",
+  "case-solo-full.json": "is not the rule's",
+  "case-counted-twice.json": "is not the rule's",
+  "score-with-repository.json": "$: unexpected repository",
+  "board-tie-out-of-order.json": "not ranked by points, then handle",
+  "bans-without-date.json": "$.bans[0]: missing date",
+  "score-boost-set.json": "$.boost: not None"
+}

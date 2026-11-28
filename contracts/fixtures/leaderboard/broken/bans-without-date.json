@@ -1,0 +1,8 @@
+{
+  "version": "openwiz.leaderboard.v1",
+  "bans": [
+    {
+      "handle": "synthetic-farmer"
+    }
+  ]
+}

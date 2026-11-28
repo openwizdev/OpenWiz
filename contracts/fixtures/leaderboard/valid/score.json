@@ -1,0 +1,15 @@
+{
+  "version": "openwiz.leaderboard.v1",
+  "handle": "synthetic-ada",
+  "period": {
+    "from": "2030-01-01",
+    "to": "2030-01-07"
+  },
+  "pull_requests": 5,
+  "points": 9,
+  "by_size": {
+    "S": 3,
+    "M": 1,
+    "L": 1
+  }
+}

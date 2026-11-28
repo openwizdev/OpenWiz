@@ -1,0 +1,55 @@
+{
+  "version": "openwiz.leaderboard.v1",
+  "built": "2030-01-08T06:00:00Z",
+  "period": {
+    "from": "2030-01-01",
+    "to": "2030-01-07"
+  },
+  "rows": [
+    {
+      "version": "openwiz.leaderboard.v1",
+      "handle": "synthetic-cy",
+      "period": {
+        "from": "2030-01-01",
+        "to": "2030-01-07"
+      },
+      "pull_requests": 5,
+      "points": 9,
+      "by_size": {
+        "S": 3,
+        "M": 1,
+        "L": 1
+      }
+    },
+    {
+      "version": "openwiz.leaderboard.v1",
+      "handle": "synthetic-ada",
+      "period": {
+        "from": "2030-01-01",
+        "to": "2030-01-07"
+      },
+      "pull_requests": 3,
+      "points": 4,
+      "by_size": {
+        "S": 2,
+        "M": 1,
+        "L": 0
+      }
+    },
+    {
+      "version": "openwiz.leaderboard.v1",
+      "handle": "synthetic-bo",
+      "period": {
+        "from": "2030-01-01",
+        "to": "2030-01-07"
+      },
+      "pull_requests": 4,
+      "points": 4,
+      "by_size": {
+        "S": 4,
+        "M": 0,
+        "L": 0
+      }
+    }
+  ]
+}

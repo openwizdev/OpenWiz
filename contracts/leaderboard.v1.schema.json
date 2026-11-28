@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/openwizdev/OpenWiz/blob/main/contracts/leaderboard.v1.schema.json",
+  "title": "openwiz.leaderboard.v1",
+  "description": "The leaderboard's opt-in record, scorer input, score record, board file and ban list. See leaderboard.v1.md for the rules a schema cannot see.",
+  "oneOf": [
+    {"$ref": "#/$defs/opt_in"},
+    {"$ref": "#/$defs/scorer_input"},
+    {"$ref": "#/$defs/score"},
+    {"$ref": "#/$defs/board"},
+    {"$ref": "#/$defs/ban_list"}
+  ],
+  "$defs": {
+    "version": {"const": "openwiz.leaderboard.v1"},
+    "handle": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$"
+    },
+    "time": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "day": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+    "count": {"type": "integer", "minimum": 0},
+    "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "family": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+    "period": {
+      "type": "object",
+      "required": ["from", "to"],
+      "additionalProperties": false,
+      "properties": {"from": {"$ref": "#/$defs/day"}, "to": {"$ref": "#/$defs/day"}}
+    },
+    "opt_in": {
+      "type": "object",
+      "required": ["version", "answer", "asked", "handle", "joined", "left"],
+      "additionalProperties": false,
+      "properties": {
+        "version": {"$ref": "#/$defs/version"},
+        "answer": {"enum": ["yes", "no"]},
+        "asked": {"$ref": "#/$defs/time"},
+        "handle": {"oneOf": [{"$ref": "#/$defs/handle"}, {"type": "null"}]},
+        "joined": {"oneOf": [{"$ref": "#/$defs/time"}, {"type": "null"}]},
+        "left": {"type": ["string", "null"], "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"}
+      },
+      "if": {"properties": {"answer": {"const": "no"}}},
+      "then": {"properties": {"handle": {"const": null}, "joined": {"const": null}, "left": {"const": null}}},
+      "else": {"properties": {"handle": {"$ref": "#/$defs/handle"}, "joined": {"$ref": "#/$defs/time"}}}
+    },
+    "review": {
+      "type": "object",
+      "required": ["state", "commit", "family"],
+      "additionalProperties": false,
+      "properties": {
+        "state": {"enum": ["APPROVED", "CHANGES_REQUESTED", "COMMENTED", "DISMISSED"]},
+        "commit": {"$ref": "#/$defs/commit"},
+        "family": {"oneOf": [{"$ref": "#/$defs/family"}, {"type": "null"}]}
+      }
+    },
+    "pull_request": {
+      "type": "object",
+      "required": ["repository", "number", "merged_at", "head", "builder_family", "additions",
+                   "deletions", "repository_facts", "reviews"],
+      "additionalProperties": false,
+      "properties": {
+        "repository": {"type": "string", "pattern": "^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$"},
+        "number": {"type": "integer", "minimum": 1},
+        "merged_at": {"oneOf": [{"$ref": "#/$defs/time"}, {"type": "null"}]},
+        "head": {"$ref": "#/$defs/commit"},
+        "builder_family": {"$ref": "#/$defs/family"},
+        "additions": {"$ref": "#/$defs/count"},
+        "deletions": {"$ref": "#/$defs/count"},
+        "repository_facts": {
+          "type": "object",
+          "required": ["owners", "other_contributors", "stars", "forks"],
+          "additionalProperties": false,
+          "properties": {
+            "owners": {"type": "integer", "minimum": 1},
+            "other_contributors": {"$ref": "#/$defs/count"},
+            "stars": {"$ref": "#/$defs/count"},
+            "forks": {"$ref": "#/$defs/count"}
+          }
+        },
+        "reviews": {"type": "array", "items": {"$ref": "#/$defs/review"}}
+      }
+    },
+    "scorer_input": {
+      "type": "object",
+      "required": ["version", "period", "pull_requests"],
+      "additionalProperties": false,
+      "properties": {
+        "version": {"$ref": "#/$defs/version"},
+        "period": {"$ref": "#/$defs/period"},
+        "pull_requests": {"type": "array", "items": {"$ref": "#/$defs/pull_request"}}
+      }
+    },
+    "score": {
+      "type": "object",
+      "required": ["version", "handle", "period", "pull_requests", "points", "by_size"],
+      "additionalProperties": false,
+      "properties": {
+        "version": {"$ref": "#/$defs/version"},
+        "handle": {"$ref": "#/$defs/handle"},
+        "period": {"$ref": "#/$defs/period"},
+        "pull_requests": {"$ref": "#/$defs/count"},
+        "points": {"type": "number", "minimum": 0, "multipleOf": 0.5},
+        "by_size": {
+          "type": "object",
+          "required": ["S", "M", "L"],
+          "additionalProperties": false,
+          "properties": {"S": {"$ref": "#/$defs/count"}, "M": {"$ref": "#/$defs/count"}, "L": {"$ref": "#/$defs/count"}}
+        },
+        "boost": {"const": null},
+        "board": {"const": null}
+      }
+    },
+    "board": {
+      "type": "object",
+      "required": ["version", "built", "period", "rows"],
+      "additionalProperties": false,
+      "properties": {
+        "version": {"$ref": "#/$defs/version"},
+        "built": {"$ref": "#/$defs/time"},
+        "period": {"$ref": "#/$defs/period"},
+        "rows": {"type": "array", "items": {"$ref": "#/$defs/score"}}
+      }
+    },
+    "ban_list": {
+      "type": "object",
+      "required": ["version", "bans"],
+      "additionalProperties": false,
+      "properties": {
+        "version": {"$ref": "#/$defs/version"},
+        "bans": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["handle", "date"],
+            "additionalProperties": false,
+            "properties": {"handle": {"$ref": "#/$defs/handle"}, "date": {"$ref": "#/$defs/day"}}
+          }
+        }
+      }
+    },
+    "case": {
+      "description": "A fixture wrapper for the score rule, not a document anyone writes.",
+      "type": "object",
+      "required": ["input", "claimed"],
+      "additionalProperties": false,
+      "properties": {"input": {"$ref": "#/$defs/scorer_input"}, "claimed": {"$ref": "#/$defs/score"}}
+    }
+  }
+}
