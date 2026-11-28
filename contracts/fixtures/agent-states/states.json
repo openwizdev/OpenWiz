@@ -125,6 +125,7 @@
             "number": 9101,
             "id": 1011,
             "author": "example-bot",
+            "created_at": "2030-01-03T12:00:00Z",
             "updated_at": "2030-01-03T12:00:00Z",
             "body": "launch-fleet: held manual: review the plan"
           }
@@ -144,7 +145,7 @@
           }
         ],
         "agents": [],
-        "tracks": [{"spec": 9001, "tickets": [9101], "agents": [], "needs_owner": ["grant-request:1011"]}],
+        "tracks": [{"spec": 9001, "tickets": [9101], "agents": [], "needs_owner": []}],
         "unavailable": []
       }
     },
@@ -157,7 +158,8 @@
             "number": 9101,
             "id": 1002,
             "author": "example-bot",
-            "updated_at": "2030-01-03T12:00:00Z",
+            "created_at": "2030-01-03T11:00:00Z",
+            "updated_at": "2030-01-03T11:00:00Z",
             "body": "launch-fleet: start checked, branch builder/9101-synthetic"
           }
         ]
@@ -182,7 +184,7 @@
             "ticket": 9101,
             "pull_request": null,
             "state": "building",
-            "since": "2030-01-03T12:00:00Z",
+            "since": "2030-01-03T11:00:00Z",
             "record": {"kind": "comment", "repo": "example/forge", "number": 9101, "id": 1002}
           }
         ],
@@ -207,7 +209,8 @@
             "number": 9101,
             "id": 1002,
             "author": "example-bot",
-            "updated_at": "2030-01-03T12:00:00Z",
+            "created_at": "2030-01-03T11:00:00Z",
+            "updated_at": "2030-01-03T11:00:00Z",
             "body": "launch-fleet: start checked, branch builder/9101-synthetic"
           }
         ]
@@ -232,7 +235,7 @@
             "ticket": 9101,
             "pull_request": {"repo": "example/forge", "number": 9201, "merged_at": null},
             "state": "building",
-            "since": "2030-01-03T12:00:00Z",
+            "since": "2030-01-03T11:00:00Z",
             "record": {"kind": "comment", "repo": "example/forge", "number": 9101, "id": 1002}
           }
         ],
@@ -268,7 +271,8 @@
             "number": 9101,
             "id": 1002,
             "author": "example-bot",
-            "updated_at": "2030-01-03T12:00:00Z",
+            "created_at": "2030-01-03T11:00:00Z",
+            "updated_at": "2030-01-03T11:00:00Z",
             "body": "launch-fleet: start checked, branch builder/9101-synthetic"
           }
         ]
@@ -329,7 +333,8 @@
             "number": 9101,
             "id": 1002,
             "author": "example-bot",
-            "updated_at": "2030-01-03T12:00:00Z",
+            "created_at": "2030-01-03T11:00:00Z",
+            "updated_at": "2030-01-03T11:00:00Z",
             "body": "launch-fleet: start checked, branch builder/9101-synthetic"
           }
         ]
@@ -380,7 +385,8 @@
             "id": 1005,
             "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
             "name": "ci",
-            "result": "pass"
+            "result": "pass",
+            "completed_at": "2030-01-03T11:00:00Z"
           }
         ],
         "comments": [
@@ -390,10 +396,12 @@
             "number": 9201,
             "id": 1006,
             "author": "example-bot",
+            "created_at": "2030-01-03T11:00:00Z",
             "updated_at": "2030-01-03T11:00:00Z",
             "body": "launch-fleet: review started aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
           }
-        ]
+        ],
+        "needs_owner": [{"id": "review:9201", "repo": "example/forge", "number": 9201}]
       },
       "expected": {
         "tickets": [
@@ -419,7 +427,7 @@
             "record": {"kind": "comment", "repo": "example/forge", "number": 9201, "id": 1006}
           }
         ],
-        "tracks": [{"spec": 9001, "tickets": [9101], "agents": ["reviewer-9201-1"], "needs_owner": []}],
+        "tracks": [{"spec": 9001, "tickets": [9101], "agents": ["reviewer-9201-1"], "needs_owner": ["review:9201"]}],
         "unavailable": []
       }
     },
@@ -441,7 +449,8 @@
             "id": 1005,
             "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
             "name": "ci",
-            "result": "pass"
+            "result": "pass",
+            "completed_at": "2030-01-03T11:00:00Z"
           }
         ],
         "comments": [
@@ -451,7 +460,8 @@
             "number": 9101,
             "id": 1002,
             "author": "example-bot",
-            "updated_at": "2030-01-03T12:00:00Z",
+            "created_at": "2030-01-03T11:00:00Z",
+            "updated_at": "2030-01-03T11:00:00Z",
             "body": "launch-fleet: start checked, branch builder/9101-synthetic"
           },
           {
@@ -460,6 +470,7 @@
             "number": 9201,
             "id": 1006,
             "author": "example-bot",
+            "created_at": "2030-01-03T11:00:00Z",
             "updated_at": "2030-01-03T11:00:00Z",
             "body": "launch-fleet: review started aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
           },
@@ -469,6 +480,7 @@
             "number": 9201,
             "id": 1008,
             "author": "example-bot",
+            "created_at": "2030-01-03T11:10:00Z",
             "updated_at": "2030-01-03T11:10:00Z",
             "body": "VERDICT: CHANGES at aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
           }
@@ -496,9 +508,18 @@
             "state": "fix",
             "since": "2030-01-03T11:10:00Z",
             "record": {"kind": "comment", "repo": "example/forge", "number": 9201, "id": 1008}
+          },
+          {
+            "name": "reviewer-9201-1",
+            "role": "reviewer",
+            "ticket": 9101,
+            "pull_request": {"repo": "example/forge", "number": 9201, "merged_at": null},
+            "state": "fix",
+            "since": "2030-01-03T11:10:00Z",
+            "record": {"kind": "comment", "repo": "example/forge", "number": 9201, "id": 1008}
           }
         ],
-        "tracks": [{"spec": 9001, "tickets": [9101], "agents": ["builder-9101"], "needs_owner": []}],
+        "tracks": [{"spec": 9001, "tickets": [9101], "agents": ["builder-9101", "reviewer-9201-1"], "needs_owner": []}],
         "unavailable": []
       }
     },
@@ -520,7 +541,8 @@
             "id": 1005,
             "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
             "name": "ci",
-            "result": "pass"
+            "result": "pass",
+            "completed_at": "2030-01-03T11:00:00Z"
           }
         ],
         "comments": [
@@ -530,6 +552,7 @@
             "number": 9201,
             "id": 1006,
             "author": "example-bot",
+            "created_at": "2030-01-03T11:00:00Z",
             "updated_at": "2030-01-03T11:00:00Z",
             "body": "launch-fleet: review started aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
           },
@@ -539,6 +562,7 @@
             "number": 9201,
             "id": 1010,
             "author": "example-bot",
+            "created_at": "2030-01-03T12:00:00Z",
             "updated_at": "2030-01-03T12:00:00Z",
             "body": "launch-fleet: review given up aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: no verdict"
           }
@@ -590,7 +614,8 @@
             "id": 1005,
             "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
             "name": "ci",
-            "result": "pass"
+            "result": "pass",
+            "completed_at": "2030-01-03T11:00:00Z"
           }
         ],
         "comments": [
@@ -600,7 +625,8 @@
             "number": 9101,
             "id": 1002,
             "author": "example-bot",
-            "updated_at": "2030-01-03T12:00:00Z",
+            "created_at": "2030-01-03T11:00:00Z",
+            "updated_at": "2030-01-03T11:00:00Z",
             "body": "launch-fleet: start checked, branch builder/9101-synthetic"
           },
           {
@@ -609,6 +635,7 @@
             "number": 9201,
             "id": 1006,
             "author": "example-bot",
+            "created_at": "2030-01-03T11:00:00Z",
             "updated_at": "2030-01-03T11:00:00Z",
             "body": "launch-fleet: review started aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
           },
@@ -618,6 +645,7 @@
             "number": 9201,
             "id": 1007,
             "author": "example-bot",
+            "created_at": "2030-01-03T12:00:00Z",
             "updated_at": "2030-01-03T12:00:00Z",
             "body": "VERDICT: APPROVE at aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
           },
@@ -627,6 +655,7 @@
             "number": 9201,
             "id": 1009,
             "author": "example-bot",
+            "created_at": "2030-01-03T12:00:00Z",
             "updated_at": "2030-01-03T12:00:00Z",
             "body": "launch-fleet: merge queued aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: synthetic approval"
           }
@@ -654,9 +683,18 @@
             "state": "merge",
             "since": "2030-01-03T12:00:00Z",
             "record": {"kind": "comment", "repo": "example/forge", "number": 9201, "id": 1009}
+          },
+          {
+            "name": "reviewer-9201-1",
+            "role": "reviewer",
+            "ticket": 9101,
+            "pull_request": {"repo": "example/forge", "number": 9201, "merged_at": null},
+            "state": "merge",
+            "since": "2030-01-03T12:00:00Z",
+            "record": {"kind": "comment", "repo": "example/forge", "number": 9201, "id": 1009}
           }
         ],
-        "tracks": [{"spec": 9001, "tickets": [9101], "agents": ["builder-9101"], "needs_owner": []}],
+        "tracks": [{"spec": 9001, "tickets": [9101], "agents": ["builder-9101", "reviewer-9201-1"], "needs_owner": []}],
         "unavailable": []
       }
     },
@@ -670,7 +708,8 @@
             "number": 9101,
             "id": 1002,
             "author": "example-bot",
-            "updated_at": "2030-01-03T12:00:00Z",
+            "created_at": "2030-01-03T11:00:00Z",
+            "updated_at": "2030-01-03T11:00:00Z",
             "body": "launch-fleet: start checked, branch builder/9101-synthetic"
           }
         ]
@@ -714,7 +753,8 @@
             "number": 9101,
             "id": 1002,
             "author": "example-bot",
-            "updated_at": "2030-01-03T12:00:00Z",
+            "created_at": "2030-01-03T11:00:00Z",
+            "updated_at": "2030-01-03T11:00:00Z",
             "body": "launch-fleet: start checked, branch builder/9101-synthetic"
           }
         ]
@@ -756,6 +796,7 @@
             "number": 9001,
             "id": 1012,
             "author": "example-bot",
+            "created_at": "2030-01-03T12:00:00Z",
             "updated_at": "2030-01-03T12:00:00Z",
             "body": "launch-fleet: fleet active, loop fleet-9001"
           }
@@ -807,7 +848,8 @@
             "number": 9101,
             "id": 1002,
             "author": "example-bot",
-            "updated_at": "2030-01-03T12:00:00Z",
+            "created_at": "2030-01-03T11:00:00Z",
+            "updated_at": "2030-01-03T11:00:00Z",
             "body": "launch-fleet: start checked, branch builder/9101-synthetic"
           }
         ]

@@ -3,6 +3,7 @@
     "accepted": true,
     "comment": "openwiz:ping v1\nSender: fleet-9001\nTarget: reviewer-9201-1\nMessage: Can you share an ETA for the review?"
   },
+  "wiz-sender": {"accepted": true, "comment": "openwiz:ping v1\nSender: wiz\nTarget: reviewer-9201-1\nMessage: Can you share an ETA?"},
   "delivered": {
     "accepted": true,
     "comment": "openwiz:ping v1\nSender: fleet-9001\nTarget: reviewer-9201-1\nMessage: Can you share an ETA for the review?\nDelivered: 2030-01-03T12:00:00Z"
@@ -28,6 +29,7 @@
     "accepted": false,
     "comment": "openwiz:ping v1\nSender: fleet-9001\nTarget: reviewer-9201-1\nMessage: Use account=@example-account"
   },
+  "stop-work": {"accepted": false, "comment": "openwiz:ping v1\nSender: fleet-9001\nTarget: reviewer-9201-1\nMessage: Stop the builder."},
   "routing-record": {
     "accepted": false,
     "comment": "openwiz:ping v1\nSender: fleet-9001\nTarget: reviewer-9201-1\nMessage: launch-fleet: start checked"

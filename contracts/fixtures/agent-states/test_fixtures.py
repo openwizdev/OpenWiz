@@ -1,6 +1,7 @@
 """Offline schema proofs for the synthetic NY2 snapshots and ping comments."""
 
 import copy
+from datetime import datetime
 import json
 from pathlib import Path
 import unittest
@@ -27,7 +28,13 @@ class StatesContract(unittest.TestCase):
         Draft202012Validator.check_schema(schema)
         if definition:
             schema = {"$defs": schema["$defs"], "$ref": f"#/$defs/{definition}"}
-        return Draft202012Validator(schema, format_checker=FormatChecker())
+        formats = FormatChecker()
+
+        @formats.checks("date-time", raises=ValueError)
+        def calendar_time(value):
+            return not isinstance(value, str) or bool(datetime.fromisoformat(value))
+
+        return Draft202012Validator(schema, format_checker=formats)
 
     def test_ticket_and_agent_states_have_record_examples(self):
         self.assertTrue(CONTRACT.is_file(), "the state-to-record contract must exist")
@@ -60,7 +67,7 @@ class StatesContract(unittest.TestCase):
             {agent["name"] for agent in wake["expected"]["agents"]}
             for wake in fixture["wakes"]
         ]
-        self.assertEqual({"reviewer-9201-1", "fixer-9201-1"}, first)
+        self.assertEqual({"reviewer-9201-1", "builder-9101"}, first)
         self.assertEqual(first, recheck)
         self.assertEqual(first | {"fixer-9201-2"}, final)
 
