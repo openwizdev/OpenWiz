@@ -1,0 +1,309 @@
+#!/usr/bin/env python3
+import fcntl, json, os, shlex, signal, subprocess, sys, time
+
+STATE, ARGS = os.environ['FAKE_PANE_STATE'], sys.argv[1:]
+PROGRAMS = {'claude': 'claude', 'codex': 'codex', 'cursor': 'cursor-agent', 'opencode': 'opencode', 'pi': 'pi'}
+
+
+def say(value, code=0):
+    print(json.dumps(value), flush=True)
+    sys.exit(code)
+
+
+def fail(code, message, next_step='synthetic: fix it and run the command again'):
+    say({'ok': False, 'error': {'code': code, 'message': message, 'next': next_step}}, 1)
+
+
+def flags(args, plain, valued):
+    out, i = {}, 0
+    while i < len(args):
+        a = args[i]
+        if a in out or a not in plain + valued or (a in valued and i + 1 >= len(args)):
+            print('runpane: unexpected arguments', file=sys.stderr)
+            sys.exit(2)
+        out[a] = True if a in plain else args[i + 1]
+        i += 1 if a in plain else 2
+    return out
+
+
+def need(got, required):
+    if not set(required) <= set(got):
+        print('runpane: missing ' + ', '.join(sorted(set(required) - set(got))), file=sys.stderr)
+        sys.exit(2)
+
+
+def update(change):
+    with open(STATE + '.lock', 'w') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            with open(STATE) as f:
+                state = json.load(f)
+        except FileNotFoundError:
+            full = [n for n in os.environ.get('FAKE_PANE_REPOS', 'example/site').split(',') if n]
+            state = {'repos': [checkout(i + 1, n) for i, n in enumerate(full)], 'panes': {}, 'panels': {}}
+        out = change(state)
+        with open(STATE + '.new', 'w') as f:
+            json.dump(state, f)
+        os.replace(STATE + '.new', STATE)
+        return out
+
+
+def checkout(number, full):
+    path = os.path.join(STATE + '.repos', '%d-%s' % (number, full.split('/')[1]))
+    git = os.path.join(path, '.git')
+    for folder in ('objects', 'refs'):
+        os.makedirs(os.path.join(git, folder))
+    with open(os.path.join(git, 'HEAD'), 'w') as f:
+        f.write('ref: refs/heads/main\n')
+    host = os.environ.get('FAKE_PANE_HOST', 'github.com')
+    other = {'include': '[include]\n\tpath = other.config\n',
+             'insteadof': '[url "https://github.com/other/"]\n\tinsteadOf = https://%s/%s/\n'
+                          % (host, full.split('/')[0])}.get(os.environ.get('FAKE_PANE_GIT'), '')
+    with open(os.path.join(git, 'other.config'), 'w') as f:
+        f.write('[remote "origin"]\n\turl = https://github.com/other/site.git\n')
+    with open(os.path.join(git, 'config'), 'w') as f:
+        f.write('[core]\n\tbare = false\n%s[remote "origin"]\n\turl = https://%s/%s.git\n'
+                '\tfetch = +refs/heads/*:refs/remotes/origin/*\n' % (other, host, full))
+        if os.environ.get('FAKE_PANE_GIT') == 'pushurl':
+            f.write('\tpushurl = https://github.com/other/site.git\n')
+    return {'id': number, 'name': full.split('/')[1], 'path': path, 'active': number == 1, 'sessionCount': 0}
+
+
+def note(panel, woken):
+    path, now = os.environ['KIT_TRACKER'], time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+    body = '\n'.join(['<!-- openwiz:status v1 -->', 'agent: builder', 'state: working', 'harness: Fake',
+                      'model: ' + panel['model'], 'skills: %s@0.1.2' % panel['skill'],
+                      'step: ' + ('woke and read the ticket again' if woken else 'started the throwaway ticket'),
+                      'time: ' + now]) + '\n'
+    with open(path) as f:
+        tracker = json.load(f)
+    if panel['note'] is None:
+        panel['note'] = 1 + max([c['id'] for c in tracker['comments']], default=0)
+        tracker['comments'].append({'id': panel['note'], 'author': 'example-bot[bot]', 'updated_at': now,
+                                    'body': body})
+    else:
+        [c for c in tracker['comments'] if c['id'] == panel['note']][0].update(body=body, updated_at=now)
+    with open(path + '.%d' % os.getpid(), 'w') as f:
+        json.dump(tracker, f)
+    os.replace(path + '.%d' % os.getpid(), path)
+
+
+def skill_in(text):
+    words = text.split()
+    return words[words.index('skill') - 1] if 'skill' in words and words.index('skill') > 0 else None
+
+
+def open_panel(state, pane, model, skill, ready):
+    panel = 'panel-%d' % (len(state['panels']) + 1)
+    agent = None
+    if ready:
+        agent = subprocess.Popen(['sleep', '300'], start_new_session=True, stdin=subprocess.DEVNULL,
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).pid
+    state['panes'][pane]['panel'] = panel
+    state['panels'][panel] = {'pane': pane, 'closed': False, 'agent': agent, 'note': None,
+                              'model': model, 'skill': skill, 'ready': ready}
+    if ready and skill:
+        note(state['panels'][panel], False)
+    return panel
+
+
+def create(args):
+    f = flags(args, ['--no-focus', '--no-expect-report', '--wait-ready', '--yes', '--json'],
+              ['--repo', '--name', '--agent', '--tool-command', '--prompt', '--source', '--ready-timeout-ms'])
+    need(f, ['--repo', '--name', '--agent', '--tool-command', '--prompt', '--source', '--no-focus',
+             '--no-expect-report', '--wait-ready', '--yes', '--json'])
+    if f['--source'] != 'agent':
+        fail('invalid-source', 'synthetic: only an agent-opened tab can be closed by an agent')
+    if os.environ.get('FAKE_PANE_HANG') == 'before-create':
+        time.sleep(30)
+    words = shlex.split(f['--tool-command'])
+    if len(words) != 3 or words[0] != PROGRAMS.get(f['--agent']) or words[1] != '--model':
+        fail('invalid-tool-command', 'synthetic: the tool command does not run the declared agent')
+    ready = os.environ.get('FAKE_PANE_READY') != 'no'
+    queue_raw = os.environ.get('FAKE_PANE_QUEUE', '')
+    queued = -1 if queue_raw == 'never' else (int(queue_raw) if queue_raw.isdigit() else None)
+
+    def make(state):
+        repo = [r for r in state['repos'] if str(r['id']) == f['--repo']]
+        if not repo:
+            fail('repo-not-found', 'synthetic: no saved repository ' + f['--repo'])
+        pane = 'pane-%d' % (len(state['panes']) + 1)
+        worktree = '/synthetic/worktrees/' + f['--name']
+        if queued is not None:
+            state['panes'][pane] = {'name': f['--name'], 'panel': None, 'archived': False, 'worktree': worktree,
+                                    'queued': queued, 'model': words[2], 'skill': skill_in(f['--prompt']),
+                                    'ready': ready}
+            return repo[0], pane, None, worktree
+        state['panes'][pane] = {'name': f['--name'], 'panel': None, 'archived': False, 'worktree': worktree}
+        panel = open_panel(state, pane, words[2], skill_in(f['--prompt']), ready)
+        return repo[0], pane, panel, worktree
+
+    repo, pane, panel, worktree = update(make)
+    if os.environ.get('FAKE_PANE_HANG') == 'create':
+        time.sleep(30)
+    if queued is not None:
+        say({'ok': True, 'repo': repo, 'items': [{'ok': True, 'index': 0, 'name': f['--name'], 'pinned': False,
+                                                  'sessionId': pane, 'paneId': pane, 'worktreePath': worktree,
+                                                  'setupQueue': {'position': 1,
+                                                                 'message': 'synthetic: waiting for setup'}}]}, 0)
+    readiness = {'ok': ready, 'condition': 'ready', 'matched': ready, 'timedOut': False, 'elapsedMs': 40,
+                 'state': 'ready' if ready else 'exited'}
+    if not ready:
+        readiness['reason'] = {'code': 'command-exited', 'message': 'synthetic: the command exited'}
+    say({'ok': ready, 'repo': repo, 'items': [{'ok': ready, 'index': 0, 'name': f['--name'], 'pinned': False,
+                                               'sessionId': pane, 'paneId': pane, 'panelId': panel,
+                                               'worktreePath': worktree, 'readiness': readiness}]}, 0 if ready else 1)
+
+
+def submit(args):
+    f = flags(args, ['--no-expect-report', '--yes', '--json'], ['--panel', '--text'])
+    need(f, ['--panel', '--text', '--no-expect-report', '--yes', '--json'])
+
+    def send(state):
+        panel = state['panels'].get(f['--panel'])
+        if not panel or panel['closed']:
+            fail('panel-not-found', 'synthetic: no open tab ' + f['--panel'])
+        if panel['skill'] and skill_in(f['--text']) == panel['skill']:
+            note(panel, True)
+        return panel['pane']
+
+    pane = update(send)
+    say({'ok': True, 'panelId': f['--panel'], 'paneId': pane, 'inputBytes': len(f['--text'].encode()),
+         'enter': 'cr', 'sequenceName': 'enter-cr', 'verifiedSubmitted': True, 'sentAt': '2026-11-20T00:00:00Z'})
+
+
+def close(args):
+    f = flags(args, ['--force', '--yes', '--json'], ['--panel', '--source'])
+    need(f, ['--panel', '--force', '--source', '--yes', '--json'])
+
+    def shut(state):
+        panel = state['panels'].get(f['--panel'])
+        if not panel or panel['closed']:
+            return None
+        panel['closed'] = True
+        if panel['agent']:
+            try:
+                os.kill(panel['agent'], signal.SIGKILL)
+            except OSError:
+                pass
+        return panel['pane']
+
+    pane = update(shut)
+    if pane is None:
+        say({'ok': True, 'panelId': f['--panel'], 'closed': False, 'alreadyClosed': True})
+    say({'ok': True, 'paneId': pane, 'panelId': f['--panel'], 'type': 'terminal', 'closed': True, 'forced': True})
+
+
+def archive(args):
+    f = flags(args, ['--remove-worktree', '--force', '--yes', '--json'], ['--pane'])
+    need(f, ['--pane', '--remove-worktree', '--yes', '--json'])
+    dirty = os.environ.get('FAKE_PANE_DIRTY', '')
+    check = {'performed': True, 'hasUncommittedChanges': dirty == 'uncommitted', 'hasUntrackedFiles': False,
+             'hasUpstream': True, 'unpushedCommits': 1 if dirty == 'unpushed' else 0}
+
+    def put_away(state):
+        pane = state['panes'].get(f['--pane'])
+        if not pane or pane['archived']:
+            fail('pane-not-found', 'synthetic: no Pane ' + f['--pane'])
+        if os.environ.get('FAKE_PANE_QUEUE_LOCK') and pane.get('queued') is not None and '--force' not in f:
+            say({'ok': False, 'paneId': f['--pane'], 'nextCommand': 'synthetic',
+                 'blocked': {'code': 'setup-in-progress', 'message': 'synthetic: setup is still running',
+                             'safetyCheck': check}}, 1)
+        if any(not p['closed'] for p in state['panels'].values() if p['pane'] == f['--pane']) and '--force' not in f:
+            say({'ok': False, 'paneId': f['--pane'], 'nextCommand': 'synthetic',
+                 'blocked': {'code': 'agent-busy', 'message': 'synthetic: an agent is mid-turn', 'safetyCheck': check}}, 1)
+        if dirty and '--force' not in f:
+            code = 'uncommitted-changes' if dirty == 'uncommitted' else 'unpushed-commits'
+            say({'ok': False, 'paneId': f['--pane'], 'nextCommand': 'synthetic',
+                 'blocked': {'code': code, 'message': 'synthetic: the worktree holds work', 'safetyCheck': check}}, 1)
+        pane['archived'] = True
+        pane.pop('queued', None)
+        return pane['worktree']
+
+    worktree = update(put_away)
+    say({'ok': True, 'paneId': f['--pane'], 'archived': True, 'forced': '--force' in f,
+         'worktreeCleanup': 'completed', 'worktreePath': worktree, 'safetyCheck': check})
+
+
+def panes(args):
+    flags(args, ['--json'], [])
+    need(args, ['--json'])
+    if os.environ.get('FAKE_PANE_HANG') == 'list':
+        time.sleep(30)
+
+    def read(state):
+        return [{'id': pid, 'paneId': pid, 'name': pane['name'], 'status': 'active', 'worktreePath': pane['worktree'],
+                 'repoId': 1, 'panelCount': sum(1 for p in state['panels'].values() if p['pane'] == pid and not p['closed']),
+                 'pinned': False, 'agentStatus': 'active', 'ownership': 'pane',
+                 'archived': pane['archived']} for pid, pane in state['panes'].items()]
+
+    say({'ok': True, 'panes': update(read)})
+
+
+def panels(args):
+    f = flags(args, ['--json'], ['--pane'])
+    need(f, ['--pane', '--json'])
+
+    def read(state):
+        pane = state['panes'].get(f['--pane'])
+        if pane and not pane['archived'] and pane.get('queued') is not None:
+            left = pane['queued']
+            if os.environ.get('FAKE_PANE_QUEUE_FINISH') or left == 0 or (left > 0 and left - 1 == 0):
+                pane.pop('queued', None)
+                open_panel(state, f['--pane'], pane['model'], pane['skill'], pane['ready'])
+            elif left > 0:
+                pane['queued'] = left - 1
+        return [{'id': pid, 'panelId': pid, 'paneId': panel['pane'], 'type': 'terminal', 'title': 'agent',
+                 'active': not panel['closed'], 'openedBy': {'source': 'agent'}}
+                for pid, panel in state['panels'].items() if panel['pane'] == f['--pane'] and not panel['closed']]
+
+    say({'ok': True, 'paneId': f['--pane'], 'panels': update(read)})
+
+
+def wait(args):
+    f = flags(args, ['--json'], ['--panel', '--for', '--timeout-ms', '--interval-ms'])
+    need(f, ['--panel', '--for', '--json'])
+    if os.environ.get('FAKE_PANE_HANG') == 'wait':
+        time.sleep(30)
+
+    def check_panel(state):
+        panel = state['panels'].get(f['--panel'])
+        if not panel or panel['closed']:
+            fail('panel-not-found', 'synthetic: no open tab ' + f['--panel'])
+        return panel['pane'], panel.get('ready', True)
+
+    pane, ready = update(check_panel)
+    out = {'ok': ready, 'panelId': f['--panel'], 'paneId': pane, 'condition': f['--for'], 'matched': ready,
+           'timedOut': False, 'elapsedMs': 40,
+           'state': {'initialized': True, 'running': ready, 'isCliReady': ready},
+           'screen': {'source': 'scrollback', 'text': 'synthetic', 'hasMore': False}}
+    if not ready:
+        out['reason'] = {'code': 'command-exited', 'message': 'synthetic: the command exited'}
+    say(out, 0 if ready else 1)
+
+
+def repos(args):
+    flags(args, ['--json'], [])
+    need(args, ['--json'])
+    say({'ok': True, 'repos': update(lambda s: s['repos'])})
+
+
+def main():
+    if os.environ.get('FAKE_PANE_CALLS'):
+        with open(os.environ['FAKE_PANE_CALLS'], 'a') as f:
+            f.write(json.dumps(ARGS) + '\n')
+    verbs = {('repos', 'list'): ('repos', repos), ('panes', 'create'): ('create', create),
+             ('panes', 'list'): ('panes', panes), ('panels', 'list'): ('panels', panels),
+             ('panels', 'wait'): ('wait', wait), ('panels', 'submit'): ('submit', submit),
+             ('panels', 'close'): ('close', close), ('panes', 'archive'): ('archive', archive)}
+    name, verb = verbs.get(tuple(ARGS[:2]), (None, None))
+    if verb is None:
+        print('runpane: unexpected arguments', file=sys.stderr)
+        sys.exit(2)
+    if os.environ.get('FAKE_PANE_DOWN'):
+        fail('daemon-unavailable', 'synthetic: Pane is not running', 'open the Pane app, then run it again')
+    verb(ARGS[2:])
+
+
+if __name__ == '__main__':
+    main()

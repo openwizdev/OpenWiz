@@ -1,0 +1,98 @@
+$ python3 -I adapters/pane/test_driver.py   # the planner ruling (driver v1 D6) tests, against the driver at bfde42a1
+test_a_later_stop_archives_the_pane_once_its_work_is_gone (__main__.Pane.test_a_later_stop_archives_the_pane_once_its_work_is_gone) ... FAIL
+test_a_start_whose_agent_never_gets_ready_closes_its_tab_and_archives_its_pane (__main__.Pane.test_a_start_whose_agent_never_gets_ready_closes_its_tab_and_archives_its_pane) ... ok
+test_errors_carry_fixed_reasons_never_pane_text (__main__.Pane.test_errors_carry_fixed_reasons_never_pane_text) ... ok
+test_kit_passes_all_five (__main__.Pane.test_kit_passes_all_five) ... ok
+test_no_real_harness_or_host_cli_is_on_the_path (__main__.Pane.test_no_real_harness_or_host_cli_is_on_the_path) ... ok
+test_start_opens_one_agent_tab_with_the_model_and_no_permission_flag (__main__.Pane.test_start_opens_one_agent_tab_with_the_model_and_no_permission_flag) ... ok
+test_start_refuses_a_credential_in_any_field (__main__.Pane.test_start_refuses_a_credential_in_any_field) ... ok
+test_start_refuses_before_creating_anything (__main__.Pane.test_start_refuses_before_creating_anything) ... ok
+test_stop_with_work_ends_the_agent_keeps_the_pane_and_answers_stopped (__main__.Pane.test_stop_with_work_ends_the_agent_keeps_the_pane_and_answers_stopped) ... 
+  test_stop_with_work_ends_the_agent_keeps_the_pane_and_answers_stopped (__main__.Pane.test_stop_with_work_ends_the_agent_keeps_the_pane_and_answers_stopped) (dirty='unpushed') ... FAIL
+  test_stop_with_work_ends_the_agent_keeps_the_pane_and_answers_stopped (__main__.Pane.test_stop_with_work_ends_the_agent_keeps_the_pane_and_answers_stopped) (dirty='uncommitted') ... FAIL
+test_stop_with_work_ends_the_agent_keeps_the_pane_and_answers_stopped (__main__.Pane.test_stop_with_work_ends_the_agent_keeps_the_pane_and_answers_stopped) ... FAIL
+test_the_environment_is_built_from_scratch (__main__.Pane.test_the_environment_is_built_from_scratch) ... ok
+
+======================================================================
+FAIL: test_a_later_stop_archives_the_pane_once_its_work_is_gone (__main__.Pane.test_a_later_stop_archives_the_pane_once_its_work_is_gone)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/pane/test_driver.py", line 158, in test_a_later_stop_archives_the_pane_once_its_work_is_gone
+    self.assertEqual(self.driver('stop', run, FAKE_PANE_DIRTY='unpushed'), (0, dict(run, stopped=True)))
+AssertionError: Tuples differ: (1, {'error': 'run run-<id> is sto[241 chars]ne'}) != (0, {'run': 'run-<id>', 'stopped': True})
+
+First differing element 0:
+1
+0
+
++ (0, {'run': 'run-<id>', 'stopped': True})
+- (1,
+-  {'error': 'run run-<id> is stopped and its agent has ended, but Pane '
+-            'kept its Pane openwiz-run-<id> and worktree: it holds work '
+-            'not yet committed or pushed (unpushed-commits)',
+-   'next': 'push or discard that work yourself, then stop the run again to '
+-           'archive its Pane'})
+
+======================================================================
+FAIL: test_stop_with_work_ends_the_agent_keeps_the_pane_and_answers_stopped (__main__.Pane.test_stop_with_work_ends_the_agent_keeps_the_pane_and_answers_stopped) (dirty='unpushed')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/pane/test_driver.py", line 146, in test_stop_with_work_ends_the_agent_keeps_the_pane_and_answers_stopped
+    self.assertEqual(self.driver('stop', run, FAKE_PANE_DIRTY=dirty), (0, dict(run, stopped=True)))
+AssertionError: Tuples differ: (1, {'error': 'run run-<id> is sto[241 chars]ne'}) != (0, {'run': 'run-<id>', 'stopped': True})
+
+First differing element 0:
+1
+0
+
++ (0, {'run': 'run-<id>', 'stopped': True})
+- (1,
+-  {'error': 'run run-<id> is stopped and its agent has ended, but Pane '
+-            'kept its Pane openwiz-run-<id> and worktree: it holds work '
+-            'not yet committed or pushed (unpushed-commits)',
+-   'next': 'push or discard that work yourself, then stop the run again to '
+-           'archive its Pane'})
+
+======================================================================
+FAIL: test_stop_with_work_ends_the_agent_keeps_the_pane_and_answers_stopped (__main__.Pane.test_stop_with_work_ends_the_agent_keeps_the_pane_and_answers_stopped) (dirty='uncommitted')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/pane/test_driver.py", line 146, in test_stop_with_work_ends_the_agent_keeps_the_pane_and_answers_stopped
+    self.assertEqual(self.driver('stop', run, FAKE_PANE_DIRTY=dirty), (0, dict(run, stopped=True)))
+AssertionError: Tuples differ: (1, {'error': 'run run-<id> is sto[244 chars]ne'}) != (0, {'run': 'run-<id>', 'stopped': True})
+
+First differing element 0:
+1
+0
+
++ (0, {'run': 'run-<id>', 'stopped': True})
+- (1,
+-  {'error': 'run run-<id> is stopped and its agent has ended, but Pane '
+-            'kept its Pane openwiz-run-<id> and worktree: it holds work '
+-            'not yet committed or pushed (uncommitted-changes)',
+-   'next': 'push or discard that work yourself, then stop the run again to '
+-           'archive its Pane'})
+
+======================================================================
+FAIL: test_stop_with_work_ends_the_agent_keeps_the_pane_and_answers_stopped (__main__.Pane.test_stop_with_work_ends_the_agent_keeps_the_pane_and_answers_stopped)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/pane/test_driver.py", line 154, in test_stop_with_work_ends_the_agent_keeps_the_pane_and_answers_stopped
+    self.assertEqual((len(archives), [c for c in archives if '--force' in c]), (4, []))
+AssertionError: Tuples differ: (2, []) != (4, [])
+
+First differing element 0:
+2
+4
+
+- (2, [])
+?  ^
+
++ (4, [])
+?  ^
+
+
+----------------------------------------------------------------------
+Ran 10 tests in <t>s
+
+FAILED (failures=4)

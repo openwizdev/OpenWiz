@@ -1,0 +1,85 @@
+# Red run at c471806 (review 7204664667): a stop after a confirmed archive reports a late create on a 404; the pre-send list misses 18 of the helper's refusals before the network; a helper error with no next prints next None and passes a control character through.
+# Command: python3 -I adapters/cursor/test_driver.py Cursor.test_a_start_whose_answer_is_lost_archives_its_agent Cursor.test_a_lost_create_whose_cleanup_the_helper_refuses_stays_stoppable Cursor.test_every_helper_refusal_before_the_network_and_only_those_say_nothing_was_sent Cursor.test_a_helper_error_with_no_next_or_a_control_character_still_fits_the_error_schema
+# Paths in the traceback read <repo>.
+test_a_start_whose_answer_is_lost_archives_its_agent (__main__.Cursor.test_a_start_whose_answer_is_lost_archives_its_agent) ... FAIL
+test_a_lost_create_whose_cleanup_the_helper_refuses_stays_stoppable (__main__.Cursor.test_a_lost_create_whose_cleanup_the_helper_refuses_stays_stoppable) ... FAIL
+test_every_helper_refusal_before_the_network_and_only_those_say_nothing_was_sent (__main__.Cursor.test_every_helper_refusal_before_the_network_and_only_those_say_nothing_was_sent) ... FAIL
+test_a_helper_error_with_no_next_or_a_control_character_still_fits_the_error_schema (__main__.Cursor.test_a_helper_error_with_no_next_or_a_control_character_still_fits_the_error_schema) ... FAIL
+
+======================================================================
+FAIL: test_a_start_whose_answer_is_lost_archives_its_agent (__main__.Cursor.test_a_start_whose_answer_is_lost_archives_its_agent)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/cursor/test_driver.py", line 381, in test_a_start_whose_answer_is_lost_archives_its_agent
+    self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}), 'a late create')
+AssertionError: Tuples differ: (1, {'error': 'run run-fc13ca0a0671: Curso[250 chars]ts'}) != (0, {'run': 'run-fc13ca0a0671', 'stopped': True})
+
+First differing element 0:
+1
+0
+
++ (0, {'run': 'run-fc13ca0a0671', 'stopped': True})
+- (1,
+-  {'error': 'run run-fc13ca0a0671: Cursor did not confirm whether agent '
+-            'bc-7f8c3352-13bc-4796-ab7e-b07df7dd43a1 was ever created (Cursor '
+-            'shows none yet, and a late create is not ruled out)',
+-   'next': 'stop it again, or archive agent '
+-           'bc-7f8c3352-13bc-4796-ab7e-b07df7dd43a1 at cursor.com/agents'}) : a late create
+
+======================================================================
+FAIL: test_a_lost_create_whose_cleanup_the_helper_refuses_stays_stoppable (__main__.Cursor.test_a_lost_create_whose_cleanup_the_helper_refuses_stays_stoppable)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/cursor/test_driver.py", line 492, in test_a_lost_create_whose_cleanup_the_helper_refuses_stays_stoppable
+    self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}), 'a late create')
+AssertionError: Tuples differ: (1, {'error': 'run run-a66a34e6e877: Curso[250 chars]ts'}) != (0, {'run': 'run-a66a34e6e877', 'stopped': True})
+
+First differing element 0:
+1
+0
+
++ (0, {'run': 'run-a66a34e6e877', 'stopped': True})
+- (1,
+-  {'error': 'run run-a66a34e6e877: Cursor did not confirm whether agent '
+-            'bc-f2745022-4a48-41f2-8d83-90f5b42ab6c5 was ever created (Cursor '
+-            'shows none yet, and a late create is not ruled out)',
+-   'next': 'stop it again, or archive agent '
+-           'bc-f2745022-4a48-41f2-8d83-90f5b42ab6c5 at cursor.com/agents'}) : a late create
+
+======================================================================
+FAIL: test_every_helper_refusal_before_the_network_and_only_those_say_nothing_was_sent (__main__.Cursor.test_every_helper_refusal_before_the_network_and_only_those_say_nothing_was_sent)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/cursor/test_driver.py", line 279, in test_every_helper_refusal_before_the_network_and_only_those_say_nothing_was_sent
+    self.assertEqual((len(texts[True]) > 20, [t for t in texts[True] if not t.startswith(listed)],
+AssertionError: Tuples differ: (True, ['a key is repeated in the input', 'path i[628 chars], []) != (True, [], [])
+
+First differing element 1:
+['a key is repeated in the input', 'path i[623 chars]ect']
+[]
+
+Diff is 776 characters long. Set self.maxDiff to None to see it.
+
+======================================================================
+FAIL: test_a_helper_error_with_no_next_or_a_control_character_still_fits_the_error_schema (__main__.Cursor.test_a_helper_error_with_no_next_or_a_control_character_still_fits_the_error_schema)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/cursor/test_driver.py", line 334, in test_a_helper_error_with_no_next_or_a_control_character_still_fits_the_error_schema
+    self.assertEqual((code, sorted(err), 'nothing was sent' in err['error'], err['next'] in ('None', ''),
+AssertionError: Tuples differ: (1, ['error', 'next'], True, True, ['error']) != (1, ['error', 'next'], True, False, [])
+
+First differing element 3:
+True
+False
+
+- (1, ['error', 'next'], True, True, ['error'])
+?                              ^^^    -------
+
++ (1, ['error', 'next'], True, False, [])
+?                              ^^^^
+
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.812s
+
+FAILED (failures=4)
