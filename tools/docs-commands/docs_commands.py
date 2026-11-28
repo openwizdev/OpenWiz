@@ -86,7 +86,7 @@ def shell_fences(markdown: str) -> Iterator[tuple[int, str, str, str]]:
             yield opening, language, info, "\n".join(body) + "\n"
 
 
-def run_shell(shell: tuple[str, ...], body: str) -> tuple[int, str]:
+def run_shell(shell: tuple[str, ...], body: str) -> int:
     unshare = shutil.which("unshare", path=SYSTEM_PATH)
     if unshare is None:
         raise OSError("Linux unshare is needed to run a block offline")
@@ -106,7 +106,9 @@ def run_shell(shell: tuple[str, ...], body: str) -> tuple[int, str]:
 
         result = subprocess.run(
             [unshare, "--user", "--map-current-user", "--net", "--pid", "--fork",
-             "--mount-proc", "--kill-child", *shell, str(script)],
+             "--mount-proc", "--kill-child", "/bin/sh", "-c",
+             'printf "ready\\n"; exec "$@" >/dev/null 2>&1',
+             "docs-commands", *shell, str(script)],
             cwd=home,
             env={
                 "HOME": str(home),
@@ -122,12 +124,12 @@ def run_shell(shell: tuple[str, ...], body: str) -> tuple[int, str]:
             },
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            encoding="utf-8",
-            errors="replace",
+            stderr=subprocess.DEVNULL,
             timeout=TIMEOUT,
         )
-        return result.returncode, result.stdout
+        if result.stdout != b"ready\n":
+            raise OSError("could not start the offline Linux sandbox")
+        return result.returncode
 
 
 def report_block(location: str, language: str, info: str, body: str) -> bool:
@@ -140,7 +142,7 @@ def report_block(location: str, language: str, info: str, body: str) -> bool:
         return False
 
     try:
-        status, output = run_shell(SHELLS[language], body)
+        status = run_shell(SHELLS[language], body)
     except subprocess.TimeoutExpired:
         print(f"FAIL {location} (timed out after {TIMEOUT}s)")
         return False
@@ -149,8 +151,6 @@ def report_block(location: str, language: str, info: str, body: str) -> bool:
         return False
 
     print(f"FAIL {location} (exit {status})" if status else f"PASS {location}")
-    for line in output.splitlines():
-        print(f"| {line}")
     return status == 0
 
 
