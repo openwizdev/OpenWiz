@@ -15,6 +15,6 @@ test_version_lists_effort (__main__.Hermes.test_version_lists_effort) ... ok
 test_wake_resumes_the_session_its_start_reported (__main__.Hermes.test_wake_resumes_the_session_its_start_reported) ... ok
 
 ----------------------------------------------------------------------
-Ran 15 tests in 4.280s
+Ran 15 tests in 4.775s
 
 OK

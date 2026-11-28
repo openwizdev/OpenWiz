@@ -6,7 +6,7 @@ STATE = os.environ.get('OPENWIZ_HERMES_STATE') or os.path.expanduser('~/.local/s
 VERSION = {'driver': 'hermes', 'records': ['openwiz:records v1'], 'can': ['start', 'wake', 'stop', 'effort']}
 START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
          'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
-         'model': r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'}
+         'model': r'(?=.{1,100}$)[A-Za-z0-9][A-Za-z0-9 ._:@+-]*(/[A-Za-z0-9][A-Za-z0-9 ._:@+-]*)*'}
 EFFORT = {'effort': r'[a-z][a-z0-9-]{0,19}'}
 LEVELS = ('none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra')
 CANT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at "

@@ -40,7 +40,7 @@ Any other `harness` is refused. What this can't control:
 
 The driver never touches a login (driver v1, N1 to N3). It never reads `~/.hermes`, and passes no key, token or password anywhere. Hermes gets only these names from your environment: `HOME`, `USER`, `LOGNAME`, `SHELL`, `PATH`, `LANG`, `LANGUAGE`, the locale settings by their exact names (`LC_ALL`, `LC_CTYPE`, `LC_COLLATE`, `LC_MESSAGES`, `LC_MONETARY`, `LC_NUMERIC`, `LC_TIME`, `LC_ADDRESS`, `LC_IDENTIFICATION`, `LC_MEASUREMENT`, `LC_NAME`, `LC_PAPER`, `LC_TELEPHONE`; any other `LC_` name stays behind), `TZ`, `TERM`, `TMPDIR`, `HERMES_HOME`, the `XDG_*` folders, `SSH_AUTH_SOCK` (the path of your SSH agent's socket, so `git push` over SSH works; no key is in it) and the kit's `OPENWIZ_KIT_RUN` mark, plus the driver's `OPENWIZ_RUN`. Anything else you have exported, such as a token, stays behind: Hermes, `gh`, `git`, `claude` and `codex` use their own signed-in configuration.
 
-1. Install Hermes and set up its model and provider yourself (`hermes setup`).
+1. Install a Hermes release whose `hermes chat` parser supports `--format stream-json` alongside `--reasoning` (verified against [`hermes-agent` v2026.9.24](https://github.com/NousResearch/hermes-agent/blob/v2026.9.24/hermes_cli/_parser.py); earlier releases such as v2026.8.31 accept `--reasoning` but reject `--format stream-json`) and set up its model and provider yourself (`hermes setup`).
 2. For `claude` or `codex`, install and sign in to that CLI yourself, and enable Hermes' bundled `claude-code` or `codex` skill.
 3. Sign in to `gh` yourself, so the agent can post its status note.
 
