@@ -1,0 +1,114 @@
+{
+  "input": {
+    "version": "openwiz.leaderboard.v1",
+    "period": {
+      "from": "2030-01-01",
+      "to": "2030-01-07"
+    },
+    "pull_requests": [
+      {
+        "repository": "synthetic-owner/synthetic-repo",
+        "number": 1,
+        "merged_at": "2030-01-03T01:00:00Z",
+        "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "builder_family": "openai",
+        "additions": 600,
+        "deletions": 0,
+        "repository_facts": {
+          "owners": 1,
+          "other_contributors": 2,
+          "stars": 0,
+          "forks": 0
+        },
+        "reviews": [
+          {
+            "state": "APPROVED",
+            "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "family": "anthropic"
+          }
+        ]
+      },
+      {
+        "repository": "synthetic-owner/synthetic-repo",
+        "number": 2,
+        "merged_at": "2030-01-03T02:00:00Z",
+        "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "builder_family": "openai",
+        "additions": 600,
+        "deletions": 0,
+        "repository_facts": {
+          "owners": 1,
+          "other_contributors": 2,
+          "stars": 0,
+          "forks": 0
+        },
+        "reviews": [
+          {
+            "state": "APPROVED",
+            "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "family": "anthropic"
+          }
+        ]
+      },
+      {
+        "repository": "synthetic-owner/synthetic-repo",
+        "number": 3,
+        "merged_at": "2030-01-03T03:00:00Z",
+        "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "builder_family": "openai",
+        "additions": 600,
+        "deletions": 0,
+        "repository_facts": {
+          "owners": 1,
+          "other_contributors": 2,
+          "stars": 0,
+          "forks": 0
+        },
+        "reviews": [
+          {
+            "state": "APPROVED",
+            "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "family": "anthropic"
+          }
+        ]
+      },
+      {
+        "repository": "synthetic-owner/synthetic-repo",
+        "number": 4,
+        "merged_at": "2030-01-03T04:00:00Z",
+        "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "builder_family": "openai",
+        "additions": 600,
+        "deletions": 0,
+        "repository_facts": {
+          "owners": 1,
+          "other_contributors": 2,
+          "stars": 0,
+          "forks": 0
+        },
+        "reviews": [
+          {
+            "state": "APPROVED",
+            "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "family": "anthropic"
+          }
+        ]
+      }
+    ]
+  },
+  "claimed": {
+    "version": "openwiz.leaderboard.v1",
+    "handle": "synthetic-ada",
+    "period": {
+      "from": "2030-01-01",
+      "to": "2030-01-07"
+    },
+    "pull_requests": 4,
+    "points": 12,
+    "by_size": {
+      "S": 0,
+      "M": 0,
+      "L": 4
+    }
+  }
+}

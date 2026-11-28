@@ -1,0 +1,18 @@
+test_a_score_record_with_a_repository_name_is_refused (__main__.Leaderboard.test_a_score_record_with_a_repository_name_is_refused) ... FAIL
+test_broken_fixtures_fail_with_the_named_error (__main__.Leaderboard.test_broken_fixtures_fail_with_the_named_error) ... FAIL
+test_every_rule_has_one_valid_and_one_broken_fixture_in_the_readme (__main__.Leaderboard.test_every_rule_has_one_valid_and_one_broken_fixture_in_the_readme) ... FAIL
+test_fixtures_are_synthetic (__main__.Leaderboard.test_fixtures_are_synthetic) ... ok
+test_published_fields_carry_no_repository_name (__main__.Leaderboard.test_published_fields_carry_no_repository_name) ... ok
+test_size_bounds_and_cap_at_their_edges (__main__.Leaderboard.test_size_bounds_and_cap_at_their_edges) ... ok
+test_the_numbers_are_written_for_a_reader_to_apply_by_hand (__main__.Leaderboard.test_the_numbers_are_written_for_a_reader_to_apply_by_hand) ... ERROR
+test_valid_fixtures_pass (__main__.Leaderboard.test_valid_fixtures_pass) ... ok
+ERROR: test_the_numbers_are_written_for_a_reader_to_apply_by_hand (__main__.Leaderboard.test_the_numbers_are_written_for_a_reader_to_apply_by_hand)
+IndexError: list index out of range
+FAIL: test_a_score_record_with_a_repository_name_is_refused (__main__.Leaderboard.test_a_score_record_with_a_repository_name_is_refused)
+AssertionError: '$: unexpected repository' not found in []
+FAIL: test_broken_fixtures_fail_with_the_named_error (__main__.Leaderboard.test_broken_fixtures_fail_with_the_named_error)
+AssertionError: [] == [] : bans-without-date.json
+FAIL: test_every_rule_has_one_valid_and_one_broken_fixture_in_the_readme (__main__.Leaderboard.test_every_rule_has_one_valid_and_one_broken_fixture_in_the_readme)
+AssertionError: '**R1' not found in '# stub\n' : R1
+Ran 8 tests in 0.004s
+FAILED (failures=3, errors=1)
