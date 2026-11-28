@@ -32,12 +32,10 @@ fn market_publish_schema_checks_every_fixture_pair() {
         "every rule needs both a valid and a broken fixture"
     );
 
-    let mut schema = load(&Path::new(CONTRACTS).join("market-publish.v1.schema.json"));
-    let errors = lint(&schema);
+    let result_schema = load(&Path::new(CONTRACTS).join("market-publish.v1.schema.json"));
+    let errors = lint(&result_schema);
     assert!(errors.is_empty(), "schema lint: {errors:?}");
 
-    // The root validates the public result line. Select the fixture entry point
-    // with the same definitions to check behavior that needs invocation context.
     for (rule, example) in &valid {
         for result in example["stdout"]
             .as_array()
@@ -45,23 +43,24 @@ fn market_publish_schema_checks_every_fixture_pair() {
             .flatten()
             .chain(example.get("recorded"))
         {
-            let errors = validate(&schema, result);
+            let errors = validate(&result_schema, result);
             assert!(errors.is_empty(), "{rule} public result: {errors:?}");
         }
         assert!(
-            !validate(&schema, example).is_empty(),
+            !validate(&result_schema, example).is_empty(),
             "{rule}: fixture metadata passed as a public result"
         );
     }
 
-    schema["$ref"] = json!("#/$defs/fixture");
-    let errors = lint(&schema);
+    let mut fixture_schema = result_schema;
+    fixture_schema["$ref"] = json!("#/$defs/fixture");
+    let errors = lint(&fixture_schema);
     assert!(errors.is_empty(), "fixture schema lint: {errors:?}");
     for (rule, example) in &valid {
-        let errors = validate(&schema, example);
+        let errors = validate(&fixture_schema, example);
         assert!(errors.is_empty(), "{rule} valid fixture: {errors:?}");
         assert!(
-            !validate(&schema, &broken[rule]).is_empty(),
+            !validate(&fixture_schema, &broken[rule]).is_empty(),
             "{rule}: accepted broken fixture"
         );
     }
