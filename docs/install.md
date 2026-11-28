@@ -1,18 +1,26 @@
 # Install OpenWiz
 
-Paste this one line into the coding agent you already use (Claude Code, Codex or another):
+Tell your coding agent (Claude Code, Codex, Cursor or another):
 
-> Install OpenWiz from github.com/openwizdev/OpenWiz
+> Install OpenWiz
 
-The agent follows the [install skill](https://github.com/openwizdev/WizSkills/blob/v0.4.0/skills/install/SKILL.md). This page says what it does, the commands it runs, what it may change, and how to recover or remove it.
+That phrase is the whole install instruction. The agent follows [Install OpenWiz](../AGENTS.md#install-openwiz). The numbered steps below are the command reference for OpenWiz 0.1.1. `<tag>` in them is `v0.1.1`. They are not the steps for 0.1.0, and not the steps for a later release. This page says what that install does, the commands it runs, what it may change, and how to recover or remove it.
 
 Using Grok Bot? See [Grok Bot + OpenWiz](grok-bot.md).
 
 **Status:** this is the install for OpenWiz 0.1.1 ("OpenWiz 0.02"), which is coming and not released yet; the current release is OpenWiz 0.1.0. CloudRoom is optional: setup is done when GitHub's sign-in is verified, and CloudRoom's sign-in too only if you pick CloudRoom. Installing today? Follow [OpenWiz 0.1.0](#openwiz-010) at the end.
 
+## Platforms
+
+These platform levels apply to OpenWiz 0.2.0.
+
+- **Supported.** macOS on Apple silicon and Intel, and Linux on x86_64 and aarch64 with glibc 2.34 or later. The release bar is a clean-machine install and first fleet on both operating systems.
+- **Community.** Windows through WSL uses the corresponding Linux build and requirements. It works for some users. The project does not test WSL.
+- **Unsupported.** Native Windows. Run the installer from a Linux distribution inside WSL instead.
+
 ## Before you start
 
-- **A supported computer:** macOS on Apple silicon or Intel, or Linux on x86_64 with glibc 2.34 or later (`ldd --version` shows it). Linux on ARM is not supported. **An Intel Mac installs with no CloudRoom,** on 0.1.1 and on 0.1.0 alike: preflight reads it ready. CloudRoom has no Intel Mac build, so on an Intel Mac, agents run on this computer or on boat.dev. On Linux older than glibc 2.39, `openwiz` may print a `GLIBC_2.39` warning and still work.
+- **A supported computer:** macOS on Apple silicon or Intel, or Linux on x86_64 or ARM64 (aarch64) with glibc 2.34 or later (`ldd --version` shows it). **An Intel Mac installs with no CloudRoom,** on 0.1.1 and on 0.1.0 alike: preflight reads it ready. CloudRoom has no Intel Mac build and no ARM64 Linux build, so on an Intel Mac or on ARM64 Linux, agents run on this computer or on boat.dev. On x86_64 Linux older than glibc 2.39, `openwiz` may print a `GLIBC_2.39` warning and still work. On ARM64 Linux the package has to be built for glibc 2.34; a hard `GLIBC_2.39` requirement does not start.
 - **Python 3.9 or later, `git`, and the GitHub CLI** (`gh`, signed in with `gh auth login`).
 - **Where your agents run,** asked first, before anything else: this computer, boat.dev or CloudRoom. CloudRoom is optional: only the CloudRoom choice needs it installed.
   - **This computer:** the Claude Code or Codex you're signed in to, and your `gh` login. Nothing else to sign in to.
@@ -24,22 +32,38 @@ Using Grok Bot? See [Grok Bot + OpenWiz](grok-bot.md).
 
 The agent runs each command itself and reads its JSON. `<root>` is the install folder, by default `~/.local/lib/openwiz`: use a new or empty folder that holds nothing else, because the installer also accepts a folder that already has other files in it. If you give `install install` a separate `--state-root`, it too must be a new or empty folder used by OpenWiz alone, never one shared with another app. `<target>` is `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-gnu` or `aarch64-unknown-linux-gnu`.
 
-1. **Preflight.** It clones this repository at the `v0.1.1` tag into a private temporary folder as `$openwiz` (`git clone --depth 1 --branch v0.1.1 https://github.com/openwizdev/OpenWiz "$openwiz"`) and checks this computer: Python, a supported system, free disk space, and whether `room-cli`, `gh` and `git` are installed. It reads only; anything missing comes with its next step. A missing `room-cli` never stops it: it says CloudRoom is optional, needed only if you pick it. On an Intel Mac it reads ready and notes that agents run on this computer or on boat.dev.
+1. **Preflight.** It clones this repository at `<tag>` into a private temporary folder as `$openwiz` (`git clone --depth 1 --branch "$tag" -- https://github.com/openwizdev/OpenWiz "$openwiz"`, and only after the whole value of `<tag>` matches `v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)`) and checks this computer: Python, a supported system, free disk space, and whether `room-cli`, `gh` and `git` are installed. It reads only; anything missing comes with its next step. A missing `room-cli` never stops it: it says CloudRoom is optional, needed only if you pick it. On an Intel Mac it reads ready and notes that agents run on this computer or on boat.dev.
 
    ```sh
    python3 -I "$openwiz"/tools/install/install preflight
    ```
 
-2. **Verified download and install.** It downloads the release's checksum file, manifest and package from GitHub and checks the package's SHA-256 hash against the manifest before using it. No Rust, Node or source build is needed. A hash proves the files are the release's files; it is not a publisher signature. A failed check changes nothing, and an earlier install keeps working.
+2. **Verified download and install.** Before downloading or activating anything, check that the selected `<tag>` is `v0.1.1` (`<version>` is `0.1.1`, the version this guide expects); if not, stop without downloading or activating. Pass `--version "$tag"` so `download` fetches that exact release tag from GitHub (not GitHub's Latest release, which may have moved), checks the manifest against its checksum and the package's SHA-256 hash against the manifest and `SHA256SUMS`, and writes nothing to `<root>`. No Rust, Node or source build is needed. A hash proves the files are the release's files; it is not a publisher signature. A failed check changes nothing, and an earlier install keeps working.
 
    ```sh
-   python3 -I "$openwiz"/tools/install/install download --target <target> --dir <new private folder>
+   python3 -I "$openwiz"/tools/install/install download --target <target> --dir <new private folder> --version "$tag"
+   ```
+
+   Check before activation that `download` printed `"outcome": "downloaded"` and `"version"` equal to `<version>` (`0.1.1`), and that `<that folder>/openwiz-<target>.manifest.json` reports `"version"` equal to `<version>` (`0.1.1`); if either differs, stop and do not run `install install`. Only after that check passes, activate the verified build:
+
+   ```sh
    python3 -I "$openwiz"/tools/install/install install --assets <that folder> --target <target> --root <root>
    ```
 
-   `install` prints `"activated": true`, the version, and the `build` and `state_root` folders, written below as `<build>` and `<state>`. `download` reads GitHub's Latest release, which will be OpenWiz 0.1.1 once it is out; if it refuses with "could not be completed safely", check the [releases page](https://github.com/openwizdev/OpenWiz/releases). The same three files will be under `https://github.com/openwizdev/OpenWiz/releases/download/v0.1.1/` once 0.1.1 is out: `openwiz-<target>.sha256`, `openwiz-<target>.manifest.json` and `openwiz-0.1.1-<target>.tar.gz`. Put them in a new private folder (mode 700, files 600) and run `install install --assets` on it; it checks every hash the same way.
+   `install` prints `"activated": true`, the version, and the `build` and `state_root` folders, written below as `<build>` and `<state>`. `download --version "$tag"` reads `https://github.com/openwizdev/OpenWiz/releases/download/$tag/` (`v0.1.1` once 0.1.1 is out); if it refuses with "could not be completed safely", check the [releases page](https://github.com/openwizdev/OpenWiz/releases). The same three files will be under `https://github.com/openwizdev/OpenWiz/releases/download/v0.1.1/` once 0.1.1 is out: `openwiz-<target>.sha256`, `openwiz-<target>.manifest.json` and `openwiz-0.1.1-<target>.tar.gz`. Put them in a new private folder (mode 700, files 600), verify `openwiz-<target>.manifest.json` names `"version": "0.1.1"` before activation, and run `install install --assets` on it; it checks every hash the same way.
 
    Then it proves the build: `<root>/current/openwiz --build-identity` prints the version (`0.1.1`) and the source commit. The `openwiz` program lives there, not on your `PATH`: typing `openwiz` alone says "command not found".
+
+   **Early builds (OpenWiz Pro, opt-in):** with no extra flag, `install download` reads only public releases from `openwizdev/OpenWiz` and installs on the `packaged` channel. Because step 1's `$openwiz` clone is pinned to `v0.1.1` (which does not accept `--early`), OpenWiz Pro members first clone the current default branch into a separate private temporary folder (or use an installer from `0.2.0` or later once released), then pass `--early` to `install download`:
+
+   ```sh
+   openwiz_early=$(mktemp -d)/OpenWiz
+   git clone --depth 1 https://github.com/openwizdev/OpenWiz "$openwiz_early"
+   python3 -I "$openwiz_early"/tools/install/install download --early --target <target> --dir <new private folder>
+   python3 -I "$openwiz_early"/tools/install/install install --assets <that folder> --target <target> --root <root>
+   ```
+
+   `download --early` uses your existing `gh` login (without storing or logging any token) to check prereleases tagged `v<version>-rc.<n>` in the private `openwizpro/WizPro` repository alongside public releases, picks whichever is newer by semver, and verifies `SHA256SUMS`, the manifest and the archive the same way. Installing writes `{"schema":"openwiz.update-channel.v1","channel":"early"}` to `<root>/channel.json` (switching an existing `packaged` install to `early` only after the new build verifies and activates), and later updates follow the newest early or public release by semver so you are never left behind a public release. If `gh` is missing or not logged in, it refuses and tells you to run `gh auth login`; if your account does not have access to `openwizpro/WizPro` (HTTP 404), it refuses and links to [openwiz.dev/pro](https://openwiz.dev/pro/). `install remove` removes an `early` `channel.json` the same as `packaged`.
 
 3. **Setup and logins.** Nothing opens in a browser by itself: the agent reads each connection with one check, run from the installed build, and reruns it after each change.
 
@@ -53,7 +77,7 @@ The agent runs each command itself and reads its JSON. `<root>` is the install f
    - **GitHub:** `runtime/setup/github_login.py sign-in --state-dir <state>` reuses your existing `gh` login, or shows what GitHub's own browser sign-in will do and waits for your yes. You paste no token.
    - **`identity_unreadable`** (for `personal_github`): GitHub's answer could not be read just then. Wait a minute and run `check` again; it usually clears.
 
-4. **Skills into your agents, then a restart.** Only now, with setup checked and the logins done, it copies OpenWiz's skills from the 0.1.1 package (WizSkills 0.4.0) into each agent found on this computer: `~/.claude/skills` (Claude Code), `~/.codex/skills` (Codex), `~/.cursor/skills` (Cursor), `~/.config/opencode/skills` (OpenCode) and `~/.grok/skills` (Grok). A skill of yours with the same name stops the step before anything is written.
+4. **Skills into your agents, then a restart.** Only now, with setup checked and the logins done, it copies OpenWiz's skills from that release's package (the WizSkills release recorded by `wizskills.lock` on `<tag>`) into each agent found on this computer: `~/.claude/skills` (Claude Code), `~/.codex/skills` (Codex), `~/.cursor/skills` (Cursor), `~/.config/opencode/skills` (OpenCode) and `~/.grok/skills` (Grok). A skill of yours with the same name stops the step before anything is written.
 
    ```sh
    python3 -I "$openwiz"/tools/install/install skills --root <root>
@@ -91,7 +115,7 @@ Start a new session of your agent and say "continue the OpenWiz install": every 
 Ask the agent to remove OpenWiz. It goes in this order:
 
 - **First, the heartbeat,** if a fleet runs on this computer or boat.dev. From the installed launch-fleet skill's folder (for example `~/.claude/skills/launch-fleet`), `python3 -I scripts/heartbeat.py status <owner>/<repo> <spec>` shows the job. `heartbeat.py pause <owner>/<repo> <spec>` stops it for now (`resume` brings it back). `heartbeat.py remove <owner>/<repo> <spec>` takes down the schedule, stops the fleet's orchestrator and deletes the heartbeat's state. Remove each one before deleting OpenWiz's files, or the job keeps running.
-- **Then the install:** `python3 -I "$openwiz"/tools/install/install remove --root <root>` (from a 0.1.1 clone, as in step 1; add `--state-root <state>` if you gave one) previews exactly what OpenWiz made: the `current` link, `channel.json`, `install.lock`, its marked skill copies in `<root>/skills`, the verified builds and its settings in `<state>`. With `--yes` it deletes exactly those, then removes each folder left empty. Anything else stays, links are never followed, and it refuses while an install or update is running.
+- **Then the install:** `python3 -I "$openwiz"/tools/install/install remove --root <root>` (from the `<tag>` clone in step 1; add `--state-root <state>` if you gave one) previews exactly what OpenWiz made: the `current` link, `channel.json`, `install.lock`, its marked skill copies in `<root>/skills`, the verified builds and its settings in `<state>`. With `--yes` it deletes exactly those, then removes each folder left empty. Anything else stays, links are never followed, and it refuses while an install or update is running.
 - **The skill copies in your agents stay:** `install remove` lists, for each agent, a `path` (a shared folder such as `~/.claude/skills`) and the `names` of OpenWiz's skill folders inside it. Remove just those named folders inside each `path`, never the listed folder itself: it also holds your own skills.
 - Your repositories, branches, pull requests and CloudRoom threads are your work and are never deleted.
 
@@ -104,6 +128,80 @@ Ask the agent to remove OpenWiz. It goes in this order:
 
 ## OpenWiz 0.1.0
 
-OpenWiz 0.1.0 ("OpenWiz 0.01") also installs with no CloudRoom, on Apple silicon, an Intel Mac or Linux on x86_64. Its steps differ: its [install skill](https://github.com/openwizdev/WizSkills/blob/33eef93ba30cd8db256f6fe270e3ed28747a79bd/skills/install/SKILL.md) (WizSkills `maint/0.2`, version 0.2.2) clones the `v0.1.0` tag, installs the 0.1.0 files (build identity `0.1.0`), and after `install skills` replaces each agent's packaged `install` skill with that fixed copy. On 0.1.0 the automatic fleet runs in CloudRoom; without CloudRoom you plan (grill, spec, tickets), start each builder by hand on this computer or on boat.dev, and review and merge its pull request yourself. 0.1.0 has no `install remove`: its install skill lists exactly what to delete.
+OpenWiz 0.1.0 ("OpenWiz 0.01") also installs with no CloudRoom, on Apple silicon, an Intel Mac or Linux on x86_64. Its [install skill](https://github.com/openwizdev/WizSkills/blob/33eef93ba30cd8db256f6fe270e3ed28747a79bd/skills/install/SKILL.md) (WizSkills commit `33eef93ba30cd8db256f6fe270e3ed28747a79bd`, version 0.2.2) is that commit, not `v0.1.0`'s `wizskills.lock`. On 0.1.0 the automatic fleet runs in CloudRoom; without CloudRoom you plan (grill, spec, tickets), start each builder by hand on this computer or on boat.dev, and review and merge its pull request yourself. 0.1.0 has no `install remove`: its install skill lists exactly what to delete.
 
-Today 0.1.0 is GitHub's Latest release, so 0.1.0's `download` step fetches 0.1.0. Once 0.1.1 is the Latest release, that step fetches 0.1.1, and 0.1.0's installer has no `--version`. Then select 0.1.0 explicitly instead of running `download`: put its three files from `https://github.com/openwizdev/OpenWiz/releases/download/v0.1.0/` (`openwiz-<target>.sha256`, `openwiz-<target>.manifest.json` and `openwiz-0.1.0-<target>.tar.gz`) in a new private folder (mode 700, files 600), then run `python3 -I "$openwiz"/tools/install/install install --assets <that folder> --target <target> --root <root>` from the `v0.1.0` clone. It checks every hash, and `<root>/current/openwiz --build-identity` reads `0.1.0`.
+When the skill URL cannot be read directly, recover it by commit first and follow it from the top, or run these complete 0.1.0 steps in order:
+
+1. **Recover and verify the pinned 0.1.0 install skill** (also needed in step 5 below):
+
+   ```sh
+   wizskills=$(mktemp -d)
+   expected_commit=33eef93ba30cd8db256f6fe270e3ed28747a79bd
+   expected_tree=30d1eaf27658efd8f781f98703fbbdb81bcd705d
+   git init -q -- "$wizskills"
+   git -C "$wizskills" fetch -q --depth 1 -- https://github.com/openwizdev/WizSkills "$expected_commit"
+   git -C "$wizskills" switch -q --detach FETCH_HEAD
+   head_commit=$(git -C "$wizskills" rev-parse HEAD)
+   install_tree=$(git -C "$wizskills" rev-parse HEAD:skills/install)
+   ```
+
+   Verify `$head_commit` equals `33eef93ba30cd8db256f6fe270e3ed28747a79bd` and `$install_tree` equals `30d1eaf27658efd8f781f98703fbbdb81bcd705d`; if the fetch fails or either hash mismatches, stop and say so. When the skill URL could not be read, follow `"$wizskills"/skills/install/SKILL.md` from the top.
+
+2. **Preflight:** clone tag `v0.1.0` into a new private temporary folder and run preflight:
+
+   ```sh
+   openwiz=$(mktemp -d)
+   git clone --depth 1 --branch v0.1.0 -- https://github.com/openwizdev/OpenWiz "$openwiz"
+   python3 -I "$openwiz"/tools/install/install preflight
+   ```
+
+3. **Verified download and install:** 0.1.0's `install download` has no `--version` and reads GitHub's Latest release (which stops being 0.1.0 once 0.1.1 is released). Select 0.1.0 explicitly from `https://github.com/openwizdev/OpenWiz/releases/download/v0.1.0/` into a new private folder (mode 700, files 600), verify the manifest names `"version": "0.1.0"` before activation, then run `install install --assets` and prove `--build-identity`:
+
+   ```sh
+   assets=$(mktemp -d)
+   chmod 700 "$assets"
+   umask 077
+   for f in openwiz-<target>.sha256 openwiz-<target>.manifest.json openwiz-0.1.0-<target>.tar.gz; do
+     curl -fsSL --proto '=https' -o "$assets/$f" "https://github.com/openwizdev/OpenWiz/releases/download/v0.1.0/$f"
+   done
+   python3 -I -c 'import json, sys; assert json.load(open(sys.argv[1]))["version"] == "0.1.0"' "$assets/openwiz-<target>.manifest.json"
+   python3 -I "$openwiz"/tools/install/install install --assets "$assets" --target <target> --root <root>
+   <root>/current/openwiz --build-identity
+   ```
+
+   `install` checks every hash and prints `"activated": true`, `<build>` and `<state>`, and `<root>/current/openwiz --build-identity` reads `0.1.0`.
+
+4. **Setup and logins:** check connections from the installed 0.1.0 build and rerun `check` after each change:
+
+   ```sh
+   OPENWIZ_STATE_DIR=<state> python3 -I -B <build>/runtime/setup/setup.py check --state-dir <state>
+   OPENWIZ_STATE_DIR=<state> python3 -I -B <build>/runtime/setup/github_login.py sign-in --state-dir <state>
+   ```
+
+   `github_login.py sign-in` reuses a verified `gh` login, or previews browser sign-in and completes with `--yes` on your yes. **CloudRoom,** only if you pick it (otherwise skip every `cloudroom_*` code): run `OPENWIZ_STATE_DIR=<state> python3 -I -B <build>/runtime/cloudroom/cloudroom.py status --state-dir <state>`, `OPENWIZ_STATE_DIR=<state> python3 -I -B <build>/runtime/cloudroom/cloudroom.py install --state-dir <state>` (preview, then `--yes --operation <id>` on your yes; only if you pick CloudRoom), and `OPENWIZ_STATE_DIR=<state> python3 -I -B <build>/runtime/cloudroom/cloudroom.py sign-in --state-dir <state>` until `check` reads `cloudroom_login_verified`.
+
+5. **Skills and required `install` skill replacement:** run `install skills`, then overwrite each agent's packaged `install` skill from the verified `"$wizskills"/skills/install` folder before restarting. The 0.1.0 archive ships `install` skill `version: 0.2.0`, which tells a restarted agent to run `install open` — a command the `v0.1.0` installer rejects.
+
+   ```sh
+   python3 -I "$openwiz"/tools/install/install skills --root <root>
+   src="$wizskills/skills/install"
+   if [ "$(git -C "$wizskills" rev-parse HEAD)" != "$expected_commit" ] || [ "$(git -C "$wizskills" rev-parse HEAD:skills/install)" != "$expected_tree" ]; then
+     echo "SOURCE MISMATCH" >&2; false
+   else
+     failed=no
+     for d in "$HOME/.claude/skills" "$HOME/.codex/skills" ${CODEX_HOME:+"$CODEX_HOME/skills"} "$HOME/.cursor/skills" "$HOME/.config/opencode/skills" "$HOME/.grok/skills"; do
+       [ -f "$d/install/.openwiz-skill" ] || continue
+       cp -R "$src"/. "$d/install/"
+       same=yes
+       for f in $(cd "$src" && find . -type f); do cmp -s "$src/$f" "$d/install/$f" || same=no; done
+       if [ "$same" = yes ] && grep -q '^version: 0.2.2$' "$d/install/SKILL.md" && ! grep -q -e 'install ope[n] ' -e 'from the setup pag[e]' -e 'Restart the OpenWiz serve[r]' "$d/install/SKILL.md" "$d/install"/scripts/*.py; then
+         echo "ok: $d/install"
+       else
+         echo "STILL OLD: $d/install" >&2; failed=yes
+       fi
+     done
+     [ "$failed" = no ]
+   fi
+   ```
+
+   If `SOURCE MISMATCH` or `STILL OLD` appears, stop before restarting and tell the user; never restart onto the 0.1.0 archive's `0.2.0` copy. Once every installed folder prints `ok:`, restart the agent and say `continue the OpenWiz install`.

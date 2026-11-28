@@ -85,8 +85,8 @@ impl Sha256Hasher {
 
     pub fn update(&mut self, mut data: &[u8]) {
         self.len = self.len.wrapping_add(data.len() as u64);
-        while !data.is_empty() {
-            let take = data.len().min(64 - self.filled);
+        if self.filled != 0 && !data.is_empty() {
+            let take = (64 - self.filled).min(data.len());
             self.block[self.filled..self.filled + take].copy_from_slice(&data[..take]);
             self.filled += take;
             data = &data[take..];
@@ -95,18 +95,42 @@ impl Sha256Hasher {
                 self.filled = 0;
             }
         }
+        let (blocks, rest) = data.as_chunks::<64>();
+        for block in blocks {
+            compress(&mut self.state, block);
+        }
+        if !rest.is_empty() {
+            self.block[..rest.len()].copy_from_slice(rest);
+            self.filled = rest.len();
+        }
     }
 
     pub fn finish(mut self) -> String {
-        let bit_len = self.len.wrapping_mul(8);
-        let zeros = (55usize.wrapping_sub(self.filled)) % 64;
-        let mut tail = vec![0x80];
-        tail.resize(1 + zeros, 0);
-        tail.extend_from_slice(&bit_len.to_be_bytes());
-        self.update(&tail);
-        self.state
-            .iter()
-            .map(|word| format!("{word:08x}"))
-            .collect()
+        let bits = self.len.wrapping_mul(8);
+        let offset = self.filled;
+        self.block[offset] = 0x80;
+        if offset >= 56 {
+            self.block[offset + 1..].fill(0);
+            compress(&mut self.state, &self.block);
+            self.block.fill(0);
+        } else {
+            self.block[offset + 1..56].fill(0);
+        }
+        self.block[56..].copy_from_slice(&bits.to_be_bytes());
+        compress(&mut self.state, &self.block);
+        let mut hex = [0u8; 64];
+        for (i, word) in self.state.iter().enumerate() {
+            let bytes = word.to_be_bytes();
+            for (j, byte) in bytes.iter().enumerate() {
+                let at = (i * 4 + j) * 2;
+                hex[at] = HEX[(byte >> 4) as usize];
+                hex[at + 1] = HEX[(byte & 0x0f) as usize];
+            }
+        }
+        std::str::from_utf8(&hex)
+            .expect("hex digits are ASCII")
+            .to_owned()
     }
 }
+
+const HEX: &[u8; 16] = b"0123456789abcdef";

@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OpenWiz voice prompter v1 decision answer",
+  "oneOf": [
+    {"$ref": "#/$defs/command_or_text"},
+    {"$ref": "#/$defs/route_focused"},
+    {"$ref": "#/$defs/route_named"},
+    {"$ref": "#/$defs/term_keep"},
+    {"$ref": "#/$defs/term_replace"},
+    {"$ref": "#/$defs/respeak"}
+  ],
+  "$defs": {
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "text": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "command_or_text": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [ "kind", "value", "confidence" ],
+      "properties": {
+        "kind": {"const": "command_or_text"},
+        "value": {
+          "enum": [ "command", "text" ]
+        },
+        "confidence": {"$ref": "#/$defs/confidence"}
+      }
+    },
+    "route_focused": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [ "kind", "value", "confidence" ],
+      "properties": {
+        "kind": {"const": "route"},
+        "value": {"const": "focused"},
+        "confidence": {"$ref": "#/$defs/confidence"}
+      }
+    },
+    "route_named": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [ "kind", "value", "confidence", "name" ],
+      "properties": {
+        "kind": {"const": "route"},
+        "value": {
+          "enum": [ "thread", "agent" ]
+        },
+        "confidence": {"$ref": "#/$defs/confidence"},
+        "name": {"$ref": "#/$defs/text"}
+      }
+    },
+    "term_keep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [ "kind", "value", "confidence" ],
+      "properties": {
+        "kind": {"const": "term_fix"},
+        "value": {"const": "keep"},
+        "confidence": {"$ref": "#/$defs/confidence"}
+      }
+    },
+    "term_replace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [ "kind", "value", "confidence", "heard", "term" ],
+      "properties": {
+        "kind": {"const": "term_fix"},
+        "value": {"const": "replace"},
+        "confidence": {"$ref": "#/$defs/confidence"},
+        "heard": {"$ref": "#/$defs/text"},
+        "term": {"$ref": "#/$defs/text"}
+      }
+    },
+    "respeak": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [ "kind", "value", "confidence" ],
+      "properties": {
+        "kind": {"const": "respeak"},
+        "value": {
+          "enum": [ "replace_last", "append" ]
+        },
+        "confidence": {"$ref": "#/$defs/confidence"}
+      }
+    }
+  }
+}

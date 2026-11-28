@@ -1,0 +1,44 @@
+{
+  "schema": "openwiz.factory-bench.v1",
+  "name": "Synthetic café tasks",
+  "tasks": [
+    {
+      "id": "trim-lines",
+      "source": {
+        "product": "Synthetic Tasks",
+        "repository": "https://example.com/synthetic/tasks",
+        "commit": "1111111111111111111111111111111111111111",
+        "licence": "MIT"
+      },
+      "instruction": "Trim trailing spaces.",
+      "start": "tasks/trim-lines/start",
+      "judge": {
+        "run": "python3 judge.py",
+        "timeout": 30
+      },
+      "caps": {
+        "wall_minutes": 5,
+        "tokens": 500
+      }
+    },
+    {
+      "id": "count-words",
+      "source": {
+        "product": "Synthetic Tasks",
+        "repository": "https://example.com/synthetic/tasks",
+        "commit": "1111111111111111111111111111111111111111",
+        "licence": "Apache-2.0"
+      },
+      "instruction": "Count the words in a line.",
+      "start": "tasks/count-words/start",
+      "judge": {
+        "run": "python3 judge.py",
+        "timeout": 30
+      },
+      "caps": {
+        "wall_minutes": 5,
+        "tokens": 500
+      }
+    }
+  ]
+}

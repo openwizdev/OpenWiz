@@ -16,7 +16,7 @@ on:
     branches: [main]
   # Every merge to main, which also saves the Cargo caches pull requests read.
   push:
-    branches: [main]
+    branches: [main, 'release-*']
 
 permissions:
   contents: read
@@ -116,6 +116,18 @@ jobs:
       - name: The release proofs
         if: matrix.part == 1
         run: python3 tools/release/test.py
+      - name: The Chrome extension
+        if: matrix.part == 1
+        run: |
+          python3 -I extensions/chrome/bridge/test_bridge.py
+          node --test extensions/chrome/policy.test.mjs
+      - name: The roadmap and installer helpers' tests
+        if: matrix.part == 1
+        run: |
+          python3 -I tools/roadmap/test.py
+          python3 -I tools/install/access/test_access.py
+          python3 -I tools/install/cloudroom/test_cloudroom.py
+          python3 -I tools/install/setup/test_check.py
       - name: The kernel kits' tests (part 1)
         if: matrix.part == 3
         run: |
@@ -132,9 +144,22 @@ jobs:
           python3 -I ci/driver-tests.py
           python3 -I kernel/records/model/test_model.py
           python3 -I kernel/driver-kit/test_hostkey.py
+      - name: The live-smoke tests
+        if: matrix.part == 4
+        run: |
+          python3 -I tools/live-smoke/test_smoke.py
+          python3 -I tools/live-smoke/test_kit.py
+          python3 -I tools/live-smoke/test_review.py
       - name: The live-check rig's tests
         if: matrix.part == 2
+        env:
+          WIZMARKET_COMMIT: 35ce60ae49a94741049f4790fc5cac0d26273fab
         run: |
+          WIZMARKET="$RUNNER_TEMP/wizmarket"
+          git init -q "$WIZMARKET"
+          git -C "$WIZMARKET" fetch -q --depth=1 --no-tags https://github.com/openwizdev/WizMarket.git "$WIZMARKET_COMMIT"
+          git -C "$WIZMARKET" checkout -q --detach FETCH_HEAD
+          export WIZMARKET
           stubs=$(mktemp -d)
           for cli in claude codex cursor-agent agent cursor pi opencode copilot goose gemini kimi qwen cline kilo \
               kilocode crush vibe auggie kiro-cli junie amp agy oz sculpt hermes acpx droid boat room-cli runpane \
@@ -159,11 +184,14 @@ jobs:
           cargo build --locked --jobs 2 -p openwiz-cli --bins
           python3 -I tools/release/test_package.py
           python3 -I tools/release/test_product_identity.py
+          python3 -I tools/release/test_glibc.py
       - name: The installer
         if: matrix.part == 2
         run: |
           python3 -I tools/install/test_install.py
+          python3 -I tools/install/test_phrase.py
           python3 -I tools/install/test_pull.py
+          python3 -I tools/downloads/test_counts.py
           python3 -I tools/install/tests/public-release-security/baseline/test_baseline.py
           python3 -I tools/install/tests/public-release-security/test_candidate.py
           python3 -I tools/install/tests/setup-onboard-contract/test_contract.py
@@ -185,6 +213,7 @@ jobs:
         run: |
           python3 -I tools/open-import/test_import.py
           python3 -I tools/skills-eval/test.py
+          python3 -I tools/memo/test_memo.py
       - name: Save the Cargo cache
         if: github.event_name == 'push' && matrix.part == 2
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -212,7 +241,7 @@ jobs:
       - name: The comment check (#1817)
         run: |
           python3 -I tools/comment-check/test_check.py
-          python3 -I docs/evidence/1817/test_ci_step.py
+          python3 -I tools/comment-check/test_ci_step.py
           git fetch --no-tags --depth=2 origin "$GITHUB_SHA"
           python3 -I tools/comment-check/check.py diff --base HEAD^1
       - name: The owned-paths tests

@@ -1,0 +1,13 @@
+{
+  "host": "fixture-template",
+  "harness": "fake-harness",
+  "model": "Synthetic 1",
+  "date": "2026-11-26",
+  "driver_commit": "2b0b0d192d9013f223279d507bc7a809540f66da",
+  "kit_commit": "2b0b0d192d9013f223279d507bc7a809540f66da",
+  "outcome": "ran",
+  "skipped": null,
+  "kit_exit": 0,
+  "stdout": "pass version: openwiz:records v1, and the schema is driver v1\npass start: the run posted builder status note 2; effort: medium reached a process the run started\npass wake: the run edited builder status note 2\npass stop: the run ended, and a wake after it is refused\npass token: no login or token passed through the driver\n",
+  "seconds": 21
+}

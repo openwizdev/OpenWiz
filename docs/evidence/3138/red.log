@@ -1,0 +1,206 @@
+test_fleet_contract_has_openwiz_rows_section_and_example (__main__.FleetOpenWizRowsTests.test_fleet_contract_has_openwiz_rows_section_and_example) ... FAIL
+test_openwiz_rows_parser_refuses_bad_tables (__main__.FleetOpenWizRowsTests.test_openwiz_rows_parser_refuses_bad_tables) ... ok
+test_records_v1_indexes_every_app_record_form_and_rules (__main__.RecordsContractTests.test_records_v1_indexes_every_app_record_form_and_rules) ... FAIL
+test_doc_example_validates (__main__.ReleaseManifestSchemaTests.test_doc_example_validates) ... FAIL
+test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) ... 
+  test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='missing wizskills.version') ... FAIL
+  test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='missing wizskills.commit') ... FAIL
+  test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='missing wizskills.tree') ... FAIL
+  test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='missing top-level schema') ... FAIL
+  test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='missing top-level kernel_version') ... FAIL
+  test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='missing top-level wizskills') ... FAIL
+  test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='missing top-level records_contract') ... FAIL
+  test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='extra top-level field') ... FAIL
+  test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='extra wizskills field') ... FAIL
+  test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='wrong schema id') ... FAIL
+  test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='v-prefixed kernel_version') ... FAIL
+  test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='leading-zero wizskills.version') ... FAIL
+  test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='uppercase hex commit') ... FAIL
+  test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='short tree hash') ... FAIL
+  test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='records_contract zero') ... FAIL
+  test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='records_contract string') ... FAIL
+  test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='records_contract bool') ... FAIL
+  test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='positional array') ... FAIL
+test_schema_declares_id_and_title (__main__.ReleaseManifestSchemaTests.test_schema_declares_id_and_title) ... FAIL
+test_strict_reader_refuses_duplicate_keys_and_float_integer (__main__.ReleaseManifestSchemaTests.test_strict_reader_refuses_duplicate_keys_and_float_integer) ... ok
+
+======================================================================
+FAIL: test_fleet_contract_has_openwiz_rows_section_and_example (__main__.FleetOpenWizRowsTests.test_fleet_contract_has_openwiz_rows_section_and_example)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/OpenWiz/docs/evidence/3138/test_contracts.py", line 254, in test_fleet_contract_has_openwiz_rows_section_and_example
+    self.assertTrue(
+AssertionError: False is not true : contracts/fleet.v1.md missing ## OpenWiz rows section
+
+======================================================================
+FAIL: test_records_v1_indexes_every_app_record_form_and_rules (__main__.RecordsContractTests.test_records_v1_indexes_every_app_record_form_and_rules)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/OpenWiz/docs/evidence/3138/test_contracts.py", line 225, in test_records_v1_indexes_every_app_record_form_and_rules
+    self.assertTrue(RECORDS_DOC_PATH.is_file(), "contracts/records.v1.md missing")
+AssertionError: False is not true : contracts/records.v1.md missing
+
+======================================================================
+FAIL: test_doc_example_validates (__main__.ReleaseManifestSchemaTests.test_doc_example_validates)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/OpenWiz/docs/evidence/3138/test_contracts.py", line 134, in test_doc_example_validates
+    self.assertTrue(MANIFEST_DOC_PATH.is_file(), "release-manifest.v1.md missing")
+AssertionError: False is not true : release-manifest.v1.md missing
+
+======================================================================
+FAIL: test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='missing wizskills.version')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/OpenWiz/docs/evidence/3138/test_contracts.py", line 199, in test_refuses_malformed_manifests
+    self.assertTrue(errors, f"schema accepted malformed manifest: {label}")
+AssertionError: [] is not true : schema accepted malformed manifest: missing wizskills.version
+
+======================================================================
+FAIL: test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='missing wizskills.commit')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/OpenWiz/docs/evidence/3138/test_contracts.py", line 199, in test_refuses_malformed_manifests
+    self.assertTrue(errors, f"schema accepted malformed manifest: {label}")
+AssertionError: [] is not true : schema accepted malformed manifest: missing wizskills.commit
+
+======================================================================
+FAIL: test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='missing wizskills.tree')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/OpenWiz/docs/evidence/3138/test_contracts.py", line 199, in test_refuses_malformed_manifests
+    self.assertTrue(errors, f"schema accepted malformed manifest: {label}")
+AssertionError: [] is not true : schema accepted malformed manifest: missing wizskills.tree
+
+======================================================================
+FAIL: test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='missing top-level schema')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/OpenWiz/docs/evidence/3138/test_contracts.py", line 199, in test_refuses_malformed_manifests
+    self.assertTrue(errors, f"schema accepted malformed manifest: {label}")
+AssertionError: [] is not true : schema accepted malformed manifest: missing top-level schema
+
+======================================================================
+FAIL: test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='missing top-level kernel_version')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/OpenWiz/docs/evidence/3138/test_contracts.py", line 199, in test_refuses_malformed_manifests
+    self.assertTrue(errors, f"schema accepted malformed manifest: {label}")
+AssertionError: [] is not true : schema accepted malformed manifest: missing top-level kernel_version
+
+======================================================================
+FAIL: test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='missing top-level wizskills')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/OpenWiz/docs/evidence/3138/test_contracts.py", line 199, in test_refuses_malformed_manifests
+    self.assertTrue(errors, f"schema accepted malformed manifest: {label}")
+AssertionError: [] is not true : schema accepted malformed manifest: missing top-level wizskills
+
+======================================================================
+FAIL: test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='missing top-level records_contract')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/OpenWiz/docs/evidence/3138/test_contracts.py", line 199, in test_refuses_malformed_manifests
+    self.assertTrue(errors, f"schema accepted malformed manifest: {label}")
+AssertionError: [] is not true : schema accepted malformed manifest: missing top-level records_contract
+
+======================================================================
+FAIL: test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='extra top-level field')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/OpenWiz/docs/evidence/3138/test_contracts.py", line 199, in test_refuses_malformed_manifests
+    self.assertTrue(errors, f"schema accepted malformed manifest: {label}")
+AssertionError: [] is not true : schema accepted malformed manifest: extra top-level field
+
+======================================================================
+FAIL: test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='extra wizskills field')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/OpenWiz/docs/evidence/3138/test_contracts.py", line 199, in test_refuses_malformed_manifests
+    self.assertTrue(errors, f"schema accepted malformed manifest: {label}")
+AssertionError: [] is not true : schema accepted malformed manifest: extra wizskills field
+
+======================================================================
+FAIL: test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='wrong schema id')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/OpenWiz/docs/evidence/3138/test_contracts.py", line 199, in test_refuses_malformed_manifests
+    self.assertTrue(errors, f"schema accepted malformed manifest: {label}")
+AssertionError: [] is not true : schema accepted malformed manifest: wrong schema id
+
+======================================================================
+FAIL: test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='v-prefixed kernel_version')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/OpenWiz/docs/evidence/3138/test_contracts.py", line 199, in test_refuses_malformed_manifests
+    self.assertTrue(errors, f"schema accepted malformed manifest: {label}")
+AssertionError: [] is not true : schema accepted malformed manifest: v-prefixed kernel_version
+
+======================================================================
+FAIL: test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='leading-zero wizskills.version')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/OpenWiz/docs/evidence/3138/test_contracts.py", line 199, in test_refuses_malformed_manifests
+    self.assertTrue(errors, f"schema accepted malformed manifest: {label}")
+AssertionError: [] is not true : schema accepted malformed manifest: leading-zero wizskills.version
+
+======================================================================
+FAIL: test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='uppercase hex commit')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/OpenWiz/docs/evidence/3138/test_contracts.py", line 199, in test_refuses_malformed_manifests
+    self.assertTrue(errors, f"schema accepted malformed manifest: {label}")
+AssertionError: [] is not true : schema accepted malformed manifest: uppercase hex commit
+
+======================================================================
+FAIL: test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='short tree hash')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/OpenWiz/docs/evidence/3138/test_contracts.py", line 199, in test_refuses_malformed_manifests
+    self.assertTrue(errors, f"schema accepted malformed manifest: {label}")
+AssertionError: [] is not true : schema accepted malformed manifest: short tree hash
+
+======================================================================
+FAIL: test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='records_contract zero')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/OpenWiz/docs/evidence/3138/test_contracts.py", line 199, in test_refuses_malformed_manifests
+    self.assertTrue(errors, f"schema accepted malformed manifest: {label}")
+AssertionError: [] is not true : schema accepted malformed manifest: records_contract zero
+
+======================================================================
+FAIL: test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='records_contract string')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/OpenWiz/docs/evidence/3138/test_contracts.py", line 199, in test_refuses_malformed_manifests
+    self.assertTrue(errors, f"schema accepted malformed manifest: {label}")
+AssertionError: [] is not true : schema accepted malformed manifest: records_contract string
+
+======================================================================
+FAIL: test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='records_contract bool')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/OpenWiz/docs/evidence/3138/test_contracts.py", line 199, in test_refuses_malformed_manifests
+    self.assertTrue(errors, f"schema accepted malformed manifest: {label}")
+AssertionError: [] is not true : schema accepted malformed manifest: records_contract bool
+
+======================================================================
+FAIL: test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) (case='positional array')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/OpenWiz/docs/evidence/3138/test_contracts.py", line 199, in test_refuses_malformed_manifests
+    self.assertTrue(errors, f"schema accepted malformed manifest: {label}")
+AssertionError: [] is not true : schema accepted malformed manifest: positional array
+
+======================================================================
+FAIL: test_schema_declares_id_and_title (__main__.ReleaseManifestSchemaTests.test_schema_declares_id_and_title)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/OpenWiz/docs/evidence/3138/test_contracts.py", line 127, in test_schema_declares_id_and_title
+    self.assertEqual(self.schema.get("title"), "openwiz.release-manifest.v1")
+AssertionError: None != 'openwiz.release-manifest.v1'
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.005s
+
+FAILED (failures=22)

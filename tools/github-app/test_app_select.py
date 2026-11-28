@@ -135,7 +135,8 @@ class SelectorTests(unittest.TestCase):
 
     def select(self, url, message):
         env = {k: v for k, v in os.environ.items() if not k.startswith("OPENWIZ_")}
-        env.update(OPENWIZ_APP_SELECT_CONFIG=str(self.config), OPENWIZ_STATE_DIR=str(self.default))
+        env.update(OPENWIZ_APP_SELECT_CONFIG=str(self.config), OPENWIZ_STATE_DIR=str(self.default),
+                   OPENWIZ_SYNTHETIC_GITHUB="1")
         done = subprocess.run(["python3", "-I", "-c", HOOK, str(self.argv_log), str(SELECTOR), "mint",
                                "--api-base", url], input=json.dumps(message), capture_output=True, text=True,
                               timeout=60, env=env)

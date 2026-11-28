@@ -43,6 +43,34 @@ jobs:
           PY
       - name: Native Rust
         run: rustup toolchain install 1.99.1 --profile minimal --no-self-update && rustup default 1.99.1
+      - name: Install pinned Zig and cargo-zigbuild
+        if: endsWith(matrix.target, '-unknown-linux-gnu')
+        run: |
+          case "$TARGET" in
+            x86_64-unknown-linux-gnu)
+              zig_arch=x86_64-linux
+              zig_sha=3581863e3cbcfd0fce0efc682ce7e9e93da96668a977791d356a26d2a7e9b17a
+              czb_sha=32581c8e13f27a807bb244aaaac870522f5b51263c766cf77b1a99771ce9fa5c
+              ;;
+            aarch64-unknown-linux-gnu)
+              zig_arch=aarch64-linux
+              zig_sha=a1546d5646eb184437918d6635ca6b762a0e889eac09cef720ee7a1ed3fe7795
+              czb_sha=70bb4c9cc71a6d16211b9079996e3cd588671053312adeff4d043499ed887601
+              ;;
+            *) echo "unsupported Linux target: $TARGET" >&2; exit 1 ;;
+          esac
+          tools="$RUNNER_TEMP/zigbuild"
+          mkdir -p "$tools/zig" "$tools/bin"
+          curl -fsSL --retry 3 -o "$tools/zig.tar.xz" \
+            "https://ziglang.org/download/0.17.1/zig-${zig_arch}-0.17.1.tar.xz"
+          echo "$zig_sha  $tools/zig.tar.xz" | sha256sum -c -
+          tar -xJf "$tools/zig.tar.xz" -C "$tools/zig" --strip-components=1
+          curl -fsSL --retry 3 -o "$tools/cargo-zigbuild.tar.xz" \
+            "https://github.com/rust-cross/cargo-zigbuild/releases/download/v0.24.1/cargo-zigbuild-${TARGET}.tar.xz"
+          echo "$czb_sha  $tools/cargo-zigbuild.tar.xz" | sha256sum -c -
+          tar -xJf "$tools/cargo-zigbuild.tar.xz" -C "$tools/bin" --strip-components=1
+          echo "$tools/zig" >> "$GITHUB_PATH"
+          echo "$tools/bin" >> "$GITHUB_PATH"
       - name: Build the matching program
         run: |
           python3 - <<'PY'
@@ -60,7 +88,15 @@ jobs:
                   blocks[at] = blocks[at].replace('\nversion = "0.0.1-dev"\n', '\nversion = "' + os.environ['VERSION'] + '"\n', 1)
           lock.write_text('[[package]]'.join(blocks))
           PY
-          cargo build --release --locked --target "$TARGET" -p openwiz-cli
+          case "$TARGET" in
+            *-unknown-linux-gnu)
+              cargo zigbuild --release --locked --target "${TARGET}.2.34" -p openwiz-cli ;;
+            *)
+              cargo build --release --locked --target "$TARGET" -p openwiz-cli ;;
+          esac
+      - name: Check Linux glibc version ceiling
+        if: endsWith(matrix.target, '-unknown-linux-gnu')
+        run: python3 -I tools/release/check_glibc.py --binary "target/$TARGET/release/openwiz" --max 2.34
       - name: Query the native programs' compiled identity
         run: python3 tools/release/product_identity.py query --binaries "target/$TARGET/release" --target "$TARGET" --output program-receipt.json
       - name: The pinned WizSkills

@@ -3,9 +3,9 @@
 The always-on service and its server went in #1264. What still runs is the private
 state it left: the config that `openwiz loop on|off` reads to name the local
 operator, and the state directory's safety checks. The schema is
-[`service.v1.schema.json`](service.v1.schema.json); only its `config` definition
-is still read (`crates/cli/src/state/loops/`). Its status, state and record
-definitions describe the retired service, and no code writes them.
+[`service.v1.schema.json`](service.v1.schema.json). It now defines only `config`
+(`openwiz.service-config.v1`). Its retired status, state and record definitions
+were removed.
 
 ## The config
 

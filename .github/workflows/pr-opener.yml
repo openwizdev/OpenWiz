@@ -1,0 +1,50 @@
+name: PR Opener
+
+on:
+  workflow_dispatch:
+    inputs:
+      head:
+        description: Head branch under room/
+        required: true
+        type: string
+      title:
+        description: Pull request title
+        required: true
+        type: string
+      body:
+        description: Pull request body
+        required: false
+        default: ""
+        type: string
+      draft:
+        description: Open as draft
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  open-pr:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    environment: app-pr-opener
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/heads/main
+          persist-credentials: false
+      - name: Open pull request as openwiz[bot]
+        env:
+          OPENWIZ_GITHUB_APP_KEY: ${{ secrets.OPENWIZ_GITHUB_APP_KEY }}
+          OPENWIZ_GITHUB_APP_ID: ${{ vars.OPENWIZ_GITHUB_APP_ID }}
+          OPENWIZ_PR_HEAD: ${{ inputs.head }}
+          OPENWIZ_PR_TITLE: ${{ inputs.title }}
+          OPENWIZ_PR_BODY: ${{ inputs.body }}
+          OPENWIZ_PR_DRAFT: ${{ inputs.draft }}
+          OPENWIZ_PR_REPOSITORY: ${{ github.repository }}
+          OPENWIZ_PR_REF: ${{ github.ref }}
+        run: python3 -I tools/github-app/pr-opener.py

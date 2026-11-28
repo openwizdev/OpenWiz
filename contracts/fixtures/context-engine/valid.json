@@ -1,0 +1,174 @@
+{
+  "connector": {
+    "schema": "openwiz.context-engine.v1",
+    "kind": "connector-manifest",
+    "id": "synthetic-connector",
+    "source": "synthetic-chat",
+    "scopes": [
+      {
+        "name": "history",
+        "access": "read"
+      }
+    ],
+    "default": "off",
+    "requirements": {
+      "account": "Synthetic account",
+      "plan": "none"
+    }
+  },
+  "transcript": {
+    "schema": "openwiz.context-engine.v1",
+    "kind": "transcript",
+    "source": "synthetic-chat",
+    "conversation": "conversation-7",
+    "message_id": "message-2",
+    "author": "Synthetic Reader",
+    "time": "2031-01-02T03:04:05Z",
+    "text": "First line.\nSecond line.",
+    "attachments": [
+      {
+        "id": "attachment-1"
+      }
+    ]
+  },
+  "saved-post": {
+    "schema": "openwiz.context-engine.v1",
+    "kind": "saved-post",
+    "source": "synthetic-social",
+    "post_id": "post-5",
+    "link": "https://posts.example.invalid/5",
+    "author": "Synthetic Writer",
+    "time": "2031-01-02T03:04:05.125Z",
+    "text": "An invented idea.",
+    "action": "bookmark"
+  },
+  "store-layout": {
+    "schema": "openwiz.context-engine.v1",
+    "kind": "store-layout",
+    "directory": "context",
+    "in_work_tree": false,
+    "directory_mode": "0700",
+    "file_mode": "0600"
+  },
+  "pillars": {
+    "schema": "openwiz.context-engine.v1",
+    "kind": "pillars",
+    "pillars": {
+      "synthetic-garden": {
+        "name": "Synthetic garden",
+        "description": "Invented planting work."
+      }
+    }
+  },
+  "recap": {
+    "schema": "openwiz.context-engine.v1",
+    "kind": "recap",
+    "pillar": "synthetic-garden",
+    "period": {
+      "start": "2031-01-01T00:00:00Z",
+      "end": "2031-01-08T00:00:00Z"
+    },
+    "text": "The synthetic seeds arrived, and the group discussed their watering schedule.",
+    "citations": [
+      {
+        "source": "synthetic-chat",
+        "conversation": "conversation-7",
+        "message_id": "message-2"
+      }
+    ]
+  },
+  "done-link": {
+    "schema": "openwiz.context-engine.v1",
+    "kind": "ledger-item",
+    "id": "item-1",
+    "state": {
+      "kind": "Done",
+      "proof": {
+        "link": "https://github.com/synthetic-owner/synthetic-work/issues/1"
+      }
+    }
+  },
+  "done-record": {
+    "schema": "openwiz.context-engine.v1",
+    "kind": "ledger-item",
+    "id": "item-2",
+    "state": {
+      "kind": "Done",
+      "proof": {
+        "record": "proof-2"
+      }
+    }
+  },
+  "ticketed": {
+    "schema": "openwiz.context-engine.v1",
+    "kind": "ledger-item",
+    "id": "item-3",
+    "state": {
+      "kind": "Ticketed",
+      "issue": "https://github.com/synthetic-owner/synthetic-work/issues/3"
+    }
+  },
+  "decide": {
+    "schema": "openwiz.context-engine.v1",
+    "kind": "ledger-item",
+    "id": "item-4",
+    "state": {
+      "kind": "Decide",
+      "question": "Water today?",
+      "recommendation": "Wait until morning."
+    }
+  },
+  "reply": {
+    "schema": "openwiz.context-engine.v1",
+    "kind": "ledger-item",
+    "id": "item-5",
+    "state": {
+      "kind": "Reply",
+      "draft": "Synthetic draft.",
+      "approval": "pending",
+      "sent_by_engine": false
+    }
+  },
+  "drop": {
+    "schema": "openwiz.context-engine.v1",
+    "kind": "ledger-item",
+    "id": "item-6",
+    "state": {
+      "kind": "Drop",
+      "reason": "Synthetic duplicate."
+    }
+  },
+  "ideas": {
+    "schema": "openwiz.context-engine.v1",
+    "kind": "ideas",
+    "run_id": "run-7",
+    "version": "0.2.0",
+    "target_visibility": "private",
+    "ideas": [
+      {
+        "saved_post": "https://posts.example.invalid/5",
+        "idea": "Record the seed order.",
+        "home": {
+          "kind": "spec",
+          "link": "https://github.com/synthetic-owner/synthetic-work/issues/6"
+        }
+      },
+      {
+        "saved_post": "https://posts.example.invalid/6",
+        "idea": "Add a watering check.",
+        "home": {
+          "kind": "ticket",
+          "link": "https://github.com/synthetic-owner/synthetic-work/issues/7"
+        }
+      },
+      {
+        "saved_post": "https://posts.example.invalid/7",
+        "idea": "Ask about planting dates.",
+        "home": {
+          "kind": "grill",
+          "link": "https://github.com/synthetic-owner/synthetic-work/issues/8#issuecomment-9"
+        }
+      }
+    ]
+  }
+}

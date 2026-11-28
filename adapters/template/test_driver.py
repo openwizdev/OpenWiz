@@ -67,6 +67,101 @@ def paused(*args):
 t.running = paused
 t.main()
 '''
+PRE_1590_TEMPLATE = '''import json, os, secrets, subprocess, sys
+cmd = sys.argv[1]
+req = json.loads(sys.stdin.read())
+state_dir = os.environ['OPENWIZ_TEMPLATE_STATE']
+os.makedirs(state_dir, mode=0o700, exist_ok=True)
+def launch(start_req, run, woken):
+    what = 'You were woken: read the ticket again and carry on' if woken else 'Build the ticket'
+    prompt = '%s: %s#%d, with the %s skill.' % (what, start_req['repository'], start_req['ticket'], start_req['skill'])
+    return subprocess.Popen([start_req['harness'], '--model', start_req['model'], '-p', prompt],
+                            env=dict(os.environ, OPENWIZ_RUN=run), start_new_session=True,
+                            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).pid
+if cmd == 'start':
+    run = 'run-' + secrets.token_hex(6)
+    state = {'request': req, 'turns': [launch(req, run, False)], 'stopped': False}
+    with open(os.path.join(state_dir, run + '.json'), 'w') as f:
+        json.dump(state, f)
+    print(json.dumps({'run': run}))
+elif cmd == 'wake':
+    run = req['run']
+    path = os.path.join(state_dir, run + '.json')
+    with open(path) as f:
+        state = json.load(f)
+    state['turns'].append(launch(state['request'], run, True))
+    with open(path, 'w') as f:
+        json.dump(state, f)
+    print(json.dumps({'run': run, 'woke': True}))
+'''
+CHECKPOINT_HARNESS = '''import os, signal, sys, time
+if os.environ.get('IGNORE_TERM'):
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+else:
+    def on_term(*_):
+        time.sleep(0.25)
+        with open(os.environ['CHECKPOINT'], 'w') as f:
+            f.write('saved')
+        sys.exit(0)
+    signal.signal(signal.SIGTERM, on_term)
+with open(os.environ['READY'], 'w') as f:
+    f.write(str(os.getpid()))
+while True:
+    time.sleep(0.05)
+'''
+LEGACY_STOP_WRAPPER = '''import importlib.machinery, importlib.util, os, re, signal, sys
+sys.dont_write_bytecode = True
+if os.environ.get('DENY_ENVIRON') or os.environ.get('DENY_ENVIRON_PID'):
+    deny_all = bool(os.environ.get('DENY_ENVIRON'))
+    deny_pid = int(os.environ['DENY_ENVIRON_PID']) if os.environ.get('DENY_ENVIRON_PID') else None
+    def audit(event, args):
+        if event == 'open' and isinstance(args[0], (str, bytes)):
+            path = os.fsdecode(args[0])
+            if deny_all and re.fullmatch(r'/proc/[0-9]+/environ', path):
+                raise PermissionError('synthetic environ refusal')
+            if deny_pid is not None and path == '/proc/%%d/environ' %% deny_pid:
+                raise PermissionError('synthetic mixed-cred environ refusal')
+    sys.addaudithook(audit)
+if os.environ.get('MIXED_CRED_PID'):
+    import builtins, io
+    mixed_pid = int(os.environ['MIXED_CRED_PID'])
+    real_open = open
+    def fake_open(file, *args, **kwargs):
+        if isinstance(file, (str, bytes)) and os.fsdecode(file) == '/proc/%%d/status' %% mixed_pid:
+            uid, gid = os.geteuid(), os.getegid()
+            return io.StringIO('Uid:\\t0\\t%%d\\t0\\t%%d\\nGid:\\t%%d\\t%%d\\t%%d\\t%%d\\n' %% (uid, uid, gid, gid, gid, gid))
+        return real_open(file, *args, **kwargs)
+    builtins.open = fake_open
+spec = importlib.util.spec_from_loader('template', importlib.machinery.SourceFileLoader('template', %r))
+t = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(t)
+if os.environ.get('SHORT_GRACE'):
+    t.GRACE = float(os.environ['SHORT_GRACE'])
+    if hasattr(t, 'KILL_GRACE'):
+        t.KILL_GRACE = float(os.environ['SHORT_GRACE'])
+if os.environ.get('DENY_SIGNALS'):
+    def denied(*_):
+        raise PermissionError('synthetic signal refusal')
+    if hasattr(signal, 'pidfd_send_signal'):
+        signal.pidfd_send_signal = denied
+    os.killpg = denied
+    real_kill = os.kill
+    os.kill = lambda pid, sig: real_kill(pid, sig) if sig == 0 else denied(pid, sig)
+if os.environ.get('RECYCLE_GROUP_TO'):
+    reused_id = int(os.environ['RECYCLE_GROUP_FROM'])
+    newcomer = int(os.environ['RECYCLE_GROUP_TO'])
+    real_proc_table = t.proc_table
+    scans = [0]
+    def recycled_proc_table(run):
+        scans[0] += 1
+        table, children = real_proc_table(run)
+        if scans[0] >= 2 and reused_id not in table and newcomer in table:
+            ppid, _pgid, _sid, started = table[newcomer]
+            table[newcomer] = (ppid, reused_id, reused_id, started)
+        return table, children
+    t.proc_table = recycled_proc_table
+t.main()
+'''
 
 
 def pinned_path(folder, *fixtures):
@@ -162,12 +257,17 @@ class Template(unittest.TestCase):
         except OSError:
             return False
 
-    def wrapper(self, name, source):
-        path = os.path.join(self.folder, name)
+    def script(self, name, source, folder=None):
+        folder = folder or self.folder
+        os.makedirs(folder, exist_ok=True)
+        path = os.path.join(folder, name)
         with open(path, 'w') as f:
-            f.write('#!%s\n' % sys.executable + source % DRIVER)
+            f.write('#!%s\n' % sys.executable + source)
         os.chmod(path, 0o700)
         return path
+
+    def wrapper(self, name, source):
+        return self.script(name, source % DRIVER)
 
     def call(self, cmd, request, driver=DRIVER, **env):
         env = dict(self.env, **env)
@@ -623,6 +723,194 @@ class Template(unittest.TestCase):
                 self.assertEqual(self.marked(), [], 'a process the run started still runs after stop')
                 self.assertEqual(self.asked_ps_for_environments(calls), [], 'the driver asked ps for process environments')
 
+
+    def test_a_run_saved_by_the_older_template_stops_and_does_not_wake(self):
+        old_driver = self.script('pre-1590-driver', PRE_1590_TEMPLATE)
+        code, started = self.call('start', START, driver=old_driver, FAKE_SAME_GROUP='1')
+        self.assertEqual(code, 0, started)
+        run = started['run']
+        [(turn, child, _)] = self.logged(1)
+        record_path = os.path.join(self.env['OPENWIZ_TEMPLATE_STATE'], run + '.json')
+        self.assertEqual(json.loads(read(record_path))['turns'], [turn])
+        self.assertTrue(self.until(lambda: not alive(turn)), 'the legacy harness did not exit')
+        self.assertTrue(alive(child))
+        code, out = self.call('wake', {'run': run})
+        self.assertEqual(code, 1, out)
+        self.assertIn('older template', out['error'])
+        self.assertNotIn('TypeError', json.dumps(out))
+        self.assertEqual(len(self.logged()), 1, 'wake started a second turn for a legacy run')
+        self.assertTrue(alive(child))
+        outsider = subprocess.Popen(['sleep', '120'], start_new_session=True,
+                                    stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.addCleanup(lambda p=outsider: (p.kill(), p.wait()))
+        code, out = self.call('stop', {'run': run})
+        self.assertEqual((code, out), (0, {'run': run, 'stopped': True}))
+        self.assertFalse(alive(child), 'a worker in the legacy turn group still runs after stop')
+        self.assertEqual(self.marked(), [], 'a legacy run process still runs after stop')
+        self.assertTrue(alive(outsider.pid), 'stop affected an unrelated process')
+        self.assertEqual(self.call('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
+
+    def test_stop_ends_a_detached_marked_worker_left_by_the_older_template(self):
+        old_driver = self.script('pre-1590-driver', PRE_1590_TEMPLATE)
+        code, started = self.call('start', START, driver=old_driver)
+        self.assertEqual(code, 0, started)
+        run = started['run']
+        [(turn, child, _)] = self.logged(1)
+        self.assertTrue(self.until(lambda: not alive(turn)), 'the legacy harness did not exit')
+        self.assertTrue(alive(child))
+        outsider = subprocess.Popen(
+            ['sleep', '120'], start_new_session=True,
+            env=dict(os.environ, OUTSIDER_SYNTHETIC='synthetic-outsider-value'),
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.addCleanup(lambda p=outsider: (p.kill(), p.wait()))
+        code, out = self.call('stop', {'run': run})
+        self.assertEqual((code, out), (0, {'run': run, 'stopped': True}))
+        self.assertFalse(alive(child), 'a detached marked worker from the legacy run still runs after stop')
+        self.assertEqual(self.marked(), [], 'a legacy run process still runs after stop')
+        self.assertTrue(alive(outsider.pid), 'stop affected an unrelated process')
+        self.assertNotIn('synthetic-outsider-value', json.dumps(out))
+        self.assertEqual(self.call('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
+
+    def test_without_proc_stop_refuses_an_unverified_legacy_stopped_flag(self):
+        old_driver = self.script('pre-1590-driver', PRE_1590_TEMPLATE)
+        open(self.hold, 'w').close()
+        code, started = self.call('start', START, driver=old_driver)
+        self.assertEqual(code, 0, started)
+        [(turn, child, _)] = self.logged(1)
+        record_path = os.path.join(self.env['OPENWIZ_TEMPLATE_STATE'], started['run'] + '.json')
+        state = json.loads(read(record_path))
+        state['stopped'] = True
+        with open(record_path, 'w') as f:
+            json.dump(state, f)
+        macos = {'PATH': NO_PROC + os.pathsep + self.env['PATH'], 'NO_PROC_PYTHON': sys.executable}
+        code, out = self.call('stop', started, **macos)
+        self.assertEqual(code, 1, out)
+        self.assertTrue(out.get('error') and out.get('next'), out)
+        self.assertTrue(alive(turn) and alive(child))
+        self.assertEqual(self.call('stop', started), (0, dict(started, stopped=True)))
+        self.assertEqual((alive(turn), alive(child)), (False, False))
+        self.assertEqual(self.call('stop', started, **macos), (0, dict(started, stopped=True)))
+
+    def test_stop_does_not_signal_a_process_that_reused_a_verified_legacy_group_or_session(self):
+        run = 'run-' + secrets.token_hex(6)
+        folder = self.env['OPENWIZ_TEMPLATE_STATE']
+        os.makedirs(folder, exist_ok=True)
+        fixtures = os.path.join(self.folder, 'recycle-fixtures')
+        holder_script = self.script('holder', CHECKPOINT_HARNESS, folder=fixtures)
+        ready = os.path.join(self.folder, 'holder-ready')
+        first_turn = subprocess.Popen(
+            ['sleep', '120'], start_new_session=True,
+            env=dict(self.env, OPENWIZ_RUN=run),
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.addCleanup(lambda p=first_turn: (p.kill(), p.wait()))
+        second_turn = subprocess.Popen(
+            [holder_script], start_new_session=True,
+            env=dict(self.env, OPENWIZ_RUN=run, READY=ready, IGNORE_TERM='1'),
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.addCleanup(lambda p=second_turn: (p.kill(), p.wait()))
+        self.assertTrue(self.until(lambda: os.path.exists(ready) and bool(read(ready).strip())))
+        unmarked = subprocess.Popen(
+            ['sleep', '120'], start_new_session=True,
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.addCleanup(lambda p=unmarked: (p.kill(), p.wait()))
+        with open(os.path.join(folder, run + '.json'), 'w') as f:
+            json.dump({'request': START, 'turns': [first_turn.pid, second_turn.pid], 'stopped': False}, f)
+        driver = self.wrapper('legacy-recycle', LEGACY_STOP_WRAPPER)
+        code, out = self.call('stop', {'run': run}, driver=driver, SHORT_GRACE='0.4',
+                              RECYCLE_GROUP_FROM=str(first_turn.pid), RECYCLE_GROUP_TO=str(unmarked.pid))
+        self.assertEqual((code, out), (0, {'run': run, 'stopped': True}))
+        self.assertFalse(alive(first_turn.pid))
+        self.assertFalse(alive(second_turn.pid))
+        self.assertTrue(alive(unmarked.pid), 'stop signaled an unrelated process after group/session reuse')
+
+    def test_stop_gives_a_legacy_run_shutdown_grace_before_sigkill(self):
+        old_driver = self.script('pre-1590-driver', PRE_1590_TEMPLATE)
+        fixtures = os.path.join(self.folder, 'checkpoint-fixtures')
+        self.script('fake-harness', CHECKPOINT_HARNESS, folder=fixtures)
+        path = fixtures + os.pathsep + self.env['PATH']
+        ready = os.path.join(self.folder, 'ready-grace')
+        checkpoint = os.path.join(self.folder, 'checkpoint')
+        code, started = self.call('start', START, driver=old_driver, PATH=path, READY=ready, CHECKPOINT=checkpoint)
+        self.assertEqual(code, 0, started)
+        self.assertTrue(self.until(lambda: os.path.exists(ready) and bool(read(ready).strip())))
+        pid = int(read(ready).strip())
+        code, out = self.call('stop', started, PATH=path)
+        self.assertEqual((code, out), (0, dict(started, stopped=True)))
+        self.assertFalse(alive(pid), 'the legacy harness still runs after stop')
+        self.assertTrue(os.path.exists(checkpoint) and read(checkpoint) == 'saved',
+                        'stop killed the legacy harness before it saved its checkpoint')
+        ready_ign = os.path.join(self.folder, 'ready-ignore')
+        code, started_ign = self.call('start', START, driver=old_driver, PATH=path, READY=ready_ign, IGNORE_TERM='1')
+        self.assertEqual(code, 0, started_ign)
+        self.assertTrue(self.until(lambda: os.path.exists(ready_ign) and bool(read(ready_ign).strip())))
+        pid_ign = int(read(ready_ign).strip())
+        driver = self.wrapper('legacy-short-grace', LEGACY_STOP_WRAPPER)
+        t0 = time.monotonic()
+        code, out = self.call('stop', started_ign, driver=driver, PATH=path, SHORT_GRACE='0.4')
+        elapsed = time.monotonic() - t0
+        self.assertEqual((code, out), (0, dict(started_ign, stopped=True)))
+        self.assertGreaterEqual(elapsed, 0.35, 'stop did not wait the shutdown grace before SIGKILL')
+        self.assertFalse(alive(pid_ign), 'a SIGTERM-ignoring legacy harness still runs after stop')
+
+    def test_stop_refuses_a_legacy_run_before_marking_stopped_when_shutdown_is_unconfirmed(self):
+        old_driver = self.script('pre-1590-driver', PRE_1590_TEMPLATE)
+        open(self.hold, 'w').close()
+        code, started = self.call('start', START, driver=old_driver, FAKE_SAME_GROUP='1')
+        self.assertEqual(code, 0, started)
+        [(turn, child, _)] = self.logged(1)
+        record_path = os.path.join(self.env['OPENWIZ_TEMPLATE_STATE'], started['run'] + '.json')
+        driver = self.wrapper('legacy-deny-signals', LEGACY_STOP_WRAPPER)
+        code, out = self.call('stop', started, driver=driver, DENY_SIGNALS='1', SHORT_GRACE='0.2')
+        self.assertEqual(code, 1, out)
+        self.assertIn('still has processes', out['error'])
+        self.assertTrue(out.get('next'), out)
+        self.assertFalse(json.loads(read(record_path))['stopped'], 'stop marked the run stopped despite survivors')
+        self.assertTrue(alive(turn))
+        code, out = self.call('stop', started, driver=driver, DENY_ENVIRON='1')
+        self.assertEqual(code, 1, out)
+        self.assertIn('cannot inspect', out['error'])
+        self.assertTrue(out.get('next'), out)
+        self.assertFalse(json.loads(read(record_path))['stopped'], 'stop marked the run stopped with unreadable environ')
+        self.assertTrue(alive(turn))
+        macos = {'PATH': NO_PROC + os.pathsep + self.env['PATH'], 'NO_PROC_PYTHON': sys.executable}
+        code, out = self.call('stop', started, **macos)
+        self.assertEqual(code, 1, out)
+        self.assertTrue(out.get('error') and out.get('next'), out)
+        self.assertFalse(json.loads(read(record_path))['stopped'], 'stop marked the run stopped without /proc')
+        self.assertTrue(alive(turn))
+        self.assertEqual(self.call('stop', started), (0, dict(started, stopped=True)))
+        self.assertEqual((alive(turn), alive(child)), (False, False))
+        self.assertEqual(self.call('stop', started, **macos), (0, dict(started, stopped=True)))
+
+    def test_stop_skips_unrelated_mixed_credential_processes_like_sd_pam(self):
+        old_driver = self.script('pre-1590-driver', PRE_1590_TEMPLATE)
+        code, started = self.call('start', START, driver=old_driver)
+        self.assertEqual(code, 0, started)
+        [(turn, child, _)] = self.logged(1)
+        self.assertTrue(self.until(lambda: not alive(turn)), 'the legacy harness did not exit')
+        self.assertTrue(alive(child))
+        sd_pam = subprocess.Popen(
+            ['sleep', '120'], start_new_session=True,
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.addCleanup(lambda p=sd_pam: (p.kill(), p.wait()))
+        driver = self.wrapper('legacy-mixed-cred', LEGACY_STOP_WRAPPER)
+        code, out = self.call('stop', started, driver=driver,
+                              DENY_ENVIRON_PID=str(sd_pam.pid), MIXED_CRED_PID=str(sd_pam.pid))
+        self.assertEqual((code, out), (0, dict(started, stopped=True)))
+        self.assertFalse(alive(child))
+        self.assertTrue(alive(sd_pam.pid))
+
+    def test_stop_does_not_signal_an_unrelated_process_that_reused_a_legacy_pid(self):
+        run = 'run-' + secrets.token_hex(6)
+        folder = self.env['OPENWIZ_TEMPLATE_STATE']
+        os.makedirs(folder, exist_ok=True)
+        unmarked = subprocess.Popen(['sleep', '120'], start_new_session=True,
+                                    stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.addCleanup(lambda p=unmarked: (p.kill(), p.wait()))
+        with open(os.path.join(folder, run + '.json'), 'w') as f:
+            json.dump({'request': START, 'turns': [unmarked.pid], 'stopped': False}, f)
+        self.assertEqual(self.call('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
+        self.assertTrue(alive(unmarked.pid), 'stop signaled a process without OPENWIZ_RUN')
 
     def test_a_provider_qualified_model_reaches_the_harness(self):
         self.env['FAKE_ARGS'] = os.path.join(self.folder, 'args')
