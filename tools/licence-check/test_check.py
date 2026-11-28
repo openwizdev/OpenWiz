@@ -34,7 +34,9 @@ elif args == prefix + ["--method", "GET", "--paginate", "--slurp", tracker + "?s
     print(json.dumps(world["issues"]))
 elif args[:len(prefix) + 2] == prefix + ["--method", "GET"] and len(args) == len(prefix) + 3:
     repo = args[-1].removeprefix("repos/")
-    record = next(row for page in world["repositories"] for row in page if row["full_name"] == repo)
+    record = world.get("metadata", {}).get(repo)
+    if record is None:
+        record = next(row for page in world["repositories"] for row in page if row["full_name"] == repo)
     print(json.dumps(record))
 elif args[:len(prefix) + 3] == prefix + ["--method", "GET", "--include"] and len(args) == len(prefix) + 4:
     repo = args[-1].removeprefix("repos/").removesuffix("/license")
@@ -136,6 +138,32 @@ class LicenceCheck(unittest.TestCase):
         self.save_world()
         self.assertEqual(self.run_check("--file-issues")[0], 2)
         self.assertEqual(len(self.calls()), 1)
+
+    def test_empty_pagination_envelope_is_an_incomplete_audit(self):
+        self.world["repositories"] = []
+        self.save_world()
+        rc, output, errors = self.run_check("--file-issues")
+        self.assertEqual((rc, output), (2, ""))
+        self.assertIn("invalid pages", errors)
+        self.assertEqual(len(self.calls()), 1)
+
+    def test_404_does_not_report_a_repository_that_became_private(self):
+        self.world["metadata"] = {f"{ORG}/missing": repository("missing", True)}
+        self.save_world()
+        rc, output, errors = self.run_check("--file-issues")
+        self.assertEqual((rc, output), (2, ""))
+        self.assertIn("visibility could not be confirmed", errors)
+        self.assertEqual({call[4] for call in self.calls()}, {"GET"})
+
+    def test_files_each_new_gap_and_nothing_on_repeat(self):
+        self.world["issues"] = [[]]
+        self.save_world()
+        self.assertEqual(self.run_check("--file-issues")[0], 1)
+        self.assertEqual(self.run_check("--file-issues")[0], 1)
+        self.assertEqual([call[7] for call in self.calls() if call[4] == "POST"], [
+            f"title=licence: {ORG}/different is not Apache-2.0",
+            f"title=licence: {ORG}/missing is not Apache-2.0",
+        ])
 
     def test_all_apache_returns_success(self):
         self.world["repositories"] = [[repository("compliant")]]
