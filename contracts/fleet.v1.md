@@ -1,6 +1,8 @@
 # OpenWiz fleet contract, version 1 (`openwiz.fleet.v1`)
 
-The JSON that `openwiz fleets --json` and `openwiz fleet <spec> --json` print. The schema is [`fleet.v1.schema.json`](fleet.v1.schema.json); this file adds the read model, the dependency table, the rules a schema can't express, the state table, where each field comes from, and examples. Fixture tests (`tests/fleet/`) prove it on synthetic data only.
+The JSON that `openwiz fleets --json` and `openwiz fleet <spec> --json` print, and the `## OpenWiz` rows a repository records in `docs/agents/fleet.md`. The schema is [`fleet.v1.schema.json`](fleet.v1.schema.json); this file adds the read model, the dependency table, the rules a schema can't express, the state table, where each field comes from, the `## OpenWiz` rows, and examples. Fixture tests (`tests/fleet/`) prove the JSON on synthetic data only.
+
+**Revision, 2026-11-24:** added `## OpenWiz rows`, the writer and reader rules for `setup`, `openwiz update`, and the app. This stays on `openwiz.fleet.v1`; it is not `openwiz.fleet.v2`.
 
 **Always true:**
 - **Read-only.** Both commands only read: GitHub through `gh`, and for `fleet`, CloudRoom through `room-cli`. Each read is on an allowlist.
@@ -1346,7 +1348,7 @@ Synthetic values only.
 
 ## OpenWiz rows
 
-Every repository set up for OpenWiz records which matched set wrote its records in one `## OpenWiz` section of `docs/agents/fleet.md` (D1, ADR 0021; #3138 MS0, consumed by #3140 MS2 and #3142 MS4).
+Every repository set up for OpenWiz records which matched set wrote its records in one `## OpenWiz` section of `docs/agents/fleet.md` (D1, ADR 0021 in [openwizdev/OpenWiz#3136](https://github.com/openwizdev/OpenWiz/pull/3136) until that pull request merges; #3138 MS0, consumed by #3140 MS2 and #3142 MS4).
 
 Prose may come before the table; the section's first Markdown table must be exactly:
 

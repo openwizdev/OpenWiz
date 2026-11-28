@@ -4,7 +4,7 @@ Every OpenWiz release carries one manifest, `release-manifest.json`, at the repo
 
 **Contract first** (#3138, MS0 of spec #3137). Downstream consumers: MS3 (#3141) generates `release-manifest.json`, checks it against `wizskills.lock` in CI, and attaches it to each GitHub release; MS5 (#3143) reads the current and previous manifests in WizSite CI to download the matching WizSkills golden archives; MS6 (#3144) gates each release candidate on that golden job.
 
-Authority: ADR 0021 (`docs/adr/0021-app-skills-kernel-ship-as-a-matched-set.md`). Jake, 2026-11-24: approved D1-D3 for 0.1.2 ([private record](https://github.com/jparker2006/ClosedWiz/issues/3065#issuecomment-7139385706)).
+Authority: ADR 0021 ([openwizdev/OpenWiz#3136](https://github.com/openwizdev/OpenWiz/pull/3136)), until that pull request merges. Jake, 2026-11-24: approved D1-D3 for 0.1.2 ([private record](https://github.com/jparker2006/ClosedWiz/issues/3065#issuecomment-7139385706)).
 
 ## Fields
 

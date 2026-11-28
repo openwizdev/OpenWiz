@@ -1,0 +1,31 @@
+test_fleet_contract_has_openwiz_rows_section_and_example (__main__.FleetOpenWizRowsTests.test_fleet_contract_has_openwiz_rows_section_and_example) ... FAIL
+test_openwiz_rows_parser_refuses_bad_tables (__main__.FleetOpenWizRowsTests.test_openwiz_rows_parser_refuses_bad_tables) ... ok
+test_records_v1_indexes_every_app_record_form_and_rules (__main__.RecordsContractTests.test_records_v1_indexes_every_app_record_form_and_rules) ... FAIL
+test_doc_example_validates (__main__.ReleaseManifestSchemaTests.test_doc_example_validates) ... ok
+test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) ... ok
+test_schema_declares_id_and_title (__main__.ReleaseManifestSchemaTests.test_schema_declares_id_and_title) ... ok
+test_strict_reader_refuses_duplicate_keys_and_float_integer (__main__.ReleaseManifestSchemaTests.test_strict_reader_refuses_duplicate_keys_and_float_integer) ... ok
+
+======================================================================
+FAIL: test_fleet_contract_has_openwiz_rows_section_and_example (__main__.FleetOpenWizRowsTests.test_fleet_contract_has_openwiz_rows_section_and_example)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "docs/evidence/3138/test_contracts.py", line 309, in test_fleet_contract_has_openwiz_rows_section_and_example
+    self.assertTrue(
+AssertionError: False is not true : scope line does not name the OpenWiz rows
+
+======================================================================
+FAIL: test_records_v1_indexes_every_app_record_form_and_rules (__main__.RecordsContractTests.test_records_v1_indexes_every_app_record_form_and_rules)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "docs/evidence/3138/test_contracts.py", line 290, in test_records_v1_indexes_every_app_record_form_and_rules
+    self.assertEqual(by_name["Labels"][1], "no own marker (kernel records v1 section 1)")
+AssertionError: '`openwiz:records v1` labels' != 'no own marker (kernel records v1 section 1)'
+- `openwiz:records v1` labels
++ no own marker (kernel records v1 section 1)
+
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.014s
+
+FAILED (failures=2)
