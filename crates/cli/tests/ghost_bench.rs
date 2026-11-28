@@ -1,5 +1,7 @@
 #[path = "../src/ghost/bench.rs"]
 mod bench;
+#[path = "../../../ci/ghost-bench.rs"]
+mod gate;
 #[path = "../src/ghost/log.rs"]
 mod log;
 #[allow(
@@ -12,7 +14,6 @@ mod schema;
 use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde_json::{Value, json};
@@ -61,22 +62,8 @@ fn env_empty(name: &str) -> Option<OsString> {
     None
 }
 
-fn gate(report: &Value) -> (i32, String, String) {
-    let dir = temp_state("gate");
-    let path = dir.join("report.json");
-    fs::write(&path, format!("{report}\n")).unwrap();
-    let output = Command::new("python3")
-        .args(["-I", "ci/ghost-bench.py", "check"])
-        .arg(&path)
-        .current_dir(repo_root())
-        .output()
-        .unwrap();
-    let _ = fs::remove_dir_all(&dir);
-    (
-        output.status.code().unwrap_or(1),
-        String::from_utf8_lossy(&output.stdout).into_owned(),
-        String::from_utf8_lossy(&output.stderr).into_owned(),
-    )
+fn baseline() -> Value {
+    read_json(&fixtures().join("bench-baseline.json"))
 }
 
 #[test]
@@ -108,7 +95,7 @@ fn bench_report_matches_the_recorded_baseline_and_schema() {
     .unwrap();
     let errors = validate("bench_report", &report);
     assert!(errors.is_empty(), "{}", errors.join("\n"));
-    let recorded = read_json(&fixtures().join("bench-baseline.json"));
+    let recorded = baseline();
     let expect = &recorded["recorded"];
     assert_eq!(report["messages"], expect["messages"]);
     assert_eq!(report["overall"]["shown"], expect["shown"]);
@@ -158,9 +145,7 @@ fn ci_gate_passes_on_the_baseline() {
         None,
     )
     .unwrap();
-    let (code, stdout, stderr) = gate(&report);
-    assert_eq!(code, 0, "stdout={stdout} stderr={stderr}");
-    assert!(stdout.contains("passed"), "{stdout}");
+    gate::check(&report, &baseline()).unwrap();
 }
 
 #[test]
@@ -173,14 +158,13 @@ fn ci_gate_fails_the_slow_model_on_p90() {
     .unwrap();
     near(&report["overall"]["p90_latency_ms"], 200.0);
     near(&report["overall"]["acceptance_rate"], 1.0);
-    let (code, _stdout, stderr) = gate(&report);
-    assert_ne!(code, 0);
-    assert!(stderr.contains("p90"), "{stderr}");
+    let error = gate::check(&report, &baseline()).unwrap_err();
+    assert!(error.contains("p90"), "{error}");
 }
 
 #[test]
 fn ci_gate_fails_the_weak_model_on_acceptance_and_characters() {
-    let report = bench::replay_file(
+    let mut report = bench::replay_file(
         &fixtures().join("replay-set.json"),
         bench::FixtureModel::Weak,
         None,
@@ -188,9 +172,12 @@ fn ci_gate_fails_the_weak_model_on_acceptance_and_characters() {
     .unwrap();
     assert_eq!(report["overall"]["shown"], 0);
     assert!(report["overall"]["p90_latency_ms"].is_null());
-    let (code, _stdout, stderr) = gate(&report);
-    assert_ne!(code, 0);
-    assert!(stderr.contains("acceptance"), "{stderr}");
+    let baseline = baseline();
+    let error = gate::check(&report, &baseline).unwrap_err();
+    assert!(error.contains("acceptance"), "{error}");
+    report["overall"]["acceptance_rate"] = baseline["acceptance_rate_min"].clone();
+    let error = gate::check(&report, &baseline).unwrap_err();
+    assert!(error.contains("characters saved"), "{error}");
 }
 
 #[test]
@@ -298,19 +285,32 @@ fn bench_reads_the_opt_in_log() {
         "outcome": "shown", "tier": "recall", "confidence": 0.5, "latency_ms": 4.0,
         "chars_accepted": 0
     });
-    let accepted = json!({
-        "schema": "openwiz.ghost.v1", "kind": "event", "at": "2026-11-24T12:00:00Z",
-        "suggestion_id": "sug_syn_9", "session_id": "thr_syn_9", "surface": "cli",
-        "outcome": "accepted_all", "tier": "recall", "confidence": 0.5, "latency_ms": 4.0,
-        "chars_accepted": 4
-    });
+    let mut accepted = shown.clone();
+    accepted["outcome"] = json!("accepted_all");
+    accepted["chars_accepted"] = json!(4);
     log::append_event(&state, &shown).unwrap();
     log::append_event(&state, &accepted).unwrap();
     assert_eq!(log::read_events(&state).unwrap().len(), 2);
-    let report = bench::report_log(&log::events_path(&state)).unwrap();
+    let path = log::events_path(&state);
+    let schema = read_json(&repo_root().join("contracts/ghost.v1.schema.json"));
+    let source = schema["$defs"]["bench_source"]["enum"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|source| !matches!(source.as_str(), Some("fixtures" | "sent")))
+        .unwrap();
+    let args = [
+        "--source",
+        source.as_str().unwrap(),
+        "--replay",
+        path.to_str().unwrap(),
+    ];
+    let (code, stdout, stderr) = run_bench(&args, &env_empty);
+    assert_eq!(code, 0, "{stderr}");
+    let report: Value = serde_json::from_str(&stdout).unwrap();
     let errors = validate("bench_report", &report);
     assert!(errors.is_empty(), "{}", errors.join("\n"));
-    assert_eq!(report["source"], "log");
+    assert_eq!(&report["source"], source);
     assert_eq!(report["messages"], 1);
     assert_eq!(report["overall"]["shown"], 1);
     assert_eq!(report["overall"]["accepted"], 1);

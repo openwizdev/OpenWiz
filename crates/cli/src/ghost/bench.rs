@@ -4,6 +4,8 @@ use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
+use serde::de::value::{Error as DeserializeError, StrDeserializer};
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use super::log;
@@ -13,6 +15,14 @@ const CONFIDENCE: f64 = 0.5;
 const BASELINE_LATENCY_MS: f64 = 1.0;
 const SLOW_LATENCY_MS: f64 = 200.0;
 const AT: &str = "2026-11-24T12:00:00Z";
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+enum BenchSource {
+    Fixtures,
+    Log,
+    Sent,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FixtureModel {
@@ -85,7 +95,14 @@ pub fn replay_file(
     }
     let pack: Value =
         serde_json::from_str(&pack_text).map_err(|_| "the context pack is not valid".to_owned())?;
-    replay_loaded(&messages, &pack, None, model, "fixtures", log_state)
+    replay_loaded(
+        &messages,
+        &pack,
+        None,
+        model,
+        BenchSource::Fixtures,
+        log_state,
+    )
 }
 
 pub fn replay_sent(
@@ -114,12 +131,19 @@ pub fn replay_sent(
     let pack: Value =
         serde_json::from_str(&pack_text).map_err(|_| "the context pack is not valid".to_owned())?;
     let loaded = skill.map(read_skill).transpose()?;
-    replay_loaded(&messages, &pack, loaded.as_ref(), model, "sent", log_state)
+    replay_loaded(
+        &messages,
+        &pack,
+        loaded.as_ref(),
+        model,
+        BenchSource::Sent,
+        log_state,
+    )
 }
 
 pub fn report_log(path: &Path) -> Result<Value, String> {
     let events = log::read_event_file(path)?;
-    report_events("log", &events)
+    report_events(&events)
 }
 
 pub fn run_with(
@@ -157,14 +181,14 @@ pub fn run_with(
         }
     };
     let state = log::state_dir(env).ok();
-    let report = match parsed.source.as_str() {
-        "fixtures" => {
+    let report = match parsed.source {
+        BenchSource::Fixtures => {
             let path = parsed
                 .replay
                 .unwrap_or_else(|| fixtures_dir(env).join("replay-set.json"));
             replay_file(&path, model, state.as_deref())
         }
-        "sent" => {
+        BenchSource::Sent => {
             let path = match parsed
                 .replay
                 .or_else(|| state.as_ref().map(|dir| dir.join("ghost/sent.json")))
@@ -179,26 +203,15 @@ pub fn run_with(
             };
             replay_sent(&path, model, skill.as_deref(), state.as_deref())
         }
-        "log" => {
+        BenchSource::Log => {
             let path = match parsed
                 .replay
-                .clone()
                 .or_else(|| state.as_ref().map(|dir| log::events_path(dir)))
             {
                 Some(path) => path,
                 None => return failure(args, 1, "unavailable", "no state directory", out, err),
             };
             report_log(&path)
-        }
-        _ => {
-            return failure(
-                args,
-                2,
-                "usage",
-                "source must be fixtures, log or sent.",
-                out,
-                err,
-            );
         }
     };
     match report {
@@ -214,12 +227,12 @@ pub fn run_with(
 
 struct Args {
     help: bool,
-    source: String,
+    source: BenchSource,
     replay: Option<PathBuf>,
 }
 
 fn parse_args(args: &[OsString]) -> Result<Args, String> {
-    let mut source = "fixtures".to_owned();
+    let mut source = BenchSource::Fixtures;
     let mut replay = None;
     let mut i = 0;
     while i < args.len() {
@@ -241,10 +254,8 @@ fn parse_args(args: &[OsString]) -> Result<Args, String> {
                     .get(i)
                     .and_then(|v| v.to_str())
                     .ok_or_else(|| "source needs fixtures, log or sent.".to_owned())?;
-                if !matches!(value, "fixtures" | "log" | "sent") {
-                    return Err("source must be fixtures, log or sent.".to_owned());
-                }
-                source = value.to_owned();
+                source = BenchSource::deserialize(StrDeserializer::<DeserializeError>::new(value))
+                    .map_err(|_| "source must be fixtures, log or sent.".to_owned())?;
             }
             "--replay" => {
                 i += 1;
@@ -430,7 +441,7 @@ fn replay_loaded(
     pack: &Value,
     skill: Option<&SkillFile>,
     model: FixtureModel,
-    source: &str,
+    source: BenchSource,
     log_state: Option<&Path>,
 ) -> Result<Value, String> {
     let known = match skill {
@@ -690,7 +701,7 @@ fn event(message: &Message, live: &Live, outcome: &str, chars_accepted: u64) -> 
     })
 }
 
-fn report_events(source: &str, events: &[Value]) -> Result<Value, String> {
+fn report_events(events: &[Value]) -> Result<Value, String> {
     let mut sessions = Vec::new();
     let mut surface_messages: Vec<(String, u64)> = Vec::new();
     let mut seen_surface_session: BTreeSet<(String, String)> = BTreeSet::new();
@@ -705,11 +716,16 @@ fn report_events(source: &str, events: &[Value]) -> Result<Value, String> {
             add_count(&mut surface_messages, surface);
         }
     }
-    report(source, sessions.len() as u64, &surface_messages, events)
+    report(
+        BenchSource::Log,
+        sessions.len() as u64,
+        &surface_messages,
+        events,
+    )
 }
 
 fn report(
-    source: &str,
+    source: BenchSource,
     messages: u64,
     surface_messages: &[(String, u64)],
     events: &[Value],
