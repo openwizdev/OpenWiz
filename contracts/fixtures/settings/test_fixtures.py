@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""The settings v1 fixtures: python3 -I contracts/fixtures/settings/test_fixtures.py"""
 import json
 import math
 from pathlib import Path
@@ -16,7 +15,6 @@ SCHEMA = CONTRACTS / "settings.v1.schema.json"
 MODELS = CONTRACTS / "models.v1.md"
 VALID, INVALID = HERE / "valid", HERE / "invalid"
 ROLES = ("orchestrator", "builder", "fixer", "reviewer", "small_builder")
-# One case per rule the ticket names, by the rule's id in invalid/expect.json.
 RULES = {"cross_family", "reserved_in_role", "reserved_in_fallback", "key_shaped", "at_in_label",
          "history_over_10", "unknown_field", "overflow_not_builders"}
 PRIVATE = re.compile(
@@ -45,7 +43,6 @@ def kind_ok(value, kind):
 
 
 def errors(value, schema, root, at="$"):
-    """The JSON Schema 2020-12 keywords the settings schema uses; any other keyword fails loudly."""
     known = {"$schema", "$id", "$ref", "$defs", "title", "description", "allOf", "oneOf", "not", "if",
              "then", "else", "type", "const", "enum", "pattern", "minLength", "maxLength", "minimum",
              "maximum", "exclusiveMinimum", "minItems", "maxItems", "uniqueItems", "items", "required",
@@ -110,7 +107,6 @@ def errors(value, schema, root, at="$"):
 
 
 def choices(doc):
-    """Each role's own choice and each fallback entry, with where it sits."""
     for role in ROLES:
         choice = doc["roles"][role]
         if isinstance(choice, dict):
@@ -120,7 +116,6 @@ def choices(doc):
 
 
 def rule_errors(doc):
-    """The contract's rules JSON Schema can't say: they compare one field with another section."""
     found = []
     for part in [doc] + doc.get("history", []):
         accounts = part["accounts"]
@@ -168,7 +163,6 @@ def property_names(schema):
 
 
 def free_strings(node, at="#"):
-    """Every schema node that admits an arbitrary string, with where it sits."""
     if isinstance(node, dict):
         if node.get("type") == "string" and "const" not in node and "enum" not in node:
             yield at, node
