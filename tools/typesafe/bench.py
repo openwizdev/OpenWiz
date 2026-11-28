@@ -82,6 +82,55 @@ HANDLERS = {
 }
 
 
+def _asked(ask, state, questions):
+    try:
+        return ask.system_one(state, questions)
+    except client.TypeSafeError:
+        return None
+
+
+def live_judge(data, ask):
+    rows = [row for row in data['cases'] if 'rule' in row and 'reply' in row]
+    hit = 0
+    for row in rows:
+        decided = jev_judge.try_jev(row['rule'], row['reply'], ask)
+        hit += int(decided is not None and decided['verdict'] == row['expected'])
+    return hit, len(rows)
+
+
+def live_plan_limit(data, ask):
+    hit = 0
+    for row in data['cases']:
+        response = None if plan_limit.exact(row['text']) else _asked(ask, row['text'], decide.questions('plan_limit'))
+        hit += int(plan_limit.shaped(row['text'], response) == row['expected'])
+    return hit, len(data['cases'])
+
+
+def live_verdict(data, ask):
+    hit = 0
+    for row in data['cases']:
+        line = row['line']
+        response = None if verdict.exact(line) else _asked(ask, line, decide.questions('verdict'))
+        hit += int(verdict.shaped(line, response) == row['expected'])
+    return hit, len(data['cases'])
+
+
+def live_mentions(data, ask):
+    hit = 0
+    for row in data['cases']:
+        found = tokens.named_docs(row['text']) | jev_mentions.extra(row['text'], ask)
+        hit += int(found == set(row['expected']))
+    return hit, len(data['cases'])
+
+
+LIVE = {
+    'openwiz.typesafe-bench.judge.v1': ('judge', live_judge),
+    'openwiz.typesafe-bench.plan-limit.v1': ('plan-limit', live_plan_limit),
+    'openwiz.typesafe-bench.verdict.v1': ('verdict', live_verdict),
+    'openwiz.typesafe-bench.mentions.v1': ('mentions', live_mentions),
+}
+
+
 def report(path, data):
     name, score = HANDLERS[data['schema']]
     n, old_hit, shaped_hit = score(data)
@@ -113,30 +162,10 @@ def main(argv):
         return 2
     for path in paths:
         data = json.loads(path.read_text())
-        if data['schema'] != 'openwiz.typesafe-bench.judge.v1':
-            continue
-        hit = sent = 0
-        for row in data['cases']:
-            if 'rule' not in row or 'reply' not in row:
-                continue
-            sent += 1
-            decided = jev_judge.try_jev(row['rule'], row['reply'], ask)
-            hit += int(decided is not None and decided['verdict'] == row['expected'])
-        print(f'judge live: {hit}/{sent} matched the fixture label')
-    for path in paths:
-        data = json.loads(path.read_text())
-        if data['schema'] != 'openwiz.typesafe-bench.plan-limit.v1':
-            continue
-        hit = 0
-        for row in data['cases']:
-            try:
-                response = ask.system_one(row['text'], decide.questions('plan_limit'))
-            except client.TypeSafeError:
-                response = None
-            hit += int(plan_limit.shaped(row['text'], response) == row['expected'])
-        print(f'plan-limit live: {hit}/{len(data["cases"])} matched the fixture label')
+        name, run = LIVE[data['schema']]
+        hit, sent = run(data, ask)
+        print(f'{name} live: {hit}/{sent} matched the fixture label')
     return 0
-
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
