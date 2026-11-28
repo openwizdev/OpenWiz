@@ -1,0 +1,169 @@
+{
+  "schema": "openwiz.settings.v1",
+  "roles": {
+    "orchestrator": {
+      "harness": "claude-code",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "account": "work",
+      "fallback": [
+        {
+          "harness": "claude-code",
+          "model": "claude-sonnet-5-5",
+          "effort": "high",
+          "account": "personal"
+        }
+      ]
+    },
+    "builder": {
+      "harness": "claude-code",
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "account": "work",
+      "fallback": [
+        {
+          "harness": "claude-code",
+          "model": "claude-opus-5-5",
+          "effort": "medium",
+          "account": "personal"
+        }
+      ]
+    },
+    "fixer": {
+      "harness": "claude-code",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "account": "personal",
+      "fallback": []
+    },
+    "reviewer": {
+      "harness": "codex",
+      "model": "gpt-6.2-sol",
+      "effort": "medium",
+      "account": "codex-work",
+      "fallback": [
+        {
+          "harness": "codex",
+          "model": "vendor/demo",
+          "effort": "medium",
+          "account": "codex-work"
+        }
+      ]
+    },
+    "small_builder": "follows builder"
+  },
+  "accounts": {
+    "work": {
+      "harness": "claude-code",
+      "host": "local",
+      "reserved": false,
+      "profile": {
+        "variable": "CLAUDE_CONFIG_DIR",
+        "folder": "~/.claude-work"
+      }
+    },
+    "personal": {
+      "harness": "claude-code",
+      "host": "local",
+      "reserved": false,
+      "profile": {
+        "variable": "CLAUDE_CONFIG_DIR",
+        "folder": "~/.claude-personal"
+      }
+    },
+    "codex-work": {
+      "harness": "codex",
+      "host": "local",
+      "reserved": false
+    },
+    "family": {
+      "harness": "claude-code",
+      "host": "local",
+      "reserved": true,
+      "profile": {
+        "variable": "CLAUDE_CONFIG_DIR",
+        "folder": "~/.claude-family"
+      }
+    }
+  },
+  "hosts": {
+    "home": {
+      "orchestrator": "local",
+      "builder": "local",
+      "reviewer": "local"
+    },
+    "overflow": {
+      "serves": "builder",
+      "host": "boat"
+    },
+    "max_agents": 8,
+    "projects": {
+      "syn-owner/syn-app": [
+        "local",
+        "boat"
+      ]
+    }
+  },
+  "drivers": {
+    "local": true,
+    "boat": true,
+    "cloudroom": false
+  },
+  "budgets": {
+    "local:claude:work": {
+      "amount": 90,
+      "unit": "percent",
+      "by": "2026-12-04T08:00:00Z"
+    },
+    "boat:plan:boat-org": {
+      "amount": 500,
+      "unit": "credits",
+      "by": "2026-12-31T08:00:00Z"
+    }
+  },
+  "keys": {
+    "github-app": {
+      "store": "token-service-key",
+      "entry": "service/app/private-key.pem",
+      "opt_in": false,
+      "on": true,
+      "set_at": "2026-11-28T08:30:00Z"
+    },
+    "eval": {
+      "store": "env-file",
+      "entry": "OPENWIZ_EVAL_KEY",
+      "opt_in": true,
+      "on": false,
+      "set_at": null
+    },
+    "devin": {
+      "store": "macos-keychain",
+      "entry": "openwiz-devin",
+      "opt_in": true,
+      "on": true,
+      "set_at": "2026-11-28T09:00:00Z"
+    }
+  },
+  "channels": {
+    "t3": true,
+    "slack": false
+  },
+  "telemetry": false,
+  "updates": "ask",
+  "version": 12,
+  "changed_at": "2026-11-28T09:30:00Z",
+  "changed_by": "settings tab",
+  "history": [
+    {"roles": {"orchestrator": {"harness": "claude-code", "model": "claude-opus-5-5", "effort": "high", "account": "work", "fallback": [{"harness": "claude-code", "model": "claude-sonnet-5-5", "effort": "high", "account": "personal"}]}, "builder": {"harness": "claude-code", "model": "claude-opus-5-5", "effort": "high", "account": "work", "fallback": [{"harness": "claude-code", "model": "claude-opus-5-5", "effort": "medium", "account": "personal"}]}, "fixer": {"harness": "claude-code", "model": "claude-sonnet-5-5", "effort": "medium", "account": "personal", "fallback": []}, "reviewer": {"harness": "codex", "model": "gpt-6.2-sol", "effort": "medium", "account": "codex-work", "fallback": [{"harness": "codex", "model": "vendor/demo", "effort": "medium", "account": "codex-work"}]}, "small_builder": "follows builder"}, "accounts": {"work": {"harness": "claude-code", "host": "local", "reserved": false, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-work"}}, "personal": {"harness": "claude-code", "host": "local", "reserved": false, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-personal"}}, "codex-work": {"harness": "codex", "host": "local", "reserved": false}, "family": {"harness": "claude-code", "host": "local", "reserved": true, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-family"}}}, "hosts": {"home": {"orchestrator": "local", "builder": "local", "reviewer": "local"}, "overflow": {"serves": "builder", "host": "boat"}, "max_agents": 8, "projects": {"syn-owner/syn-app": ["local", "boat"]}}, "drivers": {"local": true, "boat": true, "cloudroom": false}, "budgets": {"local:claude:work": {"amount": 90, "unit": "percent", "by": "2026-12-04T08:00:00Z"}, "boat:plan:boat-org": {"amount": 500, "unit": "credits", "by": "2026-12-31T08:00:00Z"}}, "keys": {"github-app": {"store": "token-service-key", "entry": "service/app/private-key.pem", "opt_in": false, "on": true, "set_at": "2026-11-28T08:30:00Z"}, "eval": {"store": "env-file", "entry": "OPENWIZ_EVAL_KEY", "opt_in": true, "on": false, "set_at": null}, "devin": {"store": "macos-keychain", "entry": "openwiz-devin", "opt_in": true, "on": true, "set_at": "2026-11-28T09:00:00Z"}}, "channels": {"t3": true, "slack": false}, "telemetry": false, "updates": "ask", "version": 1, "changed_at": "2026-11-11T09:00:00Z", "changed_by": "fill"},
+    {"roles": {"orchestrator": {"harness": "claude-code", "model": "claude-opus-5-5", "effort": "high", "account": "work", "fallback": [{"harness": "claude-code", "model": "claude-sonnet-5-5", "effort": "high", "account": "personal"}]}, "builder": {"harness": "claude-code", "model": "claude-opus-5-5", "effort": "medium", "account": "work", "fallback": [{"harness": "claude-code", "model": "claude-opus-5-5", "effort": "medium", "account": "personal"}]}, "fixer": {"harness": "claude-code", "model": "claude-sonnet-5-5", "effort": "medium", "account": "personal", "fallback": []}, "reviewer": {"harness": "codex", "model": "gpt-6.2-sol", "effort": "medium", "account": "codex-work", "fallback": [{"harness": "codex", "model": "vendor/demo", "effort": "medium", "account": "codex-work"}]}, "small_builder": "follows builder"}, "accounts": {"work": {"harness": "claude-code", "host": "local", "reserved": false, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-work"}}, "personal": {"harness": "claude-code", "host": "local", "reserved": false, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-personal"}}, "codex-work": {"harness": "codex", "host": "local", "reserved": false}, "family": {"harness": "claude-code", "host": "local", "reserved": true, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-family"}}}, "hosts": {"home": {"orchestrator": "local", "builder": "local", "reviewer": "local"}, "overflow": {"serves": "builder", "host": "boat"}, "max_agents": 8, "projects": {"syn-owner/syn-app": ["local", "boat"]}}, "drivers": {"local": true, "boat": true, "cloudroom": false}, "budgets": {"local:claude:work": {"amount": 90, "unit": "percent", "by": "2026-12-04T08:00:00Z"}, "boat:plan:boat-org": {"amount": 500, "unit": "credits", "by": "2026-12-31T08:00:00Z"}}, "keys": {"github-app": {"store": "token-service-key", "entry": "service/app/private-key.pem", "opt_in": false, "on": true, "set_at": "2026-11-28T08:30:00Z"}, "eval": {"store": "env-file", "entry": "OPENWIZ_EVAL_KEY", "opt_in": true, "on": false, "set_at": null}, "devin": {"store": "macos-keychain", "entry": "openwiz-devin", "opt_in": true, "on": true, "set_at": "2026-11-28T09:00:00Z"}}, "channels": {"t3": true, "slack": false}, "telemetry": false, "updates": "ask", "version": 2, "changed_at": "2026-11-12T09:00:00Z", "changed_by": "Wiz chat"},
+    {"roles": {"orchestrator": {"harness": "claude-code", "model": "claude-opus-5-5", "effort": "high", "account": "work", "fallback": [{"harness": "claude-code", "model": "claude-sonnet-5-5", "effort": "high", "account": "personal"}]}, "builder": {"harness": "claude-code", "model": "claude-opus-5-5", "effort": "high", "account": "work", "fallback": [{"harness": "claude-code", "model": "claude-opus-5-5", "effort": "medium", "account": "personal"}]}, "fixer": {"harness": "claude-code", "model": "claude-sonnet-5-5", "effort": "medium", "account": "personal", "fallback": []}, "reviewer": {"harness": "codex", "model": "gpt-6.2-sol", "effort": "medium", "account": "codex-work", "fallback": [{"harness": "codex", "model": "vendor/demo", "effort": "medium", "account": "codex-work"}]}, "small_builder": "follows builder"}, "accounts": {"work": {"harness": "claude-code", "host": "local", "reserved": false, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-work"}}, "personal": {"harness": "claude-code", "host": "local", "reserved": false, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-personal"}}, "codex-work": {"harness": "codex", "host": "local", "reserved": false}, "family": {"harness": "claude-code", "host": "local", "reserved": true, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-family"}}}, "hosts": {"home": {"orchestrator": "local", "builder": "local", "reviewer": "local"}, "overflow": {"serves": "builder", "host": "boat"}, "max_agents": 8, "projects": {"syn-owner/syn-app": ["local", "boat"]}}, "drivers": {"local": true, "boat": true, "cloudroom": false}, "budgets": {"local:claude:work": {"amount": 90, "unit": "percent", "by": "2026-12-04T08:00:00Z"}, "boat:plan:boat-org": {"amount": 500, "unit": "credits", "by": "2026-12-31T08:00:00Z"}}, "keys": {"github-app": {"store": "token-service-key", "entry": "service/app/private-key.pem", "opt_in": false, "on": true, "set_at": "2026-11-28T08:30:00Z"}, "eval": {"store": "env-file", "entry": "OPENWIZ_EVAL_KEY", "opt_in": true, "on": false, "set_at": null}, "devin": {"store": "macos-keychain", "entry": "openwiz-devin", "opt_in": true, "on": true, "set_at": "2026-11-28T09:00:00Z"}}, "channels": {"t3": true, "slack": false}, "telemetry": false, "updates": "ask", "version": 3, "changed_at": "2026-11-13T09:00:00Z", "changed_by": "Wiz chat"},
+    {"roles": {"orchestrator": {"harness": "claude-code", "model": "claude-opus-5-5", "effort": "high", "account": "work", "fallback": [{"harness": "claude-code", "model": "claude-sonnet-5-5", "effort": "high", "account": "personal"}]}, "builder": {"harness": "claude-code", "model": "claude-opus-5-5", "effort": "medium", "account": "work", "fallback": [{"harness": "claude-code", "model": "claude-opus-5-5", "effort": "medium", "account": "personal"}]}, "fixer": {"harness": "claude-code", "model": "claude-sonnet-5-5", "effort": "medium", "account": "personal", "fallback": []}, "reviewer": {"harness": "codex", "model": "gpt-6.2-sol", "effort": "medium", "account": "codex-work", "fallback": [{"harness": "codex", "model": "vendor/demo", "effort": "medium", "account": "codex-work"}]}, "small_builder": "follows builder"}, "accounts": {"work": {"harness": "claude-code", "host": "local", "reserved": false, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-work"}}, "personal": {"harness": "claude-code", "host": "local", "reserved": false, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-personal"}}, "codex-work": {"harness": "codex", "host": "local", "reserved": false}, "family": {"harness": "claude-code", "host": "local", "reserved": true, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-family"}}}, "hosts": {"home": {"orchestrator": "local", "builder": "local", "reviewer": "local"}, "overflow": {"serves": "builder", "host": "boat"}, "max_agents": 8, "projects": {"syn-owner/syn-app": ["local", "boat"]}}, "drivers": {"local": true, "boat": true, "cloudroom": false}, "budgets": {"local:claude:work": {"amount": 90, "unit": "percent", "by": "2026-12-04T08:00:00Z"}, "boat:plan:boat-org": {"amount": 500, "unit": "credits", "by": "2026-12-31T08:00:00Z"}}, "keys": {"github-app": {"store": "token-service-key", "entry": "service/app/private-key.pem", "opt_in": false, "on": true, "set_at": "2026-11-28T08:30:00Z"}, "eval": {"store": "env-file", "entry": "OPENWIZ_EVAL_KEY", "opt_in": true, "on": false, "set_at": null}, "devin": {"store": "macos-keychain", "entry": "openwiz-devin", "opt_in": true, "on": true, "set_at": "2026-11-28T09:00:00Z"}}, "channels": {"t3": true, "slack": false}, "telemetry": false, "updates": "ask", "version": 4, "changed_at": "2026-11-14T09:00:00Z", "changed_by": "Wiz chat"},
+    {"roles": {"orchestrator": {"harness": "claude-code", "model": "claude-opus-5-5", "effort": "high", "account": "work", "fallback": [{"harness": "claude-code", "model": "claude-sonnet-5-5", "effort": "high", "account": "personal"}]}, "builder": {"harness": "claude-code", "model": "claude-opus-5-5", "effort": "high", "account": "work", "fallback": [{"harness": "claude-code", "model": "claude-opus-5-5", "effort": "medium", "account": "personal"}]}, "fixer": {"harness": "claude-code", "model": "claude-sonnet-5-5", "effort": "medium", "account": "personal", "fallback": []}, "reviewer": {"harness": "codex", "model": "gpt-6.2-sol", "effort": "medium", "account": "codex-work", "fallback": [{"harness": "codex", "model": "vendor/demo", "effort": "medium", "account": "codex-work"}]}, "small_builder": "follows builder"}, "accounts": {"work": {"harness": "claude-code", "host": "local", "reserved": false, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-work"}}, "personal": {"harness": "claude-code", "host": "local", "reserved": false, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-personal"}}, "codex-work": {"harness": "codex", "host": "local", "reserved": false}, "family": {"harness": "claude-code", "host": "local", "reserved": true, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-family"}}}, "hosts": {"home": {"orchestrator": "local", "builder": "local", "reviewer": "local"}, "overflow": {"serves": "builder", "host": "boat"}, "max_agents": 8, "projects": {"syn-owner/syn-app": ["local", "boat"]}}, "drivers": {"local": true, "boat": true, "cloudroom": false}, "budgets": {"local:claude:work": {"amount": 90, "unit": "percent", "by": "2026-12-04T08:00:00Z"}, "boat:plan:boat-org": {"amount": 500, "unit": "credits", "by": "2026-12-31T08:00:00Z"}}, "keys": {"github-app": {"store": "token-service-key", "entry": "service/app/private-key.pem", "opt_in": false, "on": true, "set_at": "2026-11-28T08:30:00Z"}, "eval": {"store": "env-file", "entry": "OPENWIZ_EVAL_KEY", "opt_in": true, "on": false, "set_at": null}, "devin": {"store": "macos-keychain", "entry": "openwiz-devin", "opt_in": true, "on": true, "set_at": "2026-11-28T09:00:00Z"}}, "channels": {"t3": true, "slack": false}, "telemetry": false, "updates": "ask", "version": 5, "changed_at": "2026-11-15T09:00:00Z", "changed_by": "Wiz chat"},
+    {"roles": {"orchestrator": {"harness": "claude-code", "model": "claude-opus-5-5", "effort": "high", "account": "work", "fallback": [{"harness": "claude-code", "model": "claude-sonnet-5-5", "effort": "high", "account": "personal"}]}, "builder": {"harness": "claude-code", "model": "claude-opus-5-5", "effort": "medium", "account": "work", "fallback": [{"harness": "claude-code", "model": "claude-opus-5-5", "effort": "medium", "account": "personal"}]}, "fixer": {"harness": "claude-code", "model": "claude-sonnet-5-5", "effort": "medium", "account": "personal", "fallback": []}, "reviewer": {"harness": "codex", "model": "gpt-6.2-sol", "effort": "medium", "account": "codex-work", "fallback": [{"harness": "codex", "model": "vendor/demo", "effort": "medium", "account": "codex-work"}]}, "small_builder": "follows builder"}, "accounts": {"work": {"harness": "claude-code", "host": "local", "reserved": false, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-work"}}, "personal": {"harness": "claude-code", "host": "local", "reserved": false, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-personal"}}, "codex-work": {"harness": "codex", "host": "local", "reserved": false}, "family": {"harness": "claude-code", "host": "local", "reserved": true, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-family"}}}, "hosts": {"home": {"orchestrator": "local", "builder": "local", "reviewer": "local"}, "overflow": {"serves": "builder", "host": "boat"}, "max_agents": 8, "projects": {"syn-owner/syn-app": ["local", "boat"]}}, "drivers": {"local": true, "boat": true, "cloudroom": false}, "budgets": {"local:claude:work": {"amount": 90, "unit": "percent", "by": "2026-12-04T08:00:00Z"}, "boat:plan:boat-org": {"amount": 500, "unit": "credits", "by": "2026-12-31T08:00:00Z"}}, "keys": {"github-app": {"store": "token-service-key", "entry": "service/app/private-key.pem", "opt_in": false, "on": true, "set_at": "2026-11-28T08:30:00Z"}, "eval": {"store": "env-file", "entry": "OPENWIZ_EVAL_KEY", "opt_in": true, "on": false, "set_at": null}, "devin": {"store": "macos-keychain", "entry": "openwiz-devin", "opt_in": true, "on": true, "set_at": "2026-11-28T09:00:00Z"}}, "channels": {"t3": true, "slack": false}, "telemetry": false, "updates": "ask", "version": 6, "changed_at": "2026-11-16T09:00:00Z", "changed_by": "Wiz chat"},
+    {"roles": {"orchestrator": {"harness": "claude-code", "model": "claude-opus-5-5", "effort": "high", "account": "work", "fallback": [{"harness": "claude-code", "model": "claude-sonnet-5-5", "effort": "high", "account": "personal"}]}, "builder": {"harness": "claude-code", "model": "claude-opus-5-5", "effort": "high", "account": "work", "fallback": [{"harness": "claude-code", "model": "claude-opus-5-5", "effort": "medium", "account": "personal"}]}, "fixer": {"harness": "claude-code", "model": "claude-sonnet-5-5", "effort": "medium", "account": "personal", "fallback": []}, "reviewer": {"harness": "codex", "model": "gpt-6.2-sol", "effort": "medium", "account": "codex-work", "fallback": [{"harness": "codex", "model": "vendor/demo", "effort": "medium", "account": "codex-work"}]}, "small_builder": "follows builder"}, "accounts": {"work": {"harness": "claude-code", "host": "local", "reserved": false, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-work"}}, "personal": {"harness": "claude-code", "host": "local", "reserved": false, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-personal"}}, "codex-work": {"harness": "codex", "host": "local", "reserved": false}, "family": {"harness": "claude-code", "host": "local", "reserved": true, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-family"}}}, "hosts": {"home": {"orchestrator": "local", "builder": "local", "reviewer": "local"}, "overflow": {"serves": "builder", "host": "boat"}, "max_agents": 8, "projects": {"syn-owner/syn-app": ["local", "boat"]}}, "drivers": {"local": true, "boat": true, "cloudroom": false}, "budgets": {"local:claude:work": {"amount": 90, "unit": "percent", "by": "2026-12-04T08:00:00Z"}, "boat:plan:boat-org": {"amount": 500, "unit": "credits", "by": "2026-12-31T08:00:00Z"}}, "keys": {"github-app": {"store": "token-service-key", "entry": "service/app/private-key.pem", "opt_in": false, "on": true, "set_at": "2026-11-28T08:30:00Z"}, "eval": {"store": "env-file", "entry": "OPENWIZ_EVAL_KEY", "opt_in": true, "on": false, "set_at": null}, "devin": {"store": "macos-keychain", "entry": "openwiz-devin", "opt_in": true, "on": true, "set_at": "2026-11-28T09:00:00Z"}}, "channels": {"t3": true, "slack": false}, "telemetry": false, "updates": "ask", "version": 7, "changed_at": "2026-11-17T09:00:00Z", "changed_by": "Wiz chat"},
+    {"roles": {"orchestrator": {"harness": "claude-code", "model": "claude-opus-5-5", "effort": "high", "account": "work", "fallback": [{"harness": "claude-code", "model": "claude-sonnet-5-5", "effort": "high", "account": "personal"}]}, "builder": {"harness": "claude-code", "model": "claude-opus-5-5", "effort": "medium", "account": "work", "fallback": [{"harness": "claude-code", "model": "claude-opus-5-5", "effort": "medium", "account": "personal"}]}, "fixer": {"harness": "claude-code", "model": "claude-sonnet-5-5", "effort": "medium", "account": "personal", "fallback": []}, "reviewer": {"harness": "codex", "model": "gpt-6.2-sol", "effort": "medium", "account": "codex-work", "fallback": [{"harness": "codex", "model": "vendor/demo", "effort": "medium", "account": "codex-work"}]}, "small_builder": "follows builder"}, "accounts": {"work": {"harness": "claude-code", "host": "local", "reserved": false, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-work"}}, "personal": {"harness": "claude-code", "host": "local", "reserved": false, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-personal"}}, "codex-work": {"harness": "codex", "host": "local", "reserved": false}, "family": {"harness": "claude-code", "host": "local", "reserved": true, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-family"}}}, "hosts": {"home": {"orchestrator": "local", "builder": "local", "reviewer": "local"}, "overflow": {"serves": "builder", "host": "boat"}, "max_agents": 8, "projects": {"syn-owner/syn-app": ["local", "boat"]}}, "drivers": {"local": true, "boat": true, "cloudroom": false}, "budgets": {"local:claude:work": {"amount": 90, "unit": "percent", "by": "2026-12-04T08:00:00Z"}, "boat:plan:boat-org": {"amount": 500, "unit": "credits", "by": "2026-12-31T08:00:00Z"}}, "keys": {"github-app": {"store": "token-service-key", "entry": "service/app/private-key.pem", "opt_in": false, "on": true, "set_at": "2026-11-28T08:30:00Z"}, "eval": {"store": "env-file", "entry": "OPENWIZ_EVAL_KEY", "opt_in": true, "on": false, "set_at": null}, "devin": {"store": "macos-keychain", "entry": "openwiz-devin", "opt_in": true, "on": true, "set_at": "2026-11-28T09:00:00Z"}}, "channels": {"t3": true, "slack": false}, "telemetry": false, "updates": "ask", "version": 8, "changed_at": "2026-11-18T09:00:00Z", "changed_by": "Wiz chat"},
+    {"roles": {"orchestrator": {"harness": "claude-code", "model": "claude-opus-5-5", "effort": "high", "account": "work", "fallback": [{"harness": "claude-code", "model": "claude-sonnet-5-5", "effort": "high", "account": "personal"}]}, "builder": {"harness": "claude-code", "model": "claude-opus-5-5", "effort": "high", "account": "work", "fallback": [{"harness": "claude-code", "model": "claude-opus-5-5", "effort": "medium", "account": "personal"}]}, "fixer": {"harness": "claude-code", "model": "claude-sonnet-5-5", "effort": "medium", "account": "personal", "fallback": []}, "reviewer": {"harness": "codex", "model": "gpt-6.2-sol", "effort": "medium", "account": "codex-work", "fallback": [{"harness": "codex", "model": "vendor/demo", "effort": "medium", "account": "codex-work"}]}, "small_builder": "follows builder"}, "accounts": {"work": {"harness": "claude-code", "host": "local", "reserved": false, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-work"}}, "personal": {"harness": "claude-code", "host": "local", "reserved": false, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-personal"}}, "codex-work": {"harness": "codex", "host": "local", "reserved": false}, "family": {"harness": "claude-code", "host": "local", "reserved": true, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-family"}}}, "hosts": {"home": {"orchestrator": "local", "builder": "local", "reviewer": "local"}, "overflow": {"serves": "builder", "host": "boat"}, "max_agents": 8, "projects": {"syn-owner/syn-app": ["local", "boat"]}}, "drivers": {"local": true, "boat": true, "cloudroom": false}, "budgets": {"local:claude:work": {"amount": 90, "unit": "percent", "by": "2026-12-04T08:00:00Z"}, "boat:plan:boat-org": {"amount": 500, "unit": "credits", "by": "2026-12-31T08:00:00Z"}}, "keys": {"github-app": {"store": "token-service-key", "entry": "service/app/private-key.pem", "opt_in": false, "on": true, "set_at": "2026-11-28T08:30:00Z"}, "eval": {"store": "env-file", "entry": "OPENWIZ_EVAL_KEY", "opt_in": true, "on": false, "set_at": null}, "devin": {"store": "macos-keychain", "entry": "openwiz-devin", "opt_in": true, "on": true, "set_at": "2026-11-28T09:00:00Z"}}, "channels": {"t3": true, "slack": false}, "telemetry": false, "updates": "ask", "version": 9, "changed_at": "2026-11-19T09:00:00Z", "changed_by": "Wiz chat"},
+    {"roles": {"orchestrator": {"harness": "claude-code", "model": "claude-opus-5-5", "effort": "high", "account": "work", "fallback": [{"harness": "claude-code", "model": "claude-sonnet-5-5", "effort": "high", "account": "personal"}]}, "builder": {"harness": "claude-code", "model": "claude-opus-5-5", "effort": "medium", "account": "work", "fallback": [{"harness": "claude-code", "model": "claude-opus-5-5", "effort": "medium", "account": "personal"}]}, "fixer": {"harness": "claude-code", "model": "claude-sonnet-5-5", "effort": "medium", "account": "personal", "fallback": []}, "reviewer": {"harness": "codex", "model": "gpt-6.2-sol", "effort": "medium", "account": "codex-work", "fallback": [{"harness": "codex", "model": "vendor/demo", "effort": "medium", "account": "codex-work"}]}, "small_builder": "follows builder"}, "accounts": {"work": {"harness": "claude-code", "host": "local", "reserved": false, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-work"}}, "personal": {"harness": "claude-code", "host": "local", "reserved": false, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-personal"}}, "codex-work": {"harness": "codex", "host": "local", "reserved": false}, "family": {"harness": "claude-code", "host": "local", "reserved": true, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-family"}}}, "hosts": {"home": {"orchestrator": "local", "builder": "local", "reviewer": "local"}, "overflow": {"serves": "builder", "host": "boat"}, "max_agents": 8, "projects": {"syn-owner/syn-app": ["local", "boat"]}}, "drivers": {"local": true, "boat": true, "cloudroom": false}, "budgets": {"local:claude:work": {"amount": 90, "unit": "percent", "by": "2026-12-04T08:00:00Z"}, "boat:plan:boat-org": {"amount": 500, "unit": "credits", "by": "2026-12-31T08:00:00Z"}}, "keys": {"github-app": {"store": "token-service-key", "entry": "service/app/private-key.pem", "opt_in": false, "on": true, "set_at": "2026-11-28T08:30:00Z"}, "eval": {"store": "env-file", "entry": "OPENWIZ_EVAL_KEY", "opt_in": true, "on": false, "set_at": null}, "devin": {"store": "macos-keychain", "entry": "openwiz-devin", "opt_in": true, "on": true, "set_at": "2026-11-28T09:00:00Z"}}, "channels": {"t3": true, "slack": false}, "telemetry": false, "updates": "ask", "version": 10, "changed_at": "2026-11-20T09:00:00Z", "changed_by": "Wiz chat"},
+    {"roles": {"orchestrator": {"harness": "claude-code", "model": "claude-opus-5-5", "effort": "high", "account": "work", "fallback": [{"harness": "claude-code", "model": "claude-sonnet-5-5", "effort": "high", "account": "personal"}]}, "builder": {"harness": "claude-code", "model": "claude-opus-5-5", "effort": "high", "account": "work", "fallback": [{"harness": "claude-code", "model": "claude-opus-5-5", "effort": "medium", "account": "personal"}]}, "fixer": {"harness": "claude-code", "model": "claude-sonnet-5-5", "effort": "medium", "account": "personal", "fallback": []}, "reviewer": {"harness": "codex", "model": "gpt-6.2-sol", "effort": "medium", "account": "codex-work", "fallback": [{"harness": "codex", "model": "vendor/demo", "effort": "medium", "account": "codex-work"}]}, "small_builder": "follows builder"}, "accounts": {"work": {"harness": "claude-code", "host": "local", "reserved": false, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-work"}}, "personal": {"harness": "claude-code", "host": "local", "reserved": false, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-personal"}}, "codex-work": {"harness": "codex", "host": "local", "reserved": false}, "family": {"harness": "claude-code", "host": "local", "reserved": true, "profile": {"variable": "CLAUDE_CONFIG_DIR", "folder": "~/.claude-family"}}}, "hosts": {"home": {"orchestrator": "local", "builder": "local", "reviewer": "local"}, "overflow": {"serves": "builder", "host": "boat"}, "max_agents": 8, "projects": {"syn-owner/syn-app": ["local", "boat"]}}, "drivers": {"local": true, "boat": true, "cloudroom": false}, "budgets": {"local:claude:work": {"amount": 90, "unit": "percent", "by": "2026-12-04T08:00:00Z"}, "boat:plan:boat-org": {"amount": 500, "unit": "credits", "by": "2026-12-31T08:00:00Z"}}, "keys": {"github-app": {"store": "token-service-key", "entry": "service/app/private-key.pem", "opt_in": false, "on": true, "set_at": "2026-11-28T08:30:00Z"}, "eval": {"store": "env-file", "entry": "OPENWIZ_EVAL_KEY", "opt_in": true, "on": false, "set_at": null}, "devin": {"store": "macos-keychain", "entry": "openwiz-devin", "opt_in": true, "on": true, "set_at": "2026-11-28T09:00:00Z"}}, "channels": {"t3": true, "slack": false}, "telemetry": false, "updates": "ask", "version": 11, "changed_at": "2026-11-21T09:00:00Z", "changed_by": "Wiz chat"}
+  ]
+}
