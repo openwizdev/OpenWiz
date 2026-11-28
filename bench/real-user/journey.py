@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
-"""The real-user journey bench: a fresh public repository to a first merged PR.
-
-  journey.py --agent CMD [--owner LOGIN] [--wizsite DIR] [--bench-file FILE]
-             [--timeout SECONDS] [--poll SECONDS] [--dry-run FIXTURE_DIR]
+USAGE = '''The real-user journey bench: a fresh public repository to a first merged PR.
 
 Exit 0: a fleet pull request merged, every page agreed with GitHub and the
-repository was removed. Exit 1: any of those did not happen. Exit 2: bad input.
-"""
+repository was removed. Exit 1: any of those did not happen. Exit 2: bad input.'''
 
 import argparse
 import datetime
@@ -47,9 +43,7 @@ def clock_text(seconds):
     return f'{seconds // 60}:{seconds % 60:02d}'
 
 
-class Live:
-    """Runs real commands on the real clock."""
-
+class LiveRunner:
     def now(self):
         return datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
 
@@ -62,9 +56,7 @@ class Live:
         return r.returncode, r.stdout, r.stderr
 
 
-class Replay:
-    """Answers each command from a fixture's calls.json on a virtual clock and logs it to ran.jsonl."""
-
+class FixtureReplay:
     def __init__(self, folder):
         self.folder = pathlib.Path(folder)
         try:
@@ -105,7 +97,6 @@ def prompt(repo):
 
 
 def first_merge(runner, repo, start, timeout, poll):
-    """The first merged pull request that closes one of this repository's issues, or None."""
     prefix = f'https://github.com/{repo}/issues/'
     while True:
         code, out, err = runner.run(['gh', 'pr', 'list', '--repo', repo, '--state', 'merged',
@@ -218,7 +209,7 @@ def journey(runner, args, out):
 
 
 def main(argv=None):
-    p = argparse.ArgumentParser(description=__doc__.split('\n')[0])
+    p = argparse.ArgumentParser(description=USAGE, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument('--agent', required=True, help='the coding agent command; the install prompt is its last argument')
     p.add_argument('--owner', help='the GitHub account for the throwaway repository (default: the signed-in user)')
     p.add_argument('--wizsite', default=str(ROOT.parent / 'WizSite'), help='a WizSite checkout with scripts/live-check.mjs')
@@ -232,7 +223,7 @@ def main(argv=None):
         print(line, flush=True)
 
     try:
-        runner = Replay(args.dry_run) if args.dry_run else Live()
+        runner = FixtureReplay(args.dry_run) if args.dry_run else LiveRunner()
         return 0 if journey(runner, args, out) else 1
     except Fail as e:
         print(f'journey: {e}', file=sys.stderr)
