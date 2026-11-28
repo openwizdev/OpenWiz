@@ -819,6 +819,39 @@ class SourceCheck(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn("entry: invalid changelog filename changes/not-a-ticket.md", result.stderr)
 
+    def test_moved_collision_rename_passes_and_tampered_or_unmapped_fails(self):
+        import entry as entry_mod
+        repo_root = Path(__file__).resolve().parents[2]
+        raw_121 = (repo_root / "changes/121.md").read_bytes()
+        self.assertEqual(entry_mod.sha(raw_121), entry_mod.MOVED[121][1])
+        self.assertIsNone(entry_mod.MOVED[121][0])
+        (self.repo / "changes/closedwiz-121.md").write_bytes(raw_121)
+        self.issue(121, {"number": 23, "title": "0.1.1"})
+        self.plant(121, "You can rename a colliding moved line.")
+        raw_2986 = (repo_root / "changes/2986.md").read_bytes()
+        self.assertEqual(entry_mod.sha(raw_2986), entry_mod.MOVED[2986][1])
+        self.assertIsNotNone(entry_mod.MOVED[2986][0])
+        (self.repo / "changes/closedwiz-2986.md").write_bytes(raw_2986)
+        self.commit("collision renames")
+        result = self.run_check("changes/")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.stdout.strip(), "entry: pass (3 changelog lines)")
+        named = subprocess.run([sys.executable, "-I", str(Path(__file__).resolve().parent / "entry.py"),
+                                "--repo", str(self.repo), "--", "changes/121.md", "changes/closedwiz-121.md"],
+                               env=self.env, capture_output=True, text=True)
+        self.assertEqual(named.returncode, 0, named.stdout + named.stderr)
+        (self.repo / "changes/closedwiz-121.md").write_text("kind: added\n\nTampered moved line.\n")
+        self.commit("tampered")
+        tampered = self.run_check("changes/")
+        self.assertEqual(tampered.returncode, 1, tampered.stdout + tampered.stderr)
+        self.assertIn("changes/closedwiz-121.md", tampered.stderr)
+        (self.repo / "changes/closedwiz-121.md").write_bytes(raw_121)
+        (self.repo / "changes/closedwiz-999999.md").write_text("kind: added\n\nUnmapped moved line.\n")
+        self.commit("unmapped")
+        unmapped = self.run_check("changes/")
+        self.assertEqual(unmapped.returncode, 1, unmapped.stdout + unmapped.stderr)
+        self.assertIn("ClosedWiz #999999 is not in the moved-number map", unmapped.stderr)
+
 
 def load_tests(loader, tests, pattern):
     names = lambda case: (case(name) for name in case.__dict__ if name.startswith("test_"))

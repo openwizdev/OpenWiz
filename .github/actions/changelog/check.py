@@ -91,7 +91,6 @@ def classify(pages, expected_count):
     return has_product, has_line
 
 
-LINE = re.compile(r"changes/(?:closedwiz-)?[1-9][0-9]*\.md\Z")
 FILE_STATUSES = {"added", "modified", "removed", "renamed", "copied", "changed"}
 
 
@@ -105,7 +104,10 @@ def milestone_paths(pages):
             filename = path(item.get("filename"))
             status = item.get("status")
             require(status in FILE_STATUSES, "unknown file status")
-            if status != "removed" and LINE.fullmatch(filename) and filename not in seen:
+            if (status != "removed" and filename.startswith("changes/")
+                    and filename != "changes/README.md"
+                    and not filename.startswith("changes/notes/")
+                    and filename not in seen):
                 seen.append(filename)
     return seen
 

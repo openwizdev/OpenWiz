@@ -208,7 +208,7 @@ def moved(doc):
 MOVED = moved(json.loads((Path(__file__).resolve().parent / "moved.json").read_text(), object_pairs_hook=unique))
 
 
-def source_lines(check, source, excluded, only=None):
+def source_lines(check, source, excluded, only=None, allow_moved_renames=False):
     a = check.args
     paths = tree(a.repo, source, ["changes"])
     universe = paths if only is None else only
@@ -227,6 +227,10 @@ def source_lines(check, source, excluded, only=None):
         if old:
             require(number in MOVED, f"entry: {path}: ClosedWiz #{number} is not in the moved-number map")
             lookup = MOVED[number][0]
+            if allow_moved_renames and match[1]:
+                require(sha(blob(a.repo, source, path)) == MOVED[number][1],
+                        f"entry: {path} does not match the moved ClosedWiz #{number} line")
+                continue
             require(match[1] or sha(blob(a.repo, source, path)) == MOVED[number][1],
                     f"entry: {path} is not the moved ClosedWiz #{number} line: rename the moved line "
                     f"changes/closedwiz-{number}.md, or record its new bytes in the moved-number map")
@@ -405,7 +409,7 @@ def main(argv=None):
         print("entry: pass (no changed changelog line)")
         return 0
     check = argparse.Namespace(args=argparse.Namespace(repo=repo))
-    source_lines(check, args.source, {}, only=ordered)
+    source_lines(check, args.source, {}, only=ordered, allow_moved_renames=True)
     noun = "changelog line" if len(ordered) == 1 else "changelog lines"
     print(f"entry: pass ({len(ordered)} {noun})")
     return 0

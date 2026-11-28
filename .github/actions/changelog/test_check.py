@@ -213,6 +213,20 @@ sys.exit(reply.get("exit", 0))
             "api", "--paginate", "--slurp",
             "repos/synthetic/project/pulls/4102/files?per_page=100"]])
 
+    def test_milestone_lines_includes_invalid_changes_filenames(self):
+        result, _ = self.run_milestone([
+            PRODUCT,
+            {"filename": "changes/README.md", "status": "modified"},
+            {"filename": "changes/notes/4101.md", "status": "added"},
+            {"filename": "changes/04101.md", "status": "added"},
+            {"filename": "changes/not-a-ticket.md", "status": "modified"},
+            {"filename": "changes/sub/4101.md", "status": "added"},
+            {"filename": "changes/removed.md", "status": "removed"},
+        ])
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.stdout.splitlines(),
+                         ["changes/04101.md", "changes/not-a-ticket.md", "changes/sub/4101.md"])
+
     def test_milestone_lines_ignore_an_empty_list_and_refuse_a_bad_read(self):
         result, calls = self.run_milestone([])
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
