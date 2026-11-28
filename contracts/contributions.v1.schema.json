@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "openwiz.contributions.v1",
+  "description": "Contribution records. Consumers verify the source and history rules in contributions.v1.md.",
+  "type": "object",
+  "required": ["schema", "kind"],
+  "properties": {
+    "schema": {"const": "openwiz.contributions.v1"},
+    "kind": {"type": "string"}
+  },
+  "oneOf": [
+    {"$ref": "#/$defs/contribution"},
+    {"$ref": "#/$defs/intake"},
+    {"$ref": "#/$defs/review_timing"},
+    {"$ref": "#/$defs/first_review"},
+    {"$ref": "#/$defs/approval"},
+    {"$ref": "#/$defs/contributor_row"},
+    {"$ref": "#/$defs/changelog_thanks"},
+    {"$ref": "#/$defs/perk"}
+  ],
+  "unevaluatedProperties": false,
+  "$defs": {
+    "pull_request": {
+      "type": "object",
+      "required": ["repository", "number"],
+      "additionalProperties": false,
+      "properties": {
+        "repository": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_.-]+$(?![\\s\\S])"},
+        "number": {"type": "integer", "minimum": 1}
+      }
+    },
+    "head": {"type": "string", "pattern": "^[0-9a-f]{40}$(?![\\s\\S])"},
+    "utc": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$(?![\\s\\S])"
+    },
+    "family": {"enum": ["claude", "gpt"]},
+    "login": {"type": "string", "maxLength": 39, "pattern": "^[A-Za-z0-9]+(-[A-Za-z0-9]+)*$(?![\\s\\S])"},
+    "text": {"type": "string", "pattern": "\\S"},
+    "finding": {
+      "type": "object",
+      "required": ["exact_fact", "next_command"],
+      "additionalProperties": false,
+      "properties": {
+        "exact_fact": {"$ref": "#/$defs/text"},
+        "next_command": {"$ref": "#/$defs/text"}
+      }
+    },
+    "contribution": {
+      "required": ["pull_request", "login", "repository_in_public_scope", "author_is_record_author", "head_is_fleet_branch"],
+      "properties": {
+        "kind": {"const": "contribution"},
+        "pull_request": {"$ref": "#/$defs/pull_request"},
+        "login": {"$ref": "#/$defs/login"},
+        "repository_in_public_scope": {"const": true},
+        "author_is_record_author": {"const": false},
+        "head_is_fleet_branch": {"const": false}
+      }
+    },
+    "intake": {
+      "required": ["record", "pull_request", "head", "opened_at", "first_reviewer_family"],
+      "properties": {
+        "kind": {"const": "intake"},
+        "record": {"const": "launch-fleet: contribution intake"},
+        "pull_request": {"$ref": "#/$defs/pull_request"},
+        "head": {"$ref": "#/$defs/head"},
+        "opened_at": {"$ref": "#/$defs/utc"},
+        "first_reviewer_family": {"$ref": "#/$defs/family"}
+      }
+    },
+    "review_timing": {
+      "required": ["pull_request", "head", "start", "started_at", "elapsed_seconds", "outcome"],
+      "properties": {
+        "kind": {"const": "review_timing"},
+        "pull_request": {"$ref": "#/$defs/pull_request"},
+        "head": {"$ref": "#/$defs/head"},
+        "start": {"enum": ["opened", "latest_push_after_review"]},
+        "started_at": {"$ref": "#/$defs/utc"},
+        "elapsed_seconds": {"type": "integer", "minimum": 0},
+        "outcome": {"enum": ["met", "missed"]},
+        "record": {"const": "launch-fleet: contribution first review missed"}
+      },
+      "if": {"properties": {"outcome": {"const": "met"}}},
+      "then": {"properties": {"elapsed_seconds": {"maximum": 3600}}, "not": {"required": ["record"]}},
+      "else": {"properties": {"elapsed_seconds": {"minimum": 3601}}, "required": ["record"]}
+    },
+    "first_review": {
+      "required": ["pull_request", "head", "verdict", "findings"],
+      "properties": {
+        "kind": {"const": "first_review"},
+        "pull_request": {"$ref": "#/$defs/pull_request"},
+        "head": {"$ref": "#/$defs/head"},
+        "verdict": {"enum": ["APPROVE", "CHANGES"]},
+        "findings": {"type": "array", "items": {"$ref": "#/$defs/finding"}}
+      },
+      "if": {"properties": {"verdict": {"const": "CHANGES"}}},
+      "then": {"properties": {"findings": {"minItems": 1}}}
+    },
+    "approval": {
+      "required": ["pull_request", "head", "verdict", "first_reviewer_family", "approver_family"],
+      "properties": {
+        "kind": {"const": "approval"},
+        "pull_request": {"$ref": "#/$defs/pull_request"},
+        "head": {"$ref": "#/$defs/head"},
+        "verdict": {"const": "APPROVE"},
+        "first_reviewer_family": {"$ref": "#/$defs/family"},
+        "approver_family": {"$ref": "#/$defs/family"}
+      },
+      "if": {"properties": {"first_reviewer_family": {"const": "claude"}}},
+      "then": {"properties": {"approver_family": {"const": "gpt"}}},
+      "else": {"properties": {"approver_family": {"const": "claude"}}}
+    },
+    "contributor_row": {
+      "required": ["login", "first", "latest"],
+      "properties": {
+        "kind": {"const": "contributor_row"},
+        "login": {"$ref": "#/$defs/login"},
+        "first": {"$ref": "#/$defs/pull_request"},
+        "latest": {"$ref": "#/$defs/pull_request"}
+      }
+    },
+    "changelog_thanks": {
+      "required": ["line"],
+      "properties": {
+        "kind": {"const": "changelog_thanks"},
+        "line": {
+          "type": "string",
+          "pattern": "^[^\\r\\n]*\\S, with thanks to @(?=[A-Za-z0-9-]{1,39}\\.)[A-Za-z0-9]+(-[A-Za-z0-9]+)*\\.$(?![\\s\\S])"
+        }
+      }
+    },
+    "perk": {
+      "required": ["pull_request", "login", "merged", "credits"],
+      "properties": {
+        "kind": {"const": "perk"},
+        "pull_request": {"$ref": "#/$defs/pull_request"},
+        "login": {"$ref": "#/$defs/login"},
+        "merged": {"const": true},
+        "credits": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}
