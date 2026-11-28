@@ -32,6 +32,7 @@ driver's ticket for the status of a move or a new repository.
 | [GitHub Codespaces](https://github.com/openwizdev/OpenWiz/issues/3013) | sandbox | `openwizdev/driver-codespaces` | off | [`codespaces`](https://github.com/openwizdev/WizMarket/blob/main/listings/codespaces.json) | listed |
 | [GitHub Copilot coding agent](https://github.com/openwizdev/OpenWiz/issues/3479) | agent cloud | `openwizdev/driver-github-copilot-coding-agent` | off | `github-copilot-coding-agent` (planned) | unverified |
 | [Google Jules](https://github.com/openwizdev/OpenWiz/issues/3478) | agent cloud | `openwizdev/driver-google-jules` | off | `google-jules` (planned) | unverified |
+| [Grok Bot](bots.md#grok-bot) | bot | — | off | — | later |
 | [Hermes](https://github.com/openwizdev/OpenWiz/issues/3010) | machine | `openwizdev/driver-hermes` | off | [`hermes`](https://github.com/openwizdev/WizMarket/blob/main/listings/hermes.json) | listed |
 | [Modal](https://github.com/openwizdev/OpenWiz/issues/3482) | sandbox | `openwizdev/driver-modal` | off | `modal` (planned) | unverified |
 | [Ona](https://github.com/openwizdev/OpenWiz/issues/3021) | sandbox | `openwizdev/driver-ona` | off | `ona` (planned) | unverified |
