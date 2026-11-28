@@ -1,5 +1,3 @@
-"""Offline proofs for the release ladder CLI."""
-
 import json
 import os
 from pathlib import Path
@@ -79,7 +77,7 @@ class LadderTests(unittest.TestCase):
         self.git("commit", "--quiet", "--allow-empty", "-m", "Synthetic change")
         return self.git("rev-parse", "HEAD")
 
-    def github_history(self, main, first_page, second_page=()):
+    def github_history(self, main, first_page, second_page=(), files=None):
         prefix = "api repos/openwizdev/OpenWiz/"
         pulls = "pulls?state=closed&base=main&sort=updated&direction=desc&per_page=100&page="
         routes = {
@@ -88,6 +86,10 @@ class LadderTests(unittest.TestCase):
             prefix + pulls + "1": first_page,
             prefix + pulls + "2": list(second_page),
         }
+        for pr, paths in (files or {}).items():
+            routes[f"api --paginate --slurp repos/openwizdev/OpenWiz/pulls/{pr}/files?per_page=100"] = [
+                [{"filename": path, "status": "added"} for path in paths]
+            ]
         self.routes.write_text(json.dumps(routes), encoding="utf-8")
 
     def pull(self, number, commit, merged_at=RECENT, base="main", updated_at=RECENT):
@@ -112,7 +114,6 @@ class LadderTests(unittest.TestCase):
         return before, unrelated, first, second
 
     def test_propose_reads_only_verified_main_merges_after_publication(self):
-        """Catches closed, off-main, unreachable and already released PRs entering the batch."""
         before, unrelated, first, second = self.history()
         self.github_history(second, [
             self.pull(8100, before, merged_at=OLD),
@@ -122,7 +123,7 @@ class LadderTests(unittest.TestCase):
             self.pull(8103, unrelated),
             self.pull(8101, first),
             self.pull(8106, before, merged_at=CUTOFF),
-        ])
+        ], files={8101: ["changes/4101.md"], 8102: []})
         original = self.file.read_bytes()
         git_state = self.git("show-ref")
         result = self.invoke("propose")
@@ -139,7 +140,6 @@ class LadderTests(unittest.TestCase):
         self.assertEqual(self.git("show-ref"), git_state)
 
     def test_propose_uses_the_last_released_patch_and_walks_pages(self):
-        """Catches a stale release cutoff or dropped PRs after GitHub's first page."""
         before, _, first, second = self.history()
         self.entries[1].update(state="released", published_at=RECENT, published_changelog=[])
         self.write_ladder()
@@ -147,7 +147,8 @@ class LadderTests(unittest.TestCase):
         first_page = [self.pull(n, before, merged_at=None, updated_at=later) for n in range(8200, 8298)]
         first_page += [self.pull(8101, first, updated_at=later),
                        self.pull(8100, before, merged_at=OLD, updated_at=later)]
-        self.github_history(second, first_page, [self.pull(8102, second, later, updated_at=later)])
+        self.github_history(second, first_page, [self.pull(8102, second, later, updated_at=later)],
+                            files={8102: []})
         result = self.invoke("propose", "--version", "0.1.2")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout), {
@@ -157,25 +158,34 @@ class LadderTests(unittest.TestCase):
         })
 
     def test_propose_refuses_minor_major_and_skipped_versions_before_reading_github(self):
-        """Catches a proposal that crosses the owner's version boundary or skips the next patch."""
         for version in ("0.2.0", "1.1.1", "0.1.0", "0.1.2", "0.01.1"):
             with self.subTest(version=version):
                 self.assert_refused(self.invoke("propose", "--version", version), "version")
         self.assertFalse(self.calls.exists())
 
     def test_propose_refuses_unreadable_main_and_malformed_changelog(self):
-        """Catches partial proposals from a missing snapshot or an invalid ticket line."""
         _, _, first, _ = self.history()
         unknown_sha = "a" * 40
         self.github_history(unknown_sha, [])
-        self.assert_refused(self.invoke("propose"), "git rev-list")
+        self.assert_refused(self.invoke("propose"), "cannot read GitHub main")
         self.git("switch", "--quiet", "main")
         invalid = self.commit(4102, "kind: improved\n\nYou can export the inventory.\n")
-        self.github_history(invalid, [self.pull(8101, first), self.pull(8102, invalid)])
+        self.github_history(invalid, [self.pull(8101, first), self.pull(8102, invalid)],
+                            files={8101: ["changes/4101.md"], 8102: ["changes/4102.md"]})
         self.assert_refused(self.invoke("propose"), "changes/4102.md")
 
+    def test_propose_reads_the_full_pr_for_a_rebase_merge(self):
+        _, _, _, final = self.history()
+        self.github_history(final, [self.pull(8102, final)], files={8102: ["changes/4101.md"]})
+        result = self.invoke("propose")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["merges"], [
+            {"pr": 8102, "merge_commit": final, "head": f"{8102:040x}",
+             "changelog": [{"ticket": 4101, "kind": "fixed",
+                            "sentence": "The inventory keeps saved rows."}]},
+        ])
+
     def test_check_refuses_unordered_and_unknown_states(self):
-        """Catches sorting on read or silently accepting an invented state."""
         for field, value, message in (("version", "0.1.3", "order"), ("state", "draft", "state")):
             with self.subTest(field=field):
                 original = self.entries[1][field]
@@ -185,7 +195,6 @@ class LadderTests(unittest.TestCase):
                 self.entries[1][field] = original
 
     def test_check_accepts_fixture_and_the_published_seed(self):
-        """Catches a shipped seed that cannot be opened through the normal entry point."""
         for seed in (False, True):
             with self.subTest(seed=seed):
                 result = self.invoke("check", seed=seed)
