@@ -1,0 +1,22 @@
+{
+  "lane": "local:claude:demo",
+  "label": "demo",
+  "driver": "local",
+  "source": "claude /usage",
+  "status": "signed-in",
+  "windows": [
+    {
+      "label": "Weekly",
+      "used_percent": 35,
+      "resets_at": "2030-01-13T00:00:00Z"
+    }
+  ],
+  "checked_at": "2030-01-10T12:00:00Z",
+  "target": {
+    "amount": 60,
+    "unit": "percent",
+    "by": "2030-01-11T00:00:00Z"
+  },
+  "pace": "on pace",
+  "margin": 5
+}

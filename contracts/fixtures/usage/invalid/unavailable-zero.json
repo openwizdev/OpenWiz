@@ -1,0 +1,17 @@
+{
+  "lane": "local:claude:demo",
+  "label": "demo",
+  "driver": "local",
+  "source": "openwiz usage",
+  "status": "unavailable",
+  "windows": [
+    {
+      "label": "Invented",
+      "used_percent": 0,
+      "resets_at": null
+    }
+  ],
+  "checked_at": "2030-01-10T12:00:00Z",
+  "reason": "no-usage-command",
+  "message": "the driver has no usage command"
+}

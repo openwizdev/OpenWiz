@@ -1,0 +1,15 @@
+{
+  "lane": "local:claude:demo",
+  "label": "demo",
+  "driver": "local",
+  "source": "claude /usage",
+  "status": "signed-in",
+  "windows": [
+    {
+      "label": "Session",
+      "used_percent": 100.01,
+      "resets_at": null
+    }
+  ],
+  "checked_at": "2030-01-10T12:00:00Z"
+}

@@ -1,0 +1,19 @@
+{
+  "lane": "boat:plan:demo",
+  "label": "demo",
+  "driver": "boat",
+  "source": "boat limits",
+  "status": "signed-in",
+  "windows": [
+    {
+      "label": "Plan period",
+      "used_percent": 5,
+      "resets_at": "2030-02-01T00:00:00Z"
+    }
+  ],
+  "checked_at": "2030-01-10T12:00:00Z",
+  "left": {
+    "amount": 9.5,
+    "unit": "dollars"
+  }
+}
