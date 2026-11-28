@@ -100,12 +100,24 @@ RETIRED_RECEIPT_CASES = {
 }
 
 
+CLI_OPTIONS = frozenset(('-h', '--help', '--cli', '--fake', '--case'))
+
+
 def argument_parser():
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument('--cli', required=True, type=Path)
     parser.add_argument('--fake', required=True, type=Path)
     parser.add_argument('--case', choices=['integration'], default='integration')
     return parser
+
+
+def is_cli_argv(argv):
+    for token in argv:
+        if token == '--':
+            break
+        if token.partition('=')[0] in CLI_OPTIONS:
+            return True
+    return False
 
 
 class RetiredReceiptCases(unittest.TestCase):
@@ -160,14 +172,43 @@ class RetiredReceiptCases(unittest.TestCase):
                     self.assertNotIn('unrecognized arguments', run.stderr)
                     self.assertIn('FileNotFoundError', run.stderr)
 
+    def test_dispatch_routes_cli_and_unittest_invocations(self):
+        expected = (Path('synthetic-cli').resolve(), Path('synthetic-fake').resolve())
+        for argv in (
+            ['--cli', 'synthetic-cli', '--fake', 'synthetic-fake'],
+            ['--cli=synthetic-cli', '--fake=synthetic-fake', '--case', 'integration'],
+            ['--cli=synthetic-cli', '--fake=synthetic-fake', '--case=integration'],
+            ['--fake=synthetic-fake', '--cli=synthetic-cli'],
+        ):
+            with self.subTest(cli_argv=argv):
+                calls, tests = [], []
+                dispatch(argv, run_integration=lambda c, f: calls.append((c, f)),
+                         run_tests=lambda: tests.append(True))
+                self.assertEqual(calls, [expected])
+                self.assertEqual(tests, [])
 
-def main():
-    args = argument_parser().parse_args()
-    integration(args.cli.resolve(), args.fake.resolve())
+        for argv in ([], ['-v'], ['--failfast'], ['--catch'], ['RetiredReceiptCases']):
+            with self.subTest(unittest_argv=argv):
+                calls, tests = [], []
+                dispatch(argv, run_integration=lambda c, f: calls.append((c, f)),
+                         run_tests=lambda: tests.append(True))
+                self.assertEqual(calls, [])
+                self.assertEqual(tests, [True])
+
+
+def main(argv=None, run_integration=None):
+    args = argument_parser().parse_args(argv)
+    runner = integration if run_integration is None else run_integration
+    runner(args.cli.resolve(), args.fake.resolve())
+
+
+def dispatch(argv=None, *, run_integration=None, run_tests=None):
+    args = sys.argv[1:] if argv is None else list(argv)
+    if is_cli_argv(args):
+        main(args, run_integration=run_integration)
+    else:
+        (unittest.main if run_tests is None else run_tests)()
 
 
 if __name__ == '__main__':
-    if '--cli' not in sys.argv and '--help' not in sys.argv and '-h' not in sys.argv:
-        unittest.main()
-    else:
-        main()
+    dispatch()
