@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Exercise the release grant's command and audit its I/O."""
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -16,9 +17,9 @@ MINOR = (1, "every 0.x.0 stays the owner's ship call")
 NO_POINTER = (1, "missing or invalid standing release grant decision or private-record pointer")
 
 
-def check(action, fleet=None, *, launcher=None, cwd=None):
+def check(action, fleet=None, *, launcher=None, cwd=None, reader=READER):
     command = [sys.executable, "-I"]
-    command.extend([str(READER)] if launcher is None else ["-c", launcher, str(READER)])
+    command.extend([str(reader)] if launcher is None else ["-c", launcher, str(reader)])
     command.extend(["check", action])
     if fleet is not None:
         command.extend(["--fleet", str(fleet)])
@@ -48,10 +49,17 @@ class GrantTest(unittest.TestCase):
                 with self.subTest(fixture=fixture, action=action):
                     self.assert_result(check(action, FIXTURES / f"{fixture}.md"), action, expected)
 
-    def test_default_fleet_has_no_grant(self):
-        for action in ("patch", "pull"):
-            with self.subTest(action=action):
-                self.assert_result(check(action, cwd=FIXTURES), action, ABSENT)
+    def test_default_fleet_is_relative_to_the_reader(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            checkout = Path(scratch)
+            reader = checkout / "tools/release/grant.py"
+            fleet = checkout / "docs/agents/fleet.md"
+            for path, source in ((reader, READER), (fleet, FIXTURES / "patch-only.md")):
+                path.parent.mkdir(parents=True)
+                shutil.copyfile(source, path)
+            for action, expected in (("patch", GRANTED), ("pull", ABSENT)):
+                with self.subTest(action=action):
+                    self.assert_result(check(action, cwd=FIXTURES, reader=reader), action, expected)
 
     def test_failed_reads(self):
         with tempfile.TemporaryDirectory() as scratch:
