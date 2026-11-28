@@ -2,15 +2,18 @@ import {
   badgeText,
   beginActing,
   canAct,
+  createQueue,
   emptyState,
   endActing,
   grantSession,
   grantTab,
+  revokeActing,
   revokeSession,
   revokeTab
 } from "./policy.mjs";
 
 const KEY = "permission";
+const enqueue = createQueue();
 
 function openPanel() {
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
@@ -43,7 +46,7 @@ function fromPage(sender) {
   return Boolean(sender && sender.tab);
 }
 
-async function handle(message, sender) {
+async function handleNow(message, sender) {
   const state = await load();
   if (!message || typeof message !== "object") return { ok: false };
   if (message.type === "get-state") {
@@ -84,13 +87,13 @@ async function handle(message, sender) {
   }
   if (message.type === "revoke-acting") {
     if (!fromPage(sender)) return { ok: false };
-    let next = state;
-    if (next.acting && next.acting.via === "session") next = revokeSession(next);
-    else next = revokeTab(next, sender.tab.id);
-    next = endActing(next, sender.tab.id);
-    return { ok: true, state: await save(next) };
+    return { ok: true, state: await save(revokeActing(state, sender.tab.id)) };
   }
   return { ok: false };
+}
+
+function handle(message, sender) {
+  return enqueue(() => handleNow(message, sender));
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -101,7 +104,5 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {
-  load()
-    .then((state) => save(revokeTab(state, tabId)))
-    .catch(() => {});
+  enqueue(async () => save(revokeTab(await load(), tabId))).catch(() => {});
 });

@@ -109,8 +109,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def host_ok(self):
         host = self.headers.get("Host", "")
-        port = str(self.server.server_address[1])
-        return host in {f"127.0.0.1:{port}", "127.0.0.1", f"localhost:{port}", "localhost"}
+        port = self.server.server_address[1]
+        allowed = {f"127.0.0.1:{port}", f"localhost:{port}"}
+        if port == 80:
+            allowed |= {"127.0.0.1", "localhost"}
+        return host in allowed
 
     def origin_ok(self):
         origin = self.headers.get("Origin")
@@ -118,13 +121,11 @@ class Handler(BaseHTTPRequestHandler):
             return True
         if EXTENSION_ORIGIN.fullmatch(origin):
             return True
-        port = str(self.server.server_address[1])
-        return origin in {
-            f"http://127.0.0.1:{port}",
-            "http://127.0.0.1",
-            f"http://localhost:{port}",
-            "http://localhost",
-        }
+        port = self.server.server_address[1]
+        allowed = {f"http://127.0.0.1:{port}", f"http://localhost:{port}"}
+        if port == 80:
+            allowed |= {"http://127.0.0.1", "http://localhost"}
+        return origin in allowed
 
     def echo_origin(self):
         origin = self.headers.get("Origin")

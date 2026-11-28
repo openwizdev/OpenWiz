@@ -1,8 +1,11 @@
-import { acceptAction, bridgeUrl, canAct, emptyState, tabGrantable } from "./policy.mjs";
+import { acceptAction, bridgeUrl, canAct, emptyState, selectPending, tabGrantable } from "./policy.mjs";
 
 const $ = (id) => document.getElementById(id);
+const ACT_MS = 700;
+const BRIDGE_TIMEOUT_MS = 125000;
 let pending = [];
 let sending = false;
+let turnSeq = 0;
 
 function call(message) {
   return chrome.runtime.sendMessage(message).then((response) => response || { ok: false, error: "The extension did not answer." });
@@ -21,6 +24,15 @@ async function activeTab() {
   return tab || null;
 }
 
+async function tabById(tabId) {
+  if (tabId == null) return null;
+  try {
+    return (await chrome.tabs.get(tabId)) || null;
+  } catch {
+    return null;
+  }
+}
+
 async function sessionId() {
   const bag = await chrome.storage.session.get("sessionId");
   if (typeof bag.sessionId === "string" && bag.sessionId) return bag.sessionId;
@@ -36,7 +48,7 @@ async function post(route, body) {
   if (!url) return { ok: false, error: "The bridge address must be http://127.0.0.1 or http://localhost with a port." };
   if (!token) return { ok: false, error: "Paste the pairing token from the bridge." };
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 35000);
+  const timer = setTimeout(() => controller.abort(), BRIDGE_TIMEOUT_MS);
   try {
     const res = await fetch(`${url}/chrome/v1/${route}`, {
       method: "POST",
@@ -120,7 +132,7 @@ function showApp(on) {
   $("status").textContent = on ? "Connected to the local bridge" : "Not connected";
 }
 
-function appendMessage(role, text, actions, waiting) {
+function appendMessage(role, text, actions, waiting, origin = null) {
   const empty = $("log").querySelector(".empty");
   if (empty) empty.remove();
   const item = document.createElement("article");
@@ -136,15 +148,18 @@ function appendMessage(role, text, actions, waiting) {
     label.textContent = action.description || action.op;
     const status = document.createElement("p");
     status.className = "action-status";
-    status.textContent = waiting ? "Waiting for permission" : "Running";
+    status.textContent = origin && origin.closed
+      ? origin.closed
+      : waiting ? "Waiting for permission" : "Running";
     card.append(label, status);
-    if (waiting) {
+    if (waiting && origin && origin.tabId != null) {
       const button = document.createElement("button");
       button.type = "button";
       button.textContent = "Allow this tab and run";
-      button.addEventListener("click", () => allowAndRun(action, status, button));
+      const entry = { tabId: origin.tabId, turnId: origin.turnId, action, status, button };
+      button.addEventListener("click", () => allowAndRun(entry));
       card.appendChild(button);
-      pending.push({ action, status, button });
+      pending.push(entry);
     }
     statuses.push(status);
     item.appendChild(card);
@@ -154,7 +169,7 @@ function appendMessage(role, text, actions, waiting) {
   return statuses;
 }
 
-function offerSite(status, url) {
+function offerSite(status, url, onRetry) {
   if (status.parentElement.querySelector(".site")) return;
   const button = document.createElement("button");
   button.type = "button";
@@ -163,13 +178,34 @@ function offerSite(status, url) {
   button.addEventListener("click", async () => {
     const pattern = `${new URL(url).origin}/*`;
     const ok = await chrome.permissions.request({ origins: [pattern] });
-    if (ok) button.hidden = true;
-    else status.textContent = "Chrome did not grant this site.";
+    if (ok) {
+      button.remove();
+      status.textContent = "Site allowed. Retrying…";
+      if (onRetry) await onRetry();
+    } else {
+      status.textContent = "Chrome did not grant this site.";
+    }
   });
   status.parentElement.appendChild(button);
 }
 
-async function runOne(tabId, action, status, url) {
+async function retryWithTab(tabId, action, status, allowButton) {
+  const tab = await tabById(tabId);
+  if (!tab) {
+    status.textContent = "The original tab is closed.";
+    return;
+  }
+  if (allowButton) allowButton.disabled = true;
+  const ok = await runOne(tab.id, action, status, tab.url, allowButton);
+  if (ok && allowButton) {
+    allowButton.hidden = true;
+    pending = pending.filter((item) => item.button !== allowButton);
+  } else if (allowButton) {
+    allowButton.disabled = false;
+  }
+}
+
+async function runOne(tabId, action, status, url, allowButton = null) {
   const accepted = acceptAction(action);
   if (!accepted) {
     status.textContent = "The action was refused.";
@@ -181,11 +217,27 @@ async function runOne(tabId, action, status, url) {
     status.textContent = "Grant this tab or this session first.";
     return false;
   }
+  const started = Date.now();
+  let succeeded = false;
   try {
+    if (accepted.op === "navigate") {
+      if (url && tabGrantable(url)) {
+        try {
+          await chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] });
+          await chrome.tabs.sendMessage(tabId, { type: "banner" });
+        } catch {
+        }
+      }
+      await chrome.tabs.update(tabId, { url: accepted.url });
+      status.textContent = `Opening ${accepted.url}`;
+      succeeded = true;
+      return true;
+    }
     await chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] });
     const result = await chrome.tabs.sendMessage(tabId, { type: "act", action: accepted });
     if (result && result.ok) {
       status.textContent = result.detail || "Done";
+      succeeded = true;
       return true;
     }
     status.textContent = result && result.error === "permission_required"
@@ -193,10 +245,22 @@ async function runOne(tabId, action, status, url) {
       : (result && result.error) || "The action failed.";
     return false;
   } catch {
+    const live = await tabById(tabId);
+    if (!live) {
+      status.textContent = "The original tab is closed.";
+      return false;
+    }
     status.textContent = "The tab could not be reached.";
-    if (url && tabGrantable(url)) offerSite(status, url);
+    const targetUrl = live.url || url;
+    if (accepted.op !== "navigate" && targetUrl && tabGrantable(targetUrl)) {
+      offerSite(status, targetUrl, () => retryWithTab(tabId, action, status, allowButton));
+    }
     return false;
   } finally {
+    if (succeeded) {
+      const wait = ACT_MS - (Date.now() - started);
+      if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+    }
     await call({ type: "end-act", tabId });
   }
 }
@@ -208,28 +272,36 @@ async function ensureOrigin(tab) {
   return chrome.permissions.request({ origins: [pattern] });
 }
 
+async function grantTabFor(tab) {
+  if (!tab || !tabGrantable(tab.url)) {
+    note("Only an http or https tab can be granted.");
+    return null;
+  }
+  if (!(await ensureOrigin(tab))) {
+    note("Chrome did not grant this site. The agent cannot act here yet.");
+    return null;
+  }
+  const granted = await call({ type: "grant-tab", tab: { id: tab.id, url: tab.url, title: tab.title || "" } });
+  if (!granted.ok) {
+    note(granted.error || "The tab was not granted.");
+    return null;
+  }
+  note("");
+  return tab;
+}
+
 async function grantActive(kind) {
   const tab = await activeTab();
-  if (kind === "tab") {
-    if (!tab || !tabGrantable(tab.url)) {
-      note("Only an http or https tab can be granted.");
-      return null;
-    }
-    if (!(await ensureOrigin(tab))) {
-      note("Chrome did not grant this site. The agent cannot act here yet.");
-      return null;
-    }
-    const granted = await call({ type: "grant-tab", tab: { id: tab.id, url: tab.url, title: tab.title || "" } });
-    if (!granted.ok) {
-      note(granted.error || "The tab was not granted.");
-      return null;
-    }
-    note("");
-    return tab;
-  }
+  if (kind === "tab") return grantTabFor(tab);
+  const siteNeeded = Boolean(tab && tabGrantable(tab.url));
+  const siteOk = siteNeeded ? await ensureOrigin(tab) : true;
   const granted = await call({ type: "grant-session" });
   if (!granted.ok) {
     note(granted.error || "The session was not granted.");
+    return null;
+  }
+  if (siteNeeded && !siteOk) {
+    note("Session allowed, but Chrome did not grant this site yet.");
     return null;
   }
   note("");
@@ -238,25 +310,48 @@ async function grantActive(kind) {
 
 async function runQueued(tab) {
   if (!tab) return;
-  const queued = pending.splice(0);
+  const queued = selectPending(pending, tab.id);
   for (const item of queued) {
-    if (!item.button.isConnected) continue;
-    item.button.hidden = true;
-    const ok = await runOne(tab.id, item.action, item.status, tab.url);
-    if (!ok) break;
+    if (!item.button.isConnected) {
+      pending = pending.filter((entry) => entry !== item);
+      continue;
+    }
+    item.button.disabled = true;
+    const ok = await runOne(tab.id, item.action, item.status, tab.url, item.button);
+    if (ok) {
+      item.button.hidden = true;
+      pending = pending.filter((entry) => entry !== item);
+    } else {
+      item.button.disabled = false;
+      break;
+    }
   }
 }
 
-async function allowAndRun(action, status, button) {
-  const tab = await grantActive("tab");
-  if (!tab) return;
-  button.hidden = true;
-  pending = pending.filter((item) => item.button !== button);
-  await runOne(tab.id, action, status, tab.url);
+async function allowAndRun(entry) {
+  if (entry.button.disabled) return;
+  entry.button.disabled = true;
+  try {
+    const tab = await tabById(entry.tabId);
+    if (!tab) {
+      entry.status.textContent = "The original tab is closed.";
+      entry.button.hidden = true;
+      pending = pending.filter((item) => item !== entry);
+      return;
+    }
+    const granted = await grantTabFor(tab);
+    if (!granted) return;
+    const ok = await runOne(tab.id, entry.action, entry.status, tab.url, entry.button);
+    if (ok) {
+      entry.button.hidden = true;
+      pending = pending.filter((item) => item !== entry);
+    }
+  } finally {
+    if (!entry.button.hidden) entry.button.disabled = false;
+  }
 }
 
-async function collectPage() {
-  const tab = await activeTab();
+async function collectPage(tab) {
   if (!tab || !tabGrantable(tab.url)) return { page: null, note: "This tab has no page to attach." };
   const base = { url: tab.url || "", title: tab.title || "", selection: "", text: "" };
   try {
@@ -279,9 +374,11 @@ async function onSend(event) {
   $("text").value = "";
   note("");
   appendMessage("user", text);
+  const originTab = await activeTab();
+  const turnId = ++turnSeq;
   let page = null;
   if ($("include-page").checked) {
-    const collected = await collectPage();
+    const collected = await collectPage(originTab);
     page = collected.page;
     if (collected.note) note(collected.note);
   }
@@ -298,10 +395,21 @@ async function onSend(event) {
     return;
   }
   const actions = Array.isArray(response.body.actions) ? response.body.actions : [];
-  const tab = await activeTab();
+  const tab = originTab && originTab.id != null ? await tabById(originTab.id) : null;
+  if (!tab && actions.length > 0) {
+    const closed = originTab ? "The original tab is closed." : "No active tab.";
+    appendMessage("agent", response.body.text || "", actions, false, { closed });
+    return;
+  }
   const state = await call({ type: "get-state" });
   const allowed = Boolean(tab && state.ok && canAct(state.state, tab.id));
-  const statuses = appendMessage("agent", response.body.text || "", actions, !allowed && actions.length > 0);
+  const statuses = appendMessage(
+    "agent",
+    response.body.text || "",
+    actions,
+    !allowed && actions.length > 0,
+    tab ? { tabId: tab.id, turnId } : null
+  );
   if (!allowed || !tab) return;
   for (let index = 0; index < actions.length; index += 1) {
     const ok = await runOne(tab.id, actions[index], statuses[index], tab.url);
@@ -373,7 +481,12 @@ $("text").addEventListener("keydown", (event) => {
     $("composer").requestSubmit();
   }
 });
-$("disconnect").addEventListener("click", () => showApp(false));
+$("disconnect").addEventListener("click", async () => {
+  await chrome.storage.local.remove("token");
+  $("token").value = "";
+  connectError("");
+  showApp(false);
+});
 $("grant-tab").addEventListener("click", async () => {
   const tab = await grantActive("tab");
   if (tab) await runQueued(tab);
@@ -390,4 +503,14 @@ chrome.storage.onChanged.addListener((changes, area) => {
 });
 chrome.tabs.onActivated.addListener(() => paintTab());
 chrome.tabs.onUpdated.addListener(() => paintTab());
+chrome.tabs.onRemoved.addListener((tabId) => {
+  for (const item of pending) {
+    if (item.tabId === tabId) {
+      item.button.hidden = true;
+      item.status.textContent = "The original tab is closed.";
+    }
+  }
+  pending = pending.filter((item) => item.tabId !== tabId);
+  paintTab();
+});
 restore();

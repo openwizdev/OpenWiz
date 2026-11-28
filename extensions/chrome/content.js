@@ -130,21 +130,35 @@ if (!globalThis.__openwizContent) {
     return action && (action.op === "read" || action.op === "click" || action.op === "type" || action.op === "navigate");
   }
 
+  let bannerTimer = null;
+
+  function scheduleHide(banner) {
+    if (bannerTimer) clearTimeout(bannerTimer);
+    bannerTimer = setTimeout(() => {
+      bannerTimer = null;
+      if (banner.isConnected) banner.remove();
+    }, 700);
+  }
+
   async function act(action) {
     if (!known(action)) return { ok: false, error: "That action is not supported." };
     const allowed = await chrome.runtime.sendMessage({ type: "can-act" });
     if (!allowed || !allowed.ok) return { ok: false, error: "permission_required" };
     const banner = showBanner();
-    const started = Date.now();
     try {
       return { ok: true, detail: perform(action) };
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : "The action failed." };
     } finally {
-      const wait = 700 - (Date.now() - started);
-      if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
-      if (banner.isConnected) banner.remove();
+      scheduleHide(banner);
     }
+  }
+
+  async function bannerOnly() {
+    const allowed = await chrome.runtime.sendMessage({ type: "can-act" });
+    if (!allowed || !allowed.ok) return { ok: false, error: "permission_required" };
+    scheduleHide(showBanner());
+    return { ok: true };
   }
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -153,8 +167,12 @@ if (!globalThis.__openwizContent) {
       sendResponse({ ok: true, page: collect() });
       return false;
     }
+    if (message.type === "banner") {
+      bannerOnly().then(sendResponse, () => sendResponse({ ok: false }));
+      return true;
+    }
     if (message.type === "act") {
-      act(message.action).then(sendResponse);
+      act(message.action).then(sendResponse, () => sendResponse({ ok: false, error: "The action failed." }));
       return true;
     }
     return false;

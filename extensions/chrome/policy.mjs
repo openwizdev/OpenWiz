@@ -129,3 +129,31 @@ export function badgeText(state) {
   if (state && (state.session || Object.keys(state.grants || {}).length)) return "ON";
   return "";
 }
+
+export function revokeActing(state, tabId) {
+  const via = state.acting && String(state.acting.tabId) === String(tabId)
+    ? state.acting.via
+    : canAct(state, tabId);
+  const next = via === "session" ? revokeSession(state) : revokeTab(state, tabId);
+  return endActing(next, tabId);
+}
+
+export function createQueue() {
+  let tail = Promise.resolve();
+  return (task) => {
+    const run = tail.then(task, task);
+    tail = run.then(() => undefined, () => undefined);
+    return run;
+  };
+}
+
+export function selectPending(items, tabId) {
+  let latestTurn = null;
+  for (const item of items) {
+    if (String(item.tabId) === String(tabId) && (latestTurn == null || item.turnId > latestTurn)) {
+      latestTurn = item.turnId;
+    }
+  }
+  if (latestTurn == null) return [];
+  return items.filter((item) => String(item.tabId) === String(tabId) && item.turnId === latestTurn);
+}
