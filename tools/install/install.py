@@ -413,7 +413,8 @@ def install(manifest, archive, manifest_sha256, root, target, state_root=None,
         new_version = release_version or value['version']
         owns_early_file = False
         old_rc = None
-        if selected is not None:
+        early_involved = existing_channel_name == 'early' or channel == 'early'
+        if selected is not None and early_involved:
             if selected != build:
                 old_manifest_path = selected / 'install-manifest.json'
                 private(old_manifest_path, False)
@@ -442,7 +443,7 @@ def install(manifest, archive, manifest_sha256, root, target, state_root=None,
             if not stage_only:
                 require(semver_key(new_version) >= semver_key(old_version),
                         'refusing to downgrade from %s to %s' % (old_version, new_version))
-        elif early_exists and channel == 'early':
+        elif selected is None and early_exists and channel == 'early':
             read_early_release(early_file, allow_transition=True)
         with tarfile.open(archive, 'r:gz') as tar:
             members = []
@@ -523,6 +524,8 @@ def install(manifest, archive, manifest_sha256, root, target, state_root=None,
                 if release_version:
                     replace_private(early_file, early_release_bytes(release_version, value['source']),
                                     '.early-release-')
+                elif channel == 'early' and early_exists:
+                    early_file.unlink()
                 if not channel_file.exists():
                     write(channel_file, channel_bytes)
                 sync(root)

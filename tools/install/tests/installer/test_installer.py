@@ -85,8 +85,11 @@ class Installer(test_install.Bundles):
             code = entry.main(list(argv), host=host)
         return code, json.loads(out.getvalue())
 
-    def publish(self, tag, version='0.1.0'):
-        manifest, archive, _ = self.bundle(version=version, mutate=lambda m: m.update(archive=ARCHIVE))
+    def publish(self, tag, version='0.1.0', source=None):
+        kwargs = {'version': version, 'mutate': lambda m: m.update(archive=ARCHIVE)}
+        if source is not None:
+            kwargs['source'] = source
+        manifest, archive, _ = self.bundle(**kwargs)
         raw, data = manifest.read_bytes(), archive.read_bytes()
         prefix = '/openwizdev/OpenWiz/releases/download/' + tag + '/'
         sums = '%s  openwiz-%s-%s.manifest.json\n%s  %s\n' % (test_install.sha(raw), version, TARGET,
@@ -599,11 +602,54 @@ class EarlyChannel(Installer):
         self.assertEqual(self.run_entry('install', '--assets', str(dl3), '--target', TARGET,
                                         '--root', str(self.root))[0], 0)
 
+    def test_packaged_install_allows_installing_older_public_version(self):
+        self.publish('v0.1.1', '0.1.1', source='1' * 40)
+        self.publish('v0.1.0', '0.1.0', source='0' * 40)
+        dl1 = self.base / 'dl-pub-011'
+        dl0 = self.base / 'dl-pub-010'
+        self.assertEqual(self.run_entry('download', '--target', TARGET, '--dir', str(dl1), '--version', 'v0.1.1')[0], 0)
+        self.assertEqual(self.run_entry('download', '--target', TARGET, '--dir', str(dl0), '--version', 'v0.1.0')[0], 0)
+        code, value = self.run_entry('install', '--assets', str(dl1), '--target', TARGET, '--root', str(self.root))
+        self.assertEqual((code, value['outcome'], value['version']), (0, 'installed', '0.1.1'), value)
+        code, value = self.run_entry('install', '--assets', str(dl0), '--target', TARGET, '--root', str(self.root))
+        self.assertEqual((code, value['outcome'], value.get('version')), (0, 'installed', '0.1.0'), value)
+        code, st = self.run_entry('status', '--root', str(self.root))
+        self.assertEqual((code, st['version'], st['channel']), (0, '0.1.0', 'packaged'), st)
+        self.assertEqual(self.run_entry('install', '--assets', str(dl1), '--target', TARGET, '--root', str(self.root))[0], 0)
+        assets_root, cfg_path = self.setup_pro(('0.1.1-rc.1', 'a' * 40))
+        dl_rc = self.download_pro_rc(assets_root, cfg_path, '0.1.1-rc.1', self.base / 'dl-early-older')
+        code, value = self.run_entry('install', '--assets', str(dl_rc), '--target', TARGET, '--root', str(self.root))
+        self.assertEqual((code, value['outcome']), (5, 'refused'), value)
+        self.assertIn('downgrade', value['reason'])
+        self.assertEqual(self.run_entry('status', '--root', str(self.root))[1]['version'], '0.1.1')
+
+    def test_early_first_public_install_clears_stale_early_release_metadata(self):
+        self.root.parent.mkdir(parents=True, mode=0o700, exist_ok=True)
+        self.root.mkdir(mode=0o700)
+        stale = self.root / 'early-release.json'
+        stale.write_bytes(entry.installer.early_release_bytes('0.1.2-rc.1', '1' * 40))
+        stale.chmod(0o600)
+        assets_root = self.base / 'pro-empty'
+        assets_root.mkdir()
+        self.publish('v0.1.2', '0.1.2', source='2' * 40)
+        self.feed('v0.1.2')
+        self.setup_fake_gh({'logged_in': True, 'status': 200, 'assets': str(assets_root), 'releases': []})
+        dl = self.base / 'dl-early-pub-first'
+        code, value = self.run_entry('download', '--early', '--target', TARGET, '--dir', str(dl))
+        self.assertEqual((code, value['version'], value['origin']), (0, '0.1.2', 'public'), value)
+        code, value = self.run_entry('install', '--assets', str(dl), '--target', TARGET, '--root', str(self.root))
+        self.assertEqual((code, value['outcome'], value['version']), (0, 'installed', '0.1.2'), value)
+        self.assertFalse(stale.exists())
+        code, st = self.run_entry('status', '--root', str(self.root))
+        self.assertEqual((code, st['outcome'], st['version'], st['channel']), (0, 'installed', '0.1.2', 'early'), st)
+
     def test_early_install_guide_bootstraps_installer_with_early_flag(self):
         guide = (INSTALL.parents[1] / 'docs/install.md').read_text(encoding='utf-8')
         section = guide.split('**Early builds', 1)[1].split('\n3. ', 1)[0]
         self.assertNotIn('"$openwiz"/tools/install/install download --early', section)
         self.assertIn('git clone', section)
+        self.assertIn('openwiz_early=', section)
+        self.assertLess(section.index('openwiz_early='), section.index('"$openwiz_early"'))
 
 
 if __name__ == '__main__':

@@ -450,6 +450,84 @@ class Pull(unittest.TestCase):
         early = pull.discover(target, fetch=fetch, channel='early', which=which)
         self.assertEqual((early['version'], early['origin']), ('0.1.2', 'public'))
 
+    def test_early_discover_falls_back_to_latest_on_feed_error_or_refused_tag(self):
+        pull, f, target, _, cfg_path, which = self._early_fixture({
+            'logged_in': True, 'status': 200, 'assets': '', 'releases': [],
+        })
+        latest_pub = f.bundle(version='0.1.0', source='a' * 40)
+        mid_pub = f.bundle(version='0.1.1', source='b' * 40)
+        rc_pub = f.bundle(version='0.1.2', source='c' * 40)
+        rc_dir = f.base / 'pro-fallback-assets/v0.1.2-rc.1'
+        rc_dir.mkdir(parents=True)
+        rc_raw = rc_pub[0].read_bytes()
+        (rc_dir / f'openwiz-{target}.sha256').write_bytes(f'{fixture.sha(rc_raw)}  openwiz-{target}.manifest.json\n'.encode())
+        (rc_dir / f'openwiz-{target}.manifest.json').write_bytes(rc_raw)
+
+        def latest_reply(url):
+            raw = latest_pub[0].read_bytes()
+            return f'{fixture.sha(raw)}  openwiz-{target}.manifest.json\n'.encode() if url.endswith('.sha256') else raw
+
+        for feed_err in (OSError('feed network error'), pull.Refused('feed HTTP 503')):
+            def fetch_feed_err(url, limit, err=feed_err):
+                if url == pull.FEED:
+                    raise err
+                if '/latest/download/' in url:
+                    return latest_reply(url)
+                raise pull.NotFound('404 at ' + url)
+
+            Path(cfg_path).write_text(json.dumps({
+                'logged_in': True, 'status': 200, 'assets': str(f.base / 'pro-fallback-assets'),
+                'releases': [{'tag_name': 'v0.1.2-rc.1', 'prerelease': True, 'draft': False}],
+            }))
+            cand = pull.discover(target, fetch=fetch_feed_err, channel='early', which=which)
+            self.assertEqual((cand['version'], cand['origin']), ('0.1.2-rc.1', 'early'))
+
+            Path(cfg_path).write_text(json.dumps({
+                'logged_in': True, 'status': 200, 'assets': str(f.base / 'pro-fallback-assets'), 'releases': [],
+            }))
+            cand = pull.discover(target, fetch=fetch_feed_err, channel='early', which=which)
+            self.assertEqual((cand['version'], cand['origin']), ('0.1.0', 'public'))
+
+        def fetch_bad_newer_tag(url, limit):
+            if url == pull.FEED:
+                return ('<entry><link href="https://github.com/openwizdev/OpenWiz/releases/tag/v0.1.3"/>'
+                        '<link href="https://github.com/openwizdev/OpenWiz/releases/tag/v0.1.0"/></entry>').encode()
+            if '/download/v0.1.3/' in url:
+                return b'corrupt checksum line\n'
+            if '/latest/download/' in url:
+                return latest_reply(url)
+            raise pull.NotFound('404 at ' + url)
+
+        Path(cfg_path).write_text(json.dumps({
+            'logged_in': True, 'status': 200, 'assets': str(f.base / 'pro-fallback-assets'),
+            'releases': [{'tag_name': 'v0.1.2-rc.1', 'prerelease': True, 'draft': False}],
+        }))
+        cand = pull.discover(target, fetch=fetch_bad_newer_tag, channel='early', which=which)
+        self.assertEqual((cand['version'], cand['origin']), ('0.1.2-rc.1', 'early'))
+
+        Path(cfg_path).write_text(json.dumps({
+            'logged_in': True, 'status': 200, 'assets': str(f.base / 'pro-fallback-assets'), 'releases': [],
+        }))
+        cand = pull.discover(target, fetch=fetch_bad_newer_tag, channel='early', which=which)
+        self.assertEqual((cand['version'], cand['origin']), ('0.1.0', 'public'))
+
+        def fetch_bad_top_good_next(url, limit):
+            if url == pull.FEED:
+                return ('<entry><link href="https://github.com/openwizdev/OpenWiz/releases/tag/v0.1.3"/>'
+                        '<link href="https://github.com/openwizdev/OpenWiz/releases/tag/v0.1.1"/>'
+                        '<link href="https://github.com/openwizdev/OpenWiz/releases/tag/v0.1.0"/></entry>').encode()
+            if '/download/v0.1.3/' in url:
+                raise OSError('tag download failed')
+            if '/download/v0.1.1/' in url:
+                raw = mid_pub[0].read_bytes()
+                return f'{fixture.sha(raw)}  openwiz-{target}.manifest.json\n'.encode() if url.endswith('.sha256') else raw
+            if '/latest/download/' in url:
+                return latest_reply(url)
+            raise pull.NotFound('404 at ' + url)
+
+        cand = pull.discover(target, fetch=fetch_bad_top_good_next, channel='early', which=which)
+        self.assertEqual((cand['version'], cand['origin']), ('0.1.1', 'public'))
+
 
 if __name__ == '__main__':
     unittest.main()

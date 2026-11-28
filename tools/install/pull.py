@@ -190,13 +190,13 @@ def published_public_for_early(target, fetch, best_early=None):
         latest_error = missing
     try:
         tags = TAG_LINK.findall(fetch(FEED, 1024 * 1024).decode('utf-8', 'replace'))
-    except NotFound:
+    except (Refused, OSError):
         if latest_found is None:
             raise
         tags = []
     floor = semver_key(latest_found[2]['version']) if latest_found is not None else None
     early_key = semver_key(best_early) if best_early is not None else None
-    last_missing = latest_error
+    last_error = latest_error
     for tag in sorted(set(tags), key=semver_key, reverse=True):
         tag_key = semver_key(tag)
         if floor is not None and tag_key <= floor:
@@ -205,12 +205,14 @@ def published_public_for_early(target, fetch, best_early=None):
             break
         try:
             return published(target, fetch, tag)
-        except NotFound as missing:
-            last_missing = missing
+        except (Refused, OSError) as err:
+            last_error = err
     if latest_found is not None:
         return latest_found
-    if last_missing is not None:
-        raise NotFound('%s; no published release tag found at %s' % (last_missing, FEED))
+    if isinstance(last_error, NotFound):
+        raise NotFound('%s; no published release tag found at %s' % (last_error, FEED))
+    if last_error is not None:
+        raise last_error
     raise NotFound('no published release tag found at ' + FEED)
 
 

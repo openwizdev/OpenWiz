@@ -44,6 +44,7 @@ The agent runs each command itself and reads its JSON. `<root>` is the install f
    **Early builds (OpenWiz Pro, opt-in):** with no extra flag, `install download` reads only public releases from `openwizdev/OpenWiz` and installs on the `packaged` channel. Because step 1's `$openwiz` clone is pinned to `v0.1.1` (which does not accept `--early`), OpenWiz Pro members first clone the current default branch into a separate private temporary folder (or use an installer from `0.2.0` or later once released), then pass `--early` to `install download`:
 
    ```sh
+   openwiz_early=$(mktemp -d)/OpenWiz
    git clone --depth 1 https://github.com/openwizdev/OpenWiz "$openwiz_early"
    python3 -I "$openwiz_early"/tools/install/install download --early --target <target> --dir <new private folder>
    python3 -I "$openwiz_early"/tools/install/install install --assets <that folder> --target <target> --root <root>
