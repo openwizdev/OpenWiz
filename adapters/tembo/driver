@@ -1,0 +1,243 @@
+#!/usr/bin/env python3
+# SECURITY: driver v1 N4. Every Tembo call goes through the kit's key helper, which alone reads the key and picks
+# the address; this driver sends it only a host name, a method, a path and a body, and never names, reads or prints
+# the key. It shows no text the host answered: each error names only the status, the method and the path.
+import json, os, re, subprocess, sys, urllib.parse, uuid
+sys.dont_write_bytecode = True
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+HELPER = os.path.realpath(os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'hostkey.py'))
+HOST = 'tembo'
+VERSION = {'driver': 'tembo', 'records': ['openwiz:records v1'], 'can': ['start', 'wake', 'stop', 'effort']}
+START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
+         'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
+         'model': r'(?=.{1,100}$)[A-Za-z0-9][A-Za-z0-9 ._:@+-]*(/[A-Za-z0-9][A-Za-z0-9 ._:@+-]*)*'}
+RUN = {'run': r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'}
+AGENTS = {'claude': 'claudeCode', 'claude-code': 'claudeCode', 'codex': 'codex'}
+EFFORT = r'[a-z][a-z0-9-]{0,19}'
+# External: Tembo documents reasoning levels only for Codex, https://docs.tembo.io/features/agents
+EFFORTS = {'codex': ('low', 'medium', 'high', 'xhigh')}
+NO_EFFORT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster to run it "
+             "at the host's default")
+WOKEN = 'You were woken: read the ticket again and carry on.'
+
+
+class Refused(Exception):
+    pass
+
+
+def unique(pairs):
+    if len({k for k, _ in pairs}) != len(pairs):
+        raise Refused('a key is repeated', 'send each key once')
+    return dict(pairs)
+
+
+def read(fields):
+    try:
+        req = json.loads(sys.stdin.read(), object_pairs_hook=unique)
+    except ValueError:
+        raise Refused('the input is not JSON', 'send one JSON object on stdin, as `driver schema` shows')
+    optional = {'effort': EFFORT} if fields is START else {}
+    if not isinstance(req, dict) or not set(fields) <= set(req) <= set(fields) | set(optional):
+        raise Refused('the input needs exactly ' + ', '.join(fields) + (', and optionally effort' if optional else ''),
+                      'send only those fields; never a login')
+    for key, pattern in dict(fields, **optional).items():
+        if key not in req:
+            continue
+        v = req[key]
+        if not (type(v) is int and v > 0 if pattern is None else isinstance(v, str) and re.fullmatch(pattern, v)):
+            raise Refused(key + ' is not valid', 'fix ' + key + ' as `driver schema` shows')
+    return req
+
+
+def ask(method, path, body=None, ok=(200,)):
+    request = {'host': HOST, 'method': method, 'path': path}
+    if body is not None:
+        request['body'] = body
+    try:
+        p = subprocess.run([sys.executable, '-I', HELPER], input=json.dumps(request), capture_output=True,
+                           text=True, timeout=110)
+        out = json.loads(p.stdout)
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        raise Refused('the key helper gave no answer', 'run kernel/driver-kit/hostkey.py by hand to see why')
+    if p.returncode:
+        raise Refused('the key helper refused: ' + out['error'], out['next'])
+    if out['status'] not in ok:
+        raise Refused('Tembo answered %d to %s %s' % (out['status'], method, path.partition('?')[0]),
+                      'check your key and Tembo\'s status, then retry')
+    return out['status'], out['body']
+
+
+def unreadable(status, method, path):
+    return 'Tembo answered %d to %s %s in a form the driver cannot read' % (status, method, path.partition('?')[0])
+
+
+def is_str(v):
+    return isinstance(v, str)
+
+
+def not_found(status, found):
+    return status == 404 and isinstance(found, dict) and set(found) == {'error'} and is_str(found['error'])
+
+
+def github_repo(r, owner, name):
+    if r['provider']['type'].lower() != 'github':
+        return False
+    if not (is_str(r['owner']) and r['owner'].lower() == owner.lower() and r['name'].lower() == name.lower()):
+        return False
+    try:
+        u = urllib.parse.urlsplit(r['url'])
+    except ValueError:
+        return False
+    if u.scheme.lower() != 'https' or u.netloc.lower() != 'github.com' or u.query or u.fragment:
+        return False
+    path = u.path.rstrip('/')
+    if path.lower().endswith('.git'):
+        path = path[:-4]
+    return path.lower() == ('/' + owner + '/' + name).lower()
+
+
+def repository(full):
+    owner, name = full.split('/')
+    cursor, seen, matches = None, set(), []
+    while True:
+        params = {'search': name, 'limit': 100}
+        if cursor is not None:
+            params['cursor'] = cursor
+        path = '/v1/repositories?' + urllib.parse.urlencode(params)
+        status, found = ask('GET', path)
+        items = found.get('items') if isinstance(found, dict) else None
+        has_cursor = isinstance(found, dict) and 'nextCursor' in found
+        next_cursor = found['nextCursor'] if has_cursor else None
+        if not has_cursor or (next_cursor is not None and not (is_str(next_cursor) and next_cursor)) \
+                or not isinstance(items, list) or not all(
+                isinstance(r, dict) and is_str(r.get('id')) and is_str(r.get('name'))
+                and (r.get('owner') is None or is_str(r['owner'])) and is_str(r.get('url'))
+                and isinstance(r.get('provider'), dict) and is_str(r['provider'].get('type')) for r in items):
+            raise Refused(unreadable(status, 'GET', path), 'check Tembo\'s status, then retry')
+        for r in items:
+            if github_repo(r, owner, name) and r['id'] not in matches:
+                matches.append(r['id'])
+        if next_cursor is None:
+            break
+        if next_cursor in seen or len(seen) >= 100:
+            raise Refused(unreadable(status, 'GET', path), 'check Tembo\'s status, then retry')
+        seen.add(next_cursor)
+        cursor = next_cursor
+    if len(matches) == 1:
+        return matches[0]
+    if len(matches) > 1:
+        raise Refused('Tembo has more than one connected GitHub repository for ' + full,
+                      'leave only one GitHub integration connected to %s in Tembo, then start again' % full)
+    raise Refused('Tembo has no connected repository ' + full,
+                  'connect %s to Tembo (Settings, Integrations, GitHub), then start again' % full)
+
+
+def session(run):
+    path = '/v1/sessions/' + run
+    status, found = ask('GET', path, ok=(200, 404))
+    if not_found(status, found):
+        return 'unknown'
+    if status != 200 or not isinstance(found, dict) or found.get('id') != run \
+            or type(found.get('level')) is not int or found['level'] not in (0, 1):
+        raise Refused('run %s: %s' % (run, unreadable(status, 'GET', path)), 'check run %s on Tembo, then retry' % run)
+    return 'stopped' if found['level'] == 0 else 'live'
+
+
+def create(run, body):
+    status, made = ask('POST', '/v1/sessions', body, ok=(201,))
+    if not isinstance(made, dict) or made.get('id') != run or type(made.get('level')) is not int \
+            or made['level'] != 1:
+        raise Refused(unreadable(status, 'POST', '/v1/sessions'), '')
+
+
+def message(run):
+    status, sent = ask('POST', '/v1/messages', {'sessionId': run, 'content': WOKEN, 'deliveryMode': 'queue'},
+                       ok=(201,))
+    m = sent.get('message') if isinstance(sent, dict) else None
+    s = sent.get('session') if isinstance(sent, dict) else None
+    if not (isinstance(m, dict) and is_str(m.get('id')) and m.get('sessionId') == run and isinstance(s, dict)
+            and s.get('id') == run):
+        raise Refused(unreadable(status, 'POST', '/v1/messages'), '')
+
+
+def end(run):
+    path = '/v1/sessions/%s/stop?cancelQueued=true' % run
+    status, done = ask('POST', path, ok=(200, 404))
+    counts = ('cancelledSessions', 'cancelledJobs', 'stoppedRuntimeSessions', 'interruptedRuntimeTurns',
+              'cancelledRuntimeTurns')
+    if not (not_found(status, done) or status == 200 and isinstance(done, dict)
+            and all(type(done.get(k)) is int and done[k] >= 0 for k in counts)):
+        raise Refused(unreadable(status, 'POST', path), '')
+    path = '/v1/sessions/' + run
+    status, done = ask('DELETE', path, ok=(200, 404))
+    if not_found(status, done):
+        if session(run) == 'live':
+            raise Refused('Tembo answered 404 to DELETE %s, yet the run is still live' % path, '')
+    elif not (status == 200 and isinstance(done, dict) and done.get('deleted') is True and done.get('id') == run):
+        raise Refused(unreadable(status, 'DELETE', path), '')
+
+
+def answer(cmd):
+    if cmd == 'version':
+        return VERSION
+    if cmd == 'schema':
+        with open(os.path.join(HERE, 'schema.json')) as f:
+            return json.load(f)
+    if cmd == 'start':
+        req = read(START)
+        agent = AGENTS.get(req['harness'])
+        if 'effort' in req and req['effort'] not in EFFORTS.get(agent, ()):
+            raise Refused('Tembo cannot set effort %s for harness %s' % (req['effort'], req['harness']), NO_EFFORT)
+        if agent is None:
+            raise Refused('harness %s is not one Tembo runs for OpenWiz' % req['harness'],
+                          'use claude-code (or claude) or codex')
+        repo, run = repository(req['repository']), str(uuid.uuid4())
+        body = {'id': run, 'description': 'Build the ticket: %s#%d, with the %s skill.'
+                  % (req['repository'], req['ticket'], req['skill']),
+                  'agent': '%s:%s' % (agent, req['model']), 'codeRepositoryIds': [repo], 'queueRightAway': True}
+        if 'effort' in req:
+            body['agentOptions'] = {'reasoningLevel': req['effort']}
+        try:
+            create(run, body)
+        except Refused as e:
+            raise Refused('run %s may have started: %s' % (run, e.args[0]),
+                          'stop run %s with `driver stop`, then start again' % run)
+        return {'run': run}
+    if cmd == 'wake':
+        run = read(RUN)['run']
+        state = session(run)
+        if state != 'live':
+            raise Refused(('Tembo has no run %s' if state == 'unknown' else 'run %s is stopped') % run,
+                          'start a new run')
+        try:
+            message(run)
+        except Refused as e:
+            raise Refused('run %s may not have been woken: %s' % (run, e.args[0]),
+                          'check run %s on Tembo before you wake it again' % run)
+        return {'run': run, 'woke': True}
+    if cmd == 'stop':
+        run = read(RUN)['run']
+        if session(run) == 'live':
+            try:
+                end(run)
+            except Refused as e:
+                raise Refused('run %s may not have stopped: %s' % (run, e.args[0]),
+                              'check run %s on Tembo, then stop it again' % run)
+        return {'run': run, 'stopped': True}
+    raise Refused('unknown command', 'run one of: version, schema, start, wake, stop')
+
+
+def main():
+    try:
+        out, code = answer(sys.argv[1] if len(sys.argv) == 2 else ''), 0
+    except Refused as e:
+        out, code = {'error': e.args[0], 'next': e.args[1]}, 1
+    except Exception as e:
+        out, code = {'error': 'the driver failed: ' + type(e).__name__, 'next': 'read its code, fix it, retry'}, 1
+    print(json.dumps(out))
+    sys.exit(code)
+
+
+if __name__ == '__main__':
+    main()
