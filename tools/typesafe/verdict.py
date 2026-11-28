@@ -1,18 +1,10 @@
-"""Exact `VERDICT:` lines, and the confidence gate in `canonical_verdict_line`.
-
-Keep this equal to `crates/cli/src/typesafe.rs`. The commit comes from the
-line. A Choice of approve or changes is paired with a companion Noul that
-asks whether either option fits. There is no none-of-the-above option.
-Low Choice confidence, or a companion Noul in the uncertain band, leaves
-the line unchanged.
-"""
-
 import re
 
 import client
 import decide
 
 SHA = re.compile(r'[0-9a-f]{40}\Z')
+MAX_WORD_CHARS = 40
 
 
 def exact(line):
@@ -32,6 +24,8 @@ def shaped(line, recorded):
     if found:
         return found
     if not _commit(line) or not isinstance(recorded, dict):
+        return None
+    if len(line.removeprefix('VERDICT: ').split(' at ', 1)[0]) > MAX_WORD_CHARS:
         return None
     root = decide.load()
     site = root['sites']['verdict']
