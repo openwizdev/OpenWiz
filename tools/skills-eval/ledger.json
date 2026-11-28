@@ -3,12 +3,12 @@
  "skills": {
   "agent-issue": {
    "branch": "cursor/agent-records-3d07",
-   "commit": "feac99822f28445d4f9e84ff94c5503422fd1895",
+   "commit": "d64069add9a8f99c7ecf45d42d0ba49737bef9a8",
    "status": "branch-only"
   },
   "agent-pr": {
    "branch": "cursor/agent-records-3d07",
-   "commit": "feac99822f28445d4f9e84ff94c5503422fd1895",
+   "commit": "d64069add9a8f99c7ecf45d42d0ba49737bef9a8",
    "status": "branch-only"
   },
   "ask-wiz": {
@@ -55,7 +55,7 @@
   },
   "jev": {
    "branch": "cursor/jev-skill-944b",
-   "commit": "efd591814c1f30d58efaaa9c3a48ed144de3e2fb",
+   "commit": "27ca7a69c80f0a89ce26f838c103248c3bae8d39",
    "status": "branch-only"
   },
   "launch-fleet": {
@@ -99,7 +99,7 @@
   },
   "wait-what": {
    "branch": "cursor/wait-what-skill-5c8c",
-   "commit": "03dab4ed7aee7ea161980e6cbff7cb29801c25ba",
+   "commit": "d222658a1cd04596f23f9aa3d7cb28f018bd90ba",
    "status": "branch-only"
   },
   "wayfind": {

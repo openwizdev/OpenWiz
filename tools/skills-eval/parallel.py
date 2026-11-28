@@ -60,6 +60,8 @@ def resume(out, env_file, checkout=None):
             raise ValueError('; '.join(errors))
         settings = man['settings']
         pin = E.pinned(checkout or os.environ.get('WIZSKILLS_CHECKOUT'), man['wizskills']['commit'])
+        if pin['tree'] != man['wizskills']['tree']:
+            raise ValueError('wizskills tree differs from manifest')
         snap = E.snapshot(man['revision']['commit'], pin)
         errors, cases, _ = E.check(*snap, pin, E.earlier_rows(man['revision']['commit']))
         if errors:

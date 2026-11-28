@@ -173,11 +173,14 @@ def usage_report(folder):
                      'cached_input_tokens': usage.get('cache_read_input_tokens', 0),
                      'output_tokens': usage.get('output_tokens', 0),
                      'requests': t['provider_usage'], 'cost_usd': t['cost_usd']})
-    return {'schema': 'openwiz.skills-eval.provider-tokens.v1',
-            'tokenizer': 'DeepSeek (OpenRouter provider usage; not Claude tokens)',
-            'model': manifest['settings']['model'], 'revision': manifest['revision'],
-            'settings_hash': manifest.get('settings_hash'), 'cases_hash': manifest.get('cases_hash'),
-            'total': {k: sum(r[k] for r in rows) for k in ('input_tokens', 'cached_input_tokens', 'output_tokens')},
-            'cost_usd': round(sum(r['cost_usd'] for r in rows), 9), 'runs': rows,
-            'note': 'Cached input is a subset of input. Actor and judge requests included. '
-                    'Usage counts are not per-skill required-text token counts and prove no text savings.'}
+    out = {'schema': 'openwiz.skills-eval.provider-tokens.v1',
+           'tokenizer': 'DeepSeek (OpenRouter provider usage; not Claude tokens)',
+           'model': manifest['settings']['model'], 'revision': manifest['revision'],
+           'settings_hash': manifest.get('settings_hash'), 'cases_hash': manifest.get('cases_hash'),
+           'total': {k: sum(r[k] for r in rows) for k in ('input_tokens', 'cached_input_tokens', 'output_tokens')},
+           'cost_usd': round(sum(r['cost_usd'] for r in rows), 9), 'runs': rows,
+           'note': 'Cached input is a subset of input. Actor and judge requests included. '
+                   'Usage counts are not per-skill required-text token counts and prove no text savings.'}
+    if 'wizskills' in manifest:
+        out['wizskills'] = manifest['wizskills']
+    return out

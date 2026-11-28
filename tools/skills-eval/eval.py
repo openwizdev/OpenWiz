@@ -55,6 +55,27 @@ def ok(*args, repo):
     return subprocess.run(['git', '-C', str(repo), *args], capture_output=True).returncode == 0
 
 
+def parse_plugin(text):
+    try:
+        data = json.loads(text)
+    except ValueError:
+        raise Refusal(f'{PLUGIN} in pinned WizSkills is not valid JSON')
+    items = data.get('skills') if isinstance(data, dict) else None
+    if not isinstance(items, list) or any(not isinstance(p, str) or not p.strip() for p in items):
+        raise Refusal(f'{PLUGIN} in pinned WizSkills must list string skill paths')
+    return [p.rsplit('/', 1)[-1] for p in items]
+
+
+def resolve_rev(rev, host=None):
+    host = REPO if host is None else host
+    if not isinstance(rev, str) or not rev or rev.startswith('-'):
+        raise Refusal(f'invalid host revision: {rev!r}')
+    try:
+        return git('rev-parse', '--verify', '--quiet', f'{rev}^{{commit}}', repo=host).decode().strip()
+    except (OSError, subprocess.CalledProcessError):
+        raise Refusal(f'unknown host revision: {rev}')
+
+
 def pinned(checkout, commit):
     if not checkout or not commit:
         raise Refusal(NO_PIN)
@@ -73,6 +94,10 @@ def pinned(checkout, commit):
                       'run git fetch --unshallow there')
     if not ok('cat-file', '-e', f'{commit}:{PLUGIN}', repo=checkout):
         raise Refusal(f'commit {commit[:12]} has no {PLUGIN}: is that checkout WizSkills?')
+    try:
+        parse_plugin(git('cat-file', 'blob', f'{commit}:{PLUGIN}', repo=checkout).decode())
+    except UnicodeDecodeError:
+        raise Refusal(f'{PLUGIN} in pinned WizSkills is not valid UTF-8')
     return {'checkout': Path(checkout), 'commit': commit, 'tree': tree}
 
 
@@ -86,8 +111,10 @@ def tree_names(repo, rev, *paths):
     return [n for n in out.decode().split('\0') if n]
 
 
-def snapshot(rev, pin, host=REPO):
-    where = {n: (host, rev, n) for n in tree_names(host, rev)
+def snapshot(rev, pin, host=None):
+    host = REPO if host is None else host
+    at = resolve_rev(rev, host)
+    where = {n: (host, at, n) for n in tree_names(host, at)
              if n != 'skills' and not n.startswith(('skills/', '.wizskills/'))}
     if pin:
         for n in tree_names(pin['checkout'], pin['commit']):
@@ -101,9 +128,9 @@ def snapshot(rev, pin, host=REPO):
         if p not in where:
             return None
         if p not in cache:
-            repo, at, name = where[p]
+            repo, commit_at, name = where[p]
             try:
-                cache[p] = git('cat-file', 'blob', f'{at}:{name}', repo=repo).decode()
+                cache[p] = git('cat-file', 'blob', f'{commit_at}:{name}', repo=repo).decode()
             except (UnicodeDecodeError, subprocess.CalledProcessError):
                 cache[p] = None
         return cache[p]
@@ -113,9 +140,10 @@ def snapshot(rev, pin, host=REPO):
     return read, lst
 
 
-def revision(rev):
-    commit = git('rev-parse', rev).decode().strip()
-    tree = git('rev-parse', f'{commit}^{{tree}}').decode().strip()
+def revision(rev, host=None):
+    host = REPO if host is None else host
+    commit = resolve_rev(rev, host)
+    tree = git('rev-parse', f'{commit}^{{tree}}', repo=host).decode().strip()
     return {'commit': commit, 'tree': tree}
 
 
@@ -233,29 +261,39 @@ def audit(ledger, pin, read):
 
 def last_seen(pin, name):
     path = f'skills/{name}/SKILL.md'
-    gone = git('log', '-1', '--no-renames', '--format=%H', '--diff-filter=D', pin['commit'], '--', path,
-               repo=pin['checkout']).decode().strip()
-    parents = git('rev-parse', f'{gone}^@', repo=pin['checkout']).decode().split() if gone else []
+    gone = git('log', '-1', '-m', '--no-renames', '--format=%H', '--diff-filter=D', pin['commit'], '--', path,
+               repo=pin['checkout']).decode().split()
+    parents = git('rev-parse', f'{gone[0]}^@', repo=pin['checkout']).decode().split() if gone else []
     return next((p for p in parents if has(pin, p, path)), None)
 
 
-def propose(ledger, pin, read):
+def propose(ledger, pin, read, lst=None):
     rows = rows_of(ledger) or {}
     here, listed = skills_at(pin, pin['commit']), set(shipped(read))
     out = {}
     for n in sorted(here - set(rows)):
+        if n in listed:
+            out[n] = {'status': 'shipped'}
+            continue
         users = [f'skills/{s}/SKILL.md' for s in sorted(listed) if f'skills/{n}/' in (read(f'skills/{s}/SKILL.md') or '')]
-        out[n] = {'status': 'shipped'} if n in listed else {'status': 'observed-used', 'used_by': next(iter(users), None)}
+        if not users and lst is not None:
+            skip = (f'skills/{n}/', '.wizskills/skills/', 'tools/skills-eval/')
+            pool = [p for p in lst('skills/') if not p.startswith(f'skills/{n}/')]
+            pool += [p for p in lst('') if not p.startswith(('skills/', *skip))]
+            users = [p for p in pool if f'skills/{n}/' in (read(p) or '')]
+        out[n] = {'status': 'observed-used', 'used_by': next(iter(users), None)}
     for n in sorted(skills_before(pin) - here - set(rows)):
         out[n] = {'status': 'historical-only', 'last_seen': last_seen(pin, n)}
     out.update(branch_skills(pin, set(rows) | here | skills_before(pin)))
     return out
 
 
-def earlier_rows(rev, host=REPO):
-    path = LEDGER.relative_to(REPO).as_posix()
+def earlier_rows(rev, host=None):
+    host = REPO if host is None else host
+    at = resolve_rev(rev, host)
+    path = LEDGER.relative_to(HERE.parent.parent).as_posix()
     names = set()
-    for c in git('log', '--format=%H', rev, '--', path, repo=host).decode().split():
+    for c in git('log', '--format=%H', at, '--', path, repo=host).decode().split():
         try:
             rows = rows_of(json.loads(git('show', f'{c}:{path}', repo=host)))
         except (subprocess.CalledProcessError, ValueError):
@@ -311,7 +349,26 @@ def shipped(read):
     text = read('.wizskills/' + PLUGIN)
     if text is None:
         raise Refusal(NO_PIN)
-    return [p.rsplit('/', 1)[-1] for p in json.loads(text)['skills']]
+    return parse_plugin(text)
+
+
+def observed_used(ledger, pin, read):
+    rows = rows_of(ledger) or {}
+    here, listed = skills_at(pin, pin['commit']), set(shipped(read))
+    return [n for n, row in sorted(rows.items())
+            if isinstance(row, dict) and row.get('status') == 'observed-used'
+            and n in here and n not in listed
+            and isinstance(row.get('used_by'), str) and f'skills/{n}/' in (read(row['used_by']) or '')]
+
+
+def load_cases(folder=HERE / 'cases'):
+    out, errs = [], []
+    for p in sorted(Path(folder).glob('*.json')):
+        try:
+            out.append((p.name, json.loads(p.read_text())))
+        except ValueError as e:
+            errs.append(f'{p.name}: {e}')
+    return out, errs
 
 
 def coverage(all_cases, skills):
@@ -324,23 +381,23 @@ def coverage(all_cases, skills):
 
 
 def check(read, lst, pin, earlier=frozenset(), folder=HERE / 'cases'):
-    errs = []
     skills = shipped(read)
-    schema = json.loads(read('contracts/decisions.v1.schema.json'))
+    ledger = load_ledger()
+    live = sorted(set(skills) | set(observed_used(ledger, pin, read)))
+    schema_text = read('contracts/decisions.v1.schema.json')
+    if schema_text is None:
+        raise Refusal('host snapshot has no contracts/decisions.v1.schema.json')
+    schema = json.loads(schema_text)
+    loaded, errs = load_cases(folder)
     all_cases = []
-    for p in sorted(Path(folder).glob('*.json')):
-        try:
-            c = json.loads(p.read_text())
-        except ValueError as e:
-            errs.append(f'{p.name}: {e}')
-            continue
+    for name, c in loaded:
         all_cases.append(c)
-        errs += C.problems(c, skills, p.name)
+        errs += C.problems(c, live, name)
     ids = [c.get('id') for c in all_cases]
     if len(ids) != len(set(ids)):
         errs.append('duplicate case ids')
     for c in all_cases:
-        if C.problems(c, skills):
+        if C.problems(c, live):
             continue
         for kind in ('pass', 'fail'):
             for j, ctl in enumerate(c['controls'][kind]):
@@ -349,7 +406,7 @@ def check(read, lst, pin, earlier=frozenset(), folder=HERE / 'cases'):
                     errs.append(f"{c['id']}: pass control {j} fails: {reasons} {details}")
                 if kind == 'fail' and (ok or ctl['reason'] not in reasons):
                     errs.append(f"{c['id']}: fail control {j} gives {reasons}, wants {ctl['reason']}")
-    cov = coverage(all_cases, skills)
+    cov = coverage(all_cases, live)
     prov = json.loads((HERE / 'provenance.json').read_text())
     na = prov.get('not_applicable', {})
     for s, cats in cov.items():
@@ -373,7 +430,7 @@ def check(read, lst, pin, earlier=frozenset(), folder=HERE / 'cases'):
     if len(incidents) < 5:
         errs.append(f'{len(incidents)} incident cases; the five seeds are required')
     errs += T.map_problems(T.load_map(HERE / 'required-text.json'), skills, read, lst)
-    errs += ledger_problems(load_ledger(), pin, read, referenced(all_cases), earlier)
+    errs += ledger_problems(ledger, pin, read, referenced(all_cases), earlier)
     return errs, all_cases, cov
 
 
@@ -393,8 +450,8 @@ def cmd_check(a):
 
 
 def cmd_coverage(a):
-    pin, (read, lst) = pinned_snapshot(a)
-    _, all_cases, _ = check(read, lst, pin)
+    pin, (read, _) = pinned_snapshot(a)
+    all_cases = [c for _, c in load_cases()[0]]
     ledger = load_ledger()
     na = json.loads((HERE / 'provenance.json').read_text()).get('not_applicable', {})
     print(json.dumps(ledger_coverage(ledger, pin, read, all_cases, na), indent=1))
@@ -408,7 +465,7 @@ def cmd_ledger(a):
     pin, (read, lst) = pinned_snapshot(a)
     ledger = load_ledger()
     if a.propose:
-        print(json.dumps(propose(ledger, pin, read), indent=1, sort_keys=True))
+        print(json.dumps(propose(ledger, pin, read, lst), indent=1, sort_keys=True))
         return 0
     errs = ledger_problems(ledger, pin, read, referenced(), earlier_rows(a.rev)) + audit(ledger, pin, read)
     for e in errs:
@@ -524,7 +581,8 @@ def manifest_problems(man):
     if not isinstance(man.get('revision'), dict) or not man['revision'].get('commit'):
         errs.append('no revision')
     pin = man.get('wizskills')
-    if not isinstance(pin, dict) or not isinstance(pin.get('commit'), str) or not FULL.fullmatch(pin['commit']):
+    if (not isinstance(pin, dict) or not isinstance(pin.get('commit'), str) or not FULL.fullmatch(pin['commit'])
+            or not isinstance(pin.get('tree'), str) or not FULL.fullmatch(pin['tree'])):
         errs.append('no WizSkills pin: this set ran before the eval read a pinned WizSkills; take a fresh baseline')
     return errs
 
@@ -535,7 +593,12 @@ def score_set(folder):
     errs = manifest_problems(man)
     if errs:
         raise ValueError('; '.join(errs))
-    schema_text = snapshot(man['revision']['commit'], None)[0]('contracts/decisions.v1.schema.json')
+    try:
+        schema_text = snapshot(man['revision']['commit'], None)[0]('contracts/decisions.v1.schema.json')
+    except Refusal as err:
+        raise ValueError(str(err))
+    if schema_text is None:
+        raise ValueError('revision snapshot has no contracts/decisions.v1.schema.json')
     schema = json.loads(schema_text)
     by_id = {c['id']: c for c in C.load_all()}
     rows, ok_all = [], True
@@ -562,7 +625,8 @@ def score_set(folder):
             rows.append({'case': cid, 'repeat': rep, 'pass': ok, 'reasons': reasons, 'details': details,
                          'cost_usd': t.get('cost_usd'), 'stop': t.get('stop')})
     return {'schema': 'openwiz.skills-eval.score.v1', 'settings_hash': man['settings_hash'],
-            'cases_hash': man['cases_hash'], 'revision': man['revision'], 'code_hash': man['code_hash'],
+            'cases_hash': man['cases_hash'], 'revision': man['revision'], 'wizskills': man['wizskills'],
+            'code_hash': man['code_hash'],
             'schema_hash': hashlib.sha256(schema_text.encode()).hexdigest(),
             'suite_pass': ok_all, 'runs': len(rows), 'passed': sum(r['pass'] for r in rows),
             'cost_usd': round(sum(r.get('cost_usd') or 0 for r in rows), 9), 'rows': rows}

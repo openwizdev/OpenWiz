@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 import argparse
+import contextlib
 import copy
 import importlib.util
+import io
 import json
 import os
 import subprocess
@@ -15,9 +17,13 @@ sys.dont_write_bytecode = True
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import cases as C
+import tokens as TK
 spec = importlib.util.spec_from_file_location('eval_cli', HERE / 'eval.py')
 E = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(E)
+pspec = importlib.util.spec_from_file_location('parallel_cli', HERE / 'parallel.py')
+P = importlib.util.module_from_spec(pspec)
+pspec.loader.exec_module(P)
 IDENTITY = ['-c', 'user.name=Synthetic', '-c', 'user.email=synthetic@example.invalid', '-c', 'commit.gpgsign=false']
 PIN_ENV = ('WIZSKILLS_CHECKOUT', 'WIZSKILLS_COMMIT')
 
@@ -194,9 +200,65 @@ class Pinned(unittest.TestCase):
         manifest = {'settings': {}, 'settings_hash': E.sha({}), 'repeats': 1, 'cases': [],
                     'cases_hash': C.cases_hash(), 'code_hash': E.code_hash(), 'revision': {'commit': 'c'}}
         self.assertIn('no WizSkills pin', ' '.join(E.manifest_problems(manifest)))
+        manifest['wizskills'] = {'commit': self.ws.main}
+        self.assertIn('WizSkills pin', ' '.join(E.manifest_problems(manifest)))
         manifest['wizskills'] = {'commit': self.ws.main, 'tree': git(self.ws.path, 'rev-parse', 'HEAD^{tree}')}
-        self.assertNotIn('no WizSkills pin', ' '.join(E.manifest_problems(manifest)))
+        self.assertNotIn('WizSkills pin', ' '.join(E.manifest_problems(manifest)))
         self.assertEqual(E.wizskills_revision(self.ws.pin), manifest['wizskills'])
+
+    def test_bad_rev_and_corrupt_plugin_refuse_with_exit_2(self):
+        for rev in ('nonexistent-rev', '--all'):
+            with self.subTest(rev=rev):
+                done = cli('check', f'--rev={rev}', '--wizskills', str(self.ws.path), '--wizskills-commit', self.ws.main)
+                self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+                self.assertIn('refused:', done.stdout)
+                self.assertNotIn('Traceback', done.stderr)
+        for body in ('{not json', json.dumps({'name': 'wizskills'}), json.dumps({'skills': [123]})):
+            bad = Path(self.root, f'bad-{abs(hash(body))}')
+            bad.mkdir()
+            git(bad, 'init', '-q', '-b', 'main')
+            cid = commit(bad, {'.claude-plugin/plugin.json': body}, 'bad')
+            with self.subTest(body=body):
+                done = cli('coverage', '--wizskills', str(bad), '--wizskills-commit', cid)
+                self.assertEqual(done.returncode, 2, done.stdout + done.stderr)
+                self.assertIn('refused:', done.stdout)
+                self.assertNotIn('Traceback', done.stderr)
+
+    def test_coverage_works_without_decisions_schema_or_privacy_literals(self):
+        host = Path(self.root, 'host-bare')
+        host.mkdir()
+        git(host, 'init', '-q', '-b', 'main')
+        commit(host, {'AGENTS.md': 'host\n'}, 'host')
+        ns = argparse.Namespace(rev='HEAD', wizskills=str(self.ws.path), wizskills_commit=self.ws.main)
+        out, err = io.StringIO(), io.StringIO()
+        with mock.patch.object(E, 'REPO', host), mock.patch.object(E, 'load_ledger', return_value=self.ws.ledger()), \
+                mock.patch.object(E, 'referenced', return_value=set()), \
+                mock.patch.dict(os.environ, {}, clear=False), \
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            os.environ.pop('OPENWIZ_PRIVACY_LITERALS', None)
+            self.assertEqual(E.cmd_coverage(ns), 0)
+        self.assertIn('alpha', json.loads(out.getvalue()))
+
+    def test_score_parallel_and_tokens_preserve_and_verify_wizskills_pin(self):
+        out = Path(self.root, 'scored')
+        out.mkdir()
+        settings = json.loads((HERE / 'settings.json').read_text())
+        cases = C.load_all()
+        wpin = E.wizskills_revision(self.ws.pin)
+        man = {'schema': 'openwiz.skills-eval.results.v1', 'settings': settings, 'settings_hash': E.sha(settings),
+               'cases_hash': C.cases_hash(), 'revision': E.revision('HEAD'), 'wizskills': wpin,
+               'code_hash': E.code_hash(), 'cases': [c['id'] for c in cases], 'repeats': settings['repeats']}
+        (out / 'manifest.json').write_text(json.dumps(man))
+        scored = E.score_set(out)
+        self.assertEqual(scored['wizskills'], wpin)
+        usage = TK.usage_report(out)
+        self.assertEqual(usage['wizskills'], wpin)
+        bad_out = Path(self.root, 'bad-tree')
+        bad_out.mkdir()
+        bad_man = dict(man, wizskills={'commit': wpin['commit'], 'tree': '0' * 40})
+        (bad_out / 'manifest.json').write_text(json.dumps(bad_man))
+        with self.assertRaisesRegex(ValueError, 'tree'):
+            P.resume(bad_out, None, str(self.ws.path))
 
 
 class Ledger(unittest.TestCase):
@@ -306,6 +368,47 @@ class Ledger(unittest.TestCase):
         self.assertEqual(cov['gone']['status'], 'historical-only')
         self.assertEqual(cov['gone']['missing'], [])
         self.assertEqual(cov['side']['branch'], 'side')
+
+    def test_check_accepts_and_requires_coverage_for_observed_used_skills(self):
+        read, lst = E.snapshot('HEAD', self.ws.pin)
+        cdir = Path(self.root, 'cases')
+        cdir.mkdir()
+        case = {'schema': 'openwiz.skills-eval.case.v1', 'id': 'helper-wf', 'skills': ['helper'],
+                'category': 'workflow', 'brief': 'Use helper.', 'world': {},
+                'expect': {'actions': [], 'allow': [], 'forbid': [], 'end': 'end_turn', 'final': 'ok'},
+                'controls': {'pass': [{'why': 'p', 'events': [], 'judgment': {'verdict': 'pass', 'reason': 'ok'}}],
+                             'fail': [{'why': 'f', 'reason': 'bad-final', 'events': [],
+                                       'judgment': {'verdict': 'fail', 'reason': 'no'}}]}}
+        (cdir / 'helper-wf.json').write_text(json.dumps(case))
+        with mock.patch.object(E, 'load_ledger', return_value=self.ws.ledger()):
+            errs, _, cov = E.check(read, lst, self.ws.pin, folder=cdir)
+        self.assertIn('helper', cov)
+        self.assertEqual(cov['helper']['workflow'], ['helper-wf'])
+        self.assertNotIn("helper-wf: skills ['helper']", errs)
+        self.assertIn('helper: no approval case and no not-applicable reason', errs)
+
+    def test_last_seen_handles_merge_deletion_and_propose_scans_snapshot_for_used_by(self):
+        mg = Path(self.root, 'mgws')
+        mg.mkdir()
+        git(mg, 'init', '-q', '-b', 'main')
+        commit(mg, {'.claude-plugin/plugin.json': plugin('a', 'b'), 'skills/a/SKILL.md': 'a\n',
+                    'skills/a/references/doc.md': 'loads skills/extra/SKILL.md\n',
+                    'skills/b/SKILL.md': 'b\n', 'skills/extra/SKILL.md': 'extra\n'}, 'c1')
+        git(mg, 'checkout', '-q', '-b', 'side')
+        commit(mg, {'README.md': 'side\n'}, 'c2')
+        git(mg, 'checkout', '-q', 'main')
+        before = commit(mg, {'OTHER.md': 'main\n'}, 'c3')
+        git(mg, 'merge', '--no-commit', '--no-ff', 'side')
+        (mg / 'skills/b/SKILL.md').unlink()
+        (mg / '.claude-plugin/plugin.json').write_text(plugin('a'))
+        git(mg, 'add', '-A')
+        git(mg, 'commit', '-q', '-m', 'merge dropping b')
+        pin = E.pinned(str(mg), git(mg, 'rev-parse', 'HEAD'))
+        read, lst = E.snapshot('HEAD', pin)
+        self.assertEqual(E.last_seen(pin, 'b'), before)
+        proposed = E.propose({'schema': E.LEDGER_SCHEMA, 'skills': {}}, pin, read, lst)
+        self.assertEqual(proposed['b'], {'status': 'historical-only', 'last_seen': before})
+        self.assertEqual(proposed['extra'], {'status': 'observed-used', 'used_by': 'skills/a/references/doc.md'})
 
 
 @unittest.skipUnless(all(os.environ.get(k) for k in PIN_ENV), 'set WIZSKILLS_CHECKOUT and WIZSKILLS_COMMIT')

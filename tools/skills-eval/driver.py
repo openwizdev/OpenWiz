@@ -917,14 +917,17 @@ def hermes_usage_report(folder):
         rows.append({'case': t['case'], 'repeat': t['repeat'], 'input_tokens': u['input_tokens'] + u['cache_read_input_tokens'],
                      'cached_input_tokens': u['cache_read_input_tokens'], 'output_tokens': u['output_tokens'],
                      'sessions': t['provider_usage'], 'cost_usd': t['cost_usd']})
-    return {'schema': 'openwiz.skills-eval.provider-tokens.v1', 'tokenizer': HERMES_TOKENIZER,
-            'model': f"{manifest['settings']['hermes']['provider']}:{manifest['settings']['hermes']['model']}",
-            'revision': manifest['revision'], 'settings_hash': manifest.get('settings_hash'),
-            'cases_hash': manifest.get('cases_hash'),
-            'total': {k: sum(r[k] for r in rows) for k in ('input_tokens', 'cached_input_tokens', 'output_tokens')},
-            'cost_usd': round(sum(r['cost_usd'] for r in rows), 9), 'runs': rows,
-            'note': 'Hermes session store counts. Input here adds cache reads to the session input count; whether Hermes '
-                    'already includes them is unverified. Actor and judge sessions included. Not per-skill required-text tokens.'}
+    out = {'schema': 'openwiz.skills-eval.provider-tokens.v1', 'tokenizer': HERMES_TOKENIZER,
+           'model': f"{manifest['settings']['hermes']['provider']}:{manifest['settings']['hermes']['model']}",
+           'revision': manifest['revision'], 'settings_hash': manifest.get('settings_hash'),
+           'cases_hash': manifest.get('cases_hash'),
+           'total': {k: sum(r[k] for r in rows) for k in ('input_tokens', 'cached_input_tokens', 'output_tokens')},
+           'cost_usd': round(sum(r['cost_usd'] for r in rows), 9), 'runs': rows,
+           'note': 'Hermes session store counts. Input here adds cache reads to the session input count; whether Hermes '
+                   'already includes them is unverified. Actor and judge sessions included. Not per-skill required-text tokens.'}
+    if 'wizskills' in manifest:
+        out['wizskills'] = manifest['wizskills']
+    return out
 
 
 if __name__ == '__main__':
