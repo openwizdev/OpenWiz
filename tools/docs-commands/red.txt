@@ -22,3 +22,9 @@ FAIL: test_skip_reports_its_source_and_reason (__main__.DocsCommandsTests.test_s
 AssertionError: 2 != 0 : /usr/bin/python3: can't open file 'tools/docs-commands/docs_commands.py': [Errno 2] No such file or directory
 Ran 7 tests in 0.209s
 FAILED (failures=10)
+
+$ python3 -I tools/docs-commands/test_docs_commands.py DocsCommandsTests.test_cli_reports_status_without_exposing_child_output
+
+AssertionError: 'synthetic-private-output' unexpectedly found in 'FAIL commands.md:1 (exit 7)\n| synthetic-private-output\n'
+Ran 1 test
+FAILED (failures=1)

@@ -150,6 +150,18 @@ class DocsCommandsTests(unittest.TestCase):
         self.assertIn("FAIL missing.md", result.stdout)
         self.assertIn("PASS commands.md:1", result.stdout)
 
+    def test_cli_reports_status_without_exposing_child_output(self):
+        self.write("commands.md", """
+            ```sh
+            printf 'synthetic-private-output\\n' >&2
+            exit 7
+            ```
+            """)
+        result = self.invoke("commands.md")
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("FAIL commands.md:1 (exit 7)", result.stdout)
+        self.assertNotIn("synthetic-private-output", result.stdout)
+
     def test_home_credentials_fakes_and_network_are_isolated(self):
         for name in ("gh", "openwiz", "room-cli", "boat", "aws"):
             executable = self.write(name, "#!/bin/sh\nprintf 'caller command ran\\n'\nexit 90\n")
