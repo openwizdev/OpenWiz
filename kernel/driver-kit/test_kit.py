@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import http.client
 import importlib.machinery
 import importlib.util
 import json
@@ -226,6 +227,143 @@ def no_real_harness(path, fixtures=(FIXTURES,)):
             raise AssertionError('%s on the PATH is %s, outside the fixtures: a test could launch a real harness'
                                  % (name, found))
     return path
+
+
+def previous_scan(kit):
+    class PreviousScan(kit.Kit):
+        def started(self):
+            if not kit.PROC:
+                yield from self.listed()
+                return
+            table = self.table()
+            for pid, (ppid, uid, env, cmd, group, since) in table.items():
+                if env is not None and self.mark in env:
+                    yield cmd, env
+            for pid, (ppid, uid, env, cmd, group, since) in table.items():
+                if env is None and uid == os.getuid() and since > self.since and (
+                        group == os.getpgrp() or self.under_run(table, ppid)):
+                    self.leak('a process of the driver hides its details, so the kit cannot check it')
+
+        def table(self):
+            found = {}
+            for pid in filter(str.isdigit, os.listdir('/proc')):
+                try:
+                    with open('/proc/%s/stat' % pid) as f:
+                        fields = f.read().rpartition(')')[2].split()
+                    state, ppid, group, since = fields[0], int(fields[1]), int(fields[2]), fields[19]
+                    with open('/proc/%s/status' % pid) as f:
+                        uid = int(next(row for row in f if row.startswith('Uid:')).split()[1])
+                except (OSError, ValueError, IndexError, StopIteration):
+                    continue
+                candidate = uid == os.getuid() and int(since) > self.since and (pid, since) not in self.hidden
+                try:
+                    env, cmd = self.details(pid, kit.HIDDEN_TRIES if candidate else 1)
+                except PermissionError:
+                    if state in 'ZX' or not self.running(pid):
+                        continue
+                    self.hidden.add((pid, since))
+                    env = cmd = None
+                except OSError:
+                    continue
+                found[pid] = (ppid, uid, env, cmd, group, int(since))
+            return found
+
+        @staticmethod
+        def details(pid, tries=kit.HIDDEN_TRIES):
+            for attempt in range(tries):
+                try:
+                    with open('/proc/%s/environ' % pid, 'rb') as f:
+                        env = f.read().decode('utf-8', 'replace').split('\0')
+                    with open('/proc/%s/cmdline' % pid, 'rb') as f:
+                        return env, f.read().decode('utf-8', 'replace').split('\0')
+                except PermissionError:
+                    if attempt == tries - 1:
+                        raise
+                    time.sleep(kit.HIDDEN_PAUSE)
+
+        @staticmethod
+        def running(pid):
+            try:
+                with open('/proc/%s/stat' % pid) as f:
+                    return f.read().rpartition(')')[2].split()[0] not in 'ZX'
+            except OSError:
+                return False
+
+        def commandlines(self):
+            if not kit.PROC:
+                return list(self.ps('-o', 'command=').values())
+            found = []
+            for pid in filter(str.isdigit, os.listdir('/proc')):
+                try:
+                    with open('/proc/%s/cmdline' % pid, 'rb') as f:
+                        found.append(f.read().decode('utf-8', 'replace'))
+                except OSError:
+                    continue
+            return found
+
+        def run_processes(self):
+            if kit.PROC:
+                for pid, (_, _, env, cmd, _, _) in self.table().items():
+                    if env is None or self.mark not in env:
+                        continue
+                    try:
+                        cwd = self.folder_of(pid)
+                    except PermissionError:
+                        if self.running(pid):
+                            self.leak('a process of the driver hides its details, so the kit cannot check it')
+                        continue
+                    except OSError:
+                        if self.running(pid):
+                            self.leak("the kit could not read a process of the driver's working folder, so it "
+                                      "cannot check it")
+                        continue
+                    yield cmd[:-1], cwd
+                return
+            rows = self.ps('-o', 'command=')
+            for pid in sorted(self.listed_pids):
+                if pid not in rows:
+                    continue
+                cwd = self.process_cwd(pid)
+                if cwd is None:
+                    if not self.ps('-o', 'stat=').get(pid, 'Z').strip().startswith('Z'):
+                        self.leak('the kit could not resolve a file a process of the driver ran, so it cannot '
+                                  'check it')
+                    continue
+                yield rows[pid], cwd
+
+        def collect_runtime(self):
+            for argv, cwd in self.run_processes():
+                for path in (self.argument_files(argv, cwd) if isinstance(argv, list)
+                             else self.text_files(argv, cwd)):
+                    self.runtime.add(os.path.realpath(path))
+
+        def _scan(self, canary):
+            if canary:
+                name, value = canary
+                if any(value in line for line in self.commandlines()):
+                    self.leak('a process holds the %s key on its command line' % name)
+                for cmd, env in self.started():
+                    for entry in env:
+                        if value in entry:
+                            self.leak('a process the driver started holds the %s key in %s'
+                                      % (name, kit.shown(entry.partition('=')[0], value)))
+                self.collect_runtime()
+            for cmd, env in self.started():
+                if any(kit.holds_credential(a) for a in cmd):
+                    self.leak('a process the driver started holds a credential on its command line')
+                if self.setting and self.setting[0] == 'argv':
+                    _, flag, want = self.setting
+                    argv = cmd if kit.PROC else ' '.join(cmd).split()
+                    if any(x == want and (flag is None or i and argv[i - 1] == flag) for i, x in enumerate(argv)):
+                        self.effort_seen = True
+                for entry in env:
+                    name, _, value = entry.partition('=')
+                    if self.setting == ('argv', None, entry) and self.env.get(name) != value:
+                        self.effort_seen = True
+                    if kit.holds_credential(value) and os.environ.get(name) != value:
+                        self.leak('a process the driver started holds a credential in %s, which the kit never '
+                                  'gave it' % kit.shown(name))
+    return PreviousScan
 
 
 def tracker(folder):
@@ -492,6 +630,112 @@ class Kit(unittest.TestCase):
         self.assertEqual(once, kit.HIDDEN_TRIES - 1, 'only the hidden process newer than the kit is retried')
         self.assertEqual(len(pauses), once, 'a process already found hidden was retried again')
         self.assertEqual(k.leaks, ['a process of the driver hides its details, so the kit cannot check it'])
+
+    @unittest.skipUnless(os.path.isdir('/proc/self'), 'reads /proc')
+    def test_one_snapshot_per_scan_matches_the_previous_scan_on_linux_and_macos(self):
+        kit = module(os.path.join(HERE, 'kit.py'))
+        args = argparse.Namespace(driver=os.path.join(REPO, 'adapters', 'boat', 'driver'), harness='fake-harness',
+                                  repo='example/site', ticket=7, skill='build-ticket', model='m', wait=8,
+                                  effort='medium', tracker=None)
+        script = os.path.join(self.folder, 'step.py')
+        with open(script, 'w') as f:
+            f.write('import time\ntime.sleep(60)\n')
+        sleep = 'import time; time.sleep(60)'
+        undumpable = 'import ctypes, time; ctypes.CDLL(None).prctl(4, 0, 0, 0, 0); time.sleep(60)'
+        real_path = os.environ['PATH']
+        for proc in (True, False):
+            with self.subTest('/proc' if proc else 'ps'):
+                kit.PROC = proc
+                os.environ['PATH'] = real_path if proc else NO_PROC + os.pathsep + real_path
+                try:
+                    new = kit.Kit(args, None)
+                    old = previous_scan(kit)(args, None)
+                    old.mark, old.env, old.since = new.mark, new.env, new.since
+                    canary = ('devin', 'kit-canary-' + secrets.token_hex(16))
+                    plain = dict(os.environ, KIT_TEST=self.mark)
+                    marked = dict(plain, OPENWIZ_KIT_RUN=new.mark.partition('=')[2])
+                    started = [(sleep, (), dict(marked, SOME_SETTING=TOKEN)), (sleep, (TOKEN,), marked),
+                               (sleep, (canary[1],), plain), (sleep, (), dict(marked, HOLDER=canary[1])),
+                               (None, (script,), marked), (sleep, ('--effort', 'medium'), marked),
+                               (undumpable, (), marked)]
+                    for code, rest, env in started:
+                        argv = [sys.executable] + (['-c', code] if code else []) + list(rest)
+                        child = subprocess.Popen(argv, env=env, cwd=self.folder)
+                        self.addCleanup(child.wait)
+                        self.addCleanup(child.kill)
+                    time.sleep(1)
+                    for k in (old, new):
+                        k.setting = ('argv', '--effort', 'medium')
+                        k.scan()
+                        k.scan(canary)
+                        k.scan()
+                    seen = [(k.leaks, k.effort_seen, sorted(k.runtime), sorted(k.hidden), sorted(k.listed_pids))
+                            for k in (old, new)]
+                    self.assertEqual(seen[0], seen[1])
+                    self.assertTrue(new.effort_seen)
+                    self.assertIn('a process the driver started holds a credential on its command line', new.leaks)
+                    self.assertIn('a process the driver started holds the devin key in HOLDER', new.leaks)
+                    if proc:
+                        self.assertIn('a process holds the devin key on its command line', new.leaks)
+                        self.assertIn(os.path.realpath(script), new.runtime)
+                        mine = {str(p) for p in self.left()}
+                        self.assertEqual({p: e for p, e in old.table().items() if p in mine},
+                                         {p: e for p, e in new.table().items() if p in mine})
+                finally:
+                    os.environ['PATH'] = real_path
+                    self.tearDown()
+                    self.setUp()
+
+    def unreadable_driver(self, out, err=b''):
+        driver = os.path.join(self.folder, 'odd-driver')
+        for name, data in (('out', out), ('err', err)):
+            with open(os.path.join(self.folder, name), 'wb') as f:
+                f.write(data)
+        with open(driver, 'w') as f:
+            f.write('#!/bin/sh\n%s "%s"\n%s "%s" >&2\n' % (shutil.which('cat'), os.path.join(self.folder, 'out'),
+                                                            shutil.which('cat'), os.path.join(self.folder, 'err')))
+        os.chmod(driver, 0o700)
+        return driver
+
+    def test_a_driver_answer_that_is_not_utf8_or_nests_too_deep_fails_its_call_and_the_kit_goes_on(self):
+        kit = module(os.path.join(HERE, 'kit.py'))
+        k = kit.Kit.__new__(kit.Kit)
+        k.env, k.schema, k.leaks, k.lock = dict(self.env), kit.load_schema(), [], threading.RLock()
+        answer = b'{"run": "run-1", "stopped": true}'
+        for out, err, want in ((b'{"run": "run-\xff"}', b'', ('bad', 'stop printed no single JSON value')),
+                               (b'[' * 100000, b'', ('bad', 'stop printed JSON nested too deeply for the kit to read')),
+                               (answer, b'\xff\xfe', ('ok', {'run': 'run-1', 'stopped': True}))):
+            with self.subTest(out[:20]):
+                k.args = argparse.Namespace(driver=self.unreadable_driver(out, err))
+                self.assertEqual(k.call('stop', {'run': 'run-1'}), want)
+        code, out, err = self.kit(self.unreadable_driver(b'{"driver": "\xff"}'), guard=False)
+        self.assertEqual((code, out[0]), (1, 'fail version: version printed no single JSON value'))
+        self.assertNotIn('Traceback', err)
+
+    def test_a_request_body_that_nests_too_deep_holds_no_field_and_gets_an_answer(self):
+        kit = module(os.path.join(HERE, 'kit.py'))
+        deep = b'{"effort": ' + b'[' * 100000 + b'}'
+        self.assertIs(kit.holds_field(deep, 'effort', 'medium'), False)
+        host = kit.FakeHost(answers=[{'method': 'POST', 'path': '/v1/.*', 'status': 200,
+                                      'body': {'id': '{{request.effort}}'}}])
+        self.addCleanup(host.close)
+        c = http.client.HTTPConnection('127.0.0.1', host.server.server_address[1], timeout=10)
+        c.request('POST', '/v1/sessions', body=deep)
+        r = c.getresponse()
+        self.assertEqual((r.status, json.loads(r.read())), (400, {'error': 'request body is not a JSON object'}))
+
+    def test_a_kit_host_file_that_nests_too_deep_stops_the_kit(self):
+        kit = module(os.path.join(HERE, 'kit.py'))
+        os.makedirs(os.path.join(self.folder, 'fixtures'))
+        k = kit.Kit.__new__(kit.Kit)
+        k.args = argparse.Namespace(driver=os.path.join(self.folder, 'driver'))
+        for depth in (100000, 990):
+            with self.subTest(depth):
+                with open(os.path.join(self.folder, 'fixtures', 'kit-host.json'), 'w') as f:
+                    f.write('{"answers": [{"method": "GET", "path": "/", "status": 200, "body": %s}]}'
+                            % ('[' * depth + ']' * depth))
+                with self.assertRaisesRegex(kit.Unusable, "cannot read the driver's fixtures/kit-host.json"):
+                    k.lifecycle()
 
     def test_a_path_diagnostic_never_prints_the_active_canary(self):
         kit = module(os.path.join(HERE, 'kit.py'))
