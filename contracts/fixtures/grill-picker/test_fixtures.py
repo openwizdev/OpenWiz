@@ -1,14 +1,22 @@
 #!/usr/bin/env python3
-"""Offline fixture proof with a Draft 2020-12 validator."""
 from copy import deepcopy
+from datetime import datetime
 import json
 from pathlib import Path
 import unittest
 
-from jsonschema import Draft202012Validator
+from jsonschema import Draft202012Validator, FormatChecker
 
 HERE = Path(__file__).resolve().parent
 SCHEMA = HERE.parents[1] / "grill-picker.v1.schema.json"
+FORMATS = FormatChecker()
+
+
+@FORMATS.checks("date-time", raises=ValueError)
+def utc_date_time(value):
+    if isinstance(value, str):
+        datetime.fromisoformat(value.removesuffix("Z") + "+00:00")
+    return True
 
 
 def read_json(path):
@@ -68,7 +76,7 @@ class GrillPickerFixtures(unittest.TestCase):
         schema = read_json(SCHEMA)
         Draft202012Validator.check_schema(schema)
         self.validator = Draft202012Validator(
-            schema, format_checker=Draft202012Validator.FORMAT_CHECKER
+            schema, format_checker=FORMATS
         )
         self.valid = {}
         for name, fixture in read_json(HERE / "valid.json").items():
@@ -105,7 +113,7 @@ class GrillPickerFixtures(unittest.TestCase):
                     at = case["at"]
                     if "swap" in case:
                         at = [*at, 0, "recommended"]
-                    elif "value" not in case:
+                    elif case["keyword"] in {"additionalProperties", "required", "uniqueItems"}:
                         at = at[:-1]
                     keywords = {
                         error.validator
