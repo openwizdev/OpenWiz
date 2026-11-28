@@ -1,0 +1,7 @@
+$ python3 -I adapters/local/harnesses/vibe/test_row.py
+fail fake signed out (1): exited 1, stdout 'Missing MISTRAL_API_KEY environment variable for mistral provider'
+fail fake signed out (not-signed-in): exited 1, stdout 'Missing MISTRAL_API_KEY environment variable for mistral provider'
+fail quoted stream (missing key): code 1 error 'run run-93e02338a5a5: the first turn ended at once: the harness is not signed in (exit 0)'
+fail quoted stream (not signed in): code 1 error 'run run-63dae659793a: the first turn ended at once: the harness is not signed in (exit 0)'
+test_row.py: 9 refusals checked, 4 failed
+exit 1

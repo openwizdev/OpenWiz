@@ -1,0 +1,45 @@
+FFFF
+======================================================================
+FAIL: test_receipt_case_is_gone (__main__.RetiredReceiptCases.test_receipt_case_is_gone)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/agent/repos/OpenWiz/tools/live-smoke/test_fixture.py", line 175, in test_receipt_case_is_gone
+    self.assertEqual([name for name in globals() if name == 'receipt_case'], [])
+AssertionError: Lists differ: ['receipt_case'] != []
+
+First list contains 1 additional elements.
+First extra element 0:
+'receipt_case'
+
+- ['receipt_case']
++ []
+
+======================================================================
+FAIL: test_retired_receipt_cases_are_refused_and_name_their_keeper (__main__.RetiredReceiptCases.test_retired_receipt_cases_are_refused_and_name_their_keeper) (case='ready-preview')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/agent/repos/OpenWiz/tools/live-smoke/test_fixture.py", line 183, in test_retired_receipt_cases_are_refused_and_name_their_keeper
+    with self.assertRaises(SystemExit) as caught:
+AssertionError: SystemExit not raised
+
+======================================================================
+FAIL: test_retired_receipt_cases_are_refused_and_name_their_keeper (__main__.RetiredReceiptCases.test_retired_receipt_cases_are_refused_and_name_their_keeper) (case='accepted-send')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/agent/repos/OpenWiz/tools/live-smoke/test_fixture.py", line 183, in test_retired_receipt_cases_are_refused_and_name_their_keeper
+    with self.assertRaises(SystemExit) as caught:
+AssertionError: SystemExit not raised
+
+======================================================================
+FAIL: test_retired_receipt_cases_are_refused_and_name_their_keeper (__main__.RetiredReceiptCases.test_retired_receipt_cases_are_refused_and_name_their_keeper) (case='queued-send')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/agent/repos/OpenWiz/tools/live-smoke/test_fixture.py", line 183, in test_retired_receipt_cases_are_refused_and_name_their_keeper
+    with self.assertRaises(SystemExit) as caught:
+AssertionError: SystemExit not raised
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.012s
+
+FAILED (failures=4)
+EXIT:1

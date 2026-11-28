@@ -1,0 +1,12 @@
+{
+  "schema": "openwiz.value-meter.v1",
+  "kind": "pr_record",
+  "repository": "synthetic-owner/synthetic-repo",
+  "pull_request": 7,
+  "merged_at": "2030-01-10T16:00:00Z",
+  "closing_ticket": 101,
+  "cost_credits": 12.5,
+  "cost_usd": 3.5,
+  "cost_status": "known",
+  "cost_reason": null
+}

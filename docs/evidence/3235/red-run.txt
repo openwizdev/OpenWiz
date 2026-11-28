@@ -1,0 +1,223 @@
+=== test_mint_workflow.py ===
+test_workflow_run_seals_token_via_pipe_and_logs_only_mint_fields (__main__.MintWorkflowExecution.test_workflow_run_seals_token_via_pipe_and_logs_only_mint_fields) ... FAIL
+test_template_guard_catches_every_planted_violation (__main__.MintWorkflowTemplate.test_template_guard_catches_every_planted_violation) ... FAIL
+test_template_passes_all_security_guards (__main__.MintWorkflowTemplate.test_template_passes_all_security_guards) ... FAIL
+
+======================================================================
+FAIL: test_workflow_run_seals_token_via_pipe_and_logs_only_mint_fields (__main__.MintWorkflowExecution.test_workflow_run_seals_token_via_pipe_and_logs_only_mint_fields)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/tools/github-app/test_mint_workflow.py", line 165, in test_workflow_run_seals_token_via_pipe_and_logs_only_mint_fields
+    self.assertTrue(TEMPLATE.is_file(), "tools/github-app/mint-workflow.yml is missing")
+AssertionError: False is not true : tools/github-app/mint-workflow.yml is missing
+
+======================================================================
+FAIL: test_template_guard_catches_every_planted_violation (__main__.MintWorkflowTemplate.test_template_guard_catches_every_planted_violation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/tools/github-app/test_mint_workflow.py", line 144, in test_template_guard_catches_every_planted_violation
+    self.assertTrue(TEMPLATE.is_file(), "tools/github-app/mint-workflow.yml is missing")
+AssertionError: False is not true : tools/github-app/mint-workflow.yml is missing
+
+======================================================================
+FAIL: test_template_passes_all_security_guards (__main__.MintWorkflowTemplate.test_template_passes_all_security_guards)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/tools/github-app/test_mint_workflow.py", line 138, in test_template_passes_all_security_guards
+    self.assertTrue(TEMPLATE.is_file(), "tools/github-app/mint-workflow.yml is missing")
+AssertionError: False is not true : tools/github-app/mint-workflow.yml is missing
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.001s
+
+FAILED (failures=3)
+
+=== test_agent_token.py ActionsRoute ===
+test_actions_backs_off_on_403_and_429 (__main__.ActionsRoute.test_actions_backs_off_on_403_and_429) ... ERROR
+test_actions_failures_fall_back_with_right_reason (__main__.ActionsRoute.test_actions_failures_fall_back_with_right_reason) ... 
+  test_actions_failures_fall_back_with_right_reason (__main__.ActionsRoute.test_actions_failures_fall_back_with_right_reason) [missing-run] ... ERROR
+  test_actions_failures_fall_back_with_right_reason (__main__.ActionsRoute.test_actions_failures_fall_back_with_right_reason) [timeout] ... ERROR
+  test_actions_failures_fall_back_with_right_reason (__main__.ActionsRoute.test_actions_failures_fall_back_with_right_reason) [failed-run] ... ERROR
+  test_actions_failures_fall_back_with_right_reason (__main__.ActionsRoute.test_actions_failures_fall_back_with_right_reason) [missing-artifact] ... ERROR
+  test_actions_failures_fall_back_with_right_reason (__main__.ActionsRoute.test_actions_failures_fall_back_with_right_reason) [tampered-zip] ... ERROR
+  test_actions_failures_fall_back_with_right_reason (__main__.ActionsRoute.test_actions_failures_fall_back_with_right_reason) [tampered-body] ... ERROR
+  test_actions_failures_fall_back_with_right_reason (__main__.ActionsRoute.test_actions_failures_fall_back_with_right_reason) [unopenable] ... ERROR
+  test_actions_failures_fall_back_with_right_reason (__main__.ActionsRoute.test_actions_failures_fall_back_with_right_reason) [refusal] ... ERROR
+test_actions_never_exposes_plaintext_token (__main__.ActionsRoute.test_actions_never_exposes_plaintext_token) ... ok
+test_actions_round_trip_and_deletes_artifact (__main__.ActionsRoute.test_actions_round_trip_and_deletes_artifact) ... openwiz: no openwiz[bot] token (unreachable); using the owner's GitHub account
+FAIL
+
+======================================================================
+ERROR: test_actions_backs_off_on_403_and_429 (__main__.ActionsRoute.test_actions_backs_off_on_403_and_429)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/tools/github-app/test_agent_token.py", line 2572, in test_actions_backs_off_on_403_and_429
+    with mock.patch.object(self.helper, "ACTIONS_POLL_S", 0.01):
+  File "/usr/lib/python3.11/unittest/mock.py", line 1437, in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/unittest/mock.py", line 1410, in get_original
+    raise AttributeError(
+AttributeError: <module 'agent_token' from '/code/openwiz/tools/github-app/agent-token.py'> does not have the attribute 'ACTIONS_POLL_S'
+
+======================================================================
+ERROR: test_actions_failures_fall_back_with_right_reason (__main__.ActionsRoute.test_actions_failures_fall_back_with_right_reason) [missing-run]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/tools/github-app/test_agent_token.py", line 2558, in test_actions_failures_fall_back_with_right_reason
+    with mock.patch.object(self.helper, "ACTIONS_TIMEOUT_S", 0.08), \
+  File "/usr/lib/python3.11/unittest/mock.py", line 1437, in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/unittest/mock.py", line 1410, in get_original
+    raise AttributeError(
+AttributeError: <module 'agent_token' from '/code/openwiz/tools/github-app/agent-token.py'> does not have the attribute 'ACTIONS_TIMEOUT_S'
+
+======================================================================
+ERROR: test_actions_failures_fall_back_with_right_reason (__main__.ActionsRoute.test_actions_failures_fall_back_with_right_reason) [timeout]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/tools/github-app/test_agent_token.py", line 2558, in test_actions_failures_fall_back_with_right_reason
+    with mock.patch.object(self.helper, "ACTIONS_TIMEOUT_S", 0.08), \
+  File "/usr/lib/python3.11/unittest/mock.py", line 1437, in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/unittest/mock.py", line 1410, in get_original
+    raise AttributeError(
+AttributeError: <module 'agent_token' from '/code/openwiz/tools/github-app/agent-token.py'> does not have the attribute 'ACTIONS_TIMEOUT_S'
+
+======================================================================
+ERROR: test_actions_failures_fall_back_with_right_reason (__main__.ActionsRoute.test_actions_failures_fall_back_with_right_reason) [failed-run]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/tools/github-app/test_agent_token.py", line 2558, in test_actions_failures_fall_back_with_right_reason
+    with mock.patch.object(self.helper, "ACTIONS_TIMEOUT_S", 0.08), \
+  File "/usr/lib/python3.11/unittest/mock.py", line 1437, in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/unittest/mock.py", line 1410, in get_original
+    raise AttributeError(
+AttributeError: <module 'agent_token' from '/code/openwiz/tools/github-app/agent-token.py'> does not have the attribute 'ACTIONS_TIMEOUT_S'
+
+======================================================================
+ERROR: test_actions_failures_fall_back_with_right_reason (__main__.ActionsRoute.test_actions_failures_fall_back_with_right_reason) [missing-artifact]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/tools/github-app/test_agent_token.py", line 2558, in test_actions_failures_fall_back_with_right_reason
+    with mock.patch.object(self.helper, "ACTIONS_TIMEOUT_S", 0.08), \
+  File "/usr/lib/python3.11/unittest/mock.py", line 1437, in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/unittest/mock.py", line 1410, in get_original
+    raise AttributeError(
+AttributeError: <module 'agent_token' from '/code/openwiz/tools/github-app/agent-token.py'> does not have the attribute 'ACTIONS_TIMEOUT_S'
+
+======================================================================
+ERROR: test_actions_failures_fall_back_with_right_reason (__main__.ActionsRoute.test_actions_failures_fall_back_with_right_reason) [tampered-zip]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/tools/github-app/test_agent_token.py", line 2558, in test_actions_failures_fall_back_with_right_reason
+    with mock.patch.object(self.helper, "ACTIONS_TIMEOUT_S", 0.08), \
+  File "/usr/lib/python3.11/unittest/mock.py", line 1437, in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/unittest/mock.py", line 1410, in get_original
+    raise AttributeError(
+AttributeError: <module 'agent_token' from '/code/openwiz/tools/github-app/agent-token.py'> does not have the attribute 'ACTIONS_TIMEOUT_S'
+
+======================================================================
+ERROR: test_actions_failures_fall_back_with_right_reason (__main__.ActionsRoute.test_actions_failures_fall_back_with_right_reason) [tampered-body]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/tools/github-app/test_agent_token.py", line 2558, in test_actions_failures_fall_back_with_right_reason
+    with mock.patch.object(self.helper, "ACTIONS_TIMEOUT_S", 0.08), \
+  File "/usr/lib/python3.11/unittest/mock.py", line 1437, in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/unittest/mock.py", line 1410, in get_original
+    raise AttributeError(
+AttributeError: <module 'agent_token' from '/code/openwiz/tools/github-app/agent-token.py'> does not have the attribute 'ACTIONS_TIMEOUT_S'
+
+======================================================================
+ERROR: test_actions_failures_fall_back_with_right_reason (__main__.ActionsRoute.test_actions_failures_fall_back_with_right_reason) [unopenable]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/tools/github-app/test_agent_token.py", line 2558, in test_actions_failures_fall_back_with_right_reason
+    with mock.patch.object(self.helper, "ACTIONS_TIMEOUT_S", 0.08), \
+  File "/usr/lib/python3.11/unittest/mock.py", line 1437, in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/unittest/mock.py", line 1410, in get_original
+    raise AttributeError(
+AttributeError: <module 'agent_token' from '/code/openwiz/tools/github-app/agent-token.py'> does not have the attribute 'ACTIONS_TIMEOUT_S'
+
+======================================================================
+ERROR: test_actions_failures_fall_back_with_right_reason (__main__.ActionsRoute.test_actions_failures_fall_back_with_right_reason) [refusal]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/tools/github-app/test_agent_token.py", line 2558, in test_actions_failures_fall_back_with_right_reason
+    with mock.patch.object(self.helper, "ACTIONS_TIMEOUT_S", 0.08), \
+  File "/usr/lib/python3.11/unittest/mock.py", line 1437, in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/unittest/mock.py", line 1410, in get_original
+    raise AttributeError(
+AttributeError: <module 'agent_token' from '/code/openwiz/tools/github-app/agent-token.py'> does not have the attribute 'ACTIONS_TIMEOUT_S'
+
+======================================================================
+FAIL: test_actions_round_trip_and_deletes_artifact (__main__.ActionsRoute.test_actions_round_trip_and_deletes_artifact)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/tools/github-app/test_agent_token.py", line 2532, in test_actions_round_trip_and_deletes_artifact
+    self.assertEqual(token, TOKEN)
+AssertionError: None != 'synthetic-agent-token-1'
+
+----------------------------------------------------------------------
+Ran 4 tests in 5.543s
+
+FAILED (failures=1, errors=9)
+
+=== test_fixtures.py ===
+test_every_invalid_message_fails_the_schema (__main__.Invalid.test_every_invalid_message_fails_the_schema) ... ok
+test_a_token_appears_only_in_its_private_places (__main__.NeverExposed.test_a_token_appears_only_in_its_private_places) ... ok
+test_no_credential_or_real_id_in_the_contract_schema_or_fixtures (__main__.NeverExposed.test_no_credential_or_real_id_in_the_contract_schema_or_fixtures) ... ok
+test_the_leak_check_catches_a_wrapped_token (__main__.NeverExposed.test_the_leak_check_catches_a_wrapped_token) ... ok
+test_the_scan_catches_what_it_claims (__main__.NeverExposed.test_the_scan_catches_what_it_claims) ... ok
+test_a_fallback_leaves_no_service_credential_for_gh_or_git (__main__.RefreshAndFallback.test_a_fallback_leaves_no_service_credential_for_gh_or_git) ... ok
+test_a_token_is_refreshed_at_or_under_five_minutes_left (__main__.RefreshAndFallback.test_a_token_is_refreshed_at_or_under_five_minutes_left) ... ok
+test_the_fallback_says_so_once_and_not_configured_is_silent (__main__.RefreshAndFallback.test_the_fallback_says_so_once_and_not_configured_is_silent) ... ok
+test_the_pairing_route_is_off_until_the_read_back_passes (__main__.RefreshAndFallback.test_the_pairing_route_is_off_until_the_read_back_passes) ... ok
+test_each_case_is_valid_and_its_outcome_follows_the_pin (__main__.Requests.test_each_case_is_valid_and_its_outcome_follows_the_pin) ... ok
+test_the_fixtures_cover_a_good_request_and_every_refusal (__main__.Requests.test_the_fixtures_cover_a_good_request_and_every_refusal) ... ok
+test_the_mint_log_keeps_no_untrusted_request_text (__main__.Requests.test_the_mint_log_keeps_no_untrusted_request_text) ... ok
+test_the_pin_reads_requests_strictly (__main__.Requests.test_the_pin_reads_requests_strictly) ... ok
+test_the_pin_says_how_a_token_is_sealed (__main__.Sealing.test_the_pin_says_how_a_token_is_sealed) ... ok
+test_the_schema_takes_only_an_rsa_3072_answer_key (__main__.Sealing.test_the_schema_takes_only_an_rsa_3072_answer_key) ... ok
+test_every_refusal_has_one_exit_and_one_fixed_sentence (__main__.ThePin.test_every_refusal_has_one_exit_and_one_fixed_sentence) ... ok
+test_the_app_profile_and_token_guards_are_the_identity_contracts (__main__.ThePin.test_the_app_profile_and_token_guards_are_the_identity_contracts) ... ok
+test_the_key_stays_on_the_owners_machine (__main__.ThePin.test_the_key_stays_on_the_owners_machine) ... FAIL
+test_the_service_has_no_port_and_takes_the_request_on_stdin (__main__.ThePin.test_the_service_has_no_port_and_takes_the_request_on_stdin) ... FAIL
+
+======================================================================
+FAIL: test_the_key_stays_on_the_owners_machine (__main__.ThePin.test_the_key_stays_on_the_owners_machine)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/contracts/fixtures/token-service/test_fixtures.py", line 169, in test_the_key_stays_on_the_owners_machine
+    self.assertEqual(
+AssertionError: "owner's machine only" != "the owner's machine (pairing and local), [79 chars]ons)"
+- owner's machine only
++ the owner's machine (pairing and local), or the token-service environment secret of the owner's private repository (actions)
+
+
+======================================================================
+FAIL: test_the_service_has_no_port_and_takes_the_request_on_stdin (__main__.ThePin.test_the_service_has_no_port_and_takes_the_request_on_stdin)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/code/openwiz/contracts/fixtures/token-service/test_fixtures.py", line 195, in test_the_service_has_no_port_and_takes_the_request_on_stdin
+    self.assertIn("actions", reach["routes"])
+AssertionError: 'actions' not found in {'pairing': ['room-cli', 'mac', 'run', '--stdin', "python3 -I '<service>' mint"], 'local': ['python3', '-I', '<service>', 'mint']}
+
+----------------------------------------------------------------------
+Ran 19 tests in 0.024s
+
+FAILED (failures=2)

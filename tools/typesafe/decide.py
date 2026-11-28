@@ -1,16 +1,3 @@
-"""Combine one System One response using the coefficients in config.json.
-
-A Noul has no confidence field. Its value is the probability that the
-answer is yes. A value strictly between noul.no and noul.yes is the
-uncertain band, and the combination returns None so the caller keeps its
-previous rule. Choice, Score and Box do return confidence. choice_ready
-and score_ready return None when that confidence is under the threshold,
-which is the same fallback.
-
-Questions for one site are the `questions` object. Callers send that whole
-object in one system_one request.
-"""
-
 import json
 from pathlib import Path
 
@@ -33,7 +20,6 @@ def uncertain_noul(value, root=None):
 
 
 def signal(response, site, root=None):
-    """Weighted combination, or None when any Noul is in the uncertain band."""
     root = load() if root is None else root
     parts = []
     for term in site['terms']:
@@ -55,7 +41,6 @@ def signal(response, site, root=None):
 
 
 def choice_ready(response, name, confidence_at):
-    """The chosen option when confidence clears the threshold, else None."""
     picked, probability, confidence = client.choice(response, name)
     if confidence < confidence_at:
         return None
@@ -63,7 +48,6 @@ def choice_ready(response, name, confidence_at):
 
 
 def score_ready(response, name, confidence_at):
-    """The score when confidence clears the threshold, else None."""
     value, confidence, probabilities, legend = client.score(response, name)
     if confidence < confidence_at:
         return None
@@ -71,8 +55,7 @@ def score_ready(response, name, confidence_at):
 
 
 def box_ready(response, name, confidence_at):
-    """The box when confidence clears the threshold, else None."""
     edges, confidence = client.box(response, name)
-    if confidence < confidence_at:
+    if confidence is None or confidence < confidence_at:
         return None
     return edges, confidence

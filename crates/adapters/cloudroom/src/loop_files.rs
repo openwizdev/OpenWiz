@@ -157,15 +157,16 @@ pub fn read_loop_folder(dir: &Path, catalog: bool) -> io::Result<FolderRead> {
         if !bytes.ends_with(b".md") || bytes == b"README.md" {
             continue;
         }
+        if !std::fs::metadata(entry.path())?.is_file() {
+            continue;
+        }
         let Some(name) = name.to_str() else {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 "a file name is not UTF-8",
             ));
         };
-        if std::fs::metadata(entry.path())?.is_file() {
-            names.push(name.to_owned());
-        }
+        names.push(name.to_owned());
     }
     names.sort_unstable();
     let mut files = Vec::new();
@@ -3467,6 +3468,23 @@ mod plan_tests {
         assert!(folder.files[0].1.refusals.is_empty());
         std::fs::write(root.join(std::ffi::OsStr::from_bytes(b"\xff.md")), "x").unwrap();
         assert!(read_loop_folder(&root, false).is_err());
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn a_folder_skips_a_non_utf8_subdirectory_and_errors_on_a_non_utf8_file() {
+        use std::os::unix::ffi::OsStrExt;
+        let root = scratch("subdir-name");
+        std::fs::write(root.join("a.md"), format!("{WEBHOOK}---\nGo.\n")).unwrap();
+        std::fs::create_dir(root.join(std::ffi::OsStr::from_bytes(b"\xff.md"))).unwrap();
+        let folder = read_loop_folder(&root, false).unwrap();
+        assert_eq!(folder.files.len(), 1);
+        assert_eq!(folder.files[0].0, "a.md");
+        assert!(folder.files[0].1.refusals.is_empty());
+        std::fs::write(root.join(std::ffi::OsStr::from_bytes(b"\xfe.md")), "x").unwrap();
+        let error = read_loop_folder(&root, false).unwrap_err();
+        assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+        assert_eq!(error.to_string(), "a file name is not UTF-8");
         std::fs::remove_dir_all(&root).unwrap();
     }
 
