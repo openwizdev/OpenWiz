@@ -164,9 +164,6 @@ def prompt(args):
 
 
 def resume(sid):
-    """`boat resume <id>`: a stopped sandbox (boat's CLI says `stopped`, its API `archived`) starts from its disk,
-    with its conversations, and the command answers once it is ready. While the file FAKE_RESUME_HOLD exists the
-    sandbox stays `provisioning` and the command waits. A deleted sandbox is not found."""
     def begin(state):
         sandbox(state, sid)['state'] = 'provisioning'
     update(begin)
@@ -175,7 +172,7 @@ def resume(sid):
 
     def ready(state):
         box = sandbox(state, sid)
-        if box['state'] == 'provisioning':  # a stop meanwhile wins
+        if box['state'] == 'provisioning':
             box['state'] = 'running'
         return box['state']
     if update(ready) != 'running':
@@ -222,14 +219,11 @@ def main():
     elif cmd == 'resume' and len(rest) == 2 and rest[1] == '--json':
         resume(rest[0])
     elif cmd == 'limits' and rest == ['--json']:
-        # Synthetic counts in the shape docs.boat.dev gives (`starts.minute.remaining`, and so for each hour and
-        # day); FAKE_BOAT_STARTS (comma-separated `<period>=<count>`) sets what is left.
         left = {'minute': 5, 'hour': 30, 'day': 100}
         left.update((k, int(v)) for k, _, v in (x.partition('=') for x in os.environ.get(
             'FAKE_BOAT_STARTS', '').split(',') if x))
         say(accountStatus='active', canStart=min(left.values()) > 0, starts={k: {'remaining': v} for k, v in left.items()})
     elif cmd == 'conversations' and len(rest) == 2 and rest[1] == '--json':
-        # One JSON line per conversation the sandbox still holds (a synthetic shape: the reference names no fields).
         for cid in update(lambda s: sandbox(s, rest[0]))['conversations']:
             say(id=cid, running=False)
     elif cmd in ('stop', 'interrupt') and rest[-1] == '--json' and (
