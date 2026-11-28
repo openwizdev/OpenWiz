@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+import json, os, re, sys
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.environ['FAKE_CLI_LIB'])
+import fake_cli
+
+HELP = '''The fake kiro-cli: it allows only the local headless forms Kiro CLI 3.5.0 documents
+(kiro.dev/docs/cli/headless, `kiro-cli chat --help`):
+  kiro-cli chat --v3 --no-interactive --output-format stream-json --model <m> [--trust-all-tools] <prompt>
+  kiro-cli chat --v3 --no-interactive --output-format stream-json --resume-id <id> --model <m> [--trust-all-tools] <prompt>
+It prints its session id in a stream-json event, starts a background process for its V3 engine, and, with
+KIRO_FAKE_SIGNED_OUT=both (or json), answers as a signed-out kiro-cli does (or with its runError line alone).'''
+HEADLESS = ['chat', '--v3', '--no-interactive', '--output-format', 'stream-json']
+SIGNED_OUT = 'Not logged in. Set the KIRO_API_KEY environment variable or run `kiro-cli login` first.'
+RUN_ERROR = json.dumps({'type': 'runError', 'data': {'sessionId': None, 'stage': 'auth', 'message': SIGNED_OUT}},
+                       separators=(',', ':'))
+
+if sys.argv[1:] == ['--help']:
+    print(HELP)
+    sys.exit(0)
+a = sys.argv[1:]
+if a[:5] != HEADLESS:
+    fake_cli.refuse()
+a, session = a[5:], None
+if a[:1] == ['--resume-id']:
+    if len(a) < 2 or not re.fullmatch(r'[A-Za-z0-9._:-]{1,100}', a[1]):
+        fake_cli.refuse()
+    session, a = a[1], a[2:]
+if a[:1] != ['--model'] or len(a) < 3:
+    fake_cli.refuse()
+model, a = a[1], a[2:]
+if a[:1] == ['--trust-all-tools']:
+    a = a[1:]
+if len(a) != 1 or not a[0]:
+    fake_cli.refuse()
+if (session is not None) != a[0].startswith('You were woken'):
+    fake_cli.refuse()
+if os.environ.get('KIRO_FAKE_SIGNED_OUT') in ('both', 'json'):
+    print(RUN_ERROR, flush=True)
+    if os.environ['KIRO_FAKE_SIGNED_OUT'] == 'both':
+        print(SIGNED_OUT, file=sys.stderr, flush=True)
+    sys.exit(1)
+fake_cli.turn(a[0], model, session,
+              lambda sid: json.dumps({'type': 'runStarted', 'data': {'sessionId': sid}}, separators=(',', ':')),
+              daemon='tree', signed_out=RUN_ERROR)
