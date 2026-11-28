@@ -4,6 +4,7 @@ import http.server
 import importlib.machinery
 import importlib.util
 import json
+import locale
 import os
 import re
 import secrets
@@ -204,6 +205,26 @@ def texts(value):
 
 def holds_credential(text):
     return bool(SHAPES.search(text)) or any(v in text for v in SECRETS)
+
+
+TEXT_ENCODING = locale.getpreferredencoding(False)
+
+
+def read_bytes(path):
+    fd = os.open(path, os.O_RDONLY | os.O_CLOEXEC)
+    try:
+        chunks = []
+        while True:
+            chunk = os.read(fd, 65536)
+            if not chunk:
+                return b''.join(chunks)
+            chunks.append(chunk)
+    finally:
+        os.close(fd)
+
+
+def read_text(path):
+    return read_bytes(path).decode(TEXT_ENCODING).replace('\r\n', '\n').replace('\r', '\n')
 
 
 def started_at(pid):
@@ -463,11 +484,14 @@ class Kit:
         why = invalid(out, s, 'its %s %s' % (cmd, 'answer' if kind == 'ok' else 'error'))
         return ('bad', why) if why else (kind, out)
 
-    def started(self):
+    def snapshot(self):
+        return self.table() if PROC else list(self.listed())
+
+    def started(self, snapshot=None):
         if not PROC:
-            yield from self.listed()
+            yield from self.listed() if snapshot is None else snapshot
             return
-        table = self.table()
+        table = self.table() if snapshot is None else snapshot
         for pid, (ppid, uid, env, cmd, group, since) in table.items():
             if env is not None and self.mark in env:
                 yield cmd, env
@@ -480,11 +504,10 @@ class Kit:
         found = {}
         for pid in filter(str.isdigit, os.listdir('/proc')):
             try:
-                with open('/proc/%s/stat' % pid) as f:
-                    fields = f.read().rpartition(')')[2].split()
+                fields = read_text('/proc/%s/stat' % pid).rpartition(')')[2].split()
                 state, ppid, group, since = fields[0], int(fields[1]), int(fields[2]), fields[19]
-                with open('/proc/%s/status' % pid) as f:
-                    uid = int(next(row for row in f if row.startswith('Uid:')).split()[1])
+                rows = read_text('/proc/%s/status' % pid).split('\n')
+                uid = int(next(row for row in rows if row.startswith('Uid:')).split()[1])
             except (OSError, ValueError, IndexError, StopIteration):
                 continue
             candidate = uid == os.getuid() and int(since) > self.since and (pid, since) not in self.hidden
@@ -504,10 +527,8 @@ class Kit:
     def details(pid, tries=HIDDEN_TRIES):
         for attempt in range(tries):
             try:
-                with open('/proc/%s/environ' % pid, 'rb') as f:
-                    env = f.read().decode('utf-8', 'replace').split('\0')
-                with open('/proc/%s/cmdline' % pid, 'rb') as f:
-                    return env, f.read().decode('utf-8', 'replace').split('\0')
+                env = read_bytes('/proc/%s/environ' % pid).decode('utf-8', 'replace').split('\0')
+                return env, read_bytes('/proc/%s/cmdline' % pid).decode('utf-8', 'replace').split('\0')
             except PermissionError:
                 if attempt == tries - 1:
                     raise
@@ -526,8 +547,7 @@ class Kit:
     @staticmethod
     def running(pid):
         try:
-            with open('/proc/%s/stat' % pid) as f:
-                return f.read().rpartition(')')[2].split()[0] not in 'ZX'
+            return read_text('/proc/%s/stat' % pid).rpartition(')')[2].split()[0] not in 'ZX'
         except OSError:
             return False
 
@@ -597,11 +617,15 @@ class Kit:
             return self.blind
         return 'ps -E never showed a process of this run, so the kit cannot tell which processes the driver started'
 
-    def commandlines(self):
+    def commandlines(self, table=None):
         if not PROC:
             return list(self.ps('-o', 'command=').values())
         found = []
         for pid in filter(str.isdigit, os.listdir('/proc')):
+            cmd = table[pid][3] if table and pid in table else None
+            if cmd is not None:
+                found.append('\0'.join(cmd))
+                continue
             try:
                 with open('/proc/%s/cmdline' % pid, 'rb') as f:
                     found.append(f.read().decode('utf-8', 'replace'))
@@ -613,9 +637,9 @@ class Kit:
         with self.lock:
             self._scan(canary)
 
-    def run_processes(self):
+    def run_processes(self, table=None):
         if PROC:
-            for pid, (_, _, env, cmd, _, _) in self.table().items():
+            for pid, (_, _, env, cmd, _, _) in (self.table() if table is None else table).items():
                 if env is None or self.mark not in env:
                     continue
                 try:
@@ -642,8 +666,8 @@ class Kit:
                 continue
             yield rows[pid], cwd
 
-    def collect_runtime(self):
-        for argv, cwd in self.run_processes():
+    def collect_runtime(self, table=None):
+        for argv, cwd in self.run_processes(table):
             for path in (self.argument_files(argv, cwd) if isinstance(argv, list) else self.text_files(argv, cwd)):
                 self.runtime.add(os.path.realpath(path))
 
@@ -678,17 +702,19 @@ class Kit:
                 self.leak('the kit could not resolve a file a process of the driver ran, so it cannot check it')
 
     def _scan(self, canary):
+        seen = self.snapshot()
+        table = seen if PROC else None
         if canary:
             name, value = canary
-            if any(value in line for line in self.commandlines()):
+            if any(value in line for line in self.commandlines(table)):
                 self.leak('a process holds the %s key on its command line' % name)
-            for cmd, env in self.started():
+            for cmd, env in self.started(seen):
                 for entry in env:
                     if value in entry:
                         self.leak('a process the driver started holds the %s key in %s'
                                   % (name, shown(entry.partition('=')[0], value)))
-            self.collect_runtime()
-        for cmd, env in self.started():
+            self.collect_runtime(table)
+        for cmd, env in self.started(seen):
             if any(holds_credential(a) for a in cmd):
                 self.leak('a process the driver started holds a credential on its command line')
             if self.setting and self.setting[0] == 'argv':

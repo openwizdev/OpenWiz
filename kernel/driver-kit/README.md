@@ -7,6 +7,7 @@ python3 -I kernel/driver-kit/kit.py --driver adapters/<host>/driver \
   --repo <owner>/<throwaway> --ticket <n> --harness <h> --model <m> [--skill build-ticket] [--effort medium] [--wait 900]
 python3 -I kernel/driver-kit/test_kit.py     # the kit's own tests: the template passes, each planted driver fails
 python3 -I kernel/driver-kit/test_hostkey.py # the key helper's own tests: every refusal, and the key never leaks
+python3 -I kernel/driver-kit/bench.py        # times one process scan, with and without the key check, at 0 to 400 extra processes
 ```
 
 It prints one line per check, in the order version, start, wake, stop, token: `pass <check>: <what>` or `fail <check>: <why>`. Exit 0: all five pass. 1: a check failed. 2: the kit could not run; it says why on stderr, `kit.py: <why>`. The wake and stop checks run only after start passes. Once `start` has answered a run id, the kit always calls the driver's `stop` for that run before it goes on or exits, even when the start check failed; that stop is not the stop check.
