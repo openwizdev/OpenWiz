@@ -54,7 +54,7 @@ def resume(out, env_file):
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         man = json.loads((out / 'manifest.json').read_text())
         errors = E.manifest_problems(man)
-        if E.sha(json.loads((HERE / 'settings.json').read_text())) != man['settings_hash']:
+        if E.sha(E.run_settings()) != man['settings_hash']:
             errors.append('settings changed')
         if errors:
             raise ValueError('; '.join(errors))
