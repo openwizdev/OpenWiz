@@ -1,0 +1,566 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openwiz.dev/contracts/room.v1.schema.json",
+  "title": "openwiz.room.v1",
+  "description": "The room's scene file in owner and public mode, its steer lines, phone frame checks and theme input. See contracts/room.v1.md.",
+  "oneOf": [
+    {"$ref": "#/$defs/owner_scene"},
+    {"$ref": "#/$defs/public_scene"},
+    {"$ref": "#/$defs/steer"},
+    {"$ref": "#/$defs/frame"},
+    {"$ref": "#/$defs/theme"}
+  ],
+  "$defs": {
+    "version": {"const": "openwiz.room.v1"},
+    "utc": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "line": {"type": "string", "minLength": 1, "not": {"pattern": "[\\u0000-\\u001F]"}},
+    "slug": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"},
+    "positive": {"type": "integer", "minimum": 1},
+    "repository": {"type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?/[A-Za-z0-9._-]+$"},
+    "line_approve": {
+      "type": "string",
+      "pattern": "^approve plan #[1-9][0-9]* fingerprint [0-9a-f]{12}$",
+      "not": {"pattern": "[\\u0000-\\u001F]"}
+    },
+    "line_merge": {
+      "type": "string",
+      "pattern": "^merge [A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?/[A-Za-z0-9._-]+#[1-9][0-9]* at [0-9a-f]{40}$",
+      "not": {"pattern": "[\\u0000-\\u001F]"}
+    },
+    "line_answer": {
+      "type": "string",
+      "pattern": "^answer decision [A-Za-z0-9][A-Za-z0-9_-]* [A-Za-z0-9][A-Za-z0-9_-]*$",
+      "not": {"pattern": "[\\u0000-\\u001F]"}
+    },
+    "line_grant": {"type": "string", "pattern": "^grant [1-9][0-9]*$", "not": {"pattern": "[\\u0000-\\u001F]"}},
+    "line_refuse": {"type": "string", "pattern": "^refuse [1-9][0-9]*$", "not": {"pattern": "[\\u0000-\\u001F]"}},
+    "line_yes": {
+      "type": "string",
+      "pattern": "^yes to setting proposal [1-9][0-9]*$",
+      "not": {"pattern": "[\\u0000-\\u001F]"}
+    },
+    "line_no": {
+      "type": "string",
+      "pattern": "^no to setting proposal [1-9][0-9]*$",
+      "not": {"pattern": "[\\u0000-\\u001F]"}
+    },
+    "line_pause": {"type": "string", "pattern": "^pause spec #[1-9][0-9]*$", "not": {"pattern": "[\\u0000-\\u001F]"}},
+    "line_prioritize": {"type": "string", "pattern": "^prioritize #[1-9][0-9]*$", "not": {"pattern": "[\\u0000-\\u001F]"}},
+    "steer_line": {
+      "description": "Every line the room may send to Wiz.",
+      "oneOf": [
+        {"title": "approve", "$ref": "#/$defs/line_approve"},
+        {"title": "merge", "$ref": "#/$defs/line_merge"},
+        {"title": "answer", "$ref": "#/$defs/line_answer"},
+        {"title": "grant", "$ref": "#/$defs/line_grant"},
+        {"title": "refuse", "$ref": "#/$defs/line_refuse"},
+        {"title": "yes", "$ref": "#/$defs/line_yes"},
+        {"title": "no", "$ref": "#/$defs/line_no"},
+        {"title": "pause", "$ref": "#/$defs/line_pause"},
+        {"title": "prioritize", "$ref": "#/$defs/line_prioritize"}
+      ]
+    },
+    "station": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["family", "label", "text"],
+      "properties": {
+        "family": {"$ref": "#/$defs/slug"},
+        "label": {"$ref": "#/$defs/line"},
+        "text": {"$ref": "#/$defs/line"}
+      }
+    },
+    "figure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "role", "state", "ticket", "station", "text", "taps"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^(?:builder-[1-9][0-9]*|reviewer-[1-9][0-9]*-[1-9][0-9]*|fixer-[1-9][0-9]*-[1-9][0-9]*|fleet-[1-9][0-9]*)$"
+        },
+        "role": {"enum": ["builder", "reviewer", "fixer", "fleet"]},
+        "state": {"enum": ["queued", "building", "ci", "review", "fix", "merge", "done"]},
+        "ticket": {"type": ["integer", "null"], "minimum": 1},
+        "station": {"$ref": "#/$defs/slug"},
+        "text": {"$ref": "#/$defs/line"},
+        "taps": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["label", "line"],
+            "properties": {
+              "label": {"$ref": "#/$defs/line"},
+              "line": {"anyOf": [{"$ref": "#/$defs/line_pause"}, {"$ref": "#/$defs/line_prioritize"}]}
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"role": {"const": "builder"}}},
+          "then": {"properties": {"name": {"pattern": "^builder-[1-9][0-9]*$"}, "ticket": {"type": "integer"}}}
+        },
+        {
+          "if": {"properties": {"role": {"const": "reviewer"}}},
+          "then": {
+            "properties": {"name": {"pattern": "^reviewer-[1-9][0-9]*-[1-9][0-9]*$"}, "ticket": {"type": "integer"}}
+          }
+        },
+        {
+          "if": {"properties": {"role": {"const": "fixer"}}},
+          "then": {
+            "properties": {"name": {"pattern": "^fixer-[1-9][0-9]*-[1-9][0-9]*$"}, "ticket": {"type": "integer"}}
+          }
+        },
+        {
+          "if": {"properties": {"role": {"const": "fleet"}}},
+          "then": {"properties": {"name": {"pattern": "^fleet-[1-9][0-9]*$"}, "ticket": {"type": "null"}}}
+        }
+      ]
+    },
+    "pull_request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "number", "ticket", "text"],
+      "properties": {
+        "repository": {"$ref": "#/$defs/repository"},
+        "number": {"$ref": "#/$defs/positive"},
+        "ticket": {"type": ["integer", "null"], "minimum": 1},
+        "text": {"$ref": "#/$defs/line"}
+      }
+    },
+    "pipeline": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["build", "review", "merge"],
+      "properties": {
+        "build": {"type": "array", "items": {"$ref": "#/$defs/pull_request"}},
+        "review": {"type": "array", "items": {"$ref": "#/$defs/pull_request"}},
+        "merge": {"type": "array", "items": {"$ref": "#/$defs/pull_request"}}
+      }
+    },
+    "meter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lane", "window", "used_percent", "resets_at", "budget", "text"],
+      "properties": {
+        "lane": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*(?::[A-Za-z0-9._-]+)+$"},
+        "window": {"$ref": "#/$defs/slug"},
+        "used_percent": {"type": "number", "minimum": 0, "maximum": 100},
+        "resets_at": {"anyOf": [{"$ref": "#/$defs/utc"}, {"type": "null"}]},
+        "budget": {
+          "anyOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["spent", "target", "unit", "by", "pace"],
+              "properties": {
+                "spent": {"type": "number", "minimum": 0},
+                "target": {"type": "number", "minimum": 0},
+                "unit": {"enum": ["percent", "seconds", "credits", "dollars"]},
+                "by": {"$ref": "#/$defs/utc"},
+                "pace": {"enum": ["on pace", "ahead", "behind"]}
+              }
+            }
+          ]
+        },
+        "text": {"$ref": "#/$defs/line"}
+      }
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "number", "stage", "eta", "text"],
+      "properties": {
+        "repository": {"$ref": "#/$defs/repository"},
+        "number": {"$ref": "#/$defs/positive"},
+        "stage": {
+          "enum": [
+            "submitted",
+            "triaged",
+            "building",
+            "pull-request",
+            "reviewed",
+            "merged",
+            "released",
+            "working-on-install"
+          ]
+        },
+        "eta": {"anyOf": [{"$ref": "#/$defs/utc"}, {"type": "null"}]},
+        "text": {"$ref": "#/$defs/line"}
+      }
+    },
+    "beacon": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind", "text", "taps"],
+          "properties": {
+            "id": {"$ref": "#/$defs/line"},
+            "kind": {"const": "spec-to-approve"},
+            "text": {"$ref": "#/$defs/line"},
+            "taps": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["label", "line"],
+                "properties": {"label": {"$ref": "#/$defs/line"}, "line": {"$ref": "#/$defs/line_approve"}}
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind", "text", "taps"],
+          "properties": {
+            "id": {"$ref": "#/$defs/line"},
+            "kind": {"const": "pr-ready-to-merge"},
+            "text": {"$ref": "#/$defs/line"},
+            "taps": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["label", "line"],
+                "properties": {"label": {"$ref": "#/$defs/line"}, "line": {"$ref": "#/$defs/line_merge"}}
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind", "text", "taps"],
+          "properties": {
+            "id": {"$ref": "#/$defs/line"},
+            "kind": {"const": "decision-request"},
+            "text": {"$ref": "#/$defs/line"},
+            "taps": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["label", "line"],
+                "properties": {"label": {"$ref": "#/$defs/line"}, "line": {"$ref": "#/$defs/line_answer"}}
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind", "text", "taps"],
+          "properties": {
+            "id": {"$ref": "#/$defs/line"},
+            "kind": {"const": "grant-request"},
+            "text": {"$ref": "#/$defs/line"},
+            "taps": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["label", "line"],
+                "properties": {
+                  "label": {"$ref": "#/$defs/line"},
+                  "line": {"anyOf": [{"$ref": "#/$defs/line_grant"}, {"$ref": "#/$defs/line_refuse"}]}
+                }
+              },
+              "contains": {"properties": {"line": {"$ref": "#/$defs/line_grant"}}},
+              "allOf": [{"contains": {"properties": {"line": {"$ref": "#/$defs/line_refuse"}}}}]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind", "text", "taps"],
+          "properties": {
+            "id": {"$ref": "#/$defs/line"},
+            "kind": {"const": "setting-proposal"},
+            "text": {"$ref": "#/$defs/line"},
+            "taps": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["label", "line"],
+                "properties": {
+                  "label": {"$ref": "#/$defs/line"},
+                  "line": {"anyOf": [{"$ref": "#/$defs/line_yes"}, {"$ref": "#/$defs/line_no"}]}
+                }
+              },
+              "contains": {"properties": {"line": {"$ref": "#/$defs/line_yes"}}},
+              "allOf": [{"contains": {"properties": {"line": {"$ref": "#/$defs/line_no"}}}}]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind", "text", "taps", "opens"],
+          "properties": {
+            "id": {"$ref": "#/$defs/line"},
+            "kind": {"const": "key-needed"},
+            "text": {"$ref": "#/$defs/line"},
+            "taps": {"type": "array", "maxItems": 0},
+            "opens": {"const": "key-card"}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "kind", "text", "taps"],
+          "properties": {
+            "id": {"$ref": "#/$defs/line"},
+            "kind": {"const": "release"},
+            "text": {"$ref": "#/$defs/line"},
+            "taps": {"type": "array", "maxItems": 0}
+          }
+        }
+      ]
+    },
+    "unavailable": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source", "reason"],
+        "properties": {"source": {"enum": ["states", "usage", "requests", "feed"]}, "reason": {"$ref": "#/$defs/line"}}
+      }
+    },
+    "owner_scene": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "read_at",
+        "mode",
+        "stations",
+        "figures",
+        "pipeline",
+        "meters",
+        "requests",
+        "beacons",
+        "unavailable"
+      ],
+      "properties": {
+        "schema": {"$ref": "#/$defs/version"},
+        "read_at": {"$ref": "#/$defs/utc"},
+        "mode": {"const": "owner"},
+        "stations": {"type": ["array", "null"], "items": {"$ref": "#/$defs/station"}},
+        "figures": {"type": ["array", "null"], "items": {"$ref": "#/$defs/figure"}},
+        "pipeline": {"$ref": "#/$defs/pipeline"},
+        "meters": {"type": ["array", "null"], "items": {"$ref": "#/$defs/meter"}},
+        "requests": {"type": ["array", "null"], "items": {"$ref": "#/$defs/request"}},
+        "beacons": {"type": ["array", "null"], "items": {"$ref": "#/$defs/beacon"}},
+        "unavailable": {"$ref": "#/$defs/unavailable"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"stations": {"type": "null"}}},
+          "then": {"properties": {"unavailable": {"contains": {"properties": {"source": {"const": "states"}}}}}},
+          "else": {
+            "properties": {"unavailable": {"not": {"contains": {"properties": {"source": {"const": "states"}}}}}}
+          }
+        },
+        {
+          "if": {"properties": {"figures": {"type": "null"}}},
+          "then": {"properties": {"unavailable": {"contains": {"properties": {"source": {"const": "states"}}}}}},
+          "else": {
+            "properties": {"unavailable": {"not": {"contains": {"properties": {"source": {"const": "states"}}}}}}
+          }
+        },
+        {
+          "if": {"properties": {"pipeline": {"type": "null"}}},
+          "then": {"properties": {"unavailable": {"contains": {"properties": {"source": {"const": "states"}}}}}},
+          "else": {
+            "properties": {"unavailable": {"not": {"contains": {"properties": {"source": {"const": "states"}}}}}}
+          }
+        },
+        {
+          "if": {"properties": {"meters": {"type": "null"}}},
+          "then": {"properties": {"unavailable": {"contains": {"properties": {"source": {"const": "usage"}}}}}},
+          "else": {
+            "properties": {"unavailable": {"not": {"contains": {"properties": {"source": {"const": "usage"}}}}}}
+          }
+        },
+        {
+          "if": {"properties": {"requests": {"type": "null"}}},
+          "then": {"properties": {"unavailable": {"contains": {"properties": {"source": {"const": "requests"}}}}}},
+          "else": {
+            "properties": {"unavailable": {"not": {"contains": {"properties": {"source": {"const": "requests"}}}}}}
+          }
+        },
+        {
+          "if": {"properties": {"beacons": {"type": "null"}}},
+          "then": {"properties": {"unavailable": {"contains": {"properties": {"source": {"const": "feed"}}}}}},
+          "else": {
+            "properties": {"unavailable": {"not": {"contains": {"properties": {"source": {"const": "feed"}}}}}}
+          }
+        }
+      ]
+    },
+    "public_scene": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "mode", "read_at", "prs_merged_total", "prs_merged_7d", "drivers_verified", "agents_running"],
+      "properties": {
+        "schema": {"$ref": "#/$defs/version"},
+        "mode": {"const": "public"},
+        "read_at": {"$ref": "#/$defs/utc"},
+        "prs_merged_total": {"type": ["integer", "null"], "minimum": 0},
+        "prs_merged_7d": {"type": ["integer", "null"], "minimum": 0},
+        "drivers_verified": {"type": ["integer", "null"], "minimum": 0},
+        "agents_running": {"type": ["integer", "null"], "minimum": 0}
+      }
+    },
+    "steer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "kind", "line", "sent_as"],
+      "properties": {
+        "schema": {"$ref": "#/$defs/version"},
+        "kind": {"const": "steer"},
+        "line": {"$ref": "#/$defs/steer_line"},
+        "sent_as": {"const": "owner-message"}
+      }
+    },
+    "frame": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "kind",
+        "profile",
+        "view",
+        "fps",
+        "figures_drawn",
+        "draw_calls",
+        "triangles",
+        "reduced_motion",
+        "moving"
+      ],
+      "properties": {
+        "schema": {"$ref": "#/$defs/version"},
+        "kind": {"const": "frame"},
+        "profile": {"enum": ["phone", "desktop"]},
+        "view": {"enum": ["3d", "2d"]},
+        "fps": {"type": "number", "minimum": 0},
+        "figures_drawn": {"type": "integer", "minimum": 0},
+        "draw_calls": {"type": "integer", "minimum": 0},
+        "triangles": {"type": "integer", "minimum": 0},
+        "reduced_motion": {"type": "boolean"},
+        "moving": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": ["figure-idle", "pipeline-flow", "camera-drift", "holo-shimmer", "beacon-pulse", "state-change"]
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"profile": {"const": "phone"}, "view": {"const": "3d"}}},
+          "then": {
+            "properties": {
+              "fps": {"minimum": 30},
+              "figures_drawn": {"maximum": 24},
+              "draw_calls": {"maximum": 120},
+              "triangles": {"maximum": 150000}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"view": {"const": "2d"}}},
+          "then": {
+            "properties": {"figures_drawn": {"maximum": 0}, "draw_calls": {"maximum": 0}, "triangles": {"maximum": 0}}
+          }
+        },
+        {
+          "if": {"properties": {"reduced_motion": {"const": true}}},
+          "then": {"properties": {"moving": {"items": {"enum": ["state-change"]}}}}
+        }
+      ]
+    },
+    "colour": {"type": "string", "pattern": "^#[0-9a-f]{6}$"},
+    "material": {"enum": ["matte", "satin", "gloss", "glass", "metal", "emissive", "wireframe"]},
+    "theme": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "kind", "look", "colours", "materials", "sound"],
+      "properties": {
+        "schema": {"$ref": "#/$defs/version"},
+        "kind": {"const": "theme"},
+        "look": {"$ref": "#/$defs/slug"},
+        "colours": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["background", "surface", "text", "accent", "ok", "warn", "alert"],
+          "properties": {
+            "background": {"$ref": "#/$defs/colour"},
+            "surface": {"$ref": "#/$defs/colour"},
+            "text": {"$ref": "#/$defs/colour"},
+            "accent": {"$ref": "#/$defs/colour"},
+            "ok": {"$ref": "#/$defs/colour"},
+            "warn": {"$ref": "#/$defs/colour"},
+            "alert": {"$ref": "#/$defs/colour"}
+          }
+        },
+        "materials": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["figure", "station", "panel", "floor"],
+          "properties": {
+            "figure": {"$ref": "#/$defs/material"},
+            "station": {"$ref": "#/$defs/material"},
+            "panel": {"$ref": "#/$defs/material"},
+            "floor": {"$ref": "#/$defs/material"}
+          }
+        },
+        "sound": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["on", "set_by", "cues"],
+          "properties": {
+            "on": {"type": "boolean"},
+            "set_by": {"enum": ["default", "owner"]},
+            "cues": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["beacon", "merge", "alert"],
+              "properties": {
+                "beacon": {"$ref": "#/$defs/slug"},
+                "merge": {"$ref": "#/$defs/slug"},
+                "alert": {"$ref": "#/$defs/slug"}
+              }
+            }
+          },
+          "allOf": [
+            {
+              "if": {"properties": {"on": {"const": true}}},
+              "then": {"properties": {"set_by": {"const": "owner"}}}
+            }
+          ]
+        }
+      }
+    }
+  }
+}

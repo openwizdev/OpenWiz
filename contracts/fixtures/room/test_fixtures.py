@@ -198,12 +198,13 @@ class RoomContract(unittest.TestCase):
         self.assertEqual({beacon['kind'] for beacon in self.good['owner-scene']['beacons']}, NEEDS_OWNER)
         taps = [tap for beacon in self.good['owner-scene']['beacons'] for tap in beacon['taps']]
         taps += [tap for figure in self.good['owner-scene']['figures'] for tap in figure['taps']]
-        steers = {record['line'] for name, record in self.good.items() if name.startswith('steer-')}
+        used = set()
         for tap in taps:
             with self.subTest(line=tap['line']):
-                self.assertIn(tap['line'], steers)
-                record = dict(self.good['steer-pause'], line=tap['line'])
-                self.assertTrue(self.valid(record))
+                self.assertTrue(self.valid(dict(self.good['steer-pause'], line=tap['line'])))
+                used |= {title for title in self.pin['steer_lines']
+                         if matches(tap['line'], self.schema['$defs'][f'line_{title}'], self.schema)}
+        self.assertEqual(used, set(self.pin['steer_lines']))
 
     def test_the_contract_pins_the_budget_and_the_default_look(self):
         caps = self.pin['phone_budget']
