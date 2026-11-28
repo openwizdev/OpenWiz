@@ -1,0 +1,2 @@
+fail: a start prompt on a wake exited 0, not 2
+test_row.py: 15 refusals checked, 1 failed
