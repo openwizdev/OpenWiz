@@ -1,0 +1,22 @@
+fail row effort: not the none form naming mistral-vibe v3.1.5
+fail row start/wake: still passes {effort}, --thinking or --trust
+fail row daemon: vibe -p's app-server runs in its own process group; the row must name it
+fail row limit: no usage-limit pattern
+fail row signed_out: misses "Error: Can't read MISTRAL_API_KEY from the system keyring for mistral provider (locked). Unlock the system keyring or approve its prompt, or set the MISTRAL_API_KEY environment variable"
+fail trust: exited 1, not 2
+fail allowed lines: start 2 session None wake 2
+fail fake signed out (1): exited 2, stdout ''
+fail fake signed out (not-signed-in): exited 2, stdout ''
+fail fake signed out (keyring): exited 2, stdout ''
+fail fake limit: exited 2, stderr ''
+fail effort off: not refused with the fixed next, or something started
+fail effort low: not refused with the fixed next, or something started
+fail effort medium: not refused with the fixed next, or something started
+fail effort high: not refused with the fixed next, or something started
+fail effort xhigh: not refused with the fixed next, or something started
+fail effort max: not refused with the fixed next, or something started
+fail limit: no single resume after the 429 line: ['first']
+fail limit: the run's log lacks the 429 line or the driver's wait
+fail limit: waits [], not one 60-second wait
+test_row.py: 14 refusals checked, 20 failed
+exit 1

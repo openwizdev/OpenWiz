@@ -8,9 +8,7 @@
     "streaming",
     "--model",
     "{model}",
-    "--trust",
-    "{mode}",
-    "{effort}"
+    "{mode}"
   ],
   "wake": [
     "--prompt",
@@ -19,7 +17,6 @@
     "streaming",
     "--resume",
     "{session}",
-    "--trust",
     "{mode}"
   ],
   "session": {
@@ -33,20 +30,15 @@
     ]
   },
   "env": {},
-  "effort": {
-    "off": ["--thinking", "off"],
-    "low": ["--thinking", "low"],
-    "medium": ["--thinking", "medium"],
-    "high": ["--thinking", "high"],
-    "xhigh": ["--thinking", "xhigh"],
-    "max": ["--thinking", "max"]
-  },
+  "effort": "none: vibe --thinking is sent as written and only the provider judges it, and on budget-token models high, xhigh and max are one 32000-token budget, with no read-only command to tell (mistral-vibe v3.1.5, completion_profile/reasoning.py)",
   "login": "Vibe's own login: vibe --setup saves the key in the OS keyring, or in ~/.vibe/.env when no keyring is available, or you set MISTRAL_API_KEY yourself; the driver never reads or passes it",
-  "daemon": "none",
+  "daemon": "vibe -p starts its app-server in its own process group under the turn and exits only after it has; stop ends it with the process tree",
   "signed_out": [
     "^Error: Missing MISTRAL_API_KEY environment variable for .+ provider\\.?[ \\t]*$",
-    "^Error: You are not signed in to Mistral\\. Sign in and retry\\.[ \\t]*$"
+    "^Error: You are not signed in to Mistral\\. Sign in and retry\\.[ \\t]*$",
+    "^Error: Can't read MISTRAL_API_KEY from the system keyring for .+ provider \\(.*\\)\\. Unlock the system keyring or approve its prompt, or set the MISTRAL_API_KEY environment variable[ \\t]*$"
   ],
   "login_command": "vibe --setup",
-  "login_env": "MISTRAL_API_KEY"
+  "login_env": "MISTRAL_API_KEY",
+  "limit": "^Error: API error occurred: Status 429\\b"
 }
