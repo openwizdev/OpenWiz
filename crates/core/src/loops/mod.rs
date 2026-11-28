@@ -154,5 +154,6 @@ pub enum PlanError {
     InvalidSnapshot,
 }
 
+pub mod marker;
 mod planner;
 pub use planner::plan;
