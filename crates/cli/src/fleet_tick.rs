@@ -10,6 +10,8 @@ use std::path::Path;
 
 #[path = "fleet_tick_graph.rs"]
 mod graph;
+#[path = "typesafe.rs"]
+mod typesafe;
 pub use graph::{Inventory, World};
 #[path = "fleet_tick_records.rs"]
 mod records;

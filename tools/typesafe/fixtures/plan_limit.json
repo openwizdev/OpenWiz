@@ -1,0 +1,69 @@
+{
+  "schema": "openwiz.typesafe-bench.plan-limit.v1",
+  "note": "recorded answers are fixture input, not live Jev calls",
+  "cases": [
+    {"id": "exact-reached", "text": "Claude usage limit reached", "expected": true, "recorded": null},
+    {"id": "exact-hit", "text": "You've hit your limit", "expected": true, "recorded": null},
+    {"id": "exact-reset", "text": "You've hit your limit · resets 04:00 UTC", "expected": true, "recorded": null},
+    {
+      "id": "ordinary",
+      "text": "All checks passed",
+      "expected": false,
+      "recorded": {"answers": {
+        "plan_limit": {"type": "noul", "noul": 0.04},
+        "ordinary_work": {"type": "noul", "noul": 0.95},
+        "sign_in": {"type": "noul", "noul": 0.02}
+      }}
+    },
+    {
+      "id": "paraphrase-plan",
+      "text": "Please wait. The Claude plan limit was reached and the session stopped.",
+      "expected": true,
+      "recorded": {"answers": {
+        "plan_limit": {"type": "noul", "noul": 0.96},
+        "ordinary_work": {"type": "noul", "noul": 0.05},
+        "sign_in": {"type": "noul", "noul": 0.02}
+      }}
+    },
+    {
+      "id": "paraphrase-rate",
+      "text": "rate limit: retry this Claude session after the window",
+      "expected": false,
+      "recorded": {"answers": {
+        "plan_limit": {"type": "noul", "noul": 0.22},
+        "ordinary_work": {"type": "noul", "noul": 0.18},
+        "sign_in": {"type": "noul", "noul": 0.04}
+      }}
+    },
+    {
+      "id": "word-limit",
+      "text": "the ticket says the word limit in its title",
+      "expected": false,
+      "recorded": {"answers": {
+        "plan_limit": {"type": "noul", "noul": 0.2},
+        "ordinary_work": {"type": "noul", "noul": 0.85},
+        "sign_in": {"type": "noul", "noul": 0.05}
+      }}
+    },
+    {
+      "id": "sign-in",
+      "text": "not signed in: run login",
+      "expected": false,
+      "recorded": {"answers": {
+        "plan_limit": {"type": "noul", "noul": 0.12},
+        "ordinary_work": {"type": "noul", "noul": 0.1},
+        "sign_in": {"type": "noul", "noul": 0.94}
+      }}
+    },
+    {
+      "id": "confident-wrong",
+      "text": "build failed: exit 1",
+      "expected": false,
+      "recorded": {"answers": {
+        "plan_limit": {"type": "noul", "noul": 0.97},
+        "ordinary_work": {"type": "noul", "noul": 0.04},
+        "sign_in": {"type": "noul", "noul": 0.02}
+      }}
+    }
+  ]
+}

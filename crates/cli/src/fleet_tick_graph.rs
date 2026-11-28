@@ -1113,14 +1113,25 @@ impl World {
                 matches!(detail.session.status, Fact::Known(ref s) if s == "idle" || s == "error");
             let plan_limit = family == BuilderFamily::Claude
                 && stopped
+                && may_restart(
+                    matches!(row.state, openwiz_core::fleet::model::IssueState::Open),
+                    row.labels.iter().any(|l| l.as_str() == "held") || !holds.is_empty(),
+                    builder.as_ref().is_some_and(|b| b.archived),
+                    records::fallback_due(&comments),
+                )
                 && room
                     .session_output(&SessionId(thread.as_str().into()), deadline)
                     .ok()
                     .filter(|o| o.problems.is_empty())
                     .is_some_and(|o| {
-                        [o.output, o.error].iter().any(
-                            |f| matches!(f, Fact::Known(Some(text)) if claude_plan_limit(text)),
-                        )
+                        let texts: Vec<&str> = [&o.output, &o.error]
+                            .into_iter()
+                            .filter_map(|f| match f {
+                                Fact::Known(Some(text)) => Some(text.as_str()),
+                                _ => None,
+                            })
+                            .collect();
+                        super::typesafe::plan_limit(&texts, deadline)
                     });
             Some(BuilderSource {
                 thread: thread.clone(),
@@ -1426,15 +1437,22 @@ fn start_facts(r: &StartRecord, comments: &[Comment]) -> Vec<Start> {
         .collect()
 }
 
-fn claude_plan_limit(text: &str) -> bool {
-    text.lines().any(|line| {
-        let line = line.trim();
-        line == "Claude usage limit reached"
-            || line == "You've hit your limit"
-            || line
-                .strip_prefix("You've hit your limit · resets ")
-                .is_some_and(|s| !s.is_empty())
-    })
+fn may_restart(open: bool, held: bool, archived: bool, fallback_due: bool) -> bool {
+    open && !held && !archived && !fallback_due
+}
+
+#[cfg(test)]
+mod restart_gate_tests {
+    use super::may_restart;
+
+    #[test]
+    fn session_text_is_read_only_when_a_restart_could_follow() {
+        assert!(may_restart(true, false, false, false));
+        assert!(!may_restart(false, false, false, false));
+        assert!(!may_restart(true, true, false, false));
+        assert!(!may_restart(true, false, true, false));
+        assert!(!may_restart(true, false, false, true));
+    }
 }
 
 #[cfg(test)]

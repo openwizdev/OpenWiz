@@ -8,7 +8,9 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent / 'skills-eval'))
 import client
+import decide
 import jev_judge
+import plan_limit
 
 FIXTURES = HERE / 'fixtures'
 
@@ -33,8 +35,17 @@ def score_judge(data):
     return len(data['cases']), old_hit, shaped_hit
 
 
+def score_plan_limit(data):
+    old_hit = shaped_hit = 0
+    for row in data['cases']:
+        old_hit += int(plan_limit.exact(row['text']) == row['expected'])
+        shaped_hit += int(plan_limit.shaped(row['text'], row['recorded']) == row['expected'])
+    return len(data['cases']), old_hit, shaped_hit
+
+
 HANDLERS = {
     'openwiz.typesafe-bench.judge.v1': ('judge', score_judge),
+    'openwiz.typesafe-bench.plan-limit.v1': ('plan-limit', score_plan_limit),
 }
 
 
@@ -79,6 +90,20 @@ def main(argv):
             decided = jev_judge.try_jev(row['rule'], row['reply'], ask)
             hit += int(decided is not None and decided['verdict'] == row['expected'])
         print(f'judge live: {hit}/{sent} matched the fixture label')
+    for path in paths:
+        data = json.loads(path.read_text())
+        if data['schema'] != 'openwiz.typesafe-bench.plan-limit.v1':
+            continue
+        hit = 0
+        for row in data['cases']:
+            response = None
+            if not plan_limit.exact(row['text']):
+                try:
+                    response = ask.system_one(row['text'][-4000:], decide.questions('plan_limit'))
+                except client.TypeSafeError:
+                    response = None
+            hit += int(plan_limit.shaped(row['text'], response) == row['expected'])
+        print(f'plan-limit live: {hit}/{len(data["cases"])} matched the fixture label')
     return 0
 
 

@@ -31,6 +31,41 @@
           }
         }
       }
+    },
+    "plan_limit": {
+      "combine": "weighted_sum",
+      "act": 0.9,
+      "terms": [
+        {"question": "plan_limit", "weight": 0.7},
+        {"question": "ordinary_work", "weight": 0.2, "invert": true},
+        {"question": "sign_in", "weight": 0.1, "invert": true}
+      ],
+      "questions": {
+        "plan_limit": {
+          "type": "noul",
+          "instructions": "Does the text say this run stopped because its plan usage limit was reached?",
+          "criteria": {
+            "true": "A plan usage limit stopped the run.",
+            "false": "The text does not say a plan usage limit stopped the run."
+          }
+        },
+        "ordinary_work": {
+          "type": "noul",
+          "instructions": "Is this ordinary work or a normal failure?",
+          "criteria": {
+            "true": "The text is ordinary progress or a normal failure.",
+            "false": "The text is not ordinary progress or a normal failure."
+          }
+        },
+        "sign_in": {
+          "type": "noul",
+          "instructions": "Is this a sign-in or login problem?",
+          "criteria": {
+            "true": "The text says the user is signed out or must log in.",
+            "false": "The text is not a sign-in problem."
+          }
+        }
+      }
     }
   }
 }
