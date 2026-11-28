@@ -1,0 +1,91 @@
+$ python3 -I adapters/capy/test_driver.py   (the proofs of the review at ddf4537, before the fix; the key variable and keychain entry the helper named are shown as <variable> and <keychain entry>)
+F..F.F.FF/usr/lib/python3.11/unittest/case.py:622: ResourceWarning: unclosed file <_io.TextIOWrapper name=6 encoding='UTF-8'>
+  with outcome.testPartExecutor(self):
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+/usr/lib/python3.11/unittest/case.py:622: ResourceWarning: unclosed file <_io.TextIOWrapper name=8 encoding='UTF-8'>
+  with outcome.testPartExecutor(self):
+ResourceWarning: Enable tracemalloc to get the object allocation traceback
+.......F....F.....
+======================================================================
+FAIL: test_a_capy_qualified_model_is_kept_and_only_a_bare_one_gets_the_harness_prefix (__main__.Driver.test_a_capy_qualified_model_is_kept_and_only_a_bare_one_gets_the_harness_prefix)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/capy/test_driver.py", line 173, in test_a_capy_qualified_model_is_kept_and_only_a_bare_one_gets_the_harness_prefix
+    run = self.started(model='anthropic/claude-synthetic-1')
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "adapters/capy/test_driver.py", line 103, in started
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'model is not valid', 'next': 'fix model as `driver schema` shows'}
+
+======================================================================
+FAIL: test_a_lost_create_is_retried_with_the_same_request_id_and_starts_one_thread (__main__.Driver.test_a_lost_create_is_retried_with_the_same_request_id_and_starts_one_thread)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/capy/test_driver.py", line 211, in test_a_lost_create_is_retried_with_the_same_request_id_and_starts_one_thread
+    self.assertEqual(self.driver('start', START)[1], out)
+AssertionError: {'err[15 chars]ered 401 to POST /api/v1/threads', 'next': "ch[69 chars]ain"} != {'err[15 chars]ered 503 to POST /api/v1/threads, so a thread [112 chars]ain'}
+- {'error': 'Capy answered 401 to POST /api/v1/threads',
+?                          ^ ^                         -
+
++ {'error': 'Capy answered 503 to POST /api/v1/threads, so a thread may have '
+?                          ^ ^                        +++++++++++++++++++++++
+
+-  'next': "check your key, your Capy project and the start's fields, then start "
+-          'again'}
++           'started',
++  'next': 'archive the Capy thread titled OpenWiz: example/site#7 if it is '
++          'there, then start again'}
+
+======================================================================
+FAIL: test_a_rate_limited_create_waits_the_seconds_capy_asks_then_sends_it_once_more (__main__.Driver.test_a_rate_limited_create_waits_the_seconds_capy_asks_then_sends_it_once_more)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/capy/test_driver.py", line 225, in test_a_rate_limited_create_waits_the_seconds_capy_asks_then_sends_it_once_more
+    self.assertGreaterEqual(time.monotonic() - began, 1)
+AssertionError: 0.14918409008532763 not greater than or equal to 1
+
+======================================================================
+FAIL: test_a_start_the_key_helper_never_sent_keeps_the_helpers_setup_advice (__main__.Driver.test_a_start_the_key_helper_never_sent_keeps_the_helpers_setup_advice)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/capy/test_driver.py", line 218, in test_a_start_the_key_helper_never_sent_keeps_the_helpers_setup_advice
+    self.assertTrue(out['next'].startswith('unset OPENWIZ_HOSTKEY_TEST_ORIGIN'), out)
+AssertionError: False is not true : {'error': "the key helper refused: the kit's fake host gave no test key; under OPENWIZ_HOSTKEY_TEST_ORIGIN the helper never reads <variable> or the keychain entry <keychain entry>, so a thread may have started", 'next': 'archive the Capy thread titled OpenWiz: example/site#7 if it is there, then start again'}
+
+======================================================================
+FAIL: test_a_stop_during_a_wake_of_the_same_run_waits_for_it_and_leaves_the_run_stopped (__main__.Driver.test_a_stop_during_a_wake_of_the_same_run_waits_for_it_and_leaves_the_run_stopped)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/capy/test_driver.py", line 273, in test_a_stop_during_a_wake_of_the_same_run_waits_for_it_and_leaves_the_run_stopped
+    self.assertTrue(self.host.threads[run]['archived'])
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_fields_capy_adds_to_its_answers_change_nothing (__main__.Driver.test_fields_capy_adds_to_its_answers_change_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/capy/test_driver.py", line 277, in test_fields_capy_adds_to_its_answers_change_nothing
+    run = self.started()
+          ^^^^^^^^^^^^^^
+  File "adapters/capy/test_driver.py", line 103, in started
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'Capy answered GET /api/v1/projects in a shape the driver cannot read', 'next': 'set CAPY_PROJECT_ID to the project to run it in (Settings, Projects & setup), then start again'}
+
+======================================================================
+FAIL: test_start_refuses_a_harness_capy_has_no_subscription_for (__main__.Driver.test_start_refuses_a_harness_capy_has_no_subscription_for)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/capy/test_driver.py", line 168, in test_start_refuses_a_harness_capy_has_no_subscription_for
+    self.assertEqual(self.driver('start', dict(START, harness='gemini-cli', effort='high'))[1], {
+AssertionError: {'error': 'harness gemini-cli is not one Capy runs f[55 chars]dex'} != {'error': 'Capy cannot run gemini-cli (model claude-[161 chars]ult"}
+- {'error': 'harness gemini-cli is not one Capy runs for OpenWiz',
+-  'next': 'use claude-code (or claude) or codex'}
++ {'error': 'Capy cannot run gemini-cli (model claude-synthetic-1) at effort '
++           'high',
++  'next': "this host can't set effort: remove the effort for this harness in "
++          "your Models table or Roster to run it at the host's default"}
+
+----------------------------------------------------------------------
+Ran 27 tests in 27.731s
+
+FAILED (failures=7)

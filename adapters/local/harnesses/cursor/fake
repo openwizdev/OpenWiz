@@ -1,0 +1,95 @@
+#!/usr/bin/env python3
+import json, os, sys
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.environ['FAKE_CLI_LIB'])
+import fake_cli
+
+HELP = '''The fake agent (Cursor CLI 2026.11.22-e9042b2). It parses the global options of
+https://cursor.com/docs/cli/reference/parameters and exits 2 on anything else. It simulates only:
+  agent --print --output-format stream-json (--trust | --force | --yolo) [--resume <chatId>] --model <m> <prompt>
+in any option order, and exits 3 on a documented command line it does not simulate.'''
+FLAGS = {'-p': '--print', '--print': '--print', '-f': '--force', '--force': '--force', '--yolo': '--yolo',
+         '--stream-partial-output': None, '--continue': None, '--plan': None, '--list-models': None,
+         '--approve-mcps': None, '--trust': None, '--skip-worktree-setup': None, '-v': '--version',
+         '--version': '--version', '-h': '--help', '--help': '--help'}
+VALUES = {'--api-key': None, '-H': '--header', '--header': '--header', '--output-format': ('text', 'json', 'stream-json'),
+          '--model': None, '--mode': ('plan', 'ask'), '--sandbox': ('enabled', 'disabled'), '--workspace': None,
+          '--plugin-dir': None, '--worktree-base': None}
+OPTIONAL = {'--resume': None, '-w': '--worktree', '--worktree': '--worktree'}
+COMMANDS = ('agent', 'login', 'logout', 'status', 'whoami', 'about', 'models', 'mcp', 'sandbox', 'worker', 'acp',
+            'update', 'ls', 'resume', 'create-chat', 'generate-rule', 'rule', 'install-shell-integration',
+            'uninstall-shell-integration', 'help')
+SIGNED_OUT = ("Error: Authentication required. Please run 'agent login' first, or set CURSOR_API_KEY "
+              "environment variable.")
+
+
+def parse(argv):
+    seen, words, i = {}, [], 0
+    while i < len(argv):
+        a = argv[i]
+        name, eq, value = a.partition('=') if a.startswith('--') else (a, '', '')
+        if a == '--':
+            words += argv[i + 1:]
+            break
+        if not a.startswith('-') or a == '-':
+            words.append(a)
+        elif name in FLAGS and not eq:
+            seen[FLAGS[name] or name] = True
+        elif name in VALUES:
+            if not eq:
+                i += 1
+                if i == len(argv):
+                    fake_cli.refuse()
+                value = argv[i]
+            choices = VALUES[name]
+            if isinstance(choices, tuple) and value not in choices:
+                fake_cli.refuse()
+            key = choices if isinstance(choices, str) else name
+            if key == '--header':
+                header_name, sep, _ = value.partition(':')
+                if not sep or '\r' in value or '\n' in value or not header_name.strip() or \
+                        any(c.isspace() or ord(c) < 33 for c in header_name.strip()):
+                    fake_cli.refuse()
+            seen[key] = value
+        elif name in OPTIONAL:
+            if not eq and i + 1 < len(argv) and not argv[i + 1].startswith('-'):
+                i += 1
+                value, eq = argv[i], '='
+            seen[OPTIONAL[name] or name] = value if eq else True
+        else:
+            fake_cli.refuse()
+        i += 1
+    return seen, words
+
+
+def not_simulated(why):
+    print('fake agent: %s is documented, but this fake does not simulate it' % why, file=sys.stderr)
+    sys.exit(3)
+
+
+if sys.argv[1:] in (['--help'], ['-h']):
+    print(HELP)
+    sys.exit(0)
+seen, words = parse(sys.argv[1:])
+if seen.get('--stream-partial-output') and seen.get('--output-format') != 'stream-json':
+    fake_cli.refuse()
+if '--resume' in seen and seen.get('--continue'):
+    fake_cli.refuse()
+if seen.get('--print') and seen.get('--resume') is True:
+    fake_cli.refuse()
+if words[:1] and words[0] in COMMANDS:
+    not_simulated('the %s command' % words[0])
+if '--api-key' in seen:
+    not_simulated('a login in argv (--api-key)')
+if not seen.get('--print') or seen.get('--output-format') != 'stream-json' or not seen.get('--model') or not words:
+    not_simulated('a run other than --print --output-format stream-json with --model and a prompt')
+if not (seen.get('--trust') or seen.get('--force') or seen.get('--yolo')):
+    print('Workspace Trust Required: pass --trust, --yolo, or -f if you trust this directory', file=sys.stderr)
+    sys.exit(1)
+prompt, session = ' '.join(words), seen.get('--resume')
+if (session is not None) != prompt.startswith('You were woken'):
+    fake_cli.refuse()
+init = lambda sid: json.dumps({'type': 'system', 'subtype': 'init', 'apiKeySource': 'login',
+                               'cwd': '/synthetic/workspace', 'session_id': sid, 'model': seen['--model'],
+                               'permissionMode': 'default'})
+fake_cli.turn(prompt, seen['--model'], session, init, daemon='tree', signed_out=SIGNED_OUT)

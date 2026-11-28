@@ -1,0 +1,140 @@
+{
+  "schema": "openwiz.value-meter.v1",
+  "kind": "report",
+  "opted_in": true,
+  "as_of": "2030-01-15T18:30:00Z",
+  "windows": {
+    "timezone": "fixed-PST",
+    "end": "2030-01-15T08:00:00Z",
+    "this_week": {
+      "start": "2030-01-08T08:00:00Z",
+      "end": "2030-01-15T08:00:00Z"
+    },
+    "last_week": {
+      "start": "2030-01-01T08:00:00Z",
+      "end": "2030-01-08T08:00:00Z"
+    }
+  },
+  "metrics": {
+    "this_week": {
+      "merged_prs": {
+        "state": "known",
+        "value": 4,
+        "known_count": 4,
+        "total_count": 4,
+        "reason": "should be null"
+      },
+      "hours_saved": {
+        "state": "known",
+        "value": 8,
+        "known_count": 4,
+        "total_count": 4,
+        "reason": null
+      },
+      "money_saved_usd": {
+        "state": "known",
+        "value": 400,
+        "known_count": 4,
+        "total_count": 4,
+        "reason": null,
+        "net_of_known_cost_usd": 390,
+        "net_reason": null
+      },
+      "cost_per_merged_pr_credits": {
+        "state": "known",
+        "value": 10,
+        "known_count": 4,
+        "total_count": 4,
+        "reason": null
+      },
+      "cost_per_merged_pr_usd": {
+        "state": "known",
+        "value": 2.5,
+        "known_count": 4,
+        "total_count": 4,
+        "reason": null
+      }
+    },
+    "last_week": {
+      "merged_prs": {
+        "state": "known",
+        "value": 2,
+        "known_count": 2,
+        "total_count": 2,
+        "reason": null
+      },
+      "hours_saved": {
+        "state": "known",
+        "value": 4,
+        "known_count": 2,
+        "total_count": 2,
+        "reason": null
+      },
+      "money_saved_usd": {
+        "state": "known",
+        "value": 200,
+        "known_count": 2,
+        "total_count": 2,
+        "reason": null,
+        "net_of_known_cost_usd": 190,
+        "net_reason": null
+      },
+      "cost_per_merged_pr_credits": {
+        "state": "known",
+        "value": 20,
+        "known_count": 2,
+        "total_count": 2,
+        "reason": null
+      },
+      "cost_per_merged_pr_usd": {
+        "state": "known",
+        "value": 5,
+        "known_count": 2,
+        "total_count": 2,
+        "reason": null
+      }
+    }
+  },
+  "week_over_week": {
+    "merged_prs": {
+      "state": "known",
+      "value": 2,
+      "direction": "up",
+      "known_count": 2,
+      "total_count": 2,
+      "reason": null
+    },
+    "hours_saved": {
+      "state": "known",
+      "value": 4,
+      "direction": "up",
+      "known_count": 2,
+      "total_count": 2,
+      "reason": null
+    },
+    "money_saved_usd": {
+      "state": "known",
+      "value": 200,
+      "direction": "up",
+      "known_count": 2,
+      "total_count": 2,
+      "reason": null
+    },
+    "cost_per_merged_pr_credits": {
+      "state": "known",
+      "value": -10,
+      "direction": "down",
+      "known_count": 2,
+      "total_count": 2,
+      "reason": null
+    },
+    "cost_per_merged_pr_usd": {
+      "state": "known",
+      "value": -2.5,
+      "direction": "down",
+      "known_count": 2,
+      "total_count": 2,
+      "reason": null
+    }
+  }
+}

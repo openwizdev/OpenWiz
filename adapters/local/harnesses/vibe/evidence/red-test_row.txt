@@ -1,0 +1,10 @@
+fail api key flag: exited 0, not 2
+fail api key equals: exited 0, not 2
+fail thinking on resume: exited 0, not 2
+fail model on resume: exited 0, not 2
+fail unlisted thinking: exited 0, not 2
+fail yolo alias: exited 0, not 2
+fail text output: exited 0, not 2
+fail missing trust: exited 0, not 2
+fail setup: exited 0, not 2
+test_row.py: 9 refusals checked, 9 failed

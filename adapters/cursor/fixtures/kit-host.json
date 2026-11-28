@@ -1,0 +1,14 @@
+{
+  "answers": [
+    {"method": "POST", "path": "/v1/agents", "status": 201,
+     "body": {"agent": {"id": "bc-00000000-0000-4000-8000-00000000c0de", "status": "ACTIVE", "latestRunId": "run-00000001"},
+              "run": {"id": "run-00000001", "status": "CREATING"}}},
+    {"method": "GET", "path": "/v1/agents/bc-[0-9a-f-]{36}", "status": 200,
+     "body": {"status": "IDLE", "latestRunId": "run-00000001"}},
+    {"method": "POST", "path": "/v1/agents/bc-[0-9a-f-]{36}/runs", "status": 201,
+     "body": {"run": {"id": "run-00000002", "status": "CREATING"}}},
+    {"method": "POST", "path": "/v1/agents/bc-[0-9a-f-]{36}/runs/[A-Za-z0-9_-]+/cancel", "status": 409,
+     "body": {"error": {"code": "run_not_cancellable", "message": "not active"}}},
+    {"method": "POST", "path": "/v1/agents/bc-[0-9a-f-]{36}/archive", "status": 200, "body": {"id": "archived"}}
+  ]
+}
