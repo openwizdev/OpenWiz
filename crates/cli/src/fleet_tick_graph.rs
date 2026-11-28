@@ -1055,16 +1055,18 @@ impl World {
                     ci: reads.ci,
                     base_now: Some(reads.base_now),
                     reports: {
-                        let decider = super::typesafe::env_decider();
-                        c.iter()
+                        let mut reports: Vec<_> = c
+                            .iter()
                             .filter(|c| records::first(c).starts_with("VERDICT:"))
-                            .map(|c| {
-                                let mut report = c.report();
-                                report.text =
-                                    super::typesafe::verdict_text(&report.text, decider.as_ref());
-                                report
-                            })
-                            .collect()
+                            .map(Comment::report)
+                            .collect();
+                        super::typesafe::rewrite_newest_verdict(
+                            &mut reports,
+                            |r| r.comment,
+                            |r| &mut r.text,
+                            super::typesafe::env_decider(deadline).as_ref(),
+                        );
+                        reports
                     },
                     starts: ps,
                     records: records::pr_records(c, &retired_rechecks[&p.number]),
@@ -1125,9 +1127,14 @@ impl World {
                     .ok()
                     .filter(|o| o.problems.is_empty())
                     .is_some_and(|o| {
-                        [o.output, o.error].iter().any(
-                            |f| matches!(f, Fact::Known(Some(text)) if super::typesafe::plan_limit(text)),
-                        )
+                        let texts: Vec<&str> = [&o.output, &o.error]
+                            .into_iter()
+                            .filter_map(|f| match f {
+                                Fact::Known(Some(text)) => Some(text.as_str()),
+                                _ => None,
+                            })
+                            .collect();
+                        super::typesafe::plan_limit(&texts, deadline)
                     });
             Some(BuilderSource {
                 thread: thread.clone(),

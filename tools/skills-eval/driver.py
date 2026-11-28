@@ -183,7 +183,7 @@ def run_case(case, settings, snapshot, post, repeat, budget_usd=None, checkpoint
         return {'case': case['id'], 'repeat': repeat, 'stop': 'error', 'final': final,
                 'events': world.events, 'usage': dict(usage), 'provider_usage': list(provider_usage),
                 'jev_usage': list(jev_usage), 'cost_usd': round(charged[0] + uncertain[0] + bound, 9),
-                'uncertain_usd': round(uncertain[0] + bound, 9),
+                'uncertain_usd': round(uncertain[0] + bound, 9), 'reserved_usd': round(bound, 9),
                 'error': 'Interrupted request: reservation retained; never automatically retried',
                 'judgment': None, 'turns': sum(m['role'] == 'assistant' for m in messages)}
 
@@ -194,7 +194,7 @@ def run_case(case, settings, snapshot, post, repeat, budget_usd=None, checkpoint
 
     def jev(rubric, reply):
         return jev_judge.try_jev(
-            rubric, reply, jev_judge.asker(settings),
+            rubric, reply, jev_judge.asker(settings), settings.get('judge_jev'),
             fits=lambda bound: budget_usd is None or charged[0] + uncertain[0] + bound <= budget_usd,
             hold=lambda bound: checkpoint(interim(bound)) if checkpoint else None,
             settle=jev_settle)
@@ -850,7 +850,7 @@ def hermes_run_case(case, settings, snapshot, repeat, budget_usd=None, checkpoin
         if checkpoint:
             snap = transcript()
             snap.update(stop='error', cost_usd=round(spent[0] + uncertain[0] + bound, 9),
-                        uncertain_usd=round(uncertain[0] + bound, 9),
+                        uncertain_usd=round(uncertain[0] + bound, 9), reserved_usd=round(bound, 9),
                         error='Interrupted Hermes session: reservation retained; never automatically retried')
             checkpoint(snap)
         with tempfile.TemporaryDirectory(prefix='skills-eval-hermes-') as folder:
@@ -911,7 +911,7 @@ def hermes_run_case(case, settings, snapshot, repeat, budget_usd=None, checkpoin
             if checkpoint:
                 snap = transcript()
                 snap.update(stop='error', cost_usd=round(spent[0] + uncertain[0] + bound, 9),
-                            uncertain_usd=round(uncertain[0] + bound, 9),
+                            uncertain_usd=round(uncertain[0] + bound, 9), reserved_usd=round(bound, 9),
                             error='Interrupted Jev request: reservation retained; never automatically retried')
                 checkpoint(snap)
 
@@ -921,7 +921,7 @@ def hermes_run_case(case, settings, snapshot, repeat, budget_usd=None, checkpoin
             jev_usage.append(used)
 
         decided = jev_judge.try_jev(
-            rubric, final, jev_judge.asker(settings),
+            rubric, final, jev_judge.asker(settings), settings.get('judge_jev'),
             fits=lambda bound: budget_usd is None or spent[0] + uncertain[0] + bound <= budget_usd,
             hold=jev_hold, settle=jev_settle)
         if decided is not None:
