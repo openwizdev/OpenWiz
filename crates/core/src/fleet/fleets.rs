@@ -207,6 +207,7 @@ pub fn fleets(source: &dyn FleetsSource, clock: &dyn Clock, budget: Duration) ->
         jobs: Vec::new(),
         issues: None,
         prs: None,
+        closing: Closing::default(),
     };
     walk.run();
     walk.envelope()
@@ -307,6 +308,31 @@ pub fn worked<T>(
     }
 }
 
+fn worked_in_place<T>(
+    reads: &[Read],
+    requires: &BTreeSet<ReadId>,
+    known: impl FnOnce() -> T,
+) -> WorkedOut<T> {
+    let unread: Vec<ReadId> = requires
+        .iter()
+        .copied()
+        .filter(|id| !complete_in_place(reads, *id))
+        .collect();
+    if unread.is_empty() {
+        WorkedOut::Known(known())
+    } else {
+        WorkedOut::Unread(unread)
+    }
+}
+
+fn complete_in_place(reads: &[Read], id: ReadId) -> bool {
+    let at = usize::try_from(id.0).map_or(usize::MAX, |n| n.wrapping_sub(1));
+    match reads.get(at) {
+        Some(r) if r.id == id => is_complete(&r.kind),
+        _ => reads.iter().any(|r| r.id == id && is_complete(&r.kind)),
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct StateFacts<'a> {
     pub issue: &'a Issue,
@@ -390,6 +416,33 @@ struct Walk<'a> {
     jobs: Vec<(usize, Job)>,
     issues: Option<Result<Issues, Failed>>,
     prs: Option<Result<Listed<PrRow>, Failed>>,
+    closing: Closing,
+}
+
+#[derive(Default)]
+struct Closing {
+    overfull: bool,
+    rows: HashMap<NonEmpty, (Vec<usize>, Vec<usize>)>,
+}
+
+fn closing(list: &Listed<PrRow>) -> Closing {
+    let mut index = Closing::default();
+    for (at, row) in list.rows.iter().enumerate() {
+        let (facts, merged) = match row {
+            PrRow::Open(f) => (f, false),
+            PrRow::Merged { facts, .. } => (facts, true),
+            PrRow::Closed { .. } => continue,
+        };
+        index.overfull |= facts.closes.len() >= MAX_CLOSING_REFERENCES;
+        for c in &facts.closes {
+            let (m, o) = index.rows.entry(c.id.clone()).or_default();
+            let rows = if merged { m } else { o };
+            if rows.last() != Some(&at) {
+                rows.push(at);
+            }
+        }
+    }
+    index
 }
 
 struct Issues {
@@ -754,7 +807,11 @@ impl Walk<'_> {
 
     fn discover(&mut self, link: &Link) -> Result<Option<PullRequest>, Failed> {
         if self.prs.is_none() {
-            self.prs = Some(self.call(|s, d| s.pull_requests(d)).and_then(unique_prs));
+            let prs = self.call(|s, d| s.pull_requests(d)).and_then(unique_prs);
+            if let Ok(list) = &prs {
+                self.closing = closing(list);
+            }
+            self.prs = Some(prs);
         }
         let list = match self.prs.as_ref().expect("just read") {
             Ok(list) => list,
@@ -770,12 +827,7 @@ impl Walk<'_> {
                 ),
             ));
         }
-        if list.rows.iter().any(|r| match r {
-            PrRow::Open(f) | PrRow::Merged { facts: f, .. } => {
-                f.closes.len() >= MAX_CLOSING_REFERENCES
-            }
-            PrRow::Closed { .. } => false,
-        }) {
+        if self.closing.overfull {
             return Err(failed(
                 GapKind::BudgetExhausted,
                 format!(
@@ -783,17 +835,16 @@ impl Walk<'_> {
                 ),
             ));
         }
-        let closes_it = |f: &PrFacts| f.closes.iter().any(|c| c.id == link.id);
-        let merged: Vec<&PrRow> = list
+        let (merged_at, open_at) = self
+            .closing
             .rows
+            .get(&link.id)
+            .map_or((&[][..], &[][..]), |(m, o)| (m.as_slice(), o.as_slice()));
+        let merged: Vec<&PrRow> = merged_at.iter().map(|&at| &list.rows[at]).collect();
+        let open: Vec<&PrFacts> = open_at
             .iter()
-            .filter(|r| matches!(r, PrRow::Merged { facts, .. } if closes_it(facts)))
-            .collect();
-        let open: Vec<&PrFacts> = list
-            .rows
-            .iter()
-            .filter_map(|r| match r {
-                PrRow::Open(f) if closes_it(f) => Some(f),
+            .filter_map(|&at| match &list.rows[at] {
+                PrRow::Open(f) => Some(f),
                 _ => None,
             })
             .collect();
@@ -1085,7 +1136,7 @@ impl Walk<'_> {
     }
 
     fn worked<T>(&self, requires: &BTreeSet<ReadId>, known: impl FnOnce() -> T) -> WorkedOut<T> {
-        worked(&self.reads, requires, known)
+        worked_in_place(&self.reads, requires, known)
     }
 
     fn pr(&self, issue: Number) -> Option<Option<&PullRequest>> {
@@ -1369,11 +1420,154 @@ impl Walk<'_> {
 }
 
 #[cfg(test)]
+fn scanned(list: &Listed<PrRow>, id: &NonEmpty) -> (Vec<usize>, Vec<usize>, bool) {
+    let closes_it = |f: &PrFacts| f.closes.iter().any(|c| c.id == *id);
+    let merged = list
+        .rows
+        .iter()
+        .enumerate()
+        .filter(|(_, r)| matches!(r, PrRow::Merged { facts, .. } if closes_it(facts)))
+        .map(|(at, _)| at)
+        .collect();
+    let open = list
+        .rows
+        .iter()
+        .enumerate()
+        .filter(|(_, r)| matches!(r, PrRow::Open(f) if closes_it(f)))
+        .map(|(at, _)| at)
+        .collect();
+    let overfull = list.rows.iter().any(|r| match r {
+        PrRow::Open(f) | PrRow::Merged { facts: f, .. } => f.closes.len() >= MAX_CLOSING_REFERENCES,
+        PrRow::Closed { .. } => false,
+    });
+    (merged, open, overfull)
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
     fn ne(s: &str) -> NonEmpty {
         NonEmpty::new(s).unwrap()
+    }
+
+    struct Rng(u64);
+    impl Rng {
+        fn next(&mut self) -> u64 {
+            self.0 ^= self.0 << 13;
+            self.0 ^= self.0 >> 7;
+            self.0 ^= self.0 << 17;
+            self.0
+        }
+        fn below(&mut self, n: u64) -> u64 {
+            self.next() % n
+        }
+    }
+
+    fn read(id: u32, complete: bool) -> Read {
+        Read {
+            id: ReadId(id),
+            kind: ReadKind::MergeReadback {
+                pr: Number::new(u64::from(id) + 1).unwrap(),
+                outcome: if complete {
+                    Outcome::Complete { value: true }
+                } else {
+                    Outcome::Failed(failed(GapKind::Malformed, "synthetic"))
+                },
+            },
+        }
+    }
+
+    #[test]
+    fn worked_in_place_matches_the_scanning_worked_for_unique_ids() {
+        let mut rng = Rng(0x9e37_79b9_7f4a_7c15);
+        for case in 0..4000 {
+            let len = rng.below(40) as u32;
+            let mut reads: Vec<Read> = (1..=len).map(|id| read(id, rng.below(5) != 0)).collect();
+            match case % 4 {
+                0 => {}
+                1 => reads.reverse(),
+                2 => {
+                    for r in &mut reads {
+                        if rng.below(3) == 0 {
+                            r.id = ReadId(r.id.0 + len + 3);
+                        }
+                    }
+                }
+                _ => {
+                    for at in (1..reads.len()).rev() {
+                        let other = rng.below(at as u64 + 1) as usize;
+                        reads.swap(at, other);
+                    }
+                }
+            }
+            let requires: BTreeSet<ReadId> = (0..rng.below(8))
+                .map(|_| ReadId(rng.below(u64::from(2 * len) + 6) as u32))
+                .collect();
+            assert_eq!(
+                worked_in_place(&reads, &requires, || case),
+                worked(&reads, &requires, || case),
+                "case {case}: {reads:?} {requires:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn closing_matches_the_scan_of_every_pull_request() {
+        let mut rng = Rng(0xd1b5_4a32_d192_ed03);
+        for case in 0..2000 {
+            let ids: Vec<NonEmpty> = (0..1 + rng.below(6))
+                .map(|i| ne(&format!("I_syn{i}")))
+                .collect();
+            let rows: Vec<PrRow> = (0..rng.below(12))
+                .map(|p| {
+                    let number = Number::new(p + 1).unwrap();
+                    let many = if rng.below(50) == 0 {
+                        MAX_CLOSING_REFERENCES as u64
+                    } else {
+                        rng.below(4)
+                    };
+                    let facts = PrFacts {
+                        number,
+                        draft: false,
+                        head_branch: ne("syn"),
+                        head_commit: Commit::parse(&"a".repeat(40)).unwrap(),
+                        base_branch: ne("main"),
+                        closes: (0..many)
+                            .map(|_| {
+                                let i = rng.below(ids.len() as u64) as usize;
+                                Link {
+                                    number: Number::new(i as u64 + 1).unwrap(),
+                                    id: ids[i].clone(),
+                                }
+                            })
+                            .collect(),
+                    };
+                    match rng.below(3) {
+                        0 => PrRow::Open(facts),
+                        1 => PrRow::Merged {
+                            facts,
+                            merge_commit: Commit::parse(&"b".repeat(40)).unwrap(),
+                            merged_at: Timestamp(1),
+                        },
+                        _ => PrRow::Closed { number },
+                    }
+                })
+                .collect();
+            let list = Listed {
+                rows,
+                cut_short: false,
+            };
+            let index = closing(&list);
+            for id in ids.iter().chain([&ne("I_syn_missing")]) {
+                let (merged, open) = index.rows.get(id).cloned().unwrap_or_default();
+                assert_eq!(
+                    (merged, open, index.overfull),
+                    scanned(&list, id),
+                    "case {case} {id:?}: {list:?}"
+                );
+            }
+        }
     }
 
     #[test]
