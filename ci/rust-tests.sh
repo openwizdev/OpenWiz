@@ -141,17 +141,6 @@ peak_line() {
     frame "rust-tests: peak memory not measured ($stat has no anon line to read)"
   fi
 }
-main_only="a_candidate_that_exits_without_readiness_rolls_back_to_the_running_old_build
-a_failing_merge_is_kept_and_recorded_once_without_retrying_the_gate
-a_passing_main_merge_is_staged_but_not_reported_as_running
-a_real_candidate_must_confirm_readiness_before_selection_or_switched"
-skip=
-if [ "${GITHUB_EVENT_NAME:-}" = pull_request ] && [ "${GITHUB_BASE_REF:-}" = main ]; then
-  skip=--exact
-  for t in $main_only; do skip="$skip --skip $t"; done
-  echo "rust-tests: a pull request to main: skipping the main-only proofs, which merge groups and main pushes run:"
-  echo "$main_only" | sed 's/^/rust-tests:   /'
-fi
 why="$(room)" || why="the container's limits couldn't be read"
 cpus="$(nproc 2> /dev/null || true)"
 if [ -n "$why" ]; then
@@ -159,8 +148,8 @@ if [ -n "$why" ]; then
   frame "== rust-tests: cargo test $scope"
   rc=0
   began="$(date +%s)"
-  # shellcheck disable=SC2086 # the skip arguments, split
-  { cargo test $scope --locked -- --test-threads=8 $skip || echo "$?" > "$out/all.rc"; } | tee "$out/all.log"
+  # shellcheck disable=SC2086 # the scope, split
+  { cargo test $scope --locked -- --test-threads=8 || echo "$?" > "$out/all.rc"; } | tee "$out/all.log"
   [ ! -f "$out/all.rc" ] || rc="$(cat "$out/all.rc")"
   frame "rust-tests: cargo test $scope exited $rc after $(($(date +%s) - began)) s"
   finish "$rc"
@@ -191,13 +180,11 @@ run() {
 began="$(date +%s)"
 calls_run=
 if [ "$scope" = --workspace ]; then
-  # shellcheck disable=SC2086 # the skip arguments, split
-  run crates cargo test --workspace --exclude openwiz-tests --locked -- --test-threads="$threads" $skip
+  run crates cargo test --workspace --exclude openwiz-tests --locked -- --test-threads="$threads"
   calls_run=crates
 fi
 for t in $targets; do
-  # shellcheck disable=SC2086 # the skip arguments, split (#1410)
-  run "$t" cargo test -p openwiz-tests --locked --test "$t" -- --test-threads="$threads" $skip
+  run "$t" cargo test -p openwiz-tests --locked --test "$t" -- --test-threads="$threads"
 done
 for p in $pids; do wait "$p" || true; done
 took=$(($(date +%s) - began))

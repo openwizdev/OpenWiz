@@ -1,8 +1,3 @@
-# CI (#1777): plain jobs that build and test the kept parts (the kernel, the
-# drivers, the `openwiz` command, the installer, the release package), the
-# owned-paths gate, and the required `ci` check over all of them. `privacy`
-# is its own workflow (privacy.yml). `web-test` is the old required name; it
-# follows `ci`.
 name: CI
 
 on:
@@ -93,8 +88,6 @@ jobs:
             target
           key: cargo-rust-${{ runner.os }}-${{ env.RUST_VERSION }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}
 
-  # The kernel kits, the installers, the release package and the GitHub App's
-  # Python proofs, in two parts of about equal time.
   release:
     if: ${{ github.event.pull_request.draft != true }}
     runs-on: ubuntu-24.04
@@ -148,7 +141,7 @@ jobs:
       # #555: fail on any carried contract that differs from the pinned
       # WizSkills release by one byte.
       - name: The WizSkills installer
-        if: matrix.part == 2
+        if: matrix.part == 1
         run: |
           python3 -I tools/wizskills/check_contracts.py
           python3 -I tools/wizskills/test_install.py
@@ -166,9 +159,6 @@ jobs:
           python3 -I tools/install/test_pull.py
           python3 -I tools/install/tests/public-release-security/baseline/test_baseline.py
           python3 -I tools/install/tests/public-release-security/test_candidate.py
-          python3 -I tools/install/tests/setup-onboard-contract/test_contract.py
-          python3 -I tools/install/tests/init/test_init.py
-          python3 -I -B tools/install/setup/test_github_login.py
           python3 -I tools/install/tests/skills-linked-config/test_linked_config.py
           python3 -I tools/rehearsal/test_rehearse.py
           python3 -I tools/install/tests/installed-contracts/test_installed_contracts.py
@@ -181,7 +171,7 @@ jobs:
           python3 -I tools/github-app/test_token_service.py
           python3 -I tools/github-app/test_app_select.py
       - name: The importer and skills-eval tests
-        if: matrix.part == 2
+        if: matrix.part == 1
         run: |
           python3 -I tools/open-import/test_import.py
           python3 -I tools/skills-eval/test.py
@@ -277,15 +267,3 @@ jobs:
             exit 1
           }
           echo "ci: every job passed"
-
-  # The ruleset's older required name, which follows ci.
-  web-test:
-    needs: ci
-    if: ${{ always() }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    steps:
-      - name: Follows ci
-        env:
-          CI_RESULT: ${{ needs.ci.result }}
-        run: test "$CI_RESULT" = success

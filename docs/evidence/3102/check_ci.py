@@ -94,13 +94,15 @@ def concurrency(text, context):
 def privacy_findings(ref):
     text = read(ref, '.github/workflows/privacy.yml')
     events = {
-        'pull request 7 pushed': ('pull_request', 7, 101), 'pull request 7 edited': ('pull_request', 7, 102),
-        'pull request 8': ('pull_request', 8, 103), 'main push a': ('push', None, 201),
-        'main push b': ('push', None, 202), 'merge group': ('merge_group', None, 301),
+        'pull request 7 pushed': ('pull_request', 7, 101, 'refs/pull/7/merge'),
+        'pull request 7 edited': ('pull_request', 7, 102, 'refs/pull/7/merge'),
+        'pull request 8': ('pull_request', 8, 103, 'refs/pull/8/merge'),
+        'first main push': ('push', None, 201, 'refs/heads/main'),
+        'second main push': ('push', None, 202, 'refs/heads/main'),
+        'merge group': ('merge_group', None, 301, 'refs/heads/gh-readonly-queue/main/pr-7-0000000'),
     }
     got = {}
-    for name, (event, number, run) in events.items():
-        ref_name = f'refs/pull/{number}/merge' if number else 'refs/heads/main'
+    for name, (event, number, run, ref_name) in events.items():
         got[name] = concurrency(text, {'github.event_name': event, 'github.event.pull_request.number': number,
                                        'github.run_id': run, 'github.ref': ref_name})
         if got[name] is None:
@@ -110,10 +112,10 @@ def privacy_findings(ref):
         findings.append('an edit of a pull request does not cancel its older privacy run')
     if got['pull request 7 pushed'][0] == got['pull request 8'][0]:
         findings.append('two pull requests share one privacy group')
-    for name in ('main push a', 'main push b', 'merge group'):
+    for name in ('first main push', 'second main push', 'merge group'):
         others = [got[other][0] for other in events if other != name]
         if got[name][1] or got[name][0] in others:
-            findings.append(f'a {name} run can be cancelled or replaced by another run')
+            findings.append(f'the {name} run can be cancelled or replaced by another run')
     return findings
 
 

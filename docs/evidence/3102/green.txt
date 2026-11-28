@@ -1,0 +1,24 @@
+The green run at the fix, with the same check, plus the rust-tests.sh run on a fake cargo.
+
+$ python3 -I docs/evidence/3102/check_ci.py origin/main
+moved: tools/install/setup/test_github_login.py: before ['release (2)', 'cargo test tests/checks/skills.rs'], after ['cargo test tests/checks/skills.rs']
+moved: tools/install/tests/init/test_init.py: before ['release (2)', 'cargo test tests/checks/skills.rs'], after ['cargo test tests/checks/skills.rs']
+moved: tools/install/tests/setup-onboard-contract/test_contract.py: before ['release (2)', 'cargo test tests/checks/skills.rs'], after ['cargo test tests/checks/skills.rs']
+moved: tools/open-import/test_import.py: before ['release (2)'], after ['release (1)']
+moved: tools/skills-eval/test.py: before ['release (2)'], after ['release (1)']
+moved: tools/wizskills/check_contracts.py: before ['release (2)'], after ['release (1)']
+moved: tools/wizskills/test_contract.py: before ['release (2)'], after ['release (1)']
+moved: tools/wizskills/test_install.py: before ['release (2)'], after ['release (1)']
+suites: 44 before, 44 after; runs: 47 before, 44 after
+check_ci: ok
+exit 0
+
+rust-tests.sh as a pull request to main (GITHUB_EVENT_NAME=pull_request GITHUB_BASE_REF=main), on a fake cargo
+that records each cargo test call; the parallel path, --targets-only:
+before:
+  cargo test -p openwiz-tests --locked --test checks -- --test-threads=8 --exact --skip a_candidate_that_exits_without_readiness_rolls_back_to_the_running_old_build --skip a_failing_merge_is_kept_and_recorded_once_without_retrying_the_gate --skip a_passing_main_merge_is_staged_but_not_reported_as_running --skip a_real_candidate_must_confirm_readiness_before_selection_or_switched
+after:
+  cargo test -p openwiz-tests --locked --test checks -- --test-threads=8
+The one-command path (nproc 2) and the workspace scope drop the same arguments and nothing else.
+
+shellcheck 0.9.0 -s sh ci/rust-tests.sh: the same info notes before and after (SC2015 on line 12, SC2317 on the cleanup function); no warning.
