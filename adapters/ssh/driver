@@ -1,0 +1,503 @@
+#!/usr/bin/env python3
+import fcntl
+import json
+import os
+import re
+import secrets
+import shlex
+import shutil
+import signal
+import subprocess
+import sys
+import tempfile
+import time
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+STATE = os.environ.get('OPENWIZ_SSH_STATE') or os.path.expanduser('~/.local/state/openwiz-ssh')
+VERSION = {'driver': 'ssh', 'records': ['openwiz:records v1'], 'can': ['start', 'wake', 'stop', 'many-at-once']}
+START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
+         'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
+         'model': r'(?=.{1,100}$)[A-Za-z0-9][A-Za-z0-9 ._:@+-]*(/[A-Za-z0-9][A-Za-z0-9 ._:@+-]*)*'}
+RUN = {'run': r'run-[0-9a-f]{12}'}
+TARGET = re.compile(r'[A-Za-z][A-Za-z0-9._-]{0,31}@[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*')
+SECRET_WORDS = ('KEY', 'TOKEN', 'SECRET', 'PASSWORD')
+PLACE = {'{prompt}', '{model}', '{session}'}
+DEFAULT_ARGS = ['--model', '{model}', '-p', '{prompt}']
+LAUNCH_TIMEOUT = 30.0
+START_SCRIPT = (
+    'ack=$1; shift; found=; old=$IFS; IFS=:; set -f; '
+    'for d in $PATH; do [ -n "$d" ] || d=.; '
+    'if [ -f "$d/$3" ] && [ -x "$d/$3" ]; then found=1; break; fi; done; '
+    'set +f; IFS=$old; '
+    '[ -n "$found" ] || { printf "%s\\n" "harness not found on VPS" >&2; exit 127; }; '
+    'printf "%s\\n" "$ack"; exec "$@" >/dev/null 2>&1'
+)
+REASONS = (
+    ('connection refused', 'connection refused'),
+    ('connection timed out', 'connection timed out'),
+    ('operation timed out', 'connection timed out'),
+    ('could not resolve hostname', 'could not resolve host'),
+    ('name or service not known', 'could not resolve host'),
+    ('nodename nor servname', 'could not resolve host'),
+    ('permission denied', 'authentication failed'),
+    ('host key verification failed', 'host key verification failed'),
+    ('no route to host', 'host is unreachable'),
+    ('network is unreachable', 'host is unreachable'),
+    ('connection closed', 'connection closed'),
+    ('connection reset', 'connection closed'),
+    ('harness not found on vps', 'harness not found on the VPS'),
+)
+
+
+class Refused(Exception):
+    pass
+
+
+def unique(pairs):
+    if len({key for key, _ in pairs}) != len(pairs):
+        raise Refused('a key is repeated', 'send each key once')
+    return dict(pairs)
+
+
+def read(fields):
+    try:
+        req = json.loads(sys.stdin.read() or 'null', object_pairs_hook=unique)
+    except ValueError:
+        raise Refused('the input is not JSON', 'send one JSON object on stdin, as `driver schema` shows')
+    if not isinstance(req, dict) or set(req) != set(fields):
+        raise Refused('the input needs exactly ' + ', '.join(fields), 'send only those fields; never a login')
+    for key, pattern in fields.items():
+        value = req[key]
+        if not (type(value) is int and value > 0 if pattern is None else isinstance(value, str) and re.fullmatch(pattern, value)):
+            raise Refused(key + ' is not valid', 'fix ' + key + ' as `driver schema` shows')
+    return req
+
+
+def secret_values():
+    found = []
+    for name, value in os.environ.items():
+        folded = name.upper()
+        if any(word in folded for word in SECRET_WORDS) and isinstance(value, str) and len(value) >= 8:
+            found.append(value)
+    return found
+
+
+def leaked(argv, values):
+    return any(value in arg for arg in argv for value in values)
+
+
+def argument_template():
+    raw = os.environ.get('OPENWIZ_SSH_ARGS')
+    if not raw:
+        return list(DEFAULT_ARGS)
+    try:
+        args = json.loads(raw, object_pairs_hook=unique)
+    except ValueError:
+        raise Refused('OPENWIZ_SSH_ARGS is not a JSON array',
+                      'set OPENWIZ_SSH_ARGS to a JSON array of strings, with {prompt} as its own argument')
+    if (not isinstance(args, list) or not args or args.count('{prompt}') != 1
+            or not all(isinstance(arg, str) and arg and '\n' not in arg and '\x00' not in arg for arg in args)):
+        raise Refused('OPENWIZ_SSH_ARGS must be a JSON array of strings with {prompt} once',
+                      'put {prompt} in its own argument and send no other placeholder but {model} or {session}')
+    for arg in args:
+        if arg.startswith('{') and arg not in PLACE:
+            raise Refused('OPENWIZ_SSH_ARGS has an unknown placeholder',
+                          'use only {prompt}, {model} and {session}, each as a whole argument')
+    return args
+
+
+def destination():
+    value = os.environ.get('OPENWIZ_SSH_TARGET', '')
+    if not TARGET.fullmatch(value):
+        raise Refused('OPENWIZ_SSH_TARGET must be user@host',
+                      'set OPENWIZ_SSH_TARGET to the VPS ssh destination, with no spaces, options or secrets')
+    return value
+
+
+def include_path(path):
+    if re.fullmatch(r'[A-Za-z0-9_./@+-]+', path):
+        return path
+    if any(mark in path for mark in '"\n\r'):
+        raise Refused('an ssh config path cannot be included',
+                      'move that ssh config to a path without quotes or newlines')
+    return '"' + path + '"'
+
+
+def client_config(run, folder):
+    lines = []
+    for path in (os.path.expanduser('~/.ssh/config'), '/etc/ssh/ssh_config'):
+        if os.path.isfile(path):
+            lines.append('Include ' + include_path(path))
+    lines.extend(['Match final', '    SendEnv -*', ''])
+    descriptor, path = tempfile.mkstemp(prefix=run + '.', suffix='.ssh-config', dir=folder)
+    os.chmod(path, 0o600)
+    with os.fdopen(descriptor, 'w') as handle:
+        handle.write('\n'.join(lines))
+    return path
+
+
+def command(req, run, woken, target):
+    what = 'You were woken: read the ticket again and carry on' if woken else 'Build the ticket'
+    prompt = '%s: %s#%d, with the %s skill.' % (what, req['repository'], req['ticket'], req['skill'])
+    mapping = {'{prompt}': prompt, '{model}': req['model'], '{session}': run}
+    remote = [mapping.get(arg, arg) for arg in argument_template()]
+    ack = 'OPENWIZ_SSH_READY:' + secrets.token_hex(8)
+    parts = ['env', 'OPENWIZ_SSH_RUN=%s' % run, req['harness']] + remote
+    wrapped = ['sh', '-c', START_SCRIPT, 'sh', ack] + parts
+    argv, config = ssh_argv(run, STATE, target, ' '.join(shlex.quote(part) for part in wrapped), parts)
+    return argv, config, ack
+
+
+def ssh_argv(run, folder, target, remote, parts):
+    if not TARGET.fullmatch(target):
+        raise Refused('OPENWIZ_SSH_TARGET must be user@host',
+                      'set OPENWIZ_SSH_TARGET to the VPS ssh destination, with no spaces, options or secrets')
+    if not shutil.which('ssh'):
+        raise Refused('ssh is not installed', 'install ssh, then start again')
+    config = client_config(run, folder)
+    argv = ['ssh', '-F', config, '-o', 'BatchMode=yes', '-o', 'ClearAllForwardings=yes',
+            '-o', 'ForwardAgent=no', '-o', 'RequestTTY=no', target, '--', remote]
+    found = secret_values()
+    if leaked(parts, found) or leaked(argv, found):
+        os.remove(config)
+        raise Refused('the ssh command would carry a secret from the environment',
+                      'take it out of OPENWIZ_SSH_ARGS and the brief; pass secrets only in the environment on the VPS')
+    return argv, config
+
+
+def ssh_reason(stderr_bytes, code=None):
+    text = stderr_bytes[:4096].decode('utf-8', 'replace').lower()
+    for needle, label in REASONS:
+        if needle in text:
+            return label
+    return 'harness not found on the VPS' if code == 127 else None
+
+
+def ssh_refused(code, stderr_bytes, timed_out=False):
+    label = ssh_reason(stderr_bytes, code)
+    detail = ' (%s)' % label if label else ''
+    if timed_out:
+        error = 'ssh did not start the remote command in time' + detail
+    else:
+        error = 'ssh exited %d before the remote command started%s' % (code, detail)
+    return Refused(error, 'check ssh, OPENWIZ_SSH_TARGET and the harness on the VPS, then try again')
+
+
+def ensure():
+    os.makedirs(STATE, mode=0o700, exist_ok=True)
+    os.chmod(STATE, 0o700)
+
+
+def write_json(path, value):
+    temporary = path + '.tmp'
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(descriptor, 'w') as handle:
+        json.dump(value, handle)
+        handle.write('\n')
+    os.chmod(temporary, 0o600)
+    os.replace(temporary, path)
+
+
+def remove_quietly(path):
+    try:
+        os.remove(path)
+    except OSError:
+        pass
+
+
+def path_of(run):
+    return os.path.join(STATE, run + '.json')
+
+
+def load(run):
+    try:
+        with open(path_of(run)) as handle:
+            state = json.load(handle)
+    except (OSError, ValueError):
+        raise Refused('run %s is unknown' % run, 'start a new run')
+    if (not isinstance(state, dict) or set(state) != {'request', 'target', 'stopped', 'pids'}
+            or not isinstance(state['target'], str) or not TARGET.fullmatch(state['target'])):
+        raise Refused('run %s is unreadable' % run, 'stop it by hand and start a new run')
+    return state
+
+
+def lock(run):
+    ensure()
+    descriptor = os.open(os.path.join(STATE, run + '.lock'), os.O_CREAT | os.O_RDWR, 0o600)
+    fcntl.flock(descriptor, fcntl.LOCK_EX)
+    return descriptor
+
+
+def look(pid):
+    if os.path.isdir('/proc'):
+        try:
+            with open('/proc/%d/stat' % pid) as handle:
+                fields = handle.read().rpartition(')')[2].split()
+            state, start = fields[0], fields[19]
+        except FileNotFoundError:
+            return False, None
+        except (OSError, IndexError):
+            return None, None
+        return state not in 'ZX', start
+    try:
+        done = subprocess.run(['ps', '-p', str(pid), '-o', 'lstart='], stdin=subprocess.DEVNULL,
+                              capture_output=True, text=True, timeout=5)
+    except (OSError, subprocess.TimeoutExpired):
+        return None, None
+    if done.returncode != 0:
+        err = done.stderr.lower()
+        if err.strip() and 'no such' not in err:
+            return None, None
+        return False, None
+    start = done.stdout.strip()
+    return (True, start) if start else (None, None)
+
+
+def ours(record):
+    if isinstance(record, int):
+        record = {'pid': record, 'start': None}
+    if not isinstance(record, dict) or not isinstance(record.get('pid'), int):
+        return None
+    alive, start = look(record['pid'])
+    if alive is None or not alive:
+        return alive
+    recorded = record.get('start')
+    if not recorded or not start or recorded != start:
+        return None if not recorded or not start else False
+    return True
+
+
+def marked(run):
+    if not os.path.isdir('/proc'):
+        return []
+    return [int(name) for name in os.listdir('/proc')
+            if name.isdigit() and int(name) not in (1, os.getpid()) and carries(int(name), run)]
+
+
+def acknowledged(handle, ack):
+    handle.seek(0)
+    data = handle.read(65536)
+    target = ack.encode()
+    return any(line.rstrip(b'\r') == target for line in data.split(b'\n')[:-1])
+
+
+def terminate_group(process):
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        try:
+            os.killpg(process.pid, sig)
+        except OSError:
+            try:
+                process.terminate() if sig == signal.SIGTERM else process.kill()
+            except OSError:
+                pass
+        try:
+            process.wait(timeout=1)
+            return
+        except subprocess.TimeoutExpired:
+            continue
+
+
+def launch(argv, ack):
+    with tempfile.TemporaryFile() as out_file, tempfile.TemporaryFile() as err_file:
+        try:
+            process = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=out_file,
+                                       stderr=err_file, start_new_session=True)
+        except OSError as error:
+            raise Refused('ssh did not start: %s' % (error.strerror or 'unknown'),
+                          'check ssh and OPENWIZ_SSH_TARGET')
+        start = look(process.pid)[1]
+        deadline = time.monotonic() + LAUNCH_TIMEOUT
+        while True:
+            if acknowledged(out_file, ack):
+                code = process.poll()
+                if code is not None and code != 0:
+                    err_file.seek(0)
+                    raise ssh_refused(code, err_file.read(4096))
+                return {'pid': process.pid, 'start': start}
+            code = process.poll()
+            if code is not None:
+                if acknowledged(out_file, ack) and code == 0:
+                    return {'pid': process.pid, 'start': start}
+                err_file.seek(0)
+                raise ssh_refused(code, err_file.read(4096))
+            if time.monotonic() >= deadline:
+                terminate_group(process)
+                err_file.seek(0)
+                raise ssh_refused(None, err_file.read(4096), timed_out=True)
+            time.sleep(0.02)
+
+
+def carries(pid, run):
+    try:
+        with open('/proc/%d/environ' % pid, 'rb') as handle:
+            return ('OPENWIZ_SSH_RUN=%s' % run).encode() in handle.read().split(b'\0')
+    except OSError:
+        return False
+
+
+def remote_stop(run, target):
+    marker = 'OPENWIZ_SSH_RUN=%s' % run
+    script = (
+        'needle=$1; hits=; '
+        'for dir in /proc/[0-9]*; do '
+        'pid=${dir##*/}; '
+        'case $pid in *[!0-9]*) continue ;; esac; '
+        '[ "$pid" -gt 1 ] || continue; '
+        '[ "$pid" = "$$" ] && continue; '
+        'envf=$dir/environ; '
+        '[ -r "$envf" ] || continue; '
+        'if LC_ALL=C tr "\\012\\000" " \\012" < "$envf" 2>/dev/null | LC_ALL=C grep -Fxq -- "$needle"; then '
+        'kill -TERM "$pid" 2>/dev/null || true; '
+        'hits="$hits $pid"; '
+        'fi; '
+        'done; '
+        '[ -n "$hits" ] || exit 0; '
+        'sleep 0.2; '
+        'for pid in $hits; do kill -KILL "$pid" 2>/dev/null || true; done'
+    )
+    cmd = ' '.join(shlex.quote(part) for part in ('sh', '-c', script, 'sh', marker))
+    with tempfile.TemporaryDirectory() as folder:
+        argv, _ = ssh_argv(run + '-stop', folder, target, cmd, [cmd])
+        try:
+            done = subprocess.run(argv, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                  stderr=subprocess.PIPE, timeout=30, start_new_session=True)
+        except subprocess.TimeoutExpired:
+            raise Refused('the VPS did not finish ending run %s' % run, 'check the VPS, then stop the run again')
+        except OSError as error:
+            raise Refused('ssh did not start: %s' % (error.strerror or 'unknown'), 'check ssh and OPENWIZ_SSH_TARGET')
+    if done.returncode != 0:
+        label = ssh_reason(done.stderr, done.returncode)
+        detail = ' (%s)' % label if label else ''
+        raise Refused('the VPS did not end run %s%s' % (run, detail), 'check the VPS, then stop the run again')
+
+
+def end(run, records):
+    for sig, pause in ((signal.SIGTERM, 0.2), (signal.SIGKILL, 0.2)):
+        victims = {record['pid'] for record in records if isinstance(record, dict) and ours(record) is True}
+        victims |= set(marked(run))
+        sent = False
+        for pid in victims:
+            if pid <= 1:
+                continue
+            try:
+                os.kill(pid, sig)
+            except OSError:
+                pass
+            else:
+                sent = True
+        if sent:
+            time.sleep(pause)
+
+
+def answer(value):
+    json.dump(value, sys.stdout)
+    sys.stdout.write('\n')
+
+
+def fail(error):
+    text, nxt = error.args
+    answer({'error': text[:300], 'next': nxt[:300]})
+    return 1
+
+
+def start(req):
+    target = destination()
+    argument_template()
+    ensure()
+    run = 'run-' + secrets.token_hex(6)
+    argv, config, ack = command(req, run, False, target)
+    try:
+        write_json(path_of(run), {'request': req, 'target': target, 'stopped': False, 'pids': []})
+    except Exception:
+        remove_quietly(config)
+        raise
+    try:
+        record = launch(argv, ack)
+    except Exception:
+        remove_quietly(path_of(run))
+        remove_quietly(config)
+        raise
+    try:
+        write_json(path_of(run), {'request': req, 'target': target, 'stopped': False, 'pids': [record]})
+    except OSError:
+        end(run, [record])
+        raise Refused('run %s started but could not be saved, so it was ended' % run,
+                      'check OPENWIZ_SSH_STATE, then look for a leftover ssh before starting again')
+    return {'run': run}
+
+
+def wake(run):
+    descriptor = lock(run)
+    try:
+        state = load(run)
+        if state['stopped']:
+            raise Refused('run %s is stopped' % run, 'start a new run')
+        if any(ours(record) is not False for record in state['pids']):
+            return {'run': run, 'woke': True}
+        argv, config, ack = command(state['request'], run, True, state['target'])
+        try:
+            record = launch(argv, ack)
+        except Exception:
+            remove_quietly(config)
+            raise
+        state['pids'] = [item for item in state['pids'] if ours(item) is True] + [record]
+        try:
+            write_json(path_of(run), state)
+        except OSError:
+            end(run, [record])
+            raise Refused('run %s woke but could not be saved, so it was ended' % run,
+                          'check OPENWIZ_SSH_STATE, then look for a leftover ssh before waking again')
+        return {'run': run, 'woke': True}
+    finally:
+        os.close(descriptor)
+
+
+def stop(run):
+    descriptor = lock(run)
+    try:
+        state = load(run)
+        state['stopped'] = True
+        try:
+            write_json(path_of(run), state)
+        except OSError:
+            try:
+                remote_stop(run, state['target'])
+            finally:
+                end(run, state['pids'])
+            raise Refused('run %s has ended, but the driver could not save that it is stopped' % run,
+                          'make OPENWIZ_SSH_STATE a folder you can write, then stop it again')
+        try:
+            remote_stop(run, state['target'])
+        finally:
+            end(run, state['pids'])
+        return {'run': run, 'stopped': True}
+    finally:
+        os.close(descriptor)
+
+
+def main():
+    try:
+        cmd = sys.argv[1] if len(sys.argv) == 2 else ''
+        if cmd == 'version':
+            answer(VERSION)
+        elif cmd == 'schema':
+            with open(os.path.join(HERE, 'schema.json'), 'rb') as handle:
+                sys.stdout.buffer.write(handle.read())
+        elif cmd == 'start':
+            answer(start(read(START)))
+        elif cmd == 'wake':
+            answer(wake(read(RUN)['run']))
+        elif cmd == 'stop':
+            answer(stop(read(RUN)['run']))
+        else:
+            raise Refused('unknown command', 'run one of: version, schema, start, wake, stop')
+    except Refused as error:
+        return fail(error)
+    except OSError as error:
+        return fail(Refused('the driver could not use a file: %s' % (error.strerror or 'unknown'),
+                            'make OPENWIZ_SSH_STATE and the temporary folder writable, then try again'))
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
