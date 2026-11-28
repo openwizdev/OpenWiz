@@ -65,6 +65,9 @@ class ContractFixtures(unittest.TestCase):
             with self.subTest(fixture=name):
                 self.assertEqual(record['schema'], VERSION)
                 self.assertTrue(matches(record, self.schema, self.schema))
+        for action in ('repost', 'bookmark', 'like'):
+            with self.subTest(action=action):
+                self.assertTrue(matches(dict(self.good['saved-post'], action=action), self.schema, self.schema))
         examples = [json.loads(block) for block in re.findall(r'(?ms)^~~~json\n(.*?)^~~~$', CONTRACT.read_text())]
         self.assertCountEqual(examples, list(self.good.values()))
 
@@ -93,10 +96,15 @@ class ContractFixtures(unittest.TestCase):
     def test_unredacted_secret_shapes_are_refused_and_markers_are_accepted(self):
         # comment-ok: catches: a known secret shape landing on disk or a kind marker being treated as a secret again.
         vectors = json.loads((HERE / 'redaction.json').read_text())
+        readme = (HERE / 'README.md').read_text()
+        normal = dict(self.good['transcript'], text='The word password appears in ordinary prose.')
+        self.assertTrue(matches(normal, self.schema, self.schema))
         kinds = {vector['kind'] for vector in vectors}
         self.assertEqual(kinds, {'token', 'key', 'password'})
         for vector in vectors:
             with self.subTest(vector=vector['name']):
+                self.assertIn(f'`{vector["name"]}`', readme)
+                self.assertIn(f'[redacted:{vector["kind"]}]', vector['after'])
                 record = dict(self.good['transcript'], text=''.join(vector['before']))
                 self.assertFalse(matches(record, self.schema, self.schema))
                 record['text'] = vector['after']

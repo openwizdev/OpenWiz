@@ -51,7 +51,9 @@ record shape only.
 exact expected output. Join the fragments without a separator in memory only.
 The schema rejects the joined input in the valid transcript's text field and
 accepts the expected output. The store compares its own output byte for byte.
-The key fixture has invented, unusable content.
+- `authorization` and `github` produce `[redacted:token]`.
+- `pem-key` produces `[redacted:key]` and uses invented, unusable content.
+- `quoted-password` produces `[redacted:password]`.
 
 The Ticketed record is valid in shape. For the ledger's merge-readback tests,
 the same record is unresolved with an open or unread closing pull request and
