@@ -1,0 +1,32 @@
+test_broken_fixtures (__main__.GrillPickerFixtures.test_broken_fixtures) ... FAIL
+test_saved_reply_preserves_owner_text_and_choice_order (__main__.GrillPickerFixtures.test_saved_reply_preserves_owner_text_and_choice_order) ... FAIL
+test_valid_cards_and_answers (__main__.GrillPickerFixtures.test_valid_cards_and_answers) ... FAIL
+
+======================================================================
+FAIL: test_broken_fixtures (__main__.GrillPickerFixtures.test_broken_fixtures)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./contracts/fixtures/grill-picker/test_fixtures.py", line 67, in setUp
+    self.assertTrue(SCHEMA.is_file(), f"{SCHEMA.name} is missing")
+AssertionError: False is not true : grill-picker.v1.schema.json is missing
+
+======================================================================
+FAIL: test_saved_reply_preserves_owner_text_and_choice_order (__main__.GrillPickerFixtures.test_saved_reply_preserves_owner_text_and_choice_order)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./contracts/fixtures/grill-picker/test_fixtures.py", line 67, in setUp
+    self.assertTrue(SCHEMA.is_file(), f"{SCHEMA.name} is missing")
+AssertionError: False is not true : grill-picker.v1.schema.json is missing
+
+======================================================================
+FAIL: test_valid_cards_and_answers (__main__.GrillPickerFixtures.test_valid_cards_and_answers)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./contracts/fixtures/grill-picker/test_fixtures.py", line 67, in setUp
+    self.assertTrue(SCHEMA.is_file(), f"{SCHEMA.name} is missing")
+AssertionError: False is not true : grill-picker.v1.schema.json is missing
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.001s
+
+FAILED (failures=3)
