@@ -1,0 +1,33 @@
+{
+  "schema": "openwiz.ci-routing.v1",
+  "name": "The read is for last month's period: it is unreadable and normal stays even though it shows the minutes used up.",
+  "now": "2026-12-01T00:30:00Z",
+  "before": {
+    "variables": {
+      "OPENWIZ_RUNS_ON": "ubuntu-24.04",
+      "OPENWIZ_PRIVATE_RUNS_ON": "jog-4vcpu"
+    },
+    "switches": []
+  },
+  "read": {
+    "ok": true,
+    "period": "2026-11",
+    "minutes": {
+      "used": 50000,
+      "included": 50000
+    },
+    "spending": {
+      "spent_cents": 0,
+      "limit_cents": 0
+    },
+    "queued": []
+  },
+  "expect": {
+    "state": "normal",
+    "variables": {
+      "OPENWIZ_RUNS_ON": "ubuntu-24.04",
+      "OPENWIZ_PRIVATE_RUNS_ON": "jog-4vcpu"
+    },
+    "record": null
+  }
+}

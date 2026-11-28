@@ -1,0 +1,134 @@
+Red run (#3525), before the contract and its fixtures existed.
+Command: python3 -I contracts/fixtures/ci-routing/test_fixtures.py (exit 1)
+
+test_the_tool_needs_the_owners_grant_and_own_gh_and_never_edits_a_workflow (__main__.TheAuthority.test_the_tool_needs_the_owners_grant_and_own_gh_and_never_edits_a_workflow) ... FAIL
+test_an_unreadable_read_never_changes_the_state (__main__.TheFixtures.test_an_unreadable_read_never_changes_the_state) ... FAIL
+test_each_case_follows_the_rule (__main__.TheFixtures.test_each_case_follows_the_rule) ... FAIL
+test_nothing_private_or_secret (__main__.TheFixtures.test_nothing_private_or_secret) ... FAIL
+test_the_fixtures_cover_every_change_and_every_hold (__main__.TheFixtures.test_the_fixtures_cover_every_change_and_every_hold) ... FAIL
+test_the_rule_would_be_caught_if_it_drifted (__main__.TheFixtures.test_the_rule_would_be_caught_if_it_drifted) ... FAIL
+test_one_line_per_switch_on_one_tracking_issue (__main__.TheRecord.test_one_line_per_switch_on_one_tracking_issue) ... FAIL
+test_each_reason_is_a_fixed_sentence_without_usage_figures (__main__.TheRule.test_each_reason_is_a_fixed_sentence_without_usage_figures) ... FAIL
+test_every_number_is_written_exactly (__main__.TheRule.test_every_number_is_written_exactly) ... FAIL
+test_normal_is_what_the_fallbacks_give (__main__.TheStates.test_normal_is_what_the_fallbacks_give) ... FAIL
+test_two_states_and_their_values (__main__.TheStates.test_two_states_and_their_values) ... FAIL
+test_only_linux_jobs_read_the_variables (__main__.TheVariables.test_only_linux_jobs_read_the_variables) ... FAIL
+test_the_exact_expressions_are_written_in_the_prose (__main__.TheVariables.test_the_exact_expressions_are_written_in_the_prose) ... FAIL
+test_two_org_variables_with_their_fallbacks_and_visibility (__main__.TheVariables.test_two_org_variables_with_their_fallbacks_and_visibility) ... FAIL
+
+======================================================================
+FAIL: test_the_tool_needs_the_owners_grant_and_own_gh_and_never_edits_a_workflow (__main__.TheAuthority.test_the_tool_needs_the_owners_grant_and_own_gh_and_never_edits_a_workflow)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/ci-routing/test_fixtures.py", line 80, in setUp
+    self.assertTrue(CONTRACT.is_file(), "contracts/ci-routing.v1.md is missing")
+AssertionError: False is not true : contracts/ci-routing.v1.md is missing
+
+======================================================================
+FAIL: test_an_unreadable_read_never_changes_the_state (__main__.TheFixtures.test_an_unreadable_read_never_changes_the_state)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/ci-routing/test_fixtures.py", line 80, in setUp
+    self.assertTrue(CONTRACT.is_file(), "contracts/ci-routing.v1.md is missing")
+AssertionError: False is not true : contracts/ci-routing.v1.md is missing
+
+======================================================================
+FAIL: test_each_case_follows_the_rule (__main__.TheFixtures.test_each_case_follows_the_rule)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/ci-routing/test_fixtures.py", line 80, in setUp
+    self.assertTrue(CONTRACT.is_file(), "contracts/ci-routing.v1.md is missing")
+AssertionError: False is not true : contracts/ci-routing.v1.md is missing
+
+======================================================================
+FAIL: test_nothing_private_or_secret (__main__.TheFixtures.test_nothing_private_or_secret)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/ci-routing/test_fixtures.py", line 80, in setUp
+    self.assertTrue(CONTRACT.is_file(), "contracts/ci-routing.v1.md is missing")
+AssertionError: False is not true : contracts/ci-routing.v1.md is missing
+
+======================================================================
+FAIL: test_the_fixtures_cover_every_change_and_every_hold (__main__.TheFixtures.test_the_fixtures_cover_every_change_and_every_hold)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/ci-routing/test_fixtures.py", line 80, in setUp
+    self.assertTrue(CONTRACT.is_file(), "contracts/ci-routing.v1.md is missing")
+AssertionError: False is not true : contracts/ci-routing.v1.md is missing
+
+======================================================================
+FAIL: test_the_rule_would_be_caught_if_it_drifted (__main__.TheFixtures.test_the_rule_would_be_caught_if_it_drifted)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/ci-routing/test_fixtures.py", line 80, in setUp
+    self.assertTrue(CONTRACT.is_file(), "contracts/ci-routing.v1.md is missing")
+AssertionError: False is not true : contracts/ci-routing.v1.md is missing
+
+======================================================================
+FAIL: test_one_line_per_switch_on_one_tracking_issue (__main__.TheRecord.test_one_line_per_switch_on_one_tracking_issue)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/ci-routing/test_fixtures.py", line 80, in setUp
+    self.assertTrue(CONTRACT.is_file(), "contracts/ci-routing.v1.md is missing")
+AssertionError: False is not true : contracts/ci-routing.v1.md is missing
+
+======================================================================
+FAIL: test_each_reason_is_a_fixed_sentence_without_usage_figures (__main__.TheRule.test_each_reason_is_a_fixed_sentence_without_usage_figures)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/ci-routing/test_fixtures.py", line 80, in setUp
+    self.assertTrue(CONTRACT.is_file(), "contracts/ci-routing.v1.md is missing")
+AssertionError: False is not true : contracts/ci-routing.v1.md is missing
+
+======================================================================
+FAIL: test_every_number_is_written_exactly (__main__.TheRule.test_every_number_is_written_exactly)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/ci-routing/test_fixtures.py", line 80, in setUp
+    self.assertTrue(CONTRACT.is_file(), "contracts/ci-routing.v1.md is missing")
+AssertionError: False is not true : contracts/ci-routing.v1.md is missing
+
+======================================================================
+FAIL: test_normal_is_what_the_fallbacks_give (__main__.TheStates.test_normal_is_what_the_fallbacks_give)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/ci-routing/test_fixtures.py", line 80, in setUp
+    self.assertTrue(CONTRACT.is_file(), "contracts/ci-routing.v1.md is missing")
+AssertionError: False is not true : contracts/ci-routing.v1.md is missing
+
+======================================================================
+FAIL: test_two_states_and_their_values (__main__.TheStates.test_two_states_and_their_values)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/ci-routing/test_fixtures.py", line 80, in setUp
+    self.assertTrue(CONTRACT.is_file(), "contracts/ci-routing.v1.md is missing")
+AssertionError: False is not true : contracts/ci-routing.v1.md is missing
+
+======================================================================
+FAIL: test_only_linux_jobs_read_the_variables (__main__.TheVariables.test_only_linux_jobs_read_the_variables)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/ci-routing/test_fixtures.py", line 80, in setUp
+    self.assertTrue(CONTRACT.is_file(), "contracts/ci-routing.v1.md is missing")
+AssertionError: False is not true : contracts/ci-routing.v1.md is missing
+
+======================================================================
+FAIL: test_the_exact_expressions_are_written_in_the_prose (__main__.TheVariables.test_the_exact_expressions_are_written_in_the_prose)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/ci-routing/test_fixtures.py", line 80, in setUp
+    self.assertTrue(CONTRACT.is_file(), "contracts/ci-routing.v1.md is missing")
+AssertionError: False is not true : contracts/ci-routing.v1.md is missing
+
+======================================================================
+FAIL: test_two_org_variables_with_their_fallbacks_and_visibility (__main__.TheVariables.test_two_org_variables_with_their_fallbacks_and_visibility)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/ci-routing/test_fixtures.py", line 80, in setUp
+    self.assertTrue(CONTRACT.is_file(), "contracts/ci-routing.v1.md is missing")
+AssertionError: False is not true : contracts/ci-routing.v1.md is missing
+
+----------------------------------------------------------------------
+Ran 14 tests in 0.002s
+
+FAILED (failures=14)

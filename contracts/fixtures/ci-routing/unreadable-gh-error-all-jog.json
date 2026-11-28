@@ -1,0 +1,26 @@
+{
+  "schema": "openwiz.ci-routing.v1",
+  "name": "gh fails on the first run after a reset: the read is unreadable and all-jog stays.",
+  "now": "2026-12-01T00:30:00Z",
+  "before": {
+    "variables": {
+      "OPENWIZ_RUNS_ON": "jog-4vcpu",
+      "OPENWIZ_PRIVATE_RUNS_ON": "jog-4vcpu"
+    },
+    "switches": [
+      "2026-11-20T18:00:00Z ci-routing normal -> all-jog: included minutes used up"
+    ]
+  },
+  "read": {
+    "ok": false,
+    "cause": "gh-error"
+  },
+  "expect": {
+    "state": "all-jog",
+    "variables": {
+      "OPENWIZ_RUNS_ON": "jog-4vcpu",
+      "OPENWIZ_PRIVATE_RUNS_ON": "jog-4vcpu"
+    },
+    "record": null
+  }
+}

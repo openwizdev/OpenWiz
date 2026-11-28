@@ -1,0 +1,29 @@
+{
+  "schema": "openwiz.ci-routing.v1",
+  "name": "The variables match no state: nothing changes even though the minutes are used up.",
+  "now": "2026-12-14T09:30:00Z",
+  "before": {
+    "variables": {
+      "OPENWIZ_RUNS_ON": "ubuntu-22.04"
+    },
+    "switches": []
+  },
+  "read": {
+    "ok": true,
+    "period": "2026-12",
+    "minutes": {
+      "used": 50000,
+      "included": 50000
+    },
+    "spending": {
+      "spent_cents": 0,
+      "limit_cents": 0
+    },
+    "queued": []
+  },
+  "expect": {
+    "state": null,
+    "variables": null,
+    "record": null
+  }
+}

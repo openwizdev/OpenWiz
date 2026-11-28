@@ -1,0 +1,24 @@
+{
+  "schema": "openwiz.ci-routing.v1",
+  "name": "The owner's gh lacks the admin:org scope: the read is unreadable and normal stays.",
+  "now": "2026-12-14T09:30:00Z",
+  "before": {
+    "variables": {
+      "OPENWIZ_RUNS_ON": "ubuntu-24.04",
+      "OPENWIZ_PRIVATE_RUNS_ON": "jog-4vcpu"
+    },
+    "switches": []
+  },
+  "read": {
+    "ok": false,
+    "cause": "scope"
+  },
+  "expect": {
+    "state": "normal",
+    "variables": {
+      "OPENWIZ_RUNS_ON": "ubuntu-24.04",
+      "OPENWIZ_PRIVATE_RUNS_ON": "jog-4vcpu"
+    },
+    "record": null
+  }
+}
