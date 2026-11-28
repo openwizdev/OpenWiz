@@ -1,0 +1,23 @@
+{
+  "schema": "openwiz.home.v1",
+  "loops": {
+    "synthetic-sweep": {
+      "task_id": "synthetic-task-a",
+      "schedule": {
+        "type": "interval",
+        "everyMs": 900000
+      },
+      "path": "loops/synthetic-sweep.md",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "synthetic-sweep": {
+      "task_id": "synthetic-task-replacement",
+      "schedule": {
+        "type": "interval",
+        "everyMs": 900000
+      },
+      "path": "loops/synthetic-sweep.md",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  }
+}

@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openwiz.home.v1",
+  "title": "OpenWiz home manifest or acknowledgment line",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/loopsManifest"
+    },
+    {
+      "$ref": "#/$defs/okLine"
+    }
+  ],
+  "$defs": {
+    "loopsManifest": {
+      "type": "object",
+      "required": [
+        "schema",
+        "loops"
+      ],
+      "properties": {
+        "schema": {
+          "const": "openwiz.home.v1"
+        },
+        "loops": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]{0,63}(?![\\s\\S])"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/installedLoop"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "installedLoop": {
+      "type": "object",
+      "required": [
+        "task_id",
+        "schedule",
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029]+(?![\\s\\S])"
+        },
+        "schedule": {
+          "$ref": "#/$defs/schedule"
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^loops/(?:(?!\\.{1,2}/)[^/\\\\\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029]+/)*(?!\\.{1,2}/)[^/\\\\\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029]+\\.md(?![\\s\\S])"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9A-Fa-f]{64}(?![\\s\\S])"
+        }
+      },
+      "additionalProperties": false
+    },
+    "schedule": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/interval"
+        },
+        {
+          "$ref": "#/$defs/fixedTime"
+        },
+        {
+          "$ref": "#/$defs/once"
+        },
+        {
+          "$ref": "#/$defs/webhook"
+        }
+      ]
+    },
+    "interval": {
+      "type": "object",
+      "required": [
+        "type",
+        "everyMs"
+      ],
+      "properties": {
+        "type": {
+          "const": "interval"
+        },
+        "everyMs": {
+          "type": "integer",
+          "minimum": 60000
+        }
+      },
+      "additionalProperties": false
+    },
+    "fixedTime": {
+      "type": "object",
+      "required": [
+        "type",
+        "timeOfDay",
+        "timeZone"
+      ],
+      "properties": {
+        "type": {
+          "const": "fixed_time"
+        },
+        "timeOfDay": {
+          "type": "string",
+          "pattern": "^(?:[01][0-9]|2[0-3]):[0-5][0-9](?![\\s\\S])"
+        },
+        "weekdays": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 7,
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 6
+          }
+        },
+        "timeZone": {
+          "type": "string",
+          "pattern": "^(?:UTC|[A-Za-z][A-Za-z0-9_+-]*(?:/[A-Za-z0-9_+-]+)+)(?![\\s\\S])"
+        }
+      },
+      "additionalProperties": false
+    },
+    "once": {
+      "type": "object",
+      "required": [
+        "type",
+        "runAt"
+      ],
+      "properties": {
+        "type": {
+          "const": "once"
+        },
+        "runAt": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]+)?(?:Z|[+-](?:[01][0-9]|2[0-3]):[0-5][0-9])(?![\\s\\S])"
+        }
+      },
+      "additionalProperties": false
+    },
+    "webhook": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "const": "webhook"
+        }
+      },
+      "additionalProperties": false
+    },
+    "okLine": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]Z [a-z0-9][a-z0-9-]{0,63} (?:ok|quiet|recovered|failed) [^\\s\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029][^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029]*(?![\\s\\S])"
+    }
+  }
+}

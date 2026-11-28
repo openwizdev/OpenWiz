@@ -1,0 +1,15 @@
+$ python3 -I contracts/fixtures/home/synthetic/test_fixtures.py Home.test_contract
+
+F
+======================================================================
+FAIL: test_contract (__main__.Home.test_contract)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/home/synthetic/test_fixtures.py", line 51, in test_contract
+    self.assertTrue(DOC.is_file(), "contracts/home.v1.md is missing")
+AssertionError: False is not true : contracts/home.v1.md is missing
+
+----------------------------------------------------------------------
+Ran 1 test
+
+FAILED (failures=1)

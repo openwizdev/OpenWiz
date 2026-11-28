@@ -1,0 +1,66 @@
+{
+  "dispatched with stale completion": {
+    "loop": "synthetic-sweep", "now": "2030-01-02T02:30:01Z", "every_ms": 900000,
+    "lastRunStatus": "succeeded",
+    "log": ["2030-01-02T02:00:00Z synthetic-sweep ok sweep completed"],
+    "late": true
+  },
+  "dispatched with no completion": {
+    "loop": "synthetic-sweep", "now": "2030-01-02T02:29:59Z", "every_ms": 900000,
+    "lastRunStatus": "succeeded",
+    "late": true
+  },
+  "interval before deadline": {
+    "loop": "synthetic-sweep", "now": "2030-01-02T02:29:59Z", "every_ms": 900000,
+    "log": ["2030-01-02T02:00:00Z synthetic-sweep quiet nothing to sweep"],
+    "late": false
+  },
+  "interval at deadline": {
+    "loop": "synthetic-sweep", "now": "2030-01-02T02:30:00Z", "every_ms": 900000,
+    "log": ["2030-01-02T02:00:00Z synthetic-sweep quiet nothing to sweep"],
+    "late": false
+  },
+  "fixed time before deadline": {
+    "loop": "synthetic-backup", "now": "2030-01-02T02:29:59Z", "last_due": "2030-01-02T02:00:00Z",
+    "late": false
+  },
+  "fixed time at deadline": {
+    "loop": "synthetic-backup", "now": "2030-01-02T02:30:00Z", "last_due": "2030-01-02T02:00:00Z",
+    "late": false
+  },
+  "fixed time after deadline": {
+    "loop": "synthetic-backup", "now": "2030-01-02T02:30:01Z", "last_due": "2030-01-02T02:00:00Z",
+    "log": ["2030-01-02T01:59:59Z synthetic-backup ok previous backup completed"],
+    "late": true
+  },
+  "fixed time completed within grace": {
+    "loop": "synthetic-backup", "now": "2030-01-02T02:30:01Z", "last_due": "2030-01-02T02:00:00Z",
+    "log": ["2030-01-02T02:20:00Z synthetic-backup ok backup completed"],
+    "late": false
+  },
+  "fixed time with no due occurrence yet": {
+    "loop": "synthetic-backup", "now": "2030-01-02T02:30:01Z",
+    "last_due": null, "late": false
+  },
+  "webhook without a clock deadline": {
+    "loop": "synthetic-on-hook", "now": "2030-01-02T02:30:01Z",
+    "late": false
+  },
+  "failed with fresh completion": {
+    "loop": "synthetic-sweep", "now": "2030-01-02T02:30:01Z", "every_ms": 900000,
+    "lastRunStatus": "failed",
+    "log": ["2030-01-02T02:30:00Z synthetic-sweep ok sweep completed"],
+    "late": true
+  },
+  "other loops and recovery notes are not evidence of completion": {
+    "loop": "synthetic-sweep", "now": "2030-01-02T02:30:01Z", "every_ms": 900000,
+    "log": [
+      "2030-01-02T02:25:00Z synthetic-backup ok backup completed",
+      "2030-01-02T02:28:00Z synthetic-sweep failed sweep did not finish",
+      "2030-01-02T02:29:00Z synthetic-sweep recovered recovery returned",
+      "2030-01-02T02:30:00Z synthetic-sweep ok",
+      "2030-01-02T02:30:02Z synthetic-sweep ok future completion"
+    ],
+    "late": true
+  }
+}
