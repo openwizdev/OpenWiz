@@ -1,0 +1,15 @@
+The red run at origin/main (2b0b0d19), before the fix.
+
+$ python3 -I docs/evidence/3102/check_ci.py origin/main
+suites: 44 before, 44 after; runs: 47 before, 47 after
+FAIL: runs 2 times: tools/install/setup/test_github_login.py: ['release (2)', 'cargo test tests/checks/skills.rs']
+FAIL: runs 2 times: tools/install/tests/init/test_init.py: ['release (2)', 'cargo test tests/checks/skills.rs']
+FAIL: runs 2 times: tools/install/tests/setup-onboard-contract/test_contract.py: ['release (2)', 'cargo test tests/checks/skills.rs']
+FAIL: rust-tests.sh skips a test that does not exist: a_candidate_that_exits_without_readiness_rolls_back_to_the_running_old_build
+FAIL: rust-tests.sh skips a test that does not exist: a_failing_merge_is_kept_and_recorded_once_without_retrying_the_gate
+FAIL: rust-tests.sh skips a test that does not exist: a_passing_main_merge_is_staged_but_not_reported_as_running
+FAIL: rust-tests.sh skips a test that does not exist: a_real_candidate_must_confirm_readiness_before_selection_or_switched
+FAIL: privacy.yml has no concurrency group
+FAIL: ci.yml still has the legacy web-test job or names it
+check_ci: 9 failed
+exit 1
