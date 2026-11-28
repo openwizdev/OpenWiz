@@ -148,7 +148,7 @@ fn cached_prefix_is_byte_identical_across_keystrokes() {
 
 #[test]
 fn superseded_request_is_cancelled_and_its_reply_dropped() {
-    let server = fake_model_server::start(300, " later", 0.9, false);
+    let server = fake_model_server::start(90, " later", 0.9, false);
     let settings = Settings::llama(&server.url);
     let pack = pack();
     let session = Session::new();
@@ -172,7 +172,7 @@ fn superseded_request_is_cancelled_and_its_reply_dropped() {
 
 #[test]
 fn a_reply_typed_past_is_dropped() {
-    let server = fake_model_server::start(300, " later", 0.9, false);
+    let server = fake_model_server::start(90, " later", 0.9, false);
     let settings = Settings::llama(&server.url);
     let pack = pack();
     let session = Session::new();
@@ -247,6 +247,26 @@ fn no_model_server_answers_from_recall_without_error() {
 }
 
 #[test]
+fn slow_model_server_falls_back_to_recall() {
+    let server = fake_model_server::start(400, " later", 0.9, false);
+    let answer = model::answer(
+        &Session::new(),
+        &Settings::llama(&server.url),
+        &pack(),
+        "J",
+        1,
+        Some(recall(" all recs", 0.9, false)),
+    );
+    let ghost = suggestion(&answer);
+    assert_eq!(ghost.tier, Tier::Recall);
+    assert!(
+        ghost.latency_ms < 200.0,
+        "fallback took {} ms",
+        ghost.latency_ms
+    );
+}
+
+#[test]
 fn recall_and_the_logprob_gate_blend() {
     let pack = pack();
     let fixed = fake_model_server::start(0, " something else", 0.95, false);
@@ -302,64 +322,58 @@ fn recall_and_the_logprob_gate_blend() {
 
 #[test]
 fn trailing_space_sentence_and_eight_words() {
+    let pack = pack();
+    let complete = |server: &fake_model_server::Running, prefix| {
+        model::answer(
+            &Session::new(),
+            &Settings::llama(&server.url),
+            &pack,
+            prefix,
+            1,
+            None,
+        )
+    };
     let server = fake_model_server::start(0, " #42 and merge", 0.9, false);
-    let session = Session::new();
-    let answer = model::answer(
-        &session,
-        &Settings::llama(&server.url),
-        &pack(),
-        "approve ",
-        1,
-        None,
-    );
+    let answer = complete(&server, "approve ");
     let ghost = suggestion(&answer);
     assert_eq!(ghost.text, "#42 and merge");
     assert_eq!(ghost.full_text, "approve #42 and merge");
     let prompt = fake_model_server::prompt_of(&server.hits.lock().unwrap()[0].body).unwrap();
     assert!(prompt.ends_with("approve"));
-    assert!(!prompt.ends_with("approve "));
 
-    let sentence = fake_model_server::start(0, " Hello there. And more words", 0.9, false);
-    let answer = model::answer(
-        &Session::new(),
-        &Settings::llama(&sentence.url),
-        &pack(),
-        "say",
-        1,
-        None,
-    );
-    let ghost = suggestion(&answer);
-    assert_eq!(ghost.text, " Hello there.");
-    assert_eq!(ghost.full_text, "say Hello there.");
+    let sentence = " e.g. version 0.2.0 uses #3151.md at https://example.com/file?q=1.";
+    let server = fake_model_server::start(0, &format!("{sentence} Then stop"), 0.9, false);
+    let answer = complete(&server, "say");
+    assert_eq!(suggestion(&answer).full_text, format!("say{sentence}"));
 
-    let long = fake_model_server::start(
+    let server = fake_model_server::start(
         0,
         " one two three four five six seven eight nine",
         0.9,
         false,
     );
-    let answer = model::answer(
-        &Session::new(),
-        &Settings::llama(&long.url),
-        &pack(),
-        "count",
-        1,
-        None,
+    let answer = complete(&server, "count");
+    assert_eq!(
+        suggestion(&answer).text,
+        " one two three four five six seven eight"
     );
-    let ghost = suggestion(&answer);
-    assert_eq!(words(&ghost.text), 8);
-    assert_eq!(ghost.text, " one two three four five six seven eight");
+}
 
+#[test]
+fn generation_at_token_limit_drops_partial_word() {
     let partial = fake_model_server::start(0, "alpha beta partial", 0.9, true);
-    let answer = model::answer(
-        &Session::new(),
-        &Settings::llama(&partial.url),
-        &pack(),
-        "go ",
-        1,
-        None,
-    );
-    assert_eq!(suggestion(&answer).text, "alpha beta");
+    for settings in [
+        Settings::llama(&partial.url),
+        Settings::ollama(&partial.url),
+    ] {
+        let answer = model::answer(&Session::new(), &settings, &pack(), "go ", 1, None);
+        assert_eq!(
+            suggestion(&answer).text,
+            "alpha beta",
+            "{:?}",
+            settings.backend
+        );
+    }
 }
 
 #[test]
@@ -376,6 +390,7 @@ fn ollama_raw_completion_is_blended_and_ends_at_the_first_newline() {
     let body: Value = serde_json::from_str(&hit.body).unwrap();
     assert_eq!(body["raw"], true);
     assert_eq!(body["stream"], false);
+    assert_eq!(body["logprobs"], true);
     assert_eq!(body["options"]["num_predict"], 8);
     assert_eq!(body["model"], model::DEFAULT_MODEL);
 }

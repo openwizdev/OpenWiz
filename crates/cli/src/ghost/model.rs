@@ -14,7 +14,7 @@ pub const DEFAULT_LOGPROB_GATE: f64 = -0.35;
 pub const DEFAULT_CONFIDENCE: f64 = 0.30;
 const RESPONSE_LIMIT: usize = 1024 * 1024;
 const READ_SLICE: Duration = Duration::from_millis(20);
-const CONNECT_TIMEOUT: Duration = Duration::from_millis(200);
+const MODEL_BUDGET: Duration = Duration::from_millis(140);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Backend {
@@ -262,7 +262,9 @@ pub fn answer(
     let started = Instant::now();
     let cached = cached_prefix(pack);
     let (prompt, stripped_space) = compose(&cached, typed);
-    let draft = fetch(settings, &prompt, || session.stale(seq, typed));
+    let draft = fetch(settings, &prompt, started + MODEL_BUDGET, || {
+        session.stale(seq, typed)
+    });
     if session.stale(seq, typed) {
         return Answer::Dropped;
     }
@@ -329,8 +331,8 @@ fn trim_completion_at_boundary(raw: &str, stopped_limit: bool) -> Option<String>
         Some((head, _)) => (head, true),
         None => (raw, false),
     };
-    let (cut, sentence_cut) = match cut_nl.find(['.', '!', '?']) {
-        Some(index) => (&cut_nl[..=index], true),
+    let (cut, sentence_cut) = match sentence_end(cut_nl) {
+        Some(end) => (&cut_nl[..end], true),
         None => (cut_nl, false),
     };
     let mut text = cut.trim_end().to_owned();
@@ -351,7 +353,26 @@ fn trim_completion_at_boundary(raw: &str, stopped_limit: bool) -> Option<String>
     Some(format!("{leading}{}", words.join(" ")))
 }
 
-fn fetch(settings: &Settings, prompt: &str, mut cancel: impl FnMut() -> bool) -> Option<RawDraft> {
+fn sentence_end(text: &str) -> Option<usize> {
+    for (index, mark) in text.match_indices(['.', '!', '?']) {
+        let end = index + mark.len();
+        if text[end..].starts_with(|c: char| !c.is_whitespace()) {
+            continue;
+        }
+        let word = text[..end].split_whitespace().next_back()?;
+        if !word.eq_ignore_ascii_case("e.g.") && !word.eq_ignore_ascii_case("i.e.") {
+            return Some(end);
+        }
+    }
+    None
+}
+
+fn fetch(
+    settings: &Settings,
+    prompt: &str,
+    deadline: Instant,
+    mut cancel: impl FnMut() -> bool,
+) -> Option<RawDraft> {
     let (addr, host) = endpoint(&settings.base_url)?;
     if cancel() {
         return None;
@@ -362,7 +383,7 @@ fn fetch(settings: &Settings, prompt: &str, mut cancel: impl FnMut() -> bool) ->
         Backend::LlamaServer => "/completion",
         Backend::Ollama => "/api/generate",
     };
-    let payload = match post(&addr, &host, path, bytes, &mut cancel) {
+    let payload = match post(&addr, &host, path, bytes, deadline, &mut cancel) {
         Ok(payload) => payload,
         Err(Call::Cancelled) => return None,
         Err(Call::Unavailable) => return None,
@@ -383,12 +404,14 @@ fn request_body(settings: &Settings, prompt: &str) -> String {
             "temperature": 0,
             "cache_prompt": true,
             "n_probs": 1,
+            "post_sampling_probs": false,
             "stream": false,
         }),
         Backend::Ollama => json!({
             "model": settings.model,
             "prompt": prompt,
             "raw": true,
+            "logprobs": true,
             "stream": false,
             "options": {
                 "num_predict": predict,
@@ -409,38 +432,55 @@ fn post(
     host: &str,
     path: &str,
     body: &[u8],
+    deadline: Instant,
     cancel: &mut impl FnMut() -> bool,
 ) -> Result<Vec<u8>, Call> {
     if cancel() {
         return Err(Call::Cancelled);
     }
+    let remaining = || {
+        deadline
+            .checked_duration_since(Instant::now())
+            .filter(|time| !time.is_zero())
+            .ok_or(Call::Unavailable)
+    };
     let mut stream =
-        TcpStream::connect_timeout(addr, CONNECT_TIMEOUT).map_err(|_| Call::Unavailable)?;
+        TcpStream::connect_timeout(addr, remaining()?).map_err(|_| Call::Unavailable)?;
     stream.set_nodelay(true).map_err(|_| Call::Unavailable)?;
-    stream
-        .set_read_timeout(Some(READ_SLICE))
-        .map_err(|_| Call::Unavailable)?;
-    stream
-        .set_write_timeout(Some(CONNECT_TIMEOUT))
-        .map_err(|_| Call::Unavailable)?;
-    let head = format!(
+    let mut request = format!(
         "POST {path} HTTP/1.1\r\nHost: {host}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
         body.len()
-    );
-    stream
-        .write_all(head.as_bytes())
-        .and_then(|()| stream.write_all(body))
-        .map_err(|_| Call::Unavailable)?;
+    )
+    .into_bytes();
+    request.extend_from_slice(body);
+    let mut pending = request.as_slice();
+    while !pending.is_empty() {
+        if cancel() {
+            return Err(Call::Cancelled);
+        }
+        stream
+            .set_write_timeout(Some(remaining()?))
+            .map_err(|_| Call::Unavailable)?;
+        let written = stream.write(pending).map_err(|_| Call::Unavailable)?;
+        if written == 0 {
+            return Err(Call::Unavailable);
+        }
+        pending = &pending[written..];
+    }
     let mut acc = Vec::new();
     loop {
         if cancel() {
             let _ = stream.shutdown(std::net::Shutdown::Both);
             return Err(Call::Cancelled);
         }
+        stream
+            .set_read_timeout(Some(remaining()?.min(READ_SLICE)))
+            .map_err(|_| Call::Unavailable)?;
         let mut buf = [0u8; 2048];
         match stream.read(&mut buf) {
             Ok(0) => break,
             Ok(n) => {
+                remaining()?;
                 acc.extend_from_slice(&buf[..n]);
                 if acc.len() > RESPONSE_LIMIT {
                     return Err(Call::Unavailable);
@@ -515,9 +555,9 @@ fn decode(value: &Value, backend: Backend) -> Option<RawDraft> {
             let text = value.get("content")?.as_str()?.to_owned();
             let mean = llama_mean(value.get("completion_probabilities")?)?;
             let stopped_limit = value
-                .get("stopped_limit")
-                .and_then(Value::as_bool)
-                .unwrap_or(false);
+                .get("stop_type")
+                .and_then(Value::as_str)
+                .map_or_else(|| value["stopped_limit"] == true, |stop| stop == "limit");
             Some(RawDraft {
                 text,
                 mean_logprob: mean,
@@ -530,7 +570,7 @@ fn decode(value: &Value, backend: Backend) -> Option<RawDraft> {
             Some(RawDraft {
                 text,
                 mean_logprob: mean,
-                stopped_limit: false,
+                stopped_limit: value["done_reason"] == "length",
             })
         }
     }
@@ -541,8 +581,9 @@ fn llama_mean(tokens: &Value) -> Option<f64> {
     let mut sum = 0.0;
     let mut count = 0.0;
     for token in tokens {
-        let top = token.get("probs")?.as_array()?.first()?;
-        sum += token_logprob(top)?;
+        sum += token_logprob(token)
+            .or_else(|| token_logprob(token.get("top_logprobs")?.get(0)?))
+            .or_else(|| token_logprob(token.get("probs")?.get(0)?))?;
         count += 1.0;
     }
     (count > 0.0).then_some(sum / count)
@@ -559,11 +600,11 @@ fn ollama_mean(tokens: &Value) -> Option<f64> {
     (count > 0.0).then_some(sum / count)
 }
 
-fn token_logprob(top: &Value) -> Option<f64> {
-    if let Some(logprob) = top.get("logprob").and_then(Value::as_f64) {
+fn token_logprob(token: &Value) -> Option<f64> {
+    if let Some(logprob) = token.get("logprob").and_then(Value::as_f64) {
         return logprob.is_finite().then_some(logprob);
     }
-    let prob = top.get("prob")?.as_f64()?;
+    let prob = token.get("prob")?.as_f64()?;
     (prob > 0.0 && prob.is_finite()).then(|| prob.ln())
 }
 

@@ -98,7 +98,7 @@ fn handle(mut stream: TcpStream, hits: Arc<Mutex<Vec<Hit>>>, script: Arc<Script>
         return;
     }
     push(&hits, &path, &body_text, true);
-    let _ = stream.write_all(&response(&path, script.as_ref()));
+    let _ = stream.write_all(&response(&path, &body, &script));
 }
 
 fn push(hits: &Mutex<Vec<Hit>>, path: &str, body: &str, finished: bool) {
@@ -125,25 +125,33 @@ fn still_open(stream: &mut TcpStream) -> bool {
     open
 }
 
-fn response(path: &str, script: &Script) -> Vec<u8> {
+fn response(path: &str, body: &[u8], script: &Script) -> Vec<u8> {
     let logprob = if script.prob > 0.0 && script.prob.is_finite() {
         script.prob.ln()
     } else {
         -20.0
     };
-    let value = if path.contains("generate") {
-        json!({
+    let value = if path == "/api/generate" {
+        let mut value = json!({
             "response": script.content,
             "done": true,
-            "logprobs": [{"token": script.content, "logprob": logprob}],
-        })
+            "done_reason": if script.stopped_limit { "length" } else { "stop" },
+        });
+        let request: Value = serde_json::from_slice(body).expect("valid model request");
+        if request["logprobs"] == true {
+            value["logprobs"] = json!([{"token": script.content, "logprob": logprob}]);
+        }
+        value
     } else {
         json!({
             "content": script.content,
-            "stopped_limit": script.stopped_limit,
+            "stop_type": if script.stopped_limit { "limit" } else { "eos" },
             "completion_probabilities": [{
-                "content": script.content,
-                "probs": [{"tok_str": script.content, "prob": script.prob, "logprob": logprob}],
+                "id": 1,
+                "token": script.content,
+                "logprob": logprob,
+                "bytes": script.content.as_bytes(),
+                "top_logprobs": [],
             }],
         })
     };
