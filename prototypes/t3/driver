@@ -1,0 +1,216 @@
+#!/usr/bin/env -S python3 -I
+"""Disposable OpenWiz v1 lifecycle driver for the pinned repository fixture."""
+import json
+from pathlib import Path
+import re
+import subprocess
+import sys
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+sys.dont_write_bytecode = True
+import fixture
+
+# Read the kit's public patterns without inspecting the caller's environment.
+sys.path.insert(0, str(HERE.parents[1] / "kernel" / "live-rig"))
+import rig
+
+SCHEMA = HERE.parents[1] / "kernel" / "driver-kit" / "schema.json"
+VERSION = {"driver": "t3-fixture", "records": ["openwiz:records v1"], "can": ["start", "wake", "stop"]}
+CANT_SET_EFFORT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster "
+                   "to run it at the host's default")
+INSPECT = "inspect the disposable fixture state before any new start or wake"
+ACCEPTED_RUN_STATES = {"preparing", "queued", "starting", "running", "waiting", "completed"}
+
+
+class Refused(Exception):
+    pass
+
+
+def request(command):
+    schema = json.loads(SCHEMA.read_bytes())["commands"][command]["input"]
+    try:
+        value = json.loads(sys.stdin.buffer.read().decode("utf-8"), object_pairs_hook=fixture.unique)
+    except (ValueError, RecursionError):
+        raise Refused("input is unreadable JSON or repeats a key", "send one JSON object, with each key once")
+    properties = schema["properties"]
+    if not isinstance(value, dict) or not set(schema["required"]) <= value.keys() <= properties.keys():
+        raise Refused("input fields do not match driver v1", "send only the fields shown by driver schema")
+    try:
+        shapes = rig.kit_shapes()
+    except rig.Refused:
+        raise Refused("credential shapes are unavailable", "use a checkout with the v1 driver kit")
+    for name, field in value.items():
+        rule = properties[name]
+        if rule["type"] == "integer":
+            valid = type(field) is int and field >= rule["minimum"]
+        else:
+            valid = (isinstance(field, str) and len(field) <= rule.get("maxLength", len(field))
+                     and re.fullmatch(rule["pattern"], field))
+        if not valid:
+            raise Refused(f"invalid {name}", "use the type and format shown by driver schema")
+        if isinstance(field, str) and shapes.search(field):
+            raise Refused("input looks like a credential", "send only driver fields without credentials")
+    return value
+
+
+def transport(cwd, words, prompt=""):
+    # The only program this driver starts is the repository's fake transport.
+    try:
+        result = subprocess.run(
+            [sys.executable, "-I", str(HERE / "fixture.py"), *words],
+            input=prompt, capture_output=True, text=True, cwd=cwd, timeout=5,
+        )
+        if result.returncode == 0:
+            return json.loads(result.stdout, object_pairs_hook=fixture.unique)
+    except (OSError, ValueError, subprocess.TimeoutExpired):
+        pass
+    return None
+
+
+def synthetic_id(value, prefix):
+    return isinstance(value, str) and re.fullmatch(prefix + "[0-9a-f]{32}", value) is not None
+
+
+def load_runs(root):
+    runs = fixture.load(root / "runs.json", {})
+    if not isinstance(runs, dict):
+        raise ValueError("invalid run index")
+    threads = set()
+    for run, record in runs.items():
+        if not (synthetic_id(run, "run-") and isinstance(record, dict)
+                and type(record.get("ticket")) is int and record["ticket"] > 0):
+            raise ValueError("invalid run record")
+        if record.get("state") == "starting" and set(record) == {"state", "ticket"}:
+            continue
+        thread = record.get("thread")
+        if not (set(record) == {"state", "ticket", "thread"}
+                and record["state"] in ("active", "waking", "stopping", "stopped")
+                and synthetic_id(thread, "thr_syn-") and thread not in threads):
+            raise ValueError("invalid run binding")
+        threads.add(thread)
+    return runs
+
+
+def start(root, runs, value, provider):
+    ticket = value["ticket"]
+    if any(r["ticket"] == ticket and r["state"] != "stopped" for r in runs.values()):
+        raise Refused("this ticket already has an active or unresolved fixture start", INSPECT)
+
+    checkout = root / fixture.CHECKOUT
+    checkout.mkdir(exist_ok=True)
+    if checkout.is_symlink() or not checkout.is_dir():
+        raise ValueError("invalid checkout")
+    run = fixture.new_id("run-")
+    record = {"ticket": ticket, "state": "starting"}
+    runs[run] = record
+    fixture.save(root / "runs.json", runs)
+
+    title = f"#{ticket}: {fixture.REPOSITORY} builder ({run})"
+    receipt = transport(checkout, [
+        "thread", "start", "--json", "--title", title, "--provider", provider,
+        "--model", value["model"], fixture.PROJECT, "-",
+    ], f"Build {fixture.REPOSITORY}#{ticket} with the {value['skill']} skill.")
+    if not (isinstance(receipt, dict) and receipt.keys() == {"threadId", "projectId", "runId"}
+            and receipt["projectId"] == fixture.PROJECT and synthetic_id(receipt["threadId"], "thr_syn-")
+            and synthetic_id(receipt["runId"], "t3-run-syn-")
+            and all(other.get("thread") != receipt["threadId"] for other in runs.values())):
+        raise Refused("fixture start outcome is unverified", INSPECT)
+
+    record.update(state="active", thread=receipt["threadId"])
+    fixture.save(root / "runs.json", runs)
+    return {"run": run}
+
+
+def send_receipt(receipt, thread):
+    required = {"threadId", "messageId", "runId", "status", "delivery"}
+    allowed = required | {"link", "taskId"}
+    return (isinstance(receipt, dict) and required <= receipt.keys() <= allowed
+            and receipt["threadId"] == thread and synthetic_id(receipt["messageId"], "message-syn-")
+            and synthetic_id(receipt["runId"], "t3-run-syn-")
+            and all(isinstance(receipt.get(key, ""), str) for key in ("link", "taskId"))
+            and isinstance(receipt["status"], str) and receipt["status"] in ACCEPTED_RUN_STATES
+            and receipt["delivery"] in ("started", "queued"))
+
+
+def wake(root, runs, run, record):
+    if record["state"] != "active":
+        raise Refused("this fixture run cannot be woken", "use an active run or verify termination with stop")
+    thread = record["thread"]
+    if not synthetic_id(thread, "thr_syn-"):
+        raise ValueError("invalid fixture thread")
+    # Fence retries before dispatch. An unverified send can still have queued work.
+    record["state"] = "waking"
+    fixture.save(root / "runs.json", runs)
+    receipt = transport(
+        root, ["thread", "send", "--json", thread, "-"],
+        f"Read {fixture.REPOSITORY}#{record['ticket']} again and edit your existing status note.",
+    )
+    if not send_receipt(receipt, thread):
+        raise Refused("fixture wake outcome is unverified", "inspect the fixture state or stop this run")
+    record["state"] = "active"
+    fixture.save(root / "runs.json", runs)
+    return {"run": run, "woke": True}
+
+
+def stop(root, runs, run, record):
+    if record["state"] == "stopped":
+        return {"run": run, "stopped": True}
+    thread = record.get("thread")
+    if not synthetic_id(thread, "thr_syn-"):
+        raise Refused("the fixture thread for this run is unverified", INSPECT)
+
+    # Fence additional wakes even when termination is incomplete.
+    record["state"] = "stopping"
+    fixture.save(root / "runs.json", runs)
+    receipt = transport(root, ["terminate-fixture", thread])
+    expected = {"threadId": thread, "activeRunId": None, "pendingMessages": 0, "remainingWork": [], "preserved": True}
+    if (receipt != expected or type(receipt["pendingMessages"]) is not int or receipt["preserved"] is not True):
+        raise Refused("fixture termination is unverified", "inspect the fixture work and retry stop on this run")
+    record["state"] = "stopped"
+    fixture.save(root / "runs.json", runs)
+    return {"run": run, "stopped": True}
+
+
+def main(words):
+    if len(words) != 1 or words[0] not in {*VERSION["can"], "version", "schema"}:
+        raise Refused("unknown driver command", "use version, schema, start, wake or stop")
+    command = words[0]
+    if command == "version":
+        return VERSION
+    if command == "schema":
+        sys.stdout.buffer.write(SCHEMA.read_bytes())
+        return None
+
+    value = request(command)
+    if command == "start":
+        if value["repository"] != fixture.REPOSITORY:
+            raise Refused("repository has no fixture project", "use the pinned example/site repository")
+        provider = fixture.PROVIDERS.get((value["harness"], value["model"]))
+        if provider is None:
+            raise Refused("harness and model have no fixture provider instance", "use the pinned codex and gpt-6.2-sol")
+        if "effort" in value:
+            raise Refused(f"T3 0.1.11 cannot verify effort {value['effort']} for {value['harness']}", CANT_SET_EFFORT)
+    root = fixture.directory()
+    with fixture.lock(root / "driver.lock"):
+        runs = load_runs(root)
+        if command == "start":
+            return start(root, runs, value, provider)
+        run = value["run"]
+        if run not in runs:
+            raise Refused("unknown fixture run", "use a run id returned by start in this disposable state")
+        return (wake if command == "wake" else stop)(root, runs, run, runs[run])
+
+
+if __name__ == "__main__":
+    try:
+        try:
+            answer = main(sys.argv[1:])
+        except (OSError, ValueError, KeyError, TypeError, RecursionError):
+            raise Refused("fixture state is unavailable or unreadable",
+                          "use an existing private openwiz-t3-fixture directory in the system temp folder")
+    except Refused as error:
+        print(json.dumps(dict(zip(("error", "next"), error.args))))
+        sys.exit(1)
+    if answer is not None:
+        print(json.dumps(answer))
