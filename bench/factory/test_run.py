@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Offline fixture tests for bench/factory/run.py (openwiz.factory-bench.v1)."""
 
 import hashlib
 import json
@@ -140,7 +139,6 @@ def build_fixture_workspace(tmp: Path):
     tasks_file = bench_dir / "tasks.v1.json"
     tasks_file.write_text(json.dumps(task_set, indent=2), encoding="utf-8")
 
-    # Fixture merged trees for score
     trees = {}
     pass_tree = tmp / "tree-alpha"
     pass_tree.mkdir()
@@ -236,7 +234,6 @@ class FactoryBenchRunnerTests(unittest.TestCase):
             for issue in issues:
                 self.assertIn("python3 judge.py", issue["body"])
             self.assertIn("Pass the alpha fixture.", issues[0]["body"])
-            # Only repo create and issue create calls; nothing else started.
             for argv in calls:
                 self.assertIn(tuple(argv[:2]), {("repo", "create"), ("issue", "create")})
 
@@ -324,7 +321,6 @@ class FactoryBenchRunnerTests(unittest.TestCase):
             self.assertEqual(by_id["gamma-unmerged"]["result"], "unproved: not merged")
             self.assertIsNone(by_id["gamma-unmerged"]["link"])
 
-            # Verify cleanup: two deleted, one archived when delete was refused.
             self.assertEqual(
                 set(state.get("deleted_repos", [])),
                 {
@@ -340,7 +336,6 @@ class FactoryBenchRunnerTests(unittest.TestCase):
             self.assertIn("cleanup: synthetic-owner/openwiz-bench-0.2.0-beta-fail archived", proc.stdout)
             self.assertIn("cleanup: synthetic-owner/openwiz-bench-0.2.0-gamma-unmerged deleted", proc.stdout)
 
-            # Validate result shape against the contract's own schema rules.
             self.assertEqual(set(result.keys()), {"schema", "version", "commit", "hash", "tasks"})
             for entry in result["tasks"]:
                 self.assertEqual(
