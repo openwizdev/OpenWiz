@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Audit public OpenWiz repositories against GitHub's detected licence."""
 
 import argparse
 import json
@@ -131,7 +130,9 @@ def file_issues(tracker, gaps):
 
 
 def main(argv=None, *, organization=ORGANIZATION, tracker=TRACKER):
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description="Audit public OpenWiz repositories against GitHub's detected licence.",
+    )
     parser.add_argument("--file-issues", action="store_true", help="file gaps as OpenWiz issues")
     args = parser.parse_args(argv)
     try:
