@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-import os, sys
+import os, shutil, subprocess, sys, tempfile
+from pathlib import Path
 
 sys.dont_write_bytecode = True
-HERE = os.path.dirname(os.path.abspath(__file__))
+HERE = os.path.dirname(os.path.realpath(__file__))
+ROOT = os.path.abspath(os.path.join(HERE, '..', '..', '..', '..'))
 sys.path.insert(0, os.path.join(HERE, '..', '..'))
+sys.path.insert(0, os.path.join(ROOT, 'tools', 'release'))
+import build_products
 import test_harnesses as th
 
 ROWS, NAME = os.path.dirname(HERE), os.path.basename(HERE)
@@ -70,5 +74,39 @@ with th.ThrowawayMachine(ROWS, NAME, 'kiro-cli', FAKE, 'trust-all-tools') as env
         check('effort %s is refused with the fixed next, starting nothing' % level,
               env.start_refused_starting_nothing(lambda out: out['next'] == NEXT, effort=level,
                                                  FAKE_CLI_RECORD_ONLY='1'))
+
+with tempfile.TemporaryDirectory(prefix='kiro-packaged-') as scratch, \
+        th.ThrowawayMachine(ROWS, NAME, 'kiro-cli', FAKE, 'trust-all-tools') as env:
+    repo = Path(scratch) / 'repo'
+    local_dir = Path(ROOT) / 'adapters' / 'local'
+    for rel in ('driver', 'schema.json', 'release.json'):
+        dst = repo / 'adapters' / 'local' / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(local_dir / rel, dst)
+    for row in sorted((local_dir / 'harnesses').glob('*/row.json')):
+        dst = repo / row.relative_to(ROOT)
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(row, dst)
+    git = lambda *args: subprocess.run(['git', '-C', str(repo), *args], check=True, capture_output=True, text=True)
+    git('init', '-q')
+    git('add', 'adapters/local')
+    git('-c', 'user.name=test', '-c', 'user.email=test@example.invalid', 'commit', '-q', '-m', 'local')
+    sha = git('rev-parse', 'HEAD').stdout.strip()
+    selected = build_products.drivers(repo, sha)
+    packaged = Path(scratch) / 'packaged'
+    for rel in [*selected, *build_products.KIT]:
+        src = (repo / rel) if rel.startswith('adapters/') else (Path(ROOT) / rel)
+        dst = packaged / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(src, dst)
+        dst.chmod(0o700 if rel.endswith('/driver') else 0o600)
+    env.driver_path = str(packaged / 'adapters' / 'local' / 'driver')
+    code, out = env.start(FAKE_CLI_RECORD_ONLY='1')
+    if code == 0 and isinstance(out, dict) and out.get('run'):
+        env.driver('stop', out)
+    stop_all(env)
+    check('packaged runtime selects harnesses/kiro/row.json and starts kiro',
+          'adapters/local/harnesses/kiro/row.json' in selected and code == 0
+          and isinstance(out, dict) and bool(out.get('run')))
 
 sys.exit(1 if failed else 0)
