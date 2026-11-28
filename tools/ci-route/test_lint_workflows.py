@@ -76,7 +76,6 @@ class WorkflowLintTests(unittest.TestCase):
                 self.assertIn(mode, ('r', 'rb'))
                 self.assertEqual(flags & (os.O_ACCMODE | os.O_CREAT | os.O_TRUNC | os.O_APPEND), os.O_RDONLY)
 
-        # An audit hook lasts until process exit. Run this assertion in a child.
         if os.environ.get('LINT_WORKFLOW_READ_TEST'):
             sys.addaudithook(audit)
             sys.path.insert(0, str(HERE))

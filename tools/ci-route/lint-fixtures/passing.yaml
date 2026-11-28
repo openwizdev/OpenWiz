@@ -7,7 +7,7 @@ jobs:
       - run: |
           echo 'runs-on: ubuntu-24.04'
   private-linux:
-    "runs-on": "${{ vars.OPENWIZ_PRIVATE_RUNS_ON || 'jog-4vcpu' }}" # Jog
+    "runs-on": "${{ vars.OPENWIZ_PRIVATE_RUNS_ON || 'jog-4vcpu' }}"
   mac:
     runs-on: macos-15-intel
   windows:
