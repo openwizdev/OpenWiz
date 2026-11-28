@@ -1,0 +1,191 @@
+{
+  "public-scope": {
+    "schema": "openwiz.contributions.v1",
+    "kind": "contribution",
+    "pull_request": {
+      "repository": "sample-lantern/patchwork",
+      "number": 42
+    },
+    "login": "sample-stitcher",
+    "repository_in_public_scope": false,
+    "author_is_record_author": false,
+    "head_is_fleet_branch": false
+  },
+  "outside-author": {
+    "schema": "openwiz.contributions.v1",
+    "kind": "contribution",
+    "pull_request": {
+      "repository": "sample-lantern/patchwork",
+      "number": 42
+    },
+    "login": "sample-stitcher",
+    "repository_in_public_scope": true,
+    "author_is_record_author": true,
+    "head_is_fleet_branch": false
+  },
+  "non-fleet-branch": {
+    "schema": "openwiz.contributions.v1",
+    "kind": "contribution",
+    "pull_request": {
+      "repository": "sample-lantern/patchwork",
+      "number": 42
+    },
+    "login": "sample-stitcher",
+    "repository_in_public_scope": true,
+    "author_is_record_author": false,
+    "head_is_fleet_branch": true
+  },
+  "intake-record": {
+    "schema": "openwiz.contributions.v1",
+    "kind": "intake",
+    "record": "launch-fleet: contribution intake",
+    "pull_request": {
+      "repository": "sample-lantern/patchwork",
+      "number": 42
+    },
+    "head": "0123456789abcdef0123456789abcdef01234567",
+    "opened_at": "2030-01-02T12:00:00Z"
+  },
+  "hour-from-opening": {
+    "schema": "openwiz.contributions.v1",
+    "kind": "review_timing",
+    "pull_request": {
+      "repository": "sample-lantern/patchwork",
+      "number": 42
+    },
+    "head": "0123456789abcdef0123456789abcdef01234567",
+    "start": "opened",
+    "started_at": "2030-01-02T12:00:00Z",
+    "elapsed_seconds": 3601,
+    "outcome": "met"
+  },
+  "hour-from-latest-push": {
+    "schema": "openwiz.contributions.v1",
+    "kind": "review_timing",
+    "pull_request": {
+      "repository": "sample-lantern/patchwork",
+      "number": 42
+    },
+    "head": "0123456789abcdef0123456789abcdef01234567",
+    "start": "earlier_push_after_review",
+    "started_at": "2030-01-02T13:10:00Z",
+    "elapsed_seconds": 420,
+    "outcome": "met"
+  },
+  "miss-record": {
+    "schema": "openwiz.contributions.v1",
+    "kind": "review_timing",
+    "pull_request": {
+      "repository": "sample-lantern/patchwork",
+      "number": 42
+    },
+    "head": "0123456789abcdef0123456789abcdef01234567",
+    "start": "opened",
+    "started_at": "2030-01-02T12:00:00Z",
+    "elapsed_seconds": 3601,
+    "outcome": "missed"
+  },
+  "finding-fact": {
+    "schema": "openwiz.contributions.v1",
+    "kind": "first_review",
+    "pull_request": {
+      "repository": "sample-lantern/patchwork",
+      "number": 42
+    },
+    "head": "0123456789abcdef0123456789abcdef01234567",
+    "verdict": "CHANGES",
+    "findings": [
+      {
+        "next_command": "git diff -- docs/help.md"
+      }
+    ]
+  },
+  "finding-command": {
+    "schema": "openwiz.contributions.v1",
+    "kind": "first_review",
+    "pull_request": {
+      "repository": "sample-lantern/patchwork",
+      "number": 42
+    },
+    "head": "0123456789abcdef0123456789abcdef01234567",
+    "verdict": "CHANGES",
+    "findings": [
+      {
+        "exact_fact": "The help example names Loom instead of Patchwork.",
+        "next_command": "  "
+      }
+    ]
+  },
+  "approval-verdict": {
+    "schema": "openwiz.contributions.v1",
+    "kind": "approval",
+    "pull_request": {
+      "repository": "sample-lantern/patchwork",
+      "number": 42
+    },
+    "head": "0123456789abcdef0123456789abcdef01234567",
+    "verdict": "CHANGES",
+    "first_reviewer_family": "gpt",
+    "approver_family": "claude"
+  },
+  "approval-head": {
+    "schema": "openwiz.contributions.v1",
+    "kind": "approval",
+    "pull_request": {
+      "repository": "sample-lantern/patchwork",
+      "number": 42
+    },
+    "head": "0123456",
+    "verdict": "APPROVE",
+    "first_reviewer_family": "gpt",
+    "approver_family": "claude"
+  },
+  "approval-family": {
+    "schema": "openwiz.contributions.v1",
+    "kind": "approval",
+    "pull_request": {
+      "repository": "sample-lantern/patchwork",
+      "number": 42
+    },
+    "head": "0123456789abcdef0123456789abcdef01234567",
+    "verdict": "APPROVE",
+    "first_reviewer_family": "gpt",
+    "approver_family": "gpt"
+  },
+  "contributors-row": {
+    "schema": "openwiz.contributions.v1",
+    "kind": "contributor_row",
+    "login": "sample-stitcher",
+    "first": {
+      "repository": "sample-lantern/patchwork",
+      "number": 17
+    }
+  },
+  "changelog-thanks": {
+    "schema": "openwiz.contributions.v1",
+    "kind": "changelog_thanks",
+    "line": "Show the stitch count."
+  },
+  "perk-on-merge": {
+    "schema": "openwiz.contributions.v1",
+    "kind": "perk",
+    "pull_request": {
+      "repository": "sample-lantern/patchwork",
+      "number": 42
+    },
+    "login": "sample-stitcher",
+    "merged": false,
+    "credits": 3
+  },
+  "perk-credit-count": {
+    "schema": "openwiz.contributions.v1",
+    "kind": "perk",
+    "pull_request": {
+      "repository": "sample-lantern/patchwork",
+      "number": 42
+    },
+    "login": "sample-stitcher",
+    "merged": true,
+    "credits": -1
+  }
+}
