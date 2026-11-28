@@ -1,0 +1,449 @@
+{
+  "install-line-started-source": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "receipt",
+    "os": {"name": "linux", "version": "99.1"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 120,
+    "ticket_sizes": ["S", "S", "S"],
+    "steps": {
+      "install_line_started": {"source": "onboarding_state", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state", "elapsed_ms": 45000},
+      "harness_signed_in": {"source": "onboarding_state", "elapsed_ms": 90000},
+      "grill_confirmed": {"source": "onboarding_state", "elapsed_ms": 210000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000},
+      "first_pull_request_opened": {"source": "github_created_at", "elapsed_ms": 400000},
+      "first_pull_request_merged": {"source": "github_merged_at", "total_ms": 599999}
+    },
+    "status": "pass"
+  },
+  "setup-done-source": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "receipt",
+    "os": {"name": "linux", "version": "99.1"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 120,
+    "ticket_sizes": ["S", "S", "S"],
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "installer_log", "elapsed_ms": 45000},
+      "harness_signed_in": {"source": "onboarding_state", "elapsed_ms": 90000},
+      "grill_confirmed": {"source": "onboarding_state", "elapsed_ms": 210000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000},
+      "first_pull_request_opened": {"source": "github_created_at", "elapsed_ms": 400000},
+      "first_pull_request_merged": {"source": "github_merged_at", "total_ms": 599999}
+    },
+    "status": "pass"
+  },
+  "harness-signed-in-source": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "receipt",
+    "os": {"name": "linux", "version": "99.1"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 120,
+    "ticket_sizes": ["S", "S", "S"],
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state", "elapsed_ms": 45000},
+      "harness_signed_in": {"source": "installer_log", "elapsed_ms": 90000},
+      "grill_confirmed": {"source": "onboarding_state", "elapsed_ms": 210000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000},
+      "first_pull_request_opened": {"source": "github_created_at", "elapsed_ms": 400000},
+      "first_pull_request_merged": {"source": "github_merged_at", "total_ms": 599999}
+    },
+    "status": "pass"
+  },
+  "grill-confirmed-source": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "receipt",
+    "os": {"name": "linux", "version": "99.1"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 120,
+    "ticket_sizes": ["S", "S", "S"],
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state", "elapsed_ms": 45000},
+      "harness_signed_in": {"source": "onboarding_state", "elapsed_ms": 90000},
+      "grill_confirmed": {"source": "installer_log", "elapsed_ms": 210000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000},
+      "first_pull_request_opened": {"source": "github_created_at", "elapsed_ms": 400000},
+      "first_pull_request_merged": {"source": "github_merged_at", "total_ms": 599999}
+    },
+    "status": "pass"
+  },
+  "plan-approved-source": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "receipt",
+    "os": {"name": "linux", "version": "99.1"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 120,
+    "ticket_sizes": ["S", "S", "S"],
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state", "elapsed_ms": 45000},
+      "harness_signed_in": {"source": "onboarding_state", "elapsed_ms": 90000},
+      "grill_confirmed": {"source": "onboarding_state", "elapsed_ms": 210000},
+      "plan_approved": {"source": "installer_log", "elapsed_ms": 240000},
+      "first_pull_request_opened": {"source": "github_created_at", "elapsed_ms": 400000},
+      "first_pull_request_merged": {"source": "github_merged_at", "total_ms": 599999}
+    },
+    "status": "pass"
+  },
+  "first-pull-request-opened-source": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "receipt",
+    "os": {"name": "linux", "version": "99.1"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 120,
+    "ticket_sizes": ["S", "S", "S"],
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state", "elapsed_ms": 45000},
+      "harness_signed_in": {"source": "onboarding_state", "elapsed_ms": 90000},
+      "grill_confirmed": {"source": "onboarding_state", "elapsed_ms": 210000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000},
+      "first_pull_request_opened": {"source": "installer_log", "elapsed_ms": 400000},
+      "first_pull_request_merged": {"source": "github_merged_at", "total_ms": 599999}
+    },
+    "status": "pass"
+  },
+  "first-pull-request-merged-source": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "receipt",
+    "os": {"name": "linux", "version": "99.1"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 120,
+    "ticket_sizes": ["S", "S", "S"],
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state", "elapsed_ms": 45000},
+      "harness_signed_in": {"source": "onboarding_state", "elapsed_ms": 90000},
+      "grill_confirmed": {"source": "onboarding_state", "elapsed_ms": 210000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000},
+      "first_pull_request_opened": {"source": "github_created_at", "elapsed_ms": 400000},
+      "first_pull_request_merged": {"source": "installer_log", "total_ms": 599999}
+    },
+    "status": "pass"
+  },
+  "schema-version": {
+    "schema": "openwiz.first-ten.v2",
+    "kind": "receipt",
+    "os": {"name": "linux", "version": "99.1"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 120,
+    "ticket_sizes": ["S", "S", "S"],
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state", "elapsed_ms": 45000},
+      "harness_signed_in": {"source": "onboarding_state", "elapsed_ms": 90000},
+      "grill_confirmed": {"source": "onboarding_state", "elapsed_ms": 210000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000},
+      "first_pull_request_opened": {"source": "github_created_at", "elapsed_ms": 400000},
+      "first_pull_request_merged": {"source": "github_merged_at", "total_ms": 599999}
+    },
+    "status": "pass"
+  },
+  "os-name": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "receipt",
+    "os": {"name": "windows", "version": "99.2"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 120,
+    "ticket_sizes": ["S", "S", "S"],
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state", "elapsed_ms": 45000},
+      "harness_signed_in": {"source": "onboarding_state", "elapsed_ms": 90000},
+      "grill_confirmed": {"source": "onboarding_state", "elapsed_ms": 210000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000},
+      "first_pull_request_opened": {"source": "github_created_at", "elapsed_ms": 400000},
+      "first_pull_request_merged": {"source": "github_merged_at", "total_ms": 599999}
+    },
+    "status": "pass"
+  },
+  "os-version": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "receipt",
+    "os": {"name": "linux"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 120,
+    "ticket_sizes": ["S", "S", "S"],
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state", "elapsed_ms": 45000},
+      "harness_signed_in": {"source": "onboarding_state", "elapsed_ms": 90000},
+      "grill_confirmed": {"source": "onboarding_state", "elapsed_ms": 210000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000},
+      "first_pull_request_opened": {"source": "github_created_at", "elapsed_ms": 400000},
+      "first_pull_request_merged": {"source": "github_merged_at", "total_ms": 599999}
+    },
+    "status": "pass"
+  },
+  "candidate-version": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "receipt",
+    "os": {"name": "linux", "version": "99.1"},
+    "quick_grill_budget_seconds": 120,
+    "ticket_sizes": ["S", "S", "S"],
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state", "elapsed_ms": 45000},
+      "harness_signed_in": {"source": "onboarding_state", "elapsed_ms": 90000},
+      "grill_confirmed": {"source": "onboarding_state", "elapsed_ms": 210000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000},
+      "first_pull_request_opened": {"source": "github_created_at", "elapsed_ms": 400000},
+      "first_pull_request_merged": {"source": "github_merged_at", "total_ms": 599999}
+    },
+    "status": "pass"
+  },
+  "start-time": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "timing",
+    "quick_grill_budget_seconds": 120,
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": -1}
+    }
+  },
+  "step-time": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "receipt",
+    "os": {"name": "linux", "version": "99.1"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 120,
+    "ticket_sizes": ["S", "S", "S"],
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state"},
+      "harness_signed_in": {"source": "onboarding_state", "elapsed_ms": 90000},
+      "grill_confirmed": {"source": "onboarding_state", "elapsed_ms": 210000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000},
+      "first_pull_request_opened": {"source": "github_created_at", "elapsed_ms": 400000},
+      "first_pull_request_merged": {"source": "github_merged_at", "total_ms": 599999}
+    },
+    "status": "pass"
+  },
+  "total-time": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "receipt",
+    "os": {"name": "linux", "version": "99.1"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 120,
+    "ticket_sizes": ["S", "S", "S"],
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state", "elapsed_ms": 45000},
+      "harness_signed_in": {"source": "onboarding_state", "elapsed_ms": 90000},
+      "grill_confirmed": {"source": "onboarding_state", "elapsed_ms": 210000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000},
+      "first_pull_request_opened": {"source": "github_created_at", "elapsed_ms": 400000},
+      "first_pull_request_merged": {"source": "github_merged_at"}
+    },
+    "status": "pass"
+  },
+  "pass-at-600s": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "receipt",
+    "os": {"name": "linux", "version": "99.1"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 120,
+    "ticket_sizes": ["S", "S", "S"],
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state", "elapsed_ms": 45000},
+      "harness_signed_in": {"source": "onboarding_state", "elapsed_ms": 90000},
+      "grill_confirmed": {"source": "onboarding_state", "elapsed_ms": 210000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000},
+      "first_pull_request_opened": {"source": "github_created_at", "elapsed_ms": 400000},
+      "first_pull_request_merged": {"source": "github_merged_at", "total_ms": 600000}
+    },
+    "status": "pass"
+  },
+  "pass-over-600s": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "receipt",
+    "os": {"name": "linux", "version": "99.1"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 120,
+    "ticket_sizes": ["S", "S", "S"],
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state", "elapsed_ms": 45000},
+      "harness_signed_in": {"source": "onboarding_state", "elapsed_ms": 90000},
+      "grill_confirmed": {"source": "onboarding_state", "elapsed_ms": 210000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000},
+      "first_pull_request_opened": {"source": "github_created_at", "elapsed_ms": 400000},
+      "first_pull_request_merged": {"source": "github_merged_at", "total_ms": 600001}
+    },
+    "status": "pass"
+  },
+  "fail-under-600s": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "receipt",
+    "os": {"name": "linux", "version": "99.1"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 120,
+    "ticket_sizes": ["S", "S", "S"],
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state", "elapsed_ms": 45000},
+      "harness_signed_in": {"source": "onboarding_state", "elapsed_ms": 90000},
+      "grill_confirmed": {"source": "onboarding_state", "elapsed_ms": 210000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000},
+      "first_pull_request_opened": {"source": "github_created_at", "elapsed_ms": 400000},
+      "first_pull_request_merged": {"source": "github_merged_at", "total_ms": 599999}
+    },
+    "status": "fail"
+  },
+  "missing-middle-step": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "receipt",
+    "os": {"name": "linux", "version": "99.1"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 120,
+    "ticket_sizes": ["S", "S", "S"],
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state", "elapsed_ms": 45000},
+      "grill_confirmed": {"source": "onboarding_state", "elapsed_ms": 210000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000},
+      "first_pull_request_opened": {"source": "github_created_at", "elapsed_ms": 400000},
+      "first_pull_request_merged": {"source": "github_merged_at", "total_ms": 599999}
+    },
+    "status": "pass"
+  },
+  "missing-merge-step": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "receipt",
+    "os": {"name": "linux", "version": "99.1"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 120,
+    "ticket_sizes": ["S", "S", "S"],
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state", "elapsed_ms": 45000},
+      "harness_signed_in": {"source": "onboarding_state", "elapsed_ms": 90000},
+      "grill_confirmed": {"source": "onboarding_state", "elapsed_ms": 210000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000},
+      "first_pull_request_opened": {"source": "github_created_at", "elapsed_ms": 400000}
+    },
+    "status": "pass"
+  },
+  "quick-grill-budget": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "receipt",
+    "os": {"name": "linux", "version": "99.1"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 121,
+    "ticket_sizes": ["S", "S", "S"],
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state", "elapsed_ms": 45000},
+      "harness_signed_in": {"source": "onboarding_state", "elapsed_ms": 90000},
+      "grill_confirmed": {"source": "onboarding_state", "elapsed_ms": 210000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000},
+      "first_pull_request_opened": {"source": "github_created_at", "elapsed_ms": 400000},
+      "first_pull_request_merged": {"source": "github_merged_at", "total_ms": 599999}
+    },
+    "status": "pass"
+  },
+  "tiny-fleet-count": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "receipt",
+    "os": {"name": "linux", "version": "99.1"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 120,
+    "ticket_sizes": ["S", "S", "S", "S"],
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state", "elapsed_ms": 45000},
+      "harness_signed_in": {"source": "onboarding_state", "elapsed_ms": 90000},
+      "grill_confirmed": {"source": "onboarding_state", "elapsed_ms": 210000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000},
+      "first_pull_request_opened": {"source": "github_created_at", "elapsed_ms": 400000},
+      "first_pull_request_merged": {"source": "github_merged_at", "total_ms": 599999}
+    },
+    "status": "pass"
+  },
+  "tiny-fleet-size": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "receipt",
+    "os": {"name": "linux", "version": "99.1"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 120,
+    "ticket_sizes": ["S", "M", "S"],
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state", "elapsed_ms": 45000},
+      "harness_signed_in": {"source": "onboarding_state", "elapsed_ms": 90000},
+      "grill_confirmed": {"source": "onboarding_state", "elapsed_ms": 210000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000},
+      "first_pull_request_opened": {"source": "github_created_at", "elapsed_ms": 400000},
+      "first_pull_request_merged": {"source": "github_merged_at", "total_ms": 599999}
+    },
+    "status": "pass"
+  },
+  "approved-fleet-required": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "timing",
+    "os": {"name": "linux", "version": "99.1"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 120,
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state", "elapsed_ms": 45000},
+      "harness_signed_in": {"source": "onboarding_state", "elapsed_ms": 90000},
+      "grill_confirmed": {"source": "onboarding_state", "elapsed_ms": 210000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000}
+    }
+  },
+  "timing-prefix": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "timing",
+    "os": {"name": "linux", "version": "99.1"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 120,
+    "ticket_sizes": ["S", "S", "S"],
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state", "elapsed_ms": 45000},
+      "harness_signed_in": {"source": "onboarding_state", "elapsed_ms": 90000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000}
+    }
+  },
+  "timing-is-not-a-receipt": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "timing",
+    "quick_grill_budget_seconds": 120,
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000}
+    },
+    "status": "pass"
+  },
+  "timing-keeps-private-paths-out-of-json": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "timing",
+    "quick_grill_budget_seconds": 120,
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000}
+    },
+    "path": "synthetic/checkout/timing.json"
+  },
+  "passing-step-outside-window": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "receipt",
+    "os": {"name": "linux", "version": "99.1"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 120,
+    "ticket_sizes": ["S", "S", "S"],
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state", "elapsed_ms": 45000},
+      "harness_signed_in": {"source": "onboarding_state", "elapsed_ms": 90000},
+      "grill_confirmed": {"source": "onboarding_state", "elapsed_ms": 210000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000},
+      "first_pull_request_opened": {"source": "github_created_at", "elapsed_ms": 600000},
+      "first_pull_request_merged": {"source": "github_merged_at", "total_ms": 599999}
+    },
+    "status": "pass"
+  }
+}

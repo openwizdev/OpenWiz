@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OpenWiz first ten v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "kind", "quick_grill_budget_seconds", "steps"],
+  "properties": {
+    "schema": {"const": "openwiz.first-ten.v1"},
+    "kind": {"enum": ["timing", "receipt"]},
+    "os": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": {"enum": ["macos", "linux"]},
+        "version": {"$ref": "#/$defs/version"}
+      }
+    },
+    "candidate_version": {"$ref": "#/$defs/version"},
+    "quick_grill_budget_seconds": {"const": 120},
+    "ticket_sizes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": {"const": "S"}
+    },
+    "steps": {"$ref": "#/$defs/steps"},
+    "status": {"enum": ["pass", "fail"]}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"steps": {"required": ["plan_approved"]}}},
+      "then": {"required": ["ticket_sizes"]}
+    },
+    {
+      "if": {"properties": {"kind": {"const": "receipt"}}},
+      "then": {
+        "required": ["os", "candidate_version", "status"],
+        "properties": {"steps": {"required": ["first_pull_request_merged"]}}
+      },
+      "else": {"not": {"required": ["status"]}}
+    },
+    {
+      "if": {"required": ["status"], "properties": {"status": {"const": "pass"}}},
+      "then": {
+        "properties": {
+          "steps": {
+            "additionalProperties": {
+              "properties": {
+                "elapsed_ms": {"exclusiveMaximum": 600000},
+                "total_ms": {"exclusiveMaximum": 600000}
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"required": ["status"], "properties": {"status": {"const": "fail"}}},
+      "then": {
+        "properties": {
+          "steps": {
+            "properties": {
+              "first_pull_request_merged": {"properties": {"total_ms": {"minimum": 600000}}}
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "version": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9]",
+      "not": {"pattern": "[^A-Za-z0-9._+-]"},
+      "maxLength": 64
+    },
+    "ms": {"type": "integer", "minimum": 0, "maximum": 9007199254740991},
+    "steps": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["install_line_started"],
+      "dependentRequired": {
+        "setup_done": ["install_line_started"],
+        "harness_signed_in": ["setup_done"],
+        "grill_confirmed": ["harness_signed_in"],
+        "plan_approved": ["grill_confirmed"],
+        "first_pull_request_opened": ["plan_approved"],
+        "first_pull_request_merged": ["first_pull_request_opened"]
+      },
+      "properties": {
+        "install_line_started": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source", "at_unix_ms"],
+          "properties": {
+            "source": {"const": "installer_log"},
+            "at_unix_ms": {"$ref": "#/$defs/ms"}
+          }
+        },
+        "setup_done": {"$ref": "#/$defs/onboarding_event"},
+        "harness_signed_in": {"$ref": "#/$defs/onboarding_event"},
+        "grill_confirmed": {"$ref": "#/$defs/onboarding_event"},
+        "plan_approved": {"$ref": "#/$defs/onboarding_event"},
+        "first_pull_request_opened": {
+          "$ref": "#/$defs/elapsed_event",
+          "properties": {"source": {"const": "github_created_at"}}
+        },
+        "first_pull_request_merged": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source", "total_ms"],
+          "properties": {
+            "source": {"const": "github_merged_at"},
+            "total_ms": {"$ref": "#/$defs/ms"}
+          }
+        }
+      }
+    },
+    "elapsed_event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "elapsed_ms"],
+      "properties": {
+        "source": {"type": "string"},
+        "elapsed_ms": {"$ref": "#/$defs/ms"}
+      }
+    },
+    "onboarding_event": {
+      "$ref": "#/$defs/elapsed_event",
+      "properties": {"source": {"const": "onboarding_state"}}
+    }
+  }
+}

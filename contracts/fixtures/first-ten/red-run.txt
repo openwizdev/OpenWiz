@@ -1,0 +1,13 @@
+F
+======================================================================
+FAIL: test_schema_accepts_good_records_and_rejects_each_broken_rule (__main__.FirstTenFixtures.test_schema_accepts_good_records_and_rejects_each_broken_rule)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "./contracts/fixtures/first-ten/test_fixtures.py", line 27, in test_schema_accepts_good_records_and_rejects_each_broken_rule
+    self.assertTrue(SCHEMA.is_file(), "first-ten records have no schema to validate them")
+AssertionError: False is not true : first-ten records have no schema to validate them
+
+----------------------------------------------------------------------
+Ran 1 test in 0.001s
+
+FAILED (failures=1)
