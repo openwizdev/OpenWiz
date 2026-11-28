@@ -8,15 +8,15 @@ The `kiro-cli` harness row, under the [harness-row contract](../../harness-row.m
 
 ## Commands
 
-The CLI chooses the session id, a UUID. When a session ends it prints that id with the command `kiro-cli chat --resume-id <id>` ([session management](https://kiro.dev/docs/cli/chat/session-management/)). The row reads the id only from a line that ends with that command and a complete lower-case UUID, with the command at the start of the line or after a space. So a sample the builder quotes before the notice, such as the [CLI commands](https://kiro.dev/docs/reference/cli-commands/) example `kiro-cli chat --resume-id abc123-def456`, the `<SESSION_ID>` placeholder or a backticked command, is passed over. A quoted line that is exactly the command and a full UUID would still be read; the live check records the CLI's own notice.
+The CLI chooses the session id, a UUID. With `--output-format stream-json`, headless V3 emits self-contained JSON Lines events on stdout, carrying Kiro's own `data.sessionId` ([headless](https://kiro.dev/docs/cli/headless/)). Reading `session` from the JSON path `["data", "sessionId"]` keeps wake on the started session's id even when the assistant quotes a `kiro-cli chat --resume-id <uuid>` command in its response.
 
 | Turn | Command |
 | --- | --- |
-| Start | `kiro-cli chat --v3 --no-interactive --model <model> --trust-all-tools <prompt>` |
-| Wake | `kiro-cli chat --v3 --no-interactive --resume-id <session> --model <model> --trust-all-tools <prompt>` |
+| Start | `kiro-cli chat --v3 --no-interactive --output-format stream-json --model <model> --trust-all-tools <prompt>` |
+| Wake | `kiro-cli chat --v3 --no-interactive --output-format stream-json --resume-id <session> --model <model> --trust-all-tools <prompt>` |
 | Stop | none of its own: the driver's stop ends the whole process tree |
 
-`--no-interactive` is the headless flag. `--v3` names the harness, so the run does not follow the headless default. `--model` pins the model for the run. `--resume-id` resumes that session. `--resume` resumes the newest matching session, so wake does not use it. The headless reference names no process that leaves the turn, so `daemon` is `none`.
+`--no-interactive` is the headless flag. `--v3` names the harness, so the run does not follow the headless default and satisfies `--output-format stream-json` (V2/V3 only). `--model` pins the model for the run. `--resume-id` resumes that session. `--resume` resumes the newest matching session, so wake does not use it. The headless reference names no process that leaves the turn, so `daemon` is `none`.
 
 ## Modes
 
@@ -30,10 +30,10 @@ A headless run has no user to approve a tool call. The reference's other flag, `
 
 **Does a headless run resume the session id the CLI printed? Yes.**
 
-1. When a session ends, Kiro CLI prints the session id with `kiro-cli chat --resume-id <SESSION_ID>` ([session management](https://kiro.dev/docs/cli/chat/session-management/)). Session ids are UUIDs.
+1. With `--output-format stream-json`, Kiro CLI emits JSON Lines run events on stdout carrying `data.sessionId` ([headless](https://kiro.dev/docs/cli/headless/)). Session ids are UUIDs ([session management](https://kiro.dev/docs/cli/chat/session-management/)).
 2. The headless flags table lists `--resume-id` as resume of a local or cloud session by that id ([headless](https://kiro.dev/docs/cli/headless/)).
-3. The row's `session` pattern is that printed line with a complete UUID at its end, and wake passes the captured id as its own `--resume-id` argument.
-4. The fake prints the fake library's session id as the UUID `00000000-0000-4000-8000-<its 12 hex digits>`, and maps that UUID back on a wake. It refuses a `--resume-id` that is not a full UUID.
+3. The row's `session` reads `["data", "sessionId"]` from the stream-json output, and wake passes the captured id as its own `--resume-id` argument.
+4. The fake prints a `runStarted` JSON line carrying `data.sessionId` as the UUID `00000000-0000-4000-8000-<its 12 hex digits>`, and maps that UUID back on a wake. It refuses a `--resume-id` that is not a full UUID.
 
 ## Effort
 
@@ -41,6 +41,6 @@ The headless reference lists `--effort` and says the supported levels depend on 
 
 ## Signed out
 
-The `kiro-cli whoami` troubleshooting line for a missing login is a Not logged in error, and it says to login with `kiro-cli login` ([CLI commands](https://kiro.dev/docs/reference/cli-commands/)). Headless authentication is a stored login, or `KIRO_API_KEY` in the environment ([headless](https://kiro.dev/docs/cli/headless/), [authentication](https://kiro.dev/docs/getting-started/authentication/)). `start` then fails with `the harness is not signed in`. Its `next` names `kiro-cli login` and `KIRO_API_KEY`. The driver never reads the variable. The fake prints `Not logged in` when told it is signed out, and exits 2 when a login value is an argument.
+The `kiro-cli whoami` troubleshooting line for a missing login is a Not logged in error, and it says to login with `kiro-cli login` ([CLI commands](https://kiro.dev/docs/reference/cli-commands/)). Headless authentication is a stored login, or `KIRO_API_KEY` in the environment ([headless](https://kiro.dev/docs/cli/headless/), [authentication](https://kiro.dev/docs/getting-started/authentication/)). The row's `signed_out` pattern anchors to the standalone CLI diagnostic so ordinary response text mentioning `Not logged in` is not mistaken for a signed-out run. `start` then fails with `the harness is not signed in`. Its `next` names `kiro-cli login` and `KIRO_API_KEY`. The driver never reads the variable. The fake prints `Not logged in. Login with kiro-cli login.` when told it is signed out, and exits 2 when a login value is an argument.
 
 No test starts the real `kiro-cli` program. The runner puts a refusing stub for each known agent CLI on `PATH`, with only this folder's `fake` ahead of them.

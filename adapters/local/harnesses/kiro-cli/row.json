@@ -5,6 +5,8 @@
     "chat",
     "--v3",
     "--no-interactive",
+    "--output-format",
+    "stream-json",
     "--model",
     "{model}",
     "{mode}",
@@ -14,6 +16,8 @@
     "chat",
     "--v3",
     "--no-interactive",
+    "--output-format",
+    "stream-json",
     "--resume-id",
     "{session}",
     "--model",
@@ -22,7 +26,10 @@
     "{prompt}"
   ],
   "session": {
-    "pattern": "(?:^|\\s)kiro-cli chat --resume-id ([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\\s*$"
+    "json": [
+      "data",
+      "sessionId"
+    ]
   },
   "modes": {
     "trust-all-tools": [
@@ -34,7 +41,7 @@
   "login": "Kiro CLI's own login: kiro-cli login stores it, or the user sets KIRO_API_KEY; the driver never reads or passes it",
   "daemon": "none",
   "signed_out": [
-    "Not logged in"
+    "^(?:error:\\s*)?Not logged in(?:\\. Login with kiro-cli login\\.?)?$"
   ],
   "login_command": "kiro-cli login",
   "login_env": "KIRO_API_KEY"
