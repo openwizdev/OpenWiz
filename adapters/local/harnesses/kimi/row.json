@@ -28,11 +28,12 @@
   "env": {
     "KIMI_CODE_NO_AUTO_UPDATE": "1"
   },
-  "effort": "none: kimi has no effort flag, and KIMI_MODEL_THINKING_EFFORT is dropped for any model not on the kimi provider (Kimi Code CLI 2.7.2, packages/core/src/llm/thinking.ts resolveForcedThinkingEffort)",
+  "effort": "none: no headless check exposes the effective thinking level; resolveForcedThinkingEffort can drop KIMI_MODEL_THINKING_EFFORT (Kimi Code CLI 2.8.1 and 2.9.0 canary, packages/core/src/llm/thinking.ts)",
   "login": "kimi's own login, saved by `kimi login` under ~/.kimi-code/credentials/ (or $KIMI_CODE_HOME/credentials/)",
-  "daemon": "background Bash tasks the agent starts: kimi spawns each in its own session and process group with piped output, and stop ends them with the process tree on Linux; the row claims Linux only until a live macOS stop (#2519) ends one. KIMI_CODE_NO_AUTO_UPDATE=1 skips the update preflight",
+  "daemon": "background Bash tasks the agent starts: kimi spawns each in its own session and process group with piped output, and stop ends them with the process tree on Linux; the row claims Linux only. KIMI_CODE_NO_AUTO_UPDATE=1 skips the update preflight",
   "signed_out": [
     "provider managed:kimi-code has no credential configured"
   ],
-  "login_command": "kimi login"
+  "login_command": "kimi login",
+  "limit": "^error: failed to run prompt: provider\\.overloaded:"
 }
