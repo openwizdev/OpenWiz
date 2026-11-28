@@ -1593,6 +1593,317 @@ class Kit(unittest.TestCase):
             self.assertEqual(resp.status, 200)
             self.assertEqual(json.loads(resp.read().decode()), {'id': '{{request.ticket}}', 'ticket': 7})
 
+    @unittest.skipUnless(os.path.isdir('/proc/self'), 'reads /proc')
+    def test_non_utf8_process_name_is_detected_as_leftover_and_checked_for_credentials(self):
+        kit = module(os.path.join(HERE, 'kit.py'))
+        mark = 'OPENWIZ_KIT_RUN=' + secrets.token_hex(8)
+        link = os.path.join(os.fsencode(self.folder), b'py\xffrun')
+        try:
+            os.symlink(os.fsencode(sys.executable), link)
+        except OSError:
+            self.skipTest('filesystem rejects non-UTF-8 filenames')
+        ready = os.path.join(self.folder, 'ready')
+        script = 'import os, time; open(%r, "w").close(); time.sleep(60)' % ready
+        env = dict(os.environ, OPENWIZ_KIT_RUN=mark.split('=', 1)[1],
+                   PLANTED_LEAK='sk-abcdef0123456789012345')
+        child = subprocess.Popen([link, '-I', '-c', script], env=env)
+        self.addCleanup(child.wait)
+        self.addCleanup(child.kill)
+        deadline = time.monotonic() + 5
+        while not os.path.exists(ready):
+            self.assertLess(time.monotonic(), deadline, 'non-UTF-8 child did not start')
+            time.sleep(0.01)
+        since = kit.started_at(child.pid)
+        self.assertIsInstance(since, int)
+        self.assertTrue(kit.Kit.running(str(child.pid), since))
+        env_list, _ = kit.Kit.details(str(child.pid), 1, since)
+        self.assertIn(mark, env_list)
+        linux = self._scan_kit(kit, mark)
+        linux.setting = None
+        linux.effort_seen = False
+        linux.runtime = set()
+        found = linux.table()
+        self.assertIn(str(child.pid), found, 'non-UTF-8 comm process was dropped from table()')
+        linux.scan()
+        self.assertTrue(any('holds a credential in PLANTED_LEAK' in leak for leak in linux.leaks), linux.leaks)
+
+    def test_call_and_json_helpers_handle_non_utf8_and_deep_nesting(self):
+        import http.client
+        import urllib.error
+        import urllib.request
+        kit = module(os.path.join(HERE, 'kit.py'))
+        deep = '[' * 2000 + ']' * 2000
+
+        def make_driver(name, body):
+            path = os.path.join(self.folder, name)
+            with open(path, 'w') as f:
+                f.write('#!%s\n%s\n' % (sys.executable, body))
+            os.chmod(path, 0o700)
+            return path
+
+        raw_driver = make_driver('raw_driver',
+                                 'import sys; sys.stdout.buffer.write(b"\\xff\\xfe"); '
+                                 'sys.stderr.buffer.write(b"\\xffkit-canary-0123456789abcdef\\xfe")')
+        deep_driver = make_driver('deep_driver', 'import sys; sys.stdout.write("[" * 2000 + "]" * 2000)')
+
+        for driver_path, canary, expect_leak in (
+            (raw_driver, ('devin', 'kit-canary-0123456789abcdef'), True),
+            (deep_driver, None, False),
+        ):
+            k = kit.Kit.__new__(kit.Kit)
+            k.args = argparse.Namespace(driver=driver_path)
+            k.env = dict(os.environ)
+            k.schema = kit.load_schema()
+            k.lock, k.leaks, k._direct = threading.RLock(), [], set()
+            kind, msg = k.call('version', canary=canary)
+            self.assertEqual(kind, 'bad', msg)
+            if expect_leak:
+                self.assertTrue(any('printed the devin key' in leak for leak in k.leaks), k.leaks)
+
+        self.assertFalse(kit.holds_field(deep.encode('ascii'), 'effort', 'medium'))
+
+        answers = [{'method': 'POST', 'path': '/v1/runs', 'status': 200, 'body': {'id': '{{request.id}}'}}]
+        host = kit.FakeHost(answers=answers)
+        self.addCleanup(host.close)
+        req = urllib.request.Request(host.origin + '/v1/runs', data=deep.encode('ascii'), method='POST')
+        with self.assertRaises(urllib.error.HTTPError) as ctx:
+            urllib.request.urlopen(req, timeout=10)
+        self.assertEqual(ctx.exception.code, 400)
+
+        port = host.server.server_address[1]
+        conn = http.client.HTTPConnection('127.0.0.1', port, timeout=10)
+        self.addCleanup(conn.close)
+        conn.putrequest('POST', '/v1/runs')
+        conn.putheader('Content-Length', '-1')
+        conn.endheaders()
+        resp = conn.getresponse()
+        self.assertEqual(resp.status, 400)
+        resp.read()
+
+        deep_tracker = os.path.join(self.folder, 'deep-tracker.json')
+        with open(deep_tracker, 'w') as f:
+            f.write(deep)
+        with self.assertRaises(kit.Unusable):
+            kit.Ticket('example/repo', 7, deep_tracker)
+
+        deep_dir = os.path.join(self.folder, 'deep-host')
+        os.makedirs(os.path.join(deep_dir, 'fixtures'))
+        with open(os.path.join(deep_dir, 'fixtures', 'kit-host.json'), 'w') as f:
+            f.write(deep)
+        k = kit.Kit.__new__(kit.Kit)
+        k.args = argparse.Namespace(driver=os.path.join(deep_dir, 'driver'))
+        with self.assertRaises(kit.Unusable):
+            k.lifecycle()
+
+        fake_bin = os.path.join(self.folder, 'fake-ps')
+        os.makedirs(fake_bin)
+        ps_path = os.path.join(fake_bin, 'ps')
+        with open(ps_path, 'w') as f:
+            f.write('#!%s\nimport sys\nsys.stdout.buffer.write(b"123 1 1 0 S cmd\\xffname\\n'
+                    '124 bad 1 0 S ignored\\n")\n' % sys.executable)
+        os.chmod(ps_path, 0o700)
+        old_path = os.environ.get('PATH', '')
+        os.environ['PATH'] = fake_bin + os.pathsep + old_path
+        try:
+            rows = kit.Kit.ps('-o', 'ppid=', '-o', 'pgid=', '-o', 'sess=', '-o', 'stat=', '-o', 'command=')
+            self.assertIn(123, rows)
+            mac = self._scan_kit(kit, 'OPENWIZ_KIT_RUN=' + secrets.token_hex(8))
+            self.assertEqual(list(mac.listed()), [])
+        finally:
+            os.environ['PATH'] = old_path
+
+    def test_optimized_process_scan_matches_previous_oracle(self):
+        kit = module(os.path.join(HERE, 'kit.py'))
+
+        def previous_linux_process_rows(k):
+            found = {}
+            reap = getattr(k, 'subreaper', False)
+            direct = getattr(k, '_direct', ())
+            for name in filter(str.isdigit, os.listdir('/proc')):
+                pid = int(name)
+                try:
+                    proc = os.open('/proc/%d' % pid, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+                except OSError:
+                    continue
+                try:
+                    def at(path, flags, proc=proc):
+                        return os.open(os.path.basename(path), flags, dir_fd=proc)
+                    with open('/proc/%d/stat' % pid, opener=at) as f:
+                        fields = f.read().rpartition(')')[2].split()
+                    state, ppid, group, session = fields[0], int(fields[1]), int(fields[2]), int(fields[3])
+                    since = fields[19]
+                    if state in 'ZX':
+                        if reap and ppid == os.getpid() and pid not in direct:
+                            try:
+                                os.waitpid(pid, os.WNOHANG)
+                            except ChildProcessError:
+                                pass
+                        continue
+                    with open('/proc/%d/status' % pid, opener=at) as f:
+                        uid = int(next(row for row in f if row.startswith('Uid:')).split()[1])
+                except (OSError, ValueError, IndexError, StopIteration):
+                    continue
+                finally:
+                    os.close(proc)
+                found[pid] = (ppid, uid, group, session, since, state)
+            return found
+
+        def previous_linux_table(k):
+            rows = previous_linux_process_rows(k)
+            meta = {pid: (ppid, group, session, int(since))
+                    for pid, (ppid, uid, group, session, since, state) in rows.items()}
+            k.prune_tracked(meta)
+            found, seen = {}, set()
+            while True:
+                scope = k.run_scope(meta) - seen
+                if not scope:
+                    return found
+                for pid in scope:
+                    seen.add(pid)
+                    ppid, uid, group, session, since, state = rows[pid]
+                    candidate = uid == os.getuid() and int(since) > k.since and (str(pid), since) not in k.hidden
+                    try:
+                        env, cmd = k.details(str(pid), kit.HIDDEN_TRIES if candidate else 1, since)
+                    except PermissionError:
+                        if state in 'ZX' or not k.running(str(pid), since):
+                            continue
+                        k.hidden.add((str(pid), since))
+                        env = cmd = None
+                    except OSError:
+                        continue
+                    if env is not None and k.mark in env:
+                        k.note_marked(pid, group, session, int(since))
+                    found[str(pid)] = (ppid, uid, env, cmd, group, int(since))
+
+        def previous_scan(k, canary, linux_mode):
+            if linux_mode:
+                def started_gen():
+                    t = previous_linux_table(k)
+                    for _, (ppid, uid, env, cmd, group, since) in t.items():
+                        if env is not None and k.mark in env:
+                            yield cmd, env
+                    for _, (ppid, uid, env, cmd, group, since) in t.items():
+                        if env is None and uid == os.getuid() and since > k.since and (
+                                ppid == os.getpid() or group == os.getpgrp() or k.under_run(t, ppid)):
+                            k.leak('a process of the driver hides its details, so the kit cannot check it')
+            else:
+                def started_gen():
+                    yield from k.listed()
+
+            if canary:
+                name, value = canary
+                if any(value in line for line in k.commandlines()):
+                    k.leak('a process holds the %s key on its command line' % name)
+                for cmd, env in started_gen():
+                    for entry in env:
+                        if value in entry:
+                            k.leak('a process the driver started holds the %s key in %s'
+                                   % (name, kit.shown(entry.partition('=')[0], value)))
+                k.collect_runtime()
+            for cmd, env in started_gen():
+                if any(kit.holds_credential(a) for a in cmd):
+                    k.leak('a process the driver started holds a credential on its command line')
+                if k.setting and k.setting[0] == 'argv':
+                    _, flag, want = k.setting
+                    argv = cmd if linux_mode else ' '.join(cmd).split()
+                    if any(x == want and (flag is None or i and argv[i - 1] == flag) for i, x in enumerate(argv)):
+                        k.effort_seen = True
+                for entry in env:
+                    name, _, value = entry.partition('=')
+                    if k.setting == ('argv', None, entry) and k.env.get(name) != value:
+                        k.effort_seen = True
+                    if kit.holds_credential(value) and os.environ.get(name) != value:
+                        k.leak('a process the driver started holds a credential in %s, which the kit never gave it'
+                               % kit.shown(name))
+
+        def make_kit(mark, setting):
+            k = self._scan_kit(kit, mark)
+            k.setting = setting
+            k.effort_seen = False
+            k.runtime = set()
+            k.env = dict(os.environ, OPENWIZ_KIT_RUN=mark.split('=', 1)[1])
+            return k
+
+        mark = 'OPENWIZ_KIT_RUN=' + secrets.token_hex(8)
+        canary_val = 'kit-canary-' + secrets.token_hex(16)
+        canary = ('devin', canary_val)
+        helper_script = os.path.join(self.folder, 'oracle_child.py')
+        with open(helper_script, 'w') as f:
+            f.write('import sys, time\ntime.sleep(60)\n')
+
+        if os.path.isdir('/proc/self'):
+            env_child = dict(os.environ, OPENWIZ_KIT_RUN=mark.split('=', 1)[1],
+                             ORACLE_SECRET='sk-0123456789abcdef012345', ORACLE_CANARY=canary_val)
+            p1 = subprocess.Popen([sys.executable, helper_script, '--effort', 'high', canary_val], env=env_child)
+            self.addCleanup(p1.wait)
+            self.addCleanup(p1.kill)
+            time.sleep(0.05)
+
+            for active_canary in (None, canary):
+                with self.subTest(platform='linux', canary=bool(active_canary)):
+                    new_k = make_kit(mark, ('argv', '--effort', 'high'))
+                    old_k = make_kit(mark, ('argv', '--effort', 'high'))
+                    new_table = new_k.table()
+                    old_table = previous_linux_table(old_k)
+                    self.assertEqual(new_table, old_table)
+                    new_k.scan(active_canary)
+                    previous_scan(old_k, active_canary, True)
+                    self.assertEqual(new_k.leaks, old_k.leaks)
+                    self.assertEqual(new_k.effort_seen, old_k.effort_seen)
+                    self.assertEqual(new_k.runtime, old_k.runtime)
+                    self.assertEqual(new_k.owned, old_k.owned)
+
+        own_pid = os.getpid()
+        own_pgid = os.getpgrp()
+        ps_full = {
+            own_pid: '1 %d 100 S python3 kit.py' % own_pgid,
+            50001: '%d %d 100 S python3 %s --effort high %s' % (own_pid, own_pgid, helper_script, canary_val),
+            50002: '1 99999 200 S /bin/sleep 60',
+        }
+        ps_cmds = {
+            own_pid: 'python3 kit.py',
+            50001: 'python3 %s --effort high %s' % (helper_script, canary_val),
+            50002: '/bin/sleep 60',
+        }
+        ps_env = {
+            50001: 'python3 %s --effort high %s %s ORACLE_SECRET=sk-0123456789abcdef012345 ORACLE_CANARY=%s'
+                   % (helper_script, canary_val, mark, canary_val),
+        }
+
+        def make_fake_ps(counter):
+            def fake_ps(*args):
+                counter.append(args)
+                if args and isinstance(args[0], tuple):
+                    return {pid: ps_env[pid] for pid in args[0] if pid in ps_env}
+                if args == ('-o', 'command='):
+                    return dict(ps_cmds)
+                return dict(ps_full)
+            return fake_ps
+
+        old_proc = kit.PROC
+        kit.PROC = False
+        try:
+            for active_canary in (None, canary):
+                with self.subTest(platform='macos', canary=bool(active_canary)):
+                    new_calls, old_calls = [], []
+                    new_k = make_kit(mark, ('argv', '--effort', 'high'))
+                    old_k = make_kit(mark, ('argv', '--effort', 'high'))
+                    new_k.ps = make_fake_ps(new_calls)
+                    old_k.ps = make_fake_ps(old_calls)
+                    new_k.process_cwd = lambda pid: self.folder
+                    old_k.process_cwd = lambda pid: self.folder
+                    new_k.scan(active_canary)
+                    previous_scan(old_k, active_canary, False)
+                    self.assertEqual(new_k.leaks, old_k.leaks)
+                    self.assertEqual(new_k.effort_seen, old_k.effort_seen)
+                    self.assertEqual(new_k.runtime, old_k.runtime)
+                    self.assertEqual(new_k.listed_pids, old_k.listed_pids)
+                    self.assertEqual(new_k.seen, old_k.seen)
+                    if active_canary:
+                        self.assertLess(len(new_calls), len(old_calls))
+        finally:
+            kit.PROC = old_proc
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

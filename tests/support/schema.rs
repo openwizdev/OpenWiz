@@ -16,7 +16,10 @@ mod text_rules {
             .ok_or("a short escape")?
             .iter()
             .collect();
-        if chars.get(*i + 1) != Some(&'u') || hex.len() != 4 {
+        if chars.get(*i + 1) != Some(&'u')
+            || hex.len() != 4
+            || !hex.bytes().all(|b| b.is_ascii_hexdigit())
+        {
             return Err("an escape other than \\uXXXX".to_owned());
         }
         let code = u32::from_str_radix(&hex, 16).map_err(|_| "a bad \\u escape")?;
@@ -66,6 +69,7 @@ mod text_rules {
                         i += 1;
                         let hi = match chars.get(i) {
                             None => return Err("an open range".to_owned()),
+                            Some('[') | Some('^') => return Err("[ or ^ inside a class".to_owned()),
                             Some('\\') => escape(&chars, &mut i)?,
                             Some(&c) => {
                                 i += 1;
@@ -113,15 +117,52 @@ mod text_rules {
     }
 
     fn matches(atoms: &[Atom], text: &[char]) -> bool {
+        let mut reachable = vec![false; text.len() + 1];
+        reachable[0] = true;
+        let mut next = vec![false; text.len() + 1];
+        for atom in atoms {
+            next.fill(false);
+            let Atom::Class { repeat, .. } = atom;
+            if *repeat {
+                for i in 0..=text.len() {
+                    if reachable[i] {
+                        next[i] = true;
+                    }
+                    if next[i] && i < text.len() && fits(atom, text[i]) {
+                        next[i + 1] = true;
+                    }
+                }
+            } else {
+                for i in 0..text.len() {
+                    if reachable[i] && fits(atom, text[i]) {
+                        next[i + 1] = true;
+                    }
+                }
+            }
+            std::mem::swap(&mut reachable, &mut next);
+            if !reachable.iter().any(|&b| b) {
+                return false;
+            }
+        }
+        reachable[text.len()]
+    }
+
+    #[cfg(test)]
+    #[allow(
+        dead_code,
+        reason = "test oracle exercised in checks/schema_conformance"
+    )]
+    fn previous_matches(atoms: &[Atom], text: &[char]) -> bool {
         match atoms.split_first() {
             None => text.is_empty(),
             Some((atom, rest)) => {
                 let Atom::Class { repeat, .. } = atom;
                 if *repeat {
                     let run = text.iter().take_while(|&&c| fits(atom, c)).count();
-                    (0..=run).rev().any(|n| matches(rest, &text[n..]))
+                    (0..=run).rev().any(|n| previous_matches(rest, &text[n..]))
                 } else {
-                    text.first().is_some_and(|&c| fits(atom, c)) && matches(rest, &text[1..])
+                    text.first().is_some_and(|&c| fits(atom, c))
+                        && previous_matches(rest, &text[1..])
                 }
             }
         }
@@ -131,9 +172,29 @@ mod text_rules {
         parse(pattern).map(|_| ())
     }
 
+    pub(super) fn try_match(pattern: &str, text: &str) -> Option<bool> {
+        let atoms = parse(pattern).ok()?;
+        Some(matches(&atoms, &text.chars().collect::<Vec<_>>()))
+    }
+
+    #[cfg(test)]
+    #[allow(
+        dead_code,
+        reason = "test oracle exercised in checks/schema_conformance"
+    )]
     pub(super) fn is_match(pattern: &str, text: &str) -> bool {
         let atoms = parse(pattern).expect("a linted pattern");
         matches(&atoms, &text.chars().collect::<Vec<_>>())
+    }
+
+    #[cfg(test)]
+    #[allow(
+        dead_code,
+        reason = "test oracle exercised in checks/schema_conformance"
+    )]
+    pub(super) fn previous_is_match(pattern: &str, text: &str) -> bool {
+        let atoms = parse(pattern).expect("a linted pattern");
+        previous_matches(&atoms, &text.chars().collect::<Vec<_>>())
     }
 }
 
@@ -142,32 +203,35 @@ pub const SCHEMA_PATH: &str = concat!(
     "/../contracts/inventory.v1.schema.json"
 );
 
-const KNOWN_KEYWORDS: &[&str] = &[
-    "$schema",
-    "$id",
-    "$defs",
-    "$ref",
-    "title",
-    "description",
-    "type",
-    "required",
-    "properties",
-    "additionalProperties",
-    "items",
-    "enum",
-    "const",
-    "oneOf",
-    "minimum",
-    "minLength",
-    "maxLength",
-    "uniqueItems",
-    "maximum",
-    "exclusiveMinimum",
-    "minItems",
-    "maxItems",
-    "pattern",
-    "maxUtf8Bytes",
-];
+fn is_known_keyword(key: &str) -> bool {
+    matches!(
+        key,
+        "$schema"
+            | "$id"
+            | "$defs"
+            | "$ref"
+            | "title"
+            | "description"
+            | "type"
+            | "required"
+            | "properties"
+            | "additionalProperties"
+            | "items"
+            | "enum"
+            | "const"
+            | "oneOf"
+            | "minimum"
+            | "minLength"
+            | "maxLength"
+            | "uniqueItems"
+            | "maximum"
+            | "exclusiveMinimum"
+            | "minItems"
+            | "maxItems"
+            | "pattern"
+            | "maxUtf8Bytes"
+    )
+}
 
 pub fn load_schema() -> Value {
     let text = std::fs::read_to_string(SCHEMA_PATH).expect("schema file is readable");
@@ -176,85 +240,169 @@ pub fn load_schema() -> Value {
 
 pub fn lint(schema: &Value) -> Vec<String> {
     let mut errors = Vec::new();
-    lint_node(schema, schema, "#", &mut errors);
+    let mut path = String::from("#");
+    lint_node(schema, schema, &mut path, &mut errors);
     errors
 }
 
-fn lint_node(root: &Value, node: &Value, path: &str, errors: &mut Vec<String>) {
+fn lint_node(root: &Value, node: &Value, path: &mut String, errors: &mut Vec<String>) {
+    use std::fmt::Write as _;
+
     let Some(rules) = node.as_object() else {
         errors.push(format!("{path}: schema node is not an object"));
         return;
     };
+    let base_len = path.len();
     for (key, child) in rules {
-        let at = format!("{path}/{key}");
         match key.as_str() {
-            k if !KNOWN_KEYWORDS.contains(&k) => {
-                errors.push(format!("{path}: unsupported schema keyword {k}"))
+            k if !is_known_keyword(k) => {
+                errors.push(format!("{path}: unsupported schema keyword {k}"));
             }
             "additionalProperties" if child != &Value::Bool(false) => {
-                errors.push(format!("{at}: only `false` is checked"))
+                errors.push(format!("{path}/{key}: only `false` is checked"));
             }
             "uniqueItems"
                 if child != &Value::Bool(true)
                     || rules.get("type").and_then(Value::as_str) != Some("array") =>
             {
-                errors.push(format!("{at}: only `true` on an array node is checked"))
+                errors.push(format!(
+                    "{path}/{key}: only `true` on an array node is checked"
+                ));
             }
             "maximum" | "exclusiveMinimum" if child.as_f64().is_none() => {
-                errors.push(format!("{at}: expected a number"))
+                errors.push(format!("{path}/{key}: expected a number"));
             }
             "minItems" | "maxItems" if child.as_u64().is_none() => {
-                errors.push(format!("{at}: expected a nonnegative integer"))
+                errors.push(format!("{path}/{key}: expected a nonnegative integer"));
             }
             "pattern" | "maxUtf8Bytes" => {
                 if rules.get("type").and_then(Value::as_str) != Some("string") {
-                    errors.push(format!("{at}: only on a \"type\": \"string\" node"));
+                    errors.push(format!("{path}/{key}: only on a \"type\": \"string\" node"));
                 }
                 if key == "pattern" {
                     match child.as_str().map(text_rules::lint_pattern) {
                         Some(Ok(())) => {}
                         Some(Err(_))
                             if child.as_str().is_some_and(|s| parse_pattern(s).is_ok()) => {}
-                        Some(Err(error)) => errors.push(format!("{at}: unsupported ({error})")),
-                        None => errors.push(format!("{at}: not a string")),
+                        Some(Err(error)) => {
+                            errors.push(format!("{path}/{key}: unsupported ({error})"));
+                        }
+                        None => errors.push(format!("{path}/{key}: not a string")),
                     }
                 } else if child.as_u64().is_none() {
-                    errors.push(format!("{at}: not a count"));
+                    errors.push(format!("{path}/{key}: not a count"));
                 }
             }
-            "$ref" => match child.as_str() {
-                Some(reference) if resolve(root, reference).is_some() => {}
-                _ => errors.push(format!("{at}: unresolvable $ref {child}")),
+            "$ref" => match child.as_str().and_then(|r| Some((r, resolve(root, r)?))) {
+                Some((reference, target)) => {
+                    if let Some(target_rules) = target.as_object()
+                        && (target_rules.contains_key("$ref") || target_rules.contains_key("oneOf"))
+                    {
+                        let mut seen = vec![reference];
+                        if has_ref_cycle(root, target, &mut seen) {
+                            errors.push(format!("{path}/{key}: cyclic $ref {reference}"));
+                        }
+                    }
+                }
+                None => errors.push(format!("{path}/{key}: unresolvable $ref {child}")),
             },
             "$defs" | "properties" => {
+                path.push('/');
+                path.push_str(key);
+                let key_len = path.len();
                 for (name, sub) in child.as_object().into_iter().flatten() {
-                    lint_node(root, sub, &format!("{at}/{name}"), errors);
+                    path.push('/');
+                    path.push_str(name);
+                    lint_node(root, sub, path, errors);
+                    path.truncate(key_len);
                 }
+                path.truncate(base_len);
             }
-            "items" => lint_node(root, child, &at, errors),
+            "items" => {
+                path.push('/');
+                path.push_str(key);
+                lint_node(root, child, path, errors);
+                path.truncate(base_len);
+            }
             "oneOf" => {
+                path.push('/');
+                path.push_str(key);
+                let key_len = path.len();
                 for (i, sub) in child.as_array().into_iter().flatten().enumerate() {
-                    lint_node(root, sub, &format!("{at}/{i}"), errors);
+                    let _ = write!(path, "/{i}");
+                    lint_node(root, sub, path, errors);
+                    path.truncate(key_len);
                 }
+                path.truncate(base_len);
             }
             _ => {}
         }
     }
 }
 
+fn has_ref_cycle<'a>(root: &'a Value, node: &'a Value, seen: &mut Vec<&'a str>) -> bool {
+    let Some(rules) = node.as_object() else {
+        return false;
+    };
+    if let Some(reference) = rules.get("$ref").and_then(Value::as_str) {
+        if seen.contains(&reference) {
+            return true;
+        }
+        if let Some(target) = resolve(root, reference) {
+            seen.push(reference);
+            let cyclic = has_ref_cycle(root, target, seen);
+            seen.pop();
+            if cyclic {
+                return true;
+            }
+        }
+    }
+    if let Some(options) = rules.get("oneOf").and_then(Value::as_array) {
+        for option in options {
+            if has_ref_cycle(root, option, seen) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 pub fn validate(schema: &Value, value: &Value) -> Vec<String> {
     let mut errors = Vec::new();
-    check(schema, schema, value, "$", &mut errors);
+    let mut refs = Vec::new();
+    let mut path = String::from("$");
+    check(schema, schema, value, &mut path, &mut refs, &mut errors);
     errors
 }
 
-fn check(root: &Value, schema: &Value, value: &Value, path: &str, errors: &mut Vec<String>) {
+#[cfg(test)]
+#[allow(
+    dead_code,
+    reason = "test oracle exercised in checks/schema_conformance"
+)]
+pub fn text_rule_oracle_matches(pattern: &str, text: &str) -> (bool, bool) {
+    (
+        text_rules::is_match(pattern, text),
+        text_rules::previous_is_match(pattern, text),
+    )
+}
+
+fn check<'a>(
+    root: &'a Value,
+    schema: &'a Value,
+    value: &Value,
+    path: &mut String,
+    refs: &mut Vec<&'a str>,
+    errors: &mut Vec<String>,
+) {
+    use std::fmt::Write as _;
+
     let Some(rules) = schema.as_object() else {
         errors.push(format!("{path}: schema node is not an object"));
         return;
     };
     for key in rules.keys() {
-        if !KNOWN_KEYWORDS.contains(&key.as_str()) {
+        if !is_known_keyword(key.as_str()) {
             errors.push(format!("{path}: unsupported schema keyword {key}"));
         }
     }
@@ -276,19 +424,35 @@ fn check(root: &Value, schema: &Value, value: &Value, path: &str, errors: &mut V
     }
 
     if let Some(reference) = rules.get("$ref").and_then(Value::as_str) {
+        if refs.contains(&reference) {
+            errors.push(format!("{path}: cyclic $ref {reference}"));
+            return;
+        }
         match resolve(root, reference) {
-            Some(target) => check(root, target, value, path, errors),
+            Some(target) => {
+                refs.push(reference);
+                check(root, target, value, path, refs, errors);
+                refs.pop();
+            }
             None => errors.push(format!("{path}: unresolvable $ref {reference}")),
         }
     }
 
     if let Some(types) = rules.get("type") {
-        let allowed: Vec<&str> = match types {
-            Value::String(t) => vec![t.as_str()],
-            Value::Array(ts) => ts.iter().filter_map(Value::as_str).collect(),
-            _ => vec![],
+        let matched = match types {
+            Value::String(t) => type_matches(t, value),
+            Value::Array(ts) => ts
+                .iter()
+                .filter_map(Value::as_str)
+                .any(|t| type_matches(t, value)),
+            _ => false,
         };
-        if !allowed.iter().any(|t| type_matches(t, value)) {
+        if !matched {
+            let allowed: Vec<&str> = match types {
+                Value::String(t) => vec![t.as_str()],
+                Value::Array(ts) => ts.iter().filter_map(Value::as_str).collect(),
+                _ => vec![],
+            };
             errors.push(format!("{path}: expected type {allowed:?}, got {value}"));
             return;
         }
@@ -349,11 +513,9 @@ fn check(root: &Value, schema: &Value, value: &Value, path: &str, errors: &mut V
     }
     if let Some(text) = value.as_str() {
         if let Some(pattern) = rules.get("pattern").and_then(Value::as_str)
-            && !if text_rules::lint_pattern(pattern).is_ok() {
-                text_rules::is_match(pattern, text)
-            } else {
+            && !text_rules::try_match(pattern, text).unwrap_or_else(|| {
                 parse_pattern(pattern).is_ok_and(|atoms| matches_pattern(&atoms, text))
-            }
+            })
         {
             errors.push(format!("{path}: does not match {pattern:?}"));
         }
@@ -372,7 +534,7 @@ fn check(root: &Value, schema: &Value, value: &Value, path: &str, errors: &mut V
             .iter()
             .filter(|option| {
                 let mut e = Vec::new();
-                check(root, option, value, path, &mut e);
+                check(root, option, value, path, refs, &mut e);
                 e.is_empty()
             })
             .count();
@@ -392,10 +554,16 @@ fn check(root: &Value, schema: &Value, value: &Value, path: &str, errors: &mut V
                 }
             }
         }
+        let base_len = path.len();
         for (key, child) in object {
-            let child_path = format!("{path}.{key}");
             match properties.and_then(|p| p.get(key)) {
-                Some(child_schema) => check(root, child_schema, child, &child_path, errors),
+                Some(child_schema) => {
+                    path.push('.');
+                    path.push_str(key);
+                    let mut child_refs = Vec::new();
+                    check(root, child_schema, child, path, &mut child_refs, errors);
+                    path.truncate(base_len);
+                }
                 None => {
                     if rules.get("additionalProperties") == Some(&Value::Bool(false)) {
                         errors.push(format!("{path}: unexpected field {key}"));
@@ -406,8 +574,12 @@ fn check(root: &Value, schema: &Value, value: &Value, path: &str, errors: &mut V
     }
 
     if let (Some(items), Some(array)) = (rules.get("items"), value.as_array()) {
+        let base_len = path.len();
         for (i, item) in array.iter().enumerate() {
-            check(root, items, item, &format!("{path}[{i}]"), errors);
+            let _ = write!(path, "[{i}]");
+            let mut item_refs = Vec::new();
+            check(root, items, item, path, &mut item_refs, errors);
+            path.truncate(base_len);
         }
     }
 }
@@ -460,7 +632,7 @@ fn parse_pattern(pattern: &str) -> Result<Vec<Atom>, ()> {
                 {
                     let hi = chars[index + 1];
                     index += 2;
-                    if lo > hi {
+                    if matches!(hi, '^' | '[' | '\\') || lo > hi {
                         return Err(());
                     }
                     ranges.push((lo, hi));

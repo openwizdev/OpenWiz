@@ -283,6 +283,46 @@ class Helper(unittest.TestCase):
         self.assertIn('python3 -I', out['error'] + out['next'])
         self.assertEqual(self.host.requests, [])
 
+    def test_deeply_nested_json_refuses_cleanly_without_recursion_error(self):
+        hostkey = module(HOSTKEY, 'hostkey')
+        hosts = hostkey.registry()
+        deep = '[' * 2000 + ']' * 2000
+
+        with self.assertRaises(hostkey.Refused):
+            hostkey.read_request(deep, hosts)
+
+        self.assertEqual(hostkey.answer(200, deep.encode('ascii'), KEY), {'status': 200, 'body': None})
+
+        key_deep = ('[' * 2000 + '"' + KEY + '"' + ']' * 2000).encode('ascii')
+        with self.assertRaises(hostkey.Refused):
+            hostkey.answer(200, key_deep, KEY)
+
+        deep_reg = os.path.join(self.folder, 'deep-hosts.json')
+        with open(deep_reg, 'w') as f:
+            f.write(deep)
+        with self.assertRaises(hostkey.Refused):
+            hostkey.registry(deep_reg)
+
+        deep_host = self.fake(200, [], deep.encode('ascii'))
+        code, out = self.run_helper(GOOD, OPENWIZ_HOSTKEY_TEST_ORIGIN=deep_host.origin)
+        self.assertEqual(code, 0)
+        self.assertEqual(out, {'status': 200, 'body': None})
+
+        code, out = self.run_helper(None, raw=deep)
+        self.assertEqual(code, 1)
+        self.assertEqual(out['error'], 'the input is not one JSON object')
+
+        deep_dict = {}
+        cur = deep_dict
+        for _ in range(1500):
+            nxt = {}
+            cur['a'] = nxt
+            cur = nxt
+        with self.assertRaises(hostkey.Refused):
+            hostkey.screen({'path': '/v1', 'body': deep_dict}, KEY)
+        with self.assertRaises(hostkey.Refused):
+            hostkey.send(self.host.origin, 'POST', '/v1', deep_dict, KEY)
+
 
 class Keychain(unittest.TestCase):
     def setUp(self):
