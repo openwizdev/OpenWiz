@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Run shell fences from Markdown files on an offline Linux CI runner."""
 
 import argparse
 from collections.abc import Iterator
@@ -25,8 +24,7 @@ FAKES = (
 TIMEOUT = 30
 
 
-def strip_containers(line: str, containers: list[int | None]) -> tuple[str, int]:
-    """Remove Markdown list indentation and block quote markers."""
+def strip_list_and_quote_prefixes(line: str, containers: list[int | None]) -> tuple[str, int]:
     for depth, indent in enumerate(containers):
         if indent is None:
             quote = QUOTE.match(line)
@@ -44,7 +42,7 @@ def shell_fences(markdown: str) -> Iterator[tuple[int, str, str, str]]:
     containers: list[int | None] = []
     fence = None
     for number, line in enumerate(markdown.split("\n"), 1):
-        content, depth = strip_containers(line, containers)
+        content, depth = strip_list_and_quote_prefixes(line, containers)
         if fence is not None:
             opening, indent, marker, language, info, body = fence
             closing = content.lstrip(" ")
@@ -155,7 +153,9 @@ def report_block(location: str, language: str, info: str, body: str) -> bool:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description="Run shell fences from Markdown files on an offline Linux CI runner.",
+    )
     parser.add_argument("markdown", nargs="+", help="Markdown files to check")
     args = parser.parse_args()
 

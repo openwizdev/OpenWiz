@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Offline acceptance tests for the Markdown command runner."""
 
 import os
 from pathlib import Path
