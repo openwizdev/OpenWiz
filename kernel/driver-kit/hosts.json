@@ -1,4 +1,10 @@
 {
+  "cursor-cloud": {
+    "origin": "https://api.cursor.com",
+    "variable": "CURSOR_API_KEY",
+    "keychain": "openwiz-cursor-cloud",
+    "header": "authorization-bearer"
+  },
   "devin": {
     "origin": "https://api.devin.ai",
     "variable": "DEVIN_API_KEY",
