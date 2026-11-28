@@ -1,0 +1,31 @@
+name: Compliant runners
+on: push
+jobs:
+  public-linux:
+    runs-on: ${{ vars.OPENWIZ_RUNS_ON || 'ubuntu-24.04' }}
+    steps:
+      - run: |
+          echo 'runs-on: ubuntu-24.04'
+  private-linux:
+    "runs-on": "${{ vars.OPENWIZ_PRIVATE_RUNS_ON || 'jog-4vcpu' }}"
+  mac:
+    runs-on: macos-15-intel
+  windows:
+    runs-on:
+      - windows-latest
+  reusable:
+    uses: ./.github/workflows/reusable.yml
+  hosted-matrix:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        runner: [macos-26, windows-2025]
+  native-build:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - runner: macos-15
+            target: darwin
+          - runner: ${{ vars.OPENWIZ_RUNS_ON || 'ubuntu-24.04' }}
+            target: linux
