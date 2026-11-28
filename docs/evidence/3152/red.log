@@ -1,0 +1,14 @@
+cargo test -p openwiz-cli --test ghost_bench
+test result: FAILED. 0 passed; 11 failed
+
+fixture_model_matches_the_recall_rows: left None, right Some(" all recs")
+bench_report_matches_the_recorded_baseline_and_schema: missing required field schema
+ci_gate_passes_on_the_baseline: exit 2, the report or the baseline could not be read
+ci_gate_fails_the_slow_model_on_p90: NaN != 200
+ci_gate_fails_the_weak_model_on_acceptance_and_characters: Null != 0
+logging_is_off_until_the_setting_is_on: logging_enabled was true
+logging_writes_only_the_local_file: logging on must write the one local file
+forget_deletes_the_log_and_nothing_else: append_event returned false
+bench_reads_the_opt_in_log: read 0 events, wanted 2
+bad_inputs_fail_closed_and_sent_messages_replay: logging_enabled was true
+sent_bench_reads_skill_json_from_openwiz_ghost_home: exit 5, wanted 0
