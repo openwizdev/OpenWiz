@@ -9,6 +9,8 @@ Effort: passed as each harness's own flag, for the harnesses and levels in the t
 | `pi` | can't (pi sets its level with `--thinking`, not `--effort`, and the template maps no flag for it) |
 | any other harness | can't (the template has checked no other harness's own `--help`) |
 
+Part of [OpenWiz](https://openwiz.dev), the open source agent factory.
+
 The smallest [driver v1](../../kernel/driver.v1.md): one Python file, standard library only. **Platforms:** Linux and macOS, Python 3.9 or later. It passes the [kit](../../kernel/driver-kit/README.md). Each turn of a run is a local process: `start` runs the first turn, `wake` runs another once the last one has ended, and `stop` ends every process the run's turns started (on macOS, every one it can find: see `stop` below). Runs are saved in `$OPENWIZ_TEMPLATE_STATE` (default `~/.local/state/openwiz-template`), each one before its first turn starts.
 
 ## Make your own in an hour
