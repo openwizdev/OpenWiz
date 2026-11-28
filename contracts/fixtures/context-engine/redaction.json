@@ -1,0 +1,47 @@
+[
+  {
+    "name": "authorization",
+    "kind": "token",
+    "before": [
+      "Keep this line.\nAuthorization: Bearer ",
+      "Synthetic",
+      "OnlyBearer0123456789",
+      "\nKeep this too."
+    ],
+    "after": "Keep this line.\nAuthorization: Bearer [redacted:token]\nKeep this too."
+  },
+  {
+    "name": "github",
+    "kind": "token",
+    "before": [
+      "Before ",
+      "gh",
+      "p_",
+      "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
+      " after."
+    ],
+    "after": "Before [redacted:token] after."
+  },
+  {
+    "name": "pem-key",
+    "kind": "key",
+    "before": [
+      "Before\n-----BEGIN ",
+      "PRIVATE KEY-----\n",
+      "synthetic-not-key-material",
+      "\n-----END ",
+      "PRIVATE KEY-----\nAfter."
+    ],
+    "after": "Before\n[redacted:key]\nAfter."
+  },
+  {
+    "name": "quoted-password",
+    "kind": "password",
+    "before": [
+      "Keep this. password=\"",
+      "invented-not-a-password",
+      "\" and this too."
+    ],
+    "after": "Keep this. password=\"[redacted:password]\" and this too."
+  }
+]
