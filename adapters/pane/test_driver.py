@@ -235,12 +235,13 @@ class Pane(unittest.TestCase):
         self.assertEqual((Path(HERE) / 'schema.json').read_bytes(), Path(KIT).with_name('schema.json').read_bytes())
 
     def test_effort_reaches_the_pane_agent_command_and_is_recorded(self):
-        cases = (('claude', 'medium', 'claude --model synthetic-model --effort medium', {}),
-                 ('codex', 'xhigh', 'codex --model synthetic-model -c model_reasoning_effort=xhigh',
+        cases = (('claude', 'claude-opus-5-5', 'medium',
+                  'CLAUDE_CODE_EFFORT_LEVEL=medium claude --model claude-opus-5-5 --effort medium', {}),
+                 ('codex', 'gpt-6.2-sol', 'xhigh', 'codex --model gpt-6.2-sol -c model_reasoning_effort=xhigh',
                   {'FAKE_PANE_QUEUE': '1'}))
-        for i, (harness, effort, command, env) in enumerate(cases, 1):
+        for i, (harness, model, effort, command, env) in enumerate(cases, 1):
             with self.subTest(harness=harness):
-                code, run = self.driver('start', dict(REQUEST, harness=harness, model='synthetic-model', effort=effort),
+                code, run = self.driver('start', dict(REQUEST, harness=harness, model=model, effort=effort),
                                         **env)
                 self.assertEqual(code, 0, run)
                 create = [c for c in self.called() if c[:2] == ['panes', 'create']]
@@ -255,8 +256,24 @@ class Pane(unittest.TestCase):
         for harness, effort in (('claude', 'minimal'), ('codex', 'turbo'), ('cursor', 'medium'),
                                 ('opencode', 'medium'), ('pi', 'medium'), ('gemini', 'medium')):
             with self.subTest(harness=harness, effort=effort):
-                code, out = self.driver('start', dict(REQUEST, harness=harness, effort=effort))
+                model = 'gpt-6.2-sol' if harness == 'codex' else REQUEST['model']
+                code, out = self.driver('start', dict(REQUEST, harness=harness, model=model, effort=effort))
                 self.assertEqual((code, set(out), out['next']), (1, {'error', 'next'}, next_step))
+                self.assertIn(harness, out['error'])
+                self.assertIn(effort, out['error'])
+        self.assertEqual(self.called(), [])
+        self.assertFalse(os.path.exists(self.env['OPENWIZ_PANE_STATE']))
+
+    def test_effort_is_refused_when_the_selected_model_cannot_take_it(self):
+        next_step = ("this host can't set effort: remove the effort for this harness in your Models table or Roster "
+                     "to run it at the host's default")
+        for harness, model, effort in (('claude', 'claude-opus-4-6', 'xhigh'),
+                                       ('codex', 'gpt-5.5', 'max'),
+                                       ('codex', 'example/custom-model', 'medium')):
+            with self.subTest(harness=harness, model=model, effort=effort):
+                code, out = self.driver('start', dict(REQUEST, harness=harness, model=model, effort=effort))
+                self.assertEqual(code, 1, out)
+                self.assertEqual(out['next'], next_step)
                 self.assertIn(harness, out['error'])
                 self.assertIn(effort, out['error'])
         self.assertEqual(self.called(), [])
