@@ -35,7 +35,7 @@ OpenWiz 0.1.1 ("OpenWiz 0.02") is coming; it has no release date yet. In 0.1.1 t
 The kernel is small. Three parts:
 
 - **Records on GitHub.** Specs, tickets and one status note per agent live in your repo's issues. Anything that follows [the rules](kernel/records.v1.md) can read and write your factory. The [records kit](kernel/records-kit/README.md) checks them.
-- **Drivers.** A driver is a tiny program, in any language, that answers four commands: `version`, `start`, `wake`, `stop` ([driver v1](kernel/driver.v1.md)). Copy [the template](adapters/template/README.md) to plug in your own host. The 0.1.0 release carries drivers for your computer or a VPS, CloudRoom and boat.dev; `adapters/` on `main` adds drivers for Capy, Cursor cloud agents, Devin, Factory, Fly Sprites, Hermes, OpenClaw and Pane.
+- **Drivers.** A driver is a tiny program, in any language, that answers four commands: `version`, `start`, `wake`, `stop` ([driver v1](kernel/driver.v1.md)). Copy [the template](adapters/template/README.md) to plug in your own host. The 0.1.0 release carries drivers for your computer or a VPS, CloudRoom and boat.dev; `adapters/` on `main` adds drivers for Capy, Cursor cloud agents, Devin, Factory, Fly Sprites, Hermes, OpenClaw, Pane and SSH.
 - **A test kit.** The [driver kit](kernel/driver-kit/README.md) checks a driver on its real host. A driver that passes can merge.
 
 OpenWiz never touches a login. Your agents use their own signed-in tools, and there is no server of ours.
@@ -49,7 +49,7 @@ OpenWiz never touches a login. Your agents use their own signed-in tools, and th
 
 ## Versions
 
-What each version adds is in the [changelog](CHANGELOG.md); 0.0.16, 0.0.17 and 0.1.0 are so far only in [0.1.0's changelog](https://github.com/openwizdev/OpenWiz/blob/v0.1.0/CHANGELOG.md). A version has at most five outcomes, each one something a user can see or check, and claims nothing its evidence doesn't show; tests alone never prove live behaviour.
+What each version adds is in the [changelog](CHANGELOG.md). A version has at most five outcomes, each one something a user can see or check, and claims nothing its evidence doesn't show; tests alone never prove live behaviour.
 
 ## Links
 
