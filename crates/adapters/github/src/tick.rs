@@ -138,9 +138,7 @@ impl TickReads {
         &self.executor
     }
     pub fn pull_requests(&self, deadline: Instant) -> Result<PullRequests> {
-        use openwiz_core::fleet::fleets::{Link, PrFacts, PrRow};
-        use openwiz_core::fleet::tickets::PrState;
-        let v = self.json(
+        let bytes = self.call(
             &[
                 "pr",
                 "list",
@@ -153,75 +151,7 @@ impl TickReads {
             ],
             deadline,
         )?;
-        let mut rows = Vec::new();
-        let mut closed = BTreeMap::new();
-        for v in array(&v)? {
-            let row = object(v, &crate::fleets::PR_FIELDS.split(',').collect::<Vec<_>>())?;
-            if string(&row["title"])?.is_empty() {
-                return Err("empty PR title");
-            }
-            let mut references = Vec::new();
-            for r in array(&v["closingIssuesReferences"])? {
-                let r = object(r, &["id", "number", "repository", "url"])?;
-                let repo = object(&r["repository"], &["id", "name", "owner"])?;
-                string(&repo["id"])?;
-                string(&repo["name"])?;
-                let owner = object(&repo["owner"], &["id", "login"])?;
-                string(&owner["id"])?;
-                string(&owner["login"])?;
-                references.push((
-                    Link {
-                        number: number(&r["number"])?,
-                        id: NonEmpty::new(string(&r["id"])?.to_owned()).ok_or("empty issue id")?,
-                    },
-                    string(&r["url"])?.to_owned(),
-                ));
-            }
-            unique(references.iter().map(|(r, _)| r.number.get()))?;
-            unique(references.iter().map(|(r, _)| &r.id))?;
-            if string(&row["state"])? == "CLOSED" {
-                let number = number(&row["number"])?;
-                row["isDraft"].as_bool().ok_or("invalid draft flag")?;
-                for key in ["baseRefName", "headRefName", "headRefOid"] {
-                    string(&row[key])?;
-                }
-                if !row["mergeCommit"].is_null() || !row["mergedAt"].is_null() {
-                    return Err("closed PR has merge facts");
-                }
-                closed.insert(number, references);
-                rows.push(PrRow::Closed { number });
-                continue;
-            }
-            let mut view = v.clone();
-            view.as_object_mut()
-                .ok_or("PR is not an object")?
-                .remove("title");
-            let p = crate::tickets::pull_request(
-                &serde_json::to_vec(&view).map_err(|_| "PR encoding failed")?,
-            )
-            .map_err(|_| "PR inventory unread")?;
-            let facts = PrFacts {
-                number: p.number,
-                draft: p.draft,
-                head_branch: p.head_branch,
-                head_commit: p.head_commit,
-                base_branch: p.base_branch,
-                closes: references.iter().map(|(r, _)| r.clone()).collect(),
-            };
-            rows.push(match p.state {
-                PrState::Open => PrRow::Open(facts),
-                PrState::Merged {
-                    merge_commit,
-                    merged_at,
-                } => PrRow::Merged {
-                    facts,
-                    merge_commit,
-                    merged_at,
-                },
-                PrState::Closed => return Err("PR state changed while parsing"),
-            });
-        }
-        Ok(PullRequests { rows, closed })
+        parse_pull_requests(&bytes)
     }
     fn call(&self, argv: &[&str], deadline: Instant) -> Result<Vec<u8>> {
         let call = Invocation::new(argv).ok_or("tick read is not allowlisted")?;
@@ -744,4 +674,498 @@ fn comment(o: &Map<String, Value>) -> Result<Comment> {
         created,
         updated,
     })
+}
+
+fn parse_pull_requests(bytes: &[u8]) -> Result<PullRequests> {
+    match fast_prs::parse(bytes) {
+        Ok(prs) => Ok(prs),
+        Err(()) => parse_pull_requests_previous(bytes),
+    }
+}
+
+fn parse_pull_requests_previous(bytes: &[u8]) -> Result<PullRequests> {
+    use openwiz_core::fleet::fleets::{Link, PrFacts, PrRow};
+    use openwiz_core::fleet::tickets::PrState;
+    let v = document(bytes)?;
+    let mut rows = Vec::new();
+    let mut closed = BTreeMap::new();
+    for v in array(&v)? {
+        let row = object(v, &crate::fleets::PR_FIELDS.split(',').collect::<Vec<_>>())?;
+        if string(&row["title"])?.is_empty() {
+            return Err("empty PR title");
+        }
+        let mut references = Vec::new();
+        for r in array(&v["closingIssuesReferences"])? {
+            let r = object(r, &["id", "number", "repository", "url"])?;
+            let repo = object(&r["repository"], &["id", "name", "owner"])?;
+            string(&repo["id"])?;
+            string(&repo["name"])?;
+            let owner = object(&repo["owner"], &["id", "login"])?;
+            string(&owner["id"])?;
+            string(&owner["login"])?;
+            references.push((
+                Link {
+                    number: number(&r["number"])?,
+                    id: NonEmpty::new(string(&r["id"])?.to_owned()).ok_or("empty issue id")?,
+                },
+                string(&r["url"])?.to_owned(),
+            ));
+        }
+        unique(references.iter().map(|(r, _)| r.number.get()))?;
+        unique(references.iter().map(|(r, _)| &r.id))?;
+        if string(&row["state"])? == "CLOSED" {
+            let number = number(&row["number"])?;
+            row["isDraft"].as_bool().ok_or("invalid draft flag")?;
+            for key in ["baseRefName", "headRefName", "headRefOid"] {
+                string(&row[key])?;
+            }
+            if !row["mergeCommit"].is_null() || !row["mergedAt"].is_null() {
+                return Err("closed PR has merge facts");
+            }
+            closed.insert(number, references);
+            rows.push(PrRow::Closed { number });
+            continue;
+        }
+        let mut view = v.clone();
+        view.as_object_mut()
+            .ok_or("PR is not an object")?
+            .remove("title");
+        let p = crate::tickets::pull_request(
+            &serde_json::to_vec(&view).map_err(|_| "PR encoding failed")?,
+        )
+        .map_err(|_| "PR inventory unread")?;
+        let facts = PrFacts {
+            number: p.number,
+            draft: p.draft,
+            head_branch: p.head_branch,
+            head_commit: p.head_commit,
+            base_branch: p.base_branch,
+            closes: references.iter().map(|(r, _)| r.clone()).collect(),
+        };
+        rows.push(match p.state {
+            PrState::Open => PrRow::Open(facts),
+            PrState::Merged {
+                merge_commit,
+                merged_at,
+            } => PrRow::Merged {
+                facts,
+                merge_commit,
+                merged_at,
+            },
+            PrState::Closed => return Err("PR state changed while parsing"),
+        });
+    }
+    Ok(PullRequests { rows, closed })
+}
+
+mod fast_prs {
+    use std::collections::BTreeMap;
+    use std::fmt;
+
+    use openwiz_core::fleet::fleets::{Link, PrFacts, PrRow};
+    use openwiz_core::fleet::model::{Commit, NonEmpty, Number};
+    use openwiz_core::model::Timestamp;
+    use serde::de::{self, Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
+
+    use super::{PullRequests, unique};
+    use crate::fleets::fast::{
+        FastClosingRepo, FastNonEmpty, FastNumber, FastOptMergeCommit, FastPrState, Text,
+    };
+
+    struct NonEmptyDiscarded;
+
+    impl<'de> Deserialize<'de> for NonEmptyDiscarded {
+        fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+            struct V;
+            impl<'de> Visitor<'de> for V {
+                type Value = NonEmptyDiscarded;
+                fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                    f.write_str("a non-empty string")
+                }
+                fn visit_str<E: de::Error>(self, s: &str) -> Result<Self::Value, E> {
+                    if s.is_empty() {
+                        Err(de::Error::custom("empty"))
+                    } else {
+                        Ok(NonEmptyDiscarded)
+                    }
+                }
+            }
+            d.deserialize_str(V)
+        }
+    }
+
+    struct FastOptIsoTime(Option<Timestamp>);
+
+    impl<'de> Deserialize<'de> for FastOptIsoTime {
+        fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+            struct TimeStr(Timestamp);
+            impl<'de> Deserialize<'de> for TimeStr {
+                fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+                    struct V;
+                    impl<'de> Visitor<'de> for V {
+                        type Value = TimeStr;
+                        fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                            f.write_str("an ISO 8601 UTC timestamp")
+                        }
+                        fn visit_str<E: de::Error>(self, s: &str) -> Result<Self::Value, E> {
+                            crate::tickets::iso_ms(s)
+                                .map(TimeStr)
+                                .ok_or_else(|| de::Error::custom("bad time"))
+                        }
+                    }
+                    d.deserialize_str(V)
+                }
+            }
+            struct OptV;
+            impl<'de> Visitor<'de> for OptV {
+                type Value = FastOptIsoTime;
+                fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                    f.write_str("null or ISO 8601 UTC timestamp")
+                }
+                fn visit_none<E: de::Error>(self) -> Result<Self::Value, E> {
+                    Ok(FastOptIsoTime(None))
+                }
+                fn visit_some<D: Deserializer<'de>>(self, d: D) -> Result<Self::Value, D::Error> {
+                    TimeStr::deserialize(d).map(|t| FastOptIsoTime(Some(t.0)))
+                }
+            }
+            d.deserialize_option(OptV)
+        }
+    }
+
+    struct FastClosingRef<'de>(Link, Text<'de>);
+
+    impl<'de> Deserialize<'de> for FastClosingRef<'de> {
+        fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+            struct V;
+            impl<'de> Visitor<'de> for V {
+                type Value = FastClosingRef<'de>;
+                fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                    f.write_str("a closing reference")
+                }
+                fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
+                    let mut seen = 0u8;
+                    let mut id = None;
+                    let mut number = None;
+                    let mut url: Option<Text<'de>> = None;
+                    while let Some(key) = map.next_key::<Text<'de>>()? {
+                        match key.as_str() {
+                            "id" if seen & 1 == 0 => {
+                                seen |= 1;
+                                id = Some(map.next_value::<FastNonEmpty>()?.0);
+                            }
+                            "number" if seen & 2 == 0 => {
+                                seen |= 2;
+                                number = Some(map.next_value::<FastNumber>()?.0);
+                            }
+                            "repository" if seen & 4 == 0 => {
+                                seen |= 4;
+                                let _ = map.next_value::<FastClosingRepo>()?;
+                            }
+                            "url" if seen & 8 == 0 => {
+                                seen |= 8;
+                                url = Some(map.next_value::<Text<'de>>()?);
+                            }
+                            _ => return Err(de::Error::custom("bad closing ref")),
+                        }
+                    }
+                    if seen != 0b1111 {
+                        return Err(de::Error::custom("missing closing ref field"));
+                    }
+                    Ok(FastClosingRef(
+                        Link {
+                            number: number.expect("seen"),
+                            id: id.expect("seen"),
+                        },
+                        url.expect("seen"),
+                    ))
+                }
+            }
+            d.deserialize_map(V)
+        }
+    }
+
+    struct FastClosingRefs<'de>(Vec<(Link, Text<'de>)>);
+
+    impl<'de> Deserialize<'de> for FastClosingRefs<'de> {
+        fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+            struct V;
+            impl<'de> Visitor<'de> for V {
+                type Value = FastClosingRefs<'de>;
+                fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                    f.write_str("a list of closing references")
+                }
+                fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
+                    let mut out = Vec::new();
+                    while let Some(FastClosingRef(link, url)) = seq.next_element()? {
+                        out.push((link, url));
+                    }
+                    Ok(FastClosingRefs(out))
+                }
+            }
+            d.deserialize_seq(V)
+        }
+    }
+
+    enum ParsedPr {
+        Row(PrRow),
+        Closed(Number, Vec<(Link, String)>),
+    }
+
+    impl<'de> Deserialize<'de> for ParsedPr {
+        fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+            struct V;
+            impl<'de> Visitor<'de> for V {
+                type Value = ParsedPr;
+                fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                    f.write_str("a pull request row")
+                }
+                fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
+                    let mut seen = 0u16;
+                    let mut base_ref: Option<Text<'de>> = None;
+                    let mut refs: Option<Vec<(Link, Text<'de>)>> = None;
+                    let mut head_ref: Option<Text<'de>> = None;
+                    let mut head_oid: Option<Text<'de>> = None;
+                    let mut draft = None;
+                    let mut merge_commit = None;
+                    let mut merged_at = None;
+                    let mut number = None;
+                    let mut state = None;
+                    while let Some(key) = map.next_key::<Text<'de>>()? {
+                        match key.as_str() {
+                            "baseRefName" if seen & (1 << 0) == 0 => {
+                                seen |= 1 << 0;
+                                base_ref = Some(map.next_value::<Text<'de>>()?);
+                            }
+                            "closingIssuesReferences" if seen & (1 << 1) == 0 => {
+                                seen |= 1 << 1;
+                                refs = Some(map.next_value::<FastClosingRefs<'de>>()?.0);
+                            }
+                            "headRefName" if seen & (1 << 2) == 0 => {
+                                seen |= 1 << 2;
+                                head_ref = Some(map.next_value::<Text<'de>>()?);
+                            }
+                            "headRefOid" if seen & (1 << 3) == 0 => {
+                                seen |= 1 << 3;
+                                head_oid = Some(map.next_value::<Text<'de>>()?);
+                            }
+                            "isDraft" if seen & (1 << 4) == 0 => {
+                                seen |= 1 << 4;
+                                draft = Some(map.next_value::<bool>()?);
+                            }
+                            "mergeCommit" if seen & (1 << 5) == 0 => {
+                                seen |= 1 << 5;
+                                merge_commit = Some(map.next_value::<FastOptMergeCommit>()?.0);
+                            }
+                            "mergedAt" if seen & (1 << 6) == 0 => {
+                                seen |= 1 << 6;
+                                merged_at = Some(map.next_value::<FastOptIsoTime>()?.0);
+                            }
+                            "number" if seen & (1 << 7) == 0 => {
+                                seen |= 1 << 7;
+                                number = Some(map.next_value::<FastNumber>()?.0);
+                            }
+                            "state" if seen & (1 << 8) == 0 => {
+                                seen |= 1 << 8;
+                                state = Some(map.next_value::<FastPrState>()?);
+                            }
+                            "title" if seen & (1 << 9) == 0 => {
+                                seen |= 1 << 9;
+                                let _ = map.next_value::<NonEmptyDiscarded>()?;
+                            }
+                            _ => return Err(de::Error::custom("bad pr row")),
+                        }
+                    }
+                    if seen != (1 << 10) - 1 {
+                        return Err(de::Error::custom("missing pr field"));
+                    }
+                    let refs = refs.expect("seen");
+                    if refs.len() > 1 {
+                        unique(refs.iter().map(|(r, _)| r.number.get()))
+                            .map_err(de::Error::custom)?;
+                        unique(refs.iter().map(|(r, _)| &r.id)).map_err(de::Error::custom)?;
+                    }
+                    let number = number.expect("seen");
+                    let merge_commit = merge_commit.expect("seen");
+                    let merged_at = merged_at.expect("seen");
+                    match state.expect("seen") {
+                        FastPrState::Closed => {
+                            if merge_commit.is_some() || merged_at.is_some() {
+                                return Err(de::Error::custom("closed with merge"));
+                            }
+                            let closed_refs = refs
+                                .into_iter()
+                                .map(|(link, url)| (link, url.into_owned()))
+                                .collect();
+                            Ok(ParsedPr::Closed(number, closed_refs))
+                        }
+                        FastPrState::Open => {
+                            if merge_commit.is_some() || merged_at.is_some() {
+                                return Err(de::Error::custom("open with merge"));
+                            }
+                            let facts = PrFacts {
+                                number,
+                                draft: draft.expect("seen"),
+                                head_branch: NonEmpty::new(head_ref.expect("seen").into_owned())
+                                    .ok_or_else(|| de::Error::custom("empty head"))?,
+                                head_commit: Commit::parse(head_oid.expect("seen").as_str())
+                                    .ok_or_else(|| de::Error::custom("bad head commit"))?,
+                                base_branch: NonEmpty::new(base_ref.expect("seen").into_owned())
+                                    .ok_or_else(|| de::Error::custom("empty base"))?,
+                                closes: refs.into_iter().map(|(link, _)| link).collect(),
+                            };
+                            Ok(ParsedPr::Row(PrRow::Open(facts)))
+                        }
+                        FastPrState::Merged => {
+                            let (Some(merge_commit), Some(merged_at)) = (merge_commit, merged_at)
+                            else {
+                                return Err(de::Error::custom("merged without merge"));
+                            };
+                            let facts = PrFacts {
+                                number,
+                                draft: draft.expect("seen"),
+                                head_branch: NonEmpty::new(head_ref.expect("seen").into_owned())
+                                    .ok_or_else(|| de::Error::custom("empty head"))?,
+                                head_commit: Commit::parse(head_oid.expect("seen").as_str())
+                                    .ok_or_else(|| de::Error::custom("bad head commit"))?,
+                                base_branch: NonEmpty::new(base_ref.expect("seen").into_owned())
+                                    .ok_or_else(|| de::Error::custom("empty base"))?,
+                                closes: refs.into_iter().map(|(link, _)| link).collect(),
+                            };
+                            Ok(ParsedPr::Row(PrRow::Merged {
+                                facts,
+                                merge_commit,
+                                merged_at,
+                            }))
+                        }
+                    }
+                }
+            }
+            d.deserialize_map(V)
+        }
+    }
+
+    struct FastPullRequests(PullRequests);
+
+    impl<'de> Deserialize<'de> for FastPullRequests {
+        fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+            struct V;
+            impl<'de> Visitor<'de> for V {
+                type Value = FastPullRequests;
+                fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                    f.write_str("a list of pull requests")
+                }
+                fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Self::Value, A::Error> {
+                    let mut rows = Vec::new();
+                    let mut closed = BTreeMap::new();
+                    while let Some(item) = seq.next_element::<ParsedPr>()? {
+                        match item {
+                            ParsedPr::Row(row) => rows.push(row),
+                            ParsedPr::Closed(number, refs) => {
+                                closed.insert(number, refs);
+                                rows.push(PrRow::Closed { number });
+                            }
+                        }
+                    }
+                    Ok(FastPullRequests(PullRequests { rows, closed }))
+                }
+            }
+            d.deserialize_seq(V)
+        }
+    }
+
+    pub(super) fn parse(bytes: &[u8]) -> std::result::Result<PullRequests, ()> {
+        serde_json::from_slice::<FastPullRequests>(bytes)
+            .map(|x| x.0)
+            .map_err(|_| ())
+    }
+}
+
+#[cfg(test)]
+mod oracle_tests {
+    use super::*;
+
+    #[test]
+    fn fast_pull_requests_matches_previous_oracle_on_valid_and_malformed_inputs() {
+        let oid_a = "1".repeat(40);
+        let oid_b = "2".repeat(40);
+        let valid = format!(
+            r#"[
+                {{"baseRefName":"main","closingIssuesReferences":[{{"id":"I_1","number":1,"repository":{{"id":"R","name":"n","owner":{{"id":"O","login":"l"}}}},"url":"https://github.invalid/o/r/issues/1"}},{{"id":"I_2","number":2,"repository":{{"id":"R","name":"n","owner":{{"id":"O","login":"l"}}}},"url":""}}],"headRefName":"room/a","headRefOid":"{oid_a}","isDraft":true,"mergeCommit":null,"mergedAt":null,"number":10,"state":"OPEN","title":"Open PR"}},
+                {{"baseRefName":"main","closingIssuesReferences":[],"headRefName":"room/b","headRefOid":"{oid_a}","isDraft":false,"mergeCommit":{{"oid":"{oid_b}"}},"mergedAt":"2026-10-30T18:30:00Z","number":11,"state":"MERGED","title":"Merged PR"}},
+                {{"\u0062aseRefName":"","closingIssuesReferences":[{{"id":"I_3","number":3,"repository":{{"id":"R","name":"n","owner":{{"id":"O","login":"l"}}}},"url":"https://github.invalid/o/r/issues/3"}}],"headRefName":"","headRefOid":"non-commit","isDraft":false,"mergeCommit":null,"mergedAt":null,"number":12,"state":"CLOSED","title":"Closed PR"}}
+            ]"#
+        );
+        let cases = [
+            "[]".to_owned(),
+            valid.clone(),
+            valid.replace("2026-10-30T18:30:00Z", "1969-12-31T23:59:59Z"),
+            valid.replace("2026-10-30T18:30:00Z", "2025-02-29T00:00:00Z"),
+            valid.replace("\"number\":2,", "\"number\":1,"),
+            valid.replace("\"id\":\"I_2\",", "\"id\":\"I_1\","),
+            valid.replace("\"title\":\"Open PR\"", "\"title\":\"\""),
+            valid.replace(
+                "\"title\":\"Open PR\"",
+                "\"title\":\"Open PR\",\"title\":\"dup\"",
+            ),
+            valid.replace("\"state\":\"CLOSED\"", "\"state\":\"OPEN\""),
+            valid.replace("\"state\":\"OPEN\"", "\"state\":\"UNKNOWN\""),
+            valid.replace("\"mergedAt\":null", "\"mergedAt\":\"2026-10-30T18:30:00Z\""),
+            valid.replace(
+                &format!(r#""mergeCommit":{{"oid":"{oid_b}"}}"#),
+                r#""mergeCommit":null"#,
+            ),
+            valid.replace("\"isDraft\":true", "\"isDraft\":1"),
+            valid.replace("\"login\":\"l\"", "\"login\":\"l\",\"extra\":true"),
+            "{}".to_owned(),
+            "not json".to_owned(),
+        ];
+        let key = |r: Result<PullRequests>| r.map(|p| (p.rows, p.closed));
+        for raw in &cases {
+            let bytes = raw.as_bytes();
+            let old = key(parse_pull_requests_previous(bytes));
+            let new = key(parse_pull_requests(bytes));
+            assert_eq!(new, old, "mismatch on {raw}");
+            assert_eq!(
+                fast_prs::parse(bytes).ok().map(|p| (p.rows, p.closed)),
+                old.ok(),
+                "fast_prs diverged on {raw}"
+            );
+        }
+
+        let seed = valid.as_bytes();
+        let mut rng = 0x9e37_79b9_7f4a_7c15u64;
+        let alphabet: &[u8] = b"0123456789\"{},:[]\\u0062nulltruefalse-OPENCLOSEDMRG";
+        for _ in 0..600 {
+            let mut buf = seed.to_vec();
+            rng ^= rng << 13;
+            rng ^= rng >> 7;
+            rng ^= rng << 17;
+            let edits = (rng % 4) as usize + 1;
+            for _ in 0..edits {
+                if buf.is_empty() {
+                    break;
+                }
+                rng ^= rng << 13;
+                rng ^= rng >> 7;
+                rng ^= rng << 17;
+                let pos = (rng as usize) % buf.len();
+                match (rng >> 8) % 4 {
+                    0 => buf[pos] = alphabet[((rng >> 16) as usize) % alphabet.len()],
+                    1 => {
+                        buf.remove(pos);
+                    }
+                    2 => buf.insert(pos, alphabet[((rng >> 16) as usize) % alphabet.len()]),
+                    _ => buf.truncate(pos),
+                }
+            }
+            let old = key(parse_pull_requests_previous(&buf));
+            let new = key(parse_pull_requests(&buf));
+            assert_eq!(new, old);
+            assert_eq!(
+                fast_prs::parse(&buf).ok().map(|p| (p.rows, p.closed)),
+                old.ok()
+            );
+        }
+    }
 }

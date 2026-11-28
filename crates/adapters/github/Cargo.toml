@@ -13,3 +13,7 @@ serde_json.workspace = true
 
 [lints]
 workspace = true
+
+[[bench]]
+name = "fleet_reads"
+harness = false
