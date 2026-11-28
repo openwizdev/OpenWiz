@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-"""Offline proof for the voice v1 contract using synthetic inputs."""
-
 import json
 from pathlib import Path
 import re
@@ -21,7 +19,7 @@ def exact(kind, context, policy):
     if kind == "command_or_text":
         value = "command" if text.startswith(policy["wake_phrase"]) else "text"
     elif kind == "route":
-        prefix = re.match(r"to ([^:]+): ", text)
+        prefix = re.match(r"to ([^:]+): ", text.removeprefix(policy["wake_phrase"]))
         matches = [(target, name) for target, name in context.get("targets", [])
                    if prefix and prefix[1] == name]
         if len(matches) == 1:
@@ -96,7 +94,8 @@ class VoiceContract(unittest.TestCase):
                 kind, context, high = case["kind"], case["context"], case["answer"]
                 low = {**high, "confidence": case["low"]}
                 wrong = {**high, "value": "syn_unknown"}
-                for jev, answer in ((False, high), (True, low), (True, wrong)):
+                other = next(answer for answer in self.cases["answers"] if answer["kind"] != kind)
+                for jev, answer in ((False, high), (True, low), (True, wrong), (True, other), (True, None)):
                     self.assertEqual(choose(self.schema, self.policy, kind, context, jev, answer), case["exact"])
                 self.assertEqual(choose(self.schema, self.policy, kind, context, True, high), case["accepted"])
 
