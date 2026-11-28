@@ -5,3 +5,8 @@ test market_publish::market_publish_schema_checks_every_fixture_pair ... FAILED
 ---- market_publish::market_publish_schema_checks_every_fixture_pair stdout ----
 at-most-one-post: accepted broken fixture
 test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 39 filtered out; finished in 0.00s
+
+With the privacy preflight guard removed from the completed schema:
+test market_publish::market_publish_schema_checks_every_fixture_pair ... FAILED
+private-before-offer: accepted broken fixture
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 39 filtered out; finished in 0.01s

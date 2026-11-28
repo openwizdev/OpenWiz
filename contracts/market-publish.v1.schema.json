@@ -1,8 +1,195 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:openwiz:schema:market-publish:v1",
+  "title": "openwiz.market-publish.v1",
+  "description": "The public result object. The fixture definition validates synthetic observations of one publish offer.",
   "$ref": "#/$defs/result",
   "$defs": {
-    "result": {"type": "object", "required": ["schema", "outcome"]},
-    "fixture": {"type": "object"}
+    "schema-id": {"const": "openwiz.market-publish.v1"},
+    "text": {
+      "type": "string",
+      "pattern": "^[^\\u0000-\\u001f\\u0085\\u2028\\u2029]*[^\\u0000-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000][^\\u0000-\\u001f\\u0085\\u2028\\u2029]*$"
+    },
+    "result": {
+      "type": "object",
+      "oneOf": [
+        {
+          "required": ["schema", "outcome", "pr_url", "status"],
+          "additionalProperties": false,
+          "properties": {
+            "schema": {"$ref": "#/$defs/schema-id"},
+            "outcome": {"const": "posted"},
+            "pr_url": {"type": "string", "pattern": "^https://github[.]com/openwizdev/WizMarket/pull/[1-9][0-9]*$"},
+            "status": {"enum": ["listed", "verified"]}
+          }
+        },
+        {
+          "required": ["schema", "outcome", "reason"],
+          "additionalProperties": false,
+          "properties": {
+            "schema": {"$ref": "#/$defs/schema-id"},
+            "outcome": {"const": "refused"},
+            "reason": {"$ref": "#/$defs/text"}
+          }
+        },
+        {
+          "required": ["schema", "outcome"],
+          "additionalProperties": false,
+          "properties": {
+            "schema": {"$ref": "#/$defs/schema-id"},
+            "outcome": {"enum": ["declined", "unavailable"]}
+          }
+        }
+      ]
+    },
+    "fixture": {
+      "type": "object",
+      "oneOf": [
+        {"$ref": "#/$defs/invocation"},
+        {
+          "required": ["installed", "calls", "offers", "attempts", "recorded"],
+          "additionalProperties": false,
+          "properties": {
+            "installed": {"const": false},
+            "calls": {"const": 0},
+            "offers": {"const": 0},
+            "attempts": {"const": 0},
+            "recorded": {"$ref": "#/$defs/result", "properties": {"outcome": {"const": "unavailable"}}}
+          }
+        }
+      ]
+    },
+    "invocation": {
+      "required": [
+        "installed", "calls", "command", "kind", "path", "check", "check_state", "skill_check_passed",
+        "private_data", "preview", "answer", "attempts", "exit_code", "stdout"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "installed": {"const": true},
+        "calls": {"const": 1},
+        "command": {"const": "python3 -I skills/market/scripts/publish.py"},
+        "kind": {"enum": ["driver", "harness", "skill", "loop"]},
+        "path": {"$ref": "#/$defs/text"},
+        "check": {"$ref": "#/$defs/text"},
+        "receipt": {"$ref": "#/$defs/receipt"},
+        "check_state": {"enum": ["passed", "failed", "unreadable"]},
+        "skill_check_passed": {"type": "boolean"},
+        "private_data": {"enum": ["clear", "repository", "account", "path"]},
+        "preview": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/preview"}]},
+        "answer": {"type": ["string", "null"]},
+        "attempts": {"type": "integer", "minimum": 0, "maximum": 1},
+        "exit_code": {"type": "integer"},
+        "stdout": {"type": "array", "maxItems": 1, "items": {"$ref": "#/$defs/result"}}
+      },
+      "oneOf": [
+        {"$ref": "#/$defs/posted"},
+        {
+          "$ref": "#/$defs/offered",
+          "properties": {
+            "answer": {"description": "Every allowed answer except an exact yes.", "oneOf": [{}, {"const": "yes"}]},
+            "attempts": {"const": 0},
+            "exit_code": {"const": 3},
+            "stdout": {"minItems": 1, "items": {"properties": {"outcome": {"const": "declined"}}}}
+          }
+        },
+        {
+          "properties": {
+            "preview": {"const": null},
+            "answer": {"const": null},
+            "attempts": {"const": 0},
+            "exit_code": {"const": 1},
+            "stdout": {"minItems": 1, "items": {"properties": {"outcome": {"const": "refused"}}}}
+          },
+          "oneOf": [
+            {"properties": {"check_state": {"const": "failed"}}},
+            {"properties": {"check_state": {"const": "passed"}, "private_data": {"enum": ["repository", "account", "path"]}}}
+          ]
+        },
+        {
+          "$ref": "#/$defs/attempted",
+          "properties": {
+            "exit_code": {"const": 1},
+            "stdout": {"minItems": 1, "items": {"properties": {"outcome": {"const": "refused"}}}}
+          }
+        },
+        {
+          "properties": {
+            "check_state": {"const": "unreadable"},
+            "preview": {"const": null},
+            "answer": {"const": null},
+            "attempts": {"const": 0},
+            "exit_code": {"const": 2},
+            "stdout": {"maxItems": 0}
+          }
+        }
+      ]
+    },
+    "receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "checks_passed", "current"],
+      "properties": {
+        "path": {"$ref": "#/$defs/text"},
+        "checks_passed": {"type": "integer", "minimum": 0, "maximum": 5},
+        "current": {"type": "boolean"}
+      }
+    },
+    "preview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["files", "account", "before_question"],
+      "properties": {
+        "files": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["path", "shown"],
+            "properties": {"path": {"$ref": "#/$defs/text"}, "shown": {"const": true}}
+          }
+        },
+        "account": {"$ref": "#/$defs/text"},
+        "before_question": {"const": true}
+      }
+    },
+    "offered": {
+      "properties": {
+        "check_state": {"const": "passed"},
+        "private_data": {"const": "clear"},
+        "preview": {"type": "object"}
+      }
+    },
+    "attempted": {
+      "$ref": "#/$defs/offered",
+      "properties": {"answer": {"const": "yes"}, "attempts": {"const": 1}}
+    },
+    "posted": {
+      "$ref": "#/$defs/attempted",
+      "properties": {
+        "exit_code": {"const": 0},
+        "stdout": {"minItems": 1, "items": {"properties": {"outcome": {"const": "posted"}}}}
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/verification-proof",
+          "properties": {"stdout": {"items": {"properties": {"status": {"const": "verified"}}}}}
+        },
+        {
+          "properties": {"stdout": {"items": {"properties": {"status": {"const": "listed"}}}}},
+          "oneOf": [{}, {"$ref": "#/$defs/verification-proof"}]
+        }
+      ]
+    },
+    "verification-proof": {
+      "oneOf": [
+        {
+          "required": ["receipt"],
+          "properties": {
+            "kind": {"enum": ["driver", "harness"]},
+            "receipt": {"properties": {"checks_passed": {"const": 5}, "current": {"const": true}}}
+          }
+        },
+        {"properties": {"kind": {"const": "skill"}, "skill_check_passed": {"const": true}}}
+      ]
+    }
   }
 }

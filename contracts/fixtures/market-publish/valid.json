@@ -118,6 +118,23 @@
     "exit_code": 0,
     "stdout": [{"schema": "openwiz.market-publish.v1", "outcome": "posted", "pr_url": "https://github.com/openwizdev/WizMarket/pull/900001", "status": "verified"}]
   },
+  "private-before-offer": {
+    "installed": true,
+    "calls": 1,
+    "command": "python3 -I skills/market/scripts/publish.py",
+    "kind": "driver",
+    "path": "synthetic/driver",
+    "check": "synthetic/check.json",
+    "receipt": {"path": "synthetic/kit.txt", "checks_passed": 5, "current": true},
+    "check_state": "passed",
+    "skill_check_passed": false,
+    "private_data": "clear",
+    "preview": {"files": [{"path": "listings/synthetic-driver.json", "shown": true}, {"path": "receipts/synthetic-driver/kit.txt", "shown": true}], "account": "synthetic-publisher", "before_question": true},
+    "answer": "yes",
+    "attempts": 1,
+    "exit_code": 0,
+    "stdout": [{"schema": "openwiz.market-publish.v1", "outcome": "posted", "pr_url": "https://github.com/openwizdev/WizMarket/pull/900001", "status": "verified"}]
+  },
   "single-result-line": {
     "installed": true,
     "calls": 1,
