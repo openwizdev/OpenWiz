@@ -361,7 +361,7 @@ def selected(root, state_root=None):
     early_file = root / 'early-release.json'
     if channel_name == 'early' and (early_file.exists() or early_file.is_symlink()):
         release_ver = installer.read_early_release(early_file, expected_version=value['version'],
-                                                   expected_source=value['source'])
+                                                   expected_source=value['source'], allow_transition=True)
         value = dict(value, version=release_ver)
     return build, state, value, channel_name
 
@@ -475,14 +475,23 @@ def remove_unlocked(root, state, state_root, yes, home, codex_home, made=None):
     delete = [path for path, kind in ((link, stat.S_ISLNK), (root / 'install.lock', stat.S_ISREG))
               if owned(path, kind)]
     channel = root / 'channel.json'
-    if owned(channel, stat.S_ISREG) and channel.read_bytes() in installer.CHANNELS.values():
+    channel_raw = channel.read_bytes() if owned(channel, stat.S_ISREG) else None
+    if channel_raw in installer.CHANNELS.values():
         delete.append(channel)
     early_file = root / 'early-release.json'
-    if owned(early_file, stat.S_ISREG):
+    if channel_raw == installer.CHANNELS['early'] and owned(early_file, stat.S_ISREG):
         try:
-            installer.read_early_release(early_file)
+            exp_ver, exp_src = None, None
+            if link.is_symlink():
+                sel = Path(os.readlink(link))
+                sel_manifest = sel / 'install-manifest.json'
+                if verified_build(sel) and owned(sel_manifest, stat.S_ISREG):
+                    parsed = json.loads(sel_manifest.read_bytes())
+                    exp_ver, exp_src = parsed.get('version'), sel.name
+            installer.read_early_release(early_file, expected_version=exp_ver, expected_source=exp_src,
+                                         allow_transition=True)
             delete.append(early_file)
-        except (installer.Refused, OSError, ValueError):
+        except (installer.Refused, OSError, ValueError, AttributeError):
             pass
     delete += [root / 'skills' / name for name in marked_skills(root / 'skills')]
     delete += [root / name for name in marked_beside(root)]

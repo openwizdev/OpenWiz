@@ -271,15 +271,34 @@ class Pull(unittest.TestCase):
         code, value = status()
         self.assertEqual((code, value.get('source'), value.get('version')), (0, '2' * 40, '0.0.99'), value)
 
-    def test_early_channel_follows_newest_semver_across_pro_and_public_and_refuses_rollback(self):
+    def _early_fixture(self, cfg):
         spec = importlib.util.spec_from_file_location('pull', Path(__file__).with_name('pull.py'))
         pull = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(pull)
         f = fixture.Install()
         f.setUp()
         self.addCleanup(f.doCleanups)
-        target = fixture.TARGETS[2]
+        gh_path, cfg_path = write_fake_gh(f.base, cfg)
+        old_env = os.environ.get('FAKE_PRO_GH')
+        os.environ['FAKE_PRO_GH'] = cfg_path
+        self.addCleanup(lambda: os.environ.pop('FAKE_PRO_GH', None) if old_env is None
+                        else os.environ.__setitem__('FAKE_PRO_GH', old_env))
+        return pull, f, fixture.TARGETS[2], gh_path, cfg_path, lambda name: gh_path if name == 'gh' else None
+
+    def test_early_channel_follows_newest_semver_across_pro_and_public_and_refuses_rollback(self):
+        cfg = {
+            'logged_in': True, 'status': 200, 'assets': '',
+            'releases': [
+                {'tag_name': 'v0.1.2-rc.1', 'prerelease': True, 'draft': False},
+                {'tag_name': 'v0.1.2-rc.2', 'prerelease': True, 'draft': False},
+                {'tag_name': 'v0.1.3-rc.1', 'prerelease': True, 'draft': True},
+                {'tag_name': 'v0.1.3', 'prerelease': False, 'draft': False},
+            ],
+        }
+        pull, f, target, _, cfg_path, which = self._early_fixture(cfg)
         assets_root = f.base / 'pro-assets'
+        cfg['assets'] = str(assets_root)
+        Path(cfg_path).write_text(json.dumps(cfg))
 
         def populate_pro(rc_version, source):
             base = rc_version.split('-rc.', 1)[0]
@@ -294,11 +313,20 @@ class Pull(unittest.TestCase):
             (tag_dir / f'openwiz-{base}-{target}.manifest.json').write_bytes(raw)
             (tag_dir / archive_name).write_bytes(arch)
             (tag_dir / 'SHA256SUMS').write_bytes(release_sums(raw, arch, target, base, archive_name))
-            return b, raw, arch
+            return b, raw
 
-        rc1, raw_rc1, _ = populate_pro('0.1.2-rc.1', '1' * 40)
-        rc2, raw_rc2, _ = populate_pro('0.1.2-rc.2', '2' * 40)
-        rc3, raw_rc3, _ = populate_pro('0.1.3-rc.1', '4' * 40)
+        def install_early(bundle, raw, rc=None):
+            cmd = [sys.executable, str(HERE / 'install.py'), '--manifest', str(bundle[0]),
+                   '--archive', str(bundle[1]), '--manifest-sha256', fixture.sha(raw),
+                   '--root', str(f.root), '--target', target, '--channel', 'early']
+            if rc:
+                cmd += ['--release-version', rc]
+            res = subprocess.run(cmd, capture_output=True, text=True)
+            self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+
+        rc1, raw_rc1 = populate_pro('0.1.2-rc.1', '1' * 40)
+        rc2, raw_rc2 = populate_pro('0.1.2-rc.2', '2' * 40)
+        populate_pro('0.1.3-rc.1', '4' * 40)
         pub_old = f.bundle(version='0.1.1', source='a' * 40)
         pub_new = f.bundle(version='0.1.2', source='3' * 40)
         current_pub = {'bundle': pub_old, 'version': '0.1.1'}
@@ -316,28 +344,7 @@ class Pull(unittest.TestCase):
                 return release_sums(raw, arch, target, current_pub['version'])
             raise pull.NotFound('404 at ' + url)
 
-        cfg = {
-            'logged_in': True, 'status': 200, 'assets': str(assets_root),
-            'releases': [
-                {'tag_name': 'v0.1.2-rc.1', 'prerelease': True, 'draft': False},
-                {'tag_name': 'v0.1.2-rc.2', 'prerelease': True, 'draft': False},
-                {'tag_name': 'v0.1.3-rc.1', 'prerelease': True, 'draft': True},
-                {'tag_name': 'v0.1.3', 'prerelease': False, 'draft': False},
-            ],
-        }
-        gh_path, cfg_path = write_fake_gh(f.base, cfg)
-        old_env = os.environ.get('FAKE_PRO_GH')
-        os.environ['FAKE_PRO_GH'] = cfg_path
-        self.addCleanup(lambda: os.environ.pop('FAKE_PRO_GH', None) if old_env is None
-                        else os.environ.__setitem__('FAKE_PRO_GH', old_env))
-        which = lambda name: gh_path if name == 'gh' else None
-
-        res = subprocess.run([sys.executable, str(HERE / 'install.py'), '--manifest', str(rc1[0]),
-                              '--archive', str(rc1[1]), '--manifest-sha256', fixture.sha(raw_rc1),
-                              '--root', str(f.root), '--target', target, '--channel', 'early',
-                              '--release-version', '0.1.2-rc.1'],
-                             capture_output=True, text=True)
-        self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+        install_early(rc1, raw_rc1, '0.1.2-rc.1')
         self.assertEqual((f.root / 'channel.json').read_text(),
                          '{"schema":"openwiz.update-channel.v1","channel":"early"}\n')
 
@@ -346,11 +353,7 @@ class Pull(unittest.TestCase):
         staged = pull.stage(target, cand['version'], cand['source'], cand['manifest_sha256'],
                             f.root, f.root / 'state', fetch=pub_fetch, which=which)
         self.assertEqual((staged['version'], staged['activated']), ('0.1.2-rc.2', False))
-        subprocess.run([sys.executable, str(HERE / 'install.py'), '--manifest', str(rc2[0]),
-                        '--archive', str(rc2[1]), '--manifest-sha256', fixture.sha(raw_rc2),
-                        '--root', str(f.root), '--target', target, '--channel', 'early',
-                        '--release-version', '0.1.2-rc.2'],
-                       check=True, capture_output=True)
+        install_early(rc2, raw_rc2, '0.1.2-rc.2')
 
         with self.assertRaisesRegex(pull.Refused, 'published version must advance'):
             pull.stage(target, '0.1.2-rc.1', '1' * 40, fixture.sha(raw_rc1),
@@ -362,10 +365,7 @@ class Pull(unittest.TestCase):
         staged = pull.stage(target, cand['version'], cand['source'], cand['manifest_sha256'],
                             f.root, f.root / 'state', fetch=pub_fetch, which=which)
         self.assertEqual((staged['version'], staged['activated']), ('0.1.2', False))
-        subprocess.run([sys.executable, str(HERE / 'install.py'), '--manifest', str(pub_new[0]),
-                        '--archive', str(pub_new[1]), '--manifest-sha256', fixture.sha(pub_new[0].read_bytes()),
-                        '--root', str(f.root), '--target', target, '--channel', 'early'],
-                       check=True, capture_output=True)
+        install_early(pub_new, pub_new[0].read_bytes())
         self.assertEqual((f.root / 'channel.json').read_text(),
                          '{"schema":"openwiz.update-channel.v1","channel":"early"}\n')
         self.assertFalse((f.root / 'early-release.json').exists())
@@ -383,24 +383,12 @@ class Pull(unittest.TestCase):
         self.assertEqual((staged['version'], staged['source']), ('0.1.3-rc.1', '4' * 40))
 
     def test_early_channel_refusals_for_missing_gh_logged_out_and_no_pro_access(self):
-        spec = importlib.util.spec_from_file_location('pull', Path(__file__).with_name('pull.py'))
-        pull = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(pull)
-        f = fixture.Install()
-        f.setUp()
-        self.addCleanup(f.doCleanups)
-        target = fixture.TARGETS[2]
+        pull, _, target, gh_path, cfg_path, which = self._early_fixture(
+            {'logged_in': False, 'token': 'gho_synthetic_secret_123'})
         fail_fetch = lambda url, limit: self.fail('must not fetch public before Pro auth/access check: ' + url)
 
         with self.assertRaisesRegex(pull.Refused, 'gh auth login'):
             pull.discover(target, fetch=fail_fetch, channel='early', which=lambda _: None)
-
-        gh_path, cfg_path = write_fake_gh(f.base, {'logged_in': False, 'token': 'gho_synthetic_secret_123'})
-        old_env = os.environ.get('FAKE_PRO_GH')
-        os.environ['FAKE_PRO_GH'] = cfg_path
-        self.addCleanup(lambda: os.environ.pop('FAKE_PRO_GH', None) if old_env is None
-                        else os.environ.__setitem__('FAKE_PRO_GH', old_env))
-        which = lambda name: gh_path if name == 'gh' else None
 
         with self.assertRaises(pull.Refused) as ctx:
             pull.discover(target, fetch=fail_fetch, channel='early', which=which)
@@ -413,6 +401,54 @@ class Pull(unittest.TestCase):
         self.assertIn('OpenWiz Pro', str(ctx.exception))
         self.assertIn('https://openwiz.dev/pro/', str(ctx.exception))
         self.assertNotIn('gho_synthetic_secret_123', str(ctx.exception))
+
+        env = dict(os.environ, PATH=str(Path(gh_path).parent) + os.pathsep + '/usr/bin:/bin', FAKE_PRO_GH=cfg_path)
+        Path(cfg_path).write_text(json.dumps({'logged_in': False, 'token': 'gho_synthetic_secret_123'}))
+        out_cli = subprocess.run([sys.executable, '-I', str(HERE / 'pull.py'), 'discover', target, '--channel', 'early'],
+                                 capture_output=True, text=True, env=env)
+        Path(cfg_path).write_text(json.dumps({'logged_in': True, 'status': 404, 'token': 'gho_synthetic_secret_123'}))
+        pro_cli = subprocess.run([sys.executable, '-I', str(HERE / 'pull.py'), 'discover', target, '--channel', 'early'],
+                                 capture_output=True, text=True, env=env)
+        self.assertEqual((out_cli.returncode, pro_cli.returncode), (1, 1))
+        self.assertIn('gh auth login', out_cli.stderr)
+        self.assertIn('OpenWiz Pro', pro_cli.stderr)
+        self.assertIn('https://openwiz.dev/pro/', pro_cli.stderr)
+        self.assertNotIn('gho_synthetic_secret_123', out_cli.stderr + pro_cli.stderr)
+
+    def test_early_discover_prefers_newer_feed_public_release_over_older_latest_and_rc(self):
+        pull, f, target, _, cfg_path, which = self._early_fixture({
+            'logged_in': True, 'status': 200, 'assets': '',
+            'releases': [{'tag_name': 'v0.1.2-rc.1', 'prerelease': True, 'draft': False}],
+        })
+        old_pub = f.bundle(version='0.1.0', source='a' * 40)
+        new_pub = f.bundle(version='0.1.2', source='b' * 40)
+        rc_pub = f.bundle(version='0.1.2', source='c' * 40)
+        rc_dir = f.base / 'pro-feed-assets/v0.1.2-rc.1'
+        rc_dir.mkdir(parents=True)
+        rc_raw = rc_pub[0].read_bytes()
+        (rc_dir / f'openwiz-{target}.sha256').write_bytes(f'{fixture.sha(rc_raw)}  openwiz-{target}.manifest.json\n'.encode())
+        (rc_dir / f'openwiz-{target}.manifest.json').write_bytes(rc_raw)
+        Path(cfg_path).write_text(json.dumps({
+            'logged_in': True, 'status': 200, 'assets': str(f.base / 'pro-feed-assets'),
+            'releases': [{'tag_name': 'v0.1.2-rc.1', 'prerelease': True, 'draft': False}],
+        }))
+        seen = []
+
+        def fetch(url, limit):
+            seen.append(url)
+            if url == pull.FEED:
+                return ('<entry><link href="https://github.com/openwizdev/OpenWiz/releases/tag/v0.1.0"/>'
+                        '<link href="https://github.com/openwizdev/OpenWiz/releases/tag/v0.1.2"/></entry>').encode()
+            b = new_pub if '/download/v0.1.2/' in url else old_pub if '/latest/download/' in url else None
+            if b is None:
+                raise pull.NotFound('404 at ' + url)
+            raw = b[0].read_bytes()
+            return f'{fixture.sha(raw)}  openwiz-{target}.manifest.json\n'.encode() if url.endswith('.sha256') else raw
+
+        self.assertEqual(pull.discover(target, fetch=fetch)['version'], '0.1.0')
+        self.assertNotIn(pull.FEED, seen)
+        early = pull.discover(target, fetch=fetch, channel='early', which=which)
+        self.assertEqual((early['version'], early['origin']), ('0.1.2', 'public'))
 
 
 if __name__ == '__main__':

@@ -14,8 +14,8 @@ import urllib.request
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from install import (CHANNELS, EARLY_VERSION_RE, Refused, TARGETS, VERSION_RE,
-                     install, manifest_at, private, read_early_release, require, sha, unique)
+from install import (CHANNELS, EARLY_VERSION_RE, Refused, SEMVER_RE, TARGETS, VERSION_RE,
+                     install, manifest_at, private, read_early_release, require, semver_key, sha, unique)
 
 DESCRIPTION = """Fixed published-release transport. No source checkout, build, push or shell."""
 
@@ -25,7 +25,6 @@ TAG_LINK = re.compile(r'href="https://github\.com/openwizdev/OpenWiz/releases/ta
 PRO_REPO = 'openwizpro/WizPro'
 PRO_URL = 'https://openwiz.dev/pro/'
 RC_TAG_RE = re.compile(r'^v(0\.[0-9]+\.[0-9]+-rc\.[0-9]+)$')
-SEMVER_RE = re.compile(r'^(0)\.([0-9]+)\.([0-9]+)(?:-rc\.([0-9]+))?$')
 ASSET_NAME_RE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9_.-]*$')
 
 
@@ -60,13 +59,6 @@ def fetch_bytes(url, limit):
     return data
 
 
-def semver_key(version):
-    match = SEMVER_RE.fullmatch(version)
-    require(match, 'invalid release version')
-    major, minor, patch = int(match[1]), int(match[2]), int(match[3])
-    return (major, minor, patch, 1, 0) if match[4] is None else (major, minor, patch, 0, int(match[4]))
-
-
 def is_prerelease(version):
     return '-rc.' in version
 
@@ -79,7 +71,8 @@ def installed_version(root, old):
     early_file = Path(root) / 'early-release.json'
     if not early_file.exists() and not early_file.is_symlink():
         return old['version']
-    return read_early_release(early_file, expected_version=old['version'], expected_source=old['source'])
+    return read_early_release(early_file, expected_version=old['version'], expected_source=old['source'],
+                              allow_transition=True)
 
 
 def read_channel(root):
@@ -189,6 +182,38 @@ def published(target, fetch=fetch_bytes, version=None):
     return found
 
 
+def published_public_for_early(target, fetch, best_early=None):
+    latest_found, latest_error = None, None
+    try:
+        latest_found = manifest_from(BASE + 'latest/download/', target, fetch)
+    except NotFound as missing:
+        latest_error = missing
+    try:
+        tags = TAG_LINK.findall(fetch(FEED, 1024 * 1024).decode('utf-8', 'replace'))
+    except NotFound:
+        if latest_found is None:
+            raise
+        tags = []
+    floor = semver_key(latest_found[2]['version']) if latest_found is not None else None
+    early_key = semver_key(best_early) if best_early is not None else None
+    last_missing = latest_error
+    for tag in sorted(set(tags), key=semver_key, reverse=True):
+        tag_key = semver_key(tag)
+        if floor is not None and tag_key <= floor:
+            break
+        if early_key is not None and early_key > tag_key:
+            break
+        try:
+            return published(target, fetch, tag)
+        except NotFound as missing:
+            last_missing = missing
+    if latest_found is not None:
+        return latest_found
+    if last_missing is not None:
+        raise NotFound('%s; no published release tag found at %s' % (last_missing, FEED))
+    raise NotFound('no published release tag found at ' + FEED)
+
+
 def published_early(target, fetch=fetch_bytes, version=None, which=shutil.which):
     require(target in TARGETS, 'unsupported package target')
     gh_bin = gh_binary(which)
@@ -205,7 +230,7 @@ def published_early(target, fetch=fetch_bytes, version=None, which=shutil.which)
         return published(target, fetch, version), 'public', fetch, version
     best_early = max(rc_versions, key=semver_key) if rc_versions else None
     try:
-        public_found = published(target, fetch)
+        public_found = published_public_for_early(target, fetch, best_early=best_early)
     except NotFound:
         if best_early is None:
             raise
@@ -313,7 +338,10 @@ def main():
         value = discover(**args) if action == 'discover' else stage(**args)
         print(json.dumps(value, separators=(',', ':')))
         return 0
-    except (Refused, OSError, ValueError, TypeError, KeyError):
+    except Refused as error:
+        print(f'package pull: refused: {error}; last-good build retained', file=sys.stderr)
+        return 1
+    except (OSError, ValueError, TypeError, KeyError):
         print('package pull: refused; last-good build retained', file=sys.stderr)
         return 1
 

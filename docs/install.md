@@ -41,11 +41,12 @@ The agent runs each command itself and reads its JSON. `<root>` is the install f
 
    Then it proves the build: `<root>/current/openwiz --build-identity` prints the version (`0.1.1`) and the source commit. The `openwiz` program lives there, not on your `PATH`: typing `openwiz` alone says "command not found".
 
-   **Early builds (OpenWiz Pro, opt-in):** with no extra flag, `install download` reads only public releases from `openwizdev/OpenWiz` and installs on the `packaged` channel. OpenWiz Pro members can opt into the `early` channel by passing `--early` to `install download`:
+   **Early builds (OpenWiz Pro, opt-in):** with no extra flag, `install download` reads only public releases from `openwizdev/OpenWiz` and installs on the `packaged` channel. Because step 1's `$openwiz` clone is pinned to `v0.1.1` (which does not accept `--early`), OpenWiz Pro members first clone the current default branch into a separate private temporary folder (or use an installer from `0.2.0` or later once released), then pass `--early` to `install download`:
 
    ```sh
-   python3 -I "$openwiz"/tools/install/install download --early --target <target> --dir <new private folder>
-   python3 -I "$openwiz"/tools/install/install install --assets <that folder> --target <target> --root <root>
+   git clone --depth 1 https://github.com/openwizdev/OpenWiz "$openwiz_early"
+   python3 -I "$openwiz_early"/tools/install/install download --early --target <target> --dir <new private folder>
+   python3 -I "$openwiz_early"/tools/install/install install --assets <that folder> --target <target> --root <root>
    ```
 
    `download --early` uses your existing `gh` login (without storing or logging any token) to check prereleases tagged `v<version>-rc.<n>` in the private `openwizpro/WizPro` repository alongside public releases, picks whichever is newer by semver, and verifies `SHA256SUMS`, the manifest and the archive the same way. Installing writes `{"schema":"openwiz.update-channel.v1","channel":"early"}` to `<root>/channel.json` (switching an existing `packaged` install to `early` only after the new build verifies and activates), and later updates follow the newest early or public release by semver so you are never left behind a public release. If `gh` is missing or not logged in, it refuses and tells you to run `gh auth login`; if your account does not have access to `openwizpro/WizPro` (HTTP 404), it refuses and links to [openwiz.dev/pro](https://openwiz.dev/pro/). `install remove` removes an `early` `channel.json` the same as `packaged`.

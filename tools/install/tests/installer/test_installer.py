@@ -5,6 +5,7 @@ from importlib.machinery import SourceFileLoader
 import shlex
 import shutil
 import importlib.util
+import errno
 import io
 import json
 import os
@@ -524,6 +525,85 @@ class EarlyChannel(Installer):
         self.assertEqual((code, value['outcome']), (5, 'refused'), value)
         self.assertIn('OpenWiz Pro', value['reason'])
         self.assertIn('https://openwiz.dev/pro/', value['reason'])
+
+    def setup_pro(self, *rcs):
+        assets_root = self.base / 'pro-assets'
+        for rc_version, source in rcs:
+            self.publish_pro(assets_root, rc_version, source=source)
+        self.publish('v0.1.0', '0.1.0')
+        self.feed('v0.1.0')
+        cfg_path = self.setup_fake_gh({'logged_in': True, 'status': 200, 'assets': str(assets_root), 'releases': []})
+        return assets_root, cfg_path
+
+    def download_pro_rc(self, assets_root, cfg_path, rc_version, folder):
+        Path(cfg_path).write_text(json.dumps({
+            'logged_in': True, 'status': 200, 'assets': str(assets_root),
+            'releases': [{'tag_name': 'v' + rc_version, 'prerelease': True, 'draft': False}],
+        }))
+        code, value = self.run_entry('download', '--early', '--target', TARGET, '--dir', str(folder))
+        self.assertEqual((code, value['version']), (0, rc_version), value)
+        return folder
+
+    def test_packaged_reinstall_preserves_unrelated_early_release_metadata(self):
+        pkg_assets = self.assets('pkg-owner')
+        self.assertEqual(self.run_entry('install', '--assets', str(pkg_assets), '--target', TARGET,
+                                        '--root', str(self.root))[0], 0)
+        owner_meta = self.root / 'early-release.json'
+        owner_bytes = b'{"schema":"owner.private.v1","note":"keep"}\n'
+        owner_meta.write_bytes(owner_bytes)
+        owner_meta.chmod(0o600)
+        self.assertEqual(self.run_entry('install', '--assets', str(pkg_assets), '--target', TARGET,
+                                        '--root', str(self.root))[0], 0)
+        self.assertTrue(owner_meta.is_file(), 'packaged reinstall deleted unrelated early-release.json')
+        self.assertEqual(owner_meta.read_bytes(), owner_bytes)
+        self.assertNotIn(str(owner_meta), self.run_entry('remove', '--root', str(self.root))[1]['delete'])
+        assets_root, cfg_path = self.setup_pro(('0.1.2-rc.1', '1' * 40))
+        dl1 = self.download_pro_rc(assets_root, cfg_path, '0.1.2-rc.1', self.base / 'dl-own')
+        self.assertEqual(self.run_entry('install', '--assets', str(dl1), '--target', TARGET,
+                                        '--root', str(self.root))[0], 5)
+        self.assertEqual(owner_meta.read_bytes(), owner_bytes)
+
+    def test_rc_upgrade_enospc_and_interrupted_activation_stay_consistent(self):
+        assets_root, cfg_path = self.setup_pro(('0.1.2-rc.1', '1' * 40), ('0.1.2-rc.2', '2' * 40))
+        dl1 = self.download_pro_rc(assets_root, cfg_path, '0.1.2-rc.1', self.base / 'dl-rc1')
+        dl2 = self.download_pro_rc(assets_root, cfg_path, '0.1.2-rc.2', self.base / 'dl-rc2')
+        self.assertEqual(self.run_entry('install', '--assets', str(dl1), '--target', TARGET,
+                                        '--root', str(self.root))[0], 0)
+        real_replace = entry.installer.replace_private
+        entry.installer.replace_private = lambda *a, **k: (_ for _ in ()).throw(OSError(errno.ENOSPC, 'no space'))
+        try:
+            code, value = self.run_entry('install', '--assets', str(dl2), '--target', TARGET, '--root', str(self.root))
+        finally:
+            entry.installer.replace_private = real_replace
+        self.assertEqual((code, value['outcome']), (5, 'refused'), value)
+        code, st = self.run_entry('status', '--root', str(self.root))
+        self.assertEqual((code, st.get('version'), st.get('source')), (0, '0.1.2-rc.1', '1' * 40), st)
+        raw2 = (assets_root / 'v0.1.2-rc.2' / f'openwiz-0.1.2-{TARGET}.manifest.json').read_bytes()
+        staged = pull.stage(TARGET, '0.1.2-rc.2', '2' * 40, test_install.sha(raw2), self.root, self.root / 'state')
+        self.assertEqual((staged['version'], staged['activated']), ('0.1.2-rc.2', False))
+        (self.root / 'early-release.json').write_bytes(entry.installer.early_release_bytes(
+            '0.1.2-rc.1', '1' * 40, next_entry={'version': '0.1.2-rc.2', 'source': '2' * 40}))
+        entry.installer.activate_link(self.root / 'state/service/builds' / ('2' * 40), self.root)
+        code, st = self.run_entry('status', '--root', str(self.root))
+        self.assertEqual((code, st.get('version'), st.get('source')), (0, '0.1.2-rc.2', '2' * 40), st)
+
+    def test_install_refuses_downgrade_under_lock_and_allows_reinstall(self):
+        assets_root, cfg_path = self.setup_pro(('0.1.2-rc.1', '1' * 40), ('0.1.3-rc.1', '3' * 40))
+        dl1 = self.download_pro_rc(assets_root, cfg_path, '0.1.2-rc.1', self.base / 'dl-rc1')
+        dl3 = self.download_pro_rc(assets_root, cfg_path, '0.1.3-rc.1', self.base / 'dl-rc3')
+        self.assertEqual(self.run_entry('install', '--assets', str(dl3), '--target', TARGET,
+                                        '--root', str(self.root))[0], 0)
+        code, value = self.run_entry('install', '--assets', str(dl1), '--target', TARGET, '--root', str(self.root))
+        self.assertEqual((code, value['outcome']), (5, 'refused'), value)
+        self.assertEqual(self.run_entry('status', '--root', str(self.root))[1]['version'], '0.1.3-rc.1')
+        self.assertEqual(self.run_entry('install', '--assets', str(dl3), '--target', TARGET,
+                                        '--root', str(self.root))[0], 0)
+
+    def test_early_install_guide_bootstraps_installer_with_early_flag(self):
+        guide = (INSTALL.parents[1] / 'docs/install.md').read_text(encoding='utf-8')
+        section = guide.split('**Early builds', 1)[1].split('\n3. ', 1)[0]
+        self.assertNotIn('"$openwiz"/tools/install/install download --early', section)
+        self.assertIn('git clone', section)
 
 
 if __name__ == '__main__':
