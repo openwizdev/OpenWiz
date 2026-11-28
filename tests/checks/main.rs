@@ -25,5 +25,6 @@ mod test_floor;
 mod place;
 
 mod loops_schema;
+mod market_publish;
 #[path = "../new-thread/pattern.rs"]
 mod pattern;
