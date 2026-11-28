@@ -1,0 +1,10 @@
+Repository: example/openwiz-bench-20261128t100000z (public, throwaway)
+Time to first merged PR: 23:30 (pull request #3, merged 2026-11-28T10:23:30Z)
+Checker: PASS, 5/5 pages agree with GitHub
+  PASS You: agrees with GitHub
+  PASS Specs: agrees with GitHub
+  PASS Agents: agrees with GitHub
+  PASS Canvas: agrees with GitHub
+  PASS Models: agrees with GitHub
+Repository removed: deleted
+Row: | Real-user | none | 23:30 | 5/5 pages agree | 2026-11-28 |

@@ -1,0 +1,10 @@
+Repository: example/openwiz-bench-20261128t100000z (public, throwaway)
+Time to first merged PR: 85:05 (pull request #2, merged 2026-11-28T11:25:05Z)
+Checker: FAIL, 4/5 pages agree with GitHub
+  PASS You: agrees with GitHub
+  PASS Specs: agrees with GitHub
+  PASS Agents: agrees with GitHub
+  FAIL Canvas: shows No tickets yet, GitHub has 1
+  PASS Models: agrees with GitHub
+Repository removed: archived (delete refused: HTTP 403: Must have admin rights to Repository. (needs the delete_repo scope))
+Row: | Real-user | 23:30 | 85:05 | 4/5 pages agree | 2026-11-28 |

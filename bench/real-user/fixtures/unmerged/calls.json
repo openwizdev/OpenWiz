@@ -1,0 +1,75 @@
+{
+ "start": "2026-11-28T10:00:00Z",
+ "rules": [
+  {
+   "argv": [
+    "gh",
+    "repo",
+    "create",
+    "example/openwiz-bench-20261128t100000z",
+    "--public",
+    "--add-readme"
+   ],
+   "stdout": "https://github.com/example/openwiz-bench-20261128t100000z\n"
+  },
+  {
+   "argv": [
+    "gh",
+    "repo",
+    "clone",
+    "example/openwiz-bench-20261128t100000z"
+   ],
+   "stdout": ""
+  },
+  {
+   "argv": [
+    "fake-agent"
+   ],
+   "stdout": "fleet launched\n",
+   "advance": 1200
+  },
+  {
+   "argv": [
+    "gh",
+    "pr",
+    "list",
+    "--repo",
+    "example/openwiz-bench-20261128t100000z",
+    "--state",
+    "merged"
+   ],
+   "stdout": "[]",
+   "advance": 600
+  },
+  {
+   "argv": [
+    "gh",
+    "auth",
+    "token"
+   ],
+   "stdout": "dummy-token\n"
+  },
+  {
+   "argv": [
+    "node",
+    "/wizsite/scripts/live-check.mjs",
+    "--repo",
+    "example/openwiz-bench-20261128t100000z",
+    "--prod",
+    "--json"
+   ],
+   "stdout": "{\"ok\": true, \"repo\": \"example/openwiz-bench-20261128t100000z\", \"pages\": [{\"page\": \"You\", \"pass\": true, \"detail\": \"agrees with GitHub\"}, {\"page\": \"Specs\", \"pass\": true, \"detail\": \"agrees with GitHub\"}, {\"page\": \"Agents\", \"pass\": true, \"detail\": \"agrees with GitHub\"}, {\"page\": \"Canvas\", \"pass\": true, \"detail\": \"agrees with GitHub\"}, {\"page\": \"Models\", \"pass\": true, \"detail\": \"agrees with GitHub\"}]}",
+   "code": 0
+  },
+  {
+   "argv": [
+    "gh",
+    "repo",
+    "delete",
+    "example/openwiz-bench-20261128t100000z",
+    "--yes"
+   ],
+   "stdout": ""
+  }
+ ]
+}

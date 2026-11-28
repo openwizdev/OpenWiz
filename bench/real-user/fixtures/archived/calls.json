@@ -1,0 +1,85 @@
+{
+ "start": "2026-11-28T10:00:00Z",
+ "rules": [
+  {
+   "argv": [
+    "gh",
+    "repo",
+    "create",
+    "example/openwiz-bench-20261128t100000z",
+    "--public",
+    "--add-readme"
+   ],
+   "stdout": "https://github.com/example/openwiz-bench-20261128t100000z\n"
+  },
+  {
+   "argv": [
+    "gh",
+    "repo",
+    "clone",
+    "example/openwiz-bench-20261128t100000z"
+   ],
+   "stdout": ""
+  },
+  {
+   "argv": [
+    "fake-agent"
+   ],
+   "stdout": "fleet launched\n",
+   "advance": 1200
+  },
+  {
+   "argv": [
+    "gh",
+    "pr",
+    "list",
+    "--repo",
+    "example/openwiz-bench-20261128t100000z",
+    "--state",
+    "merged"
+   ],
+   "stdout": "[{\"number\": 2, \"url\": \"https://github.com/example/openwiz-bench-20261128t100000z/pull/2\", \"mergedAt\": \"2026-11-28T11:25:05Z\", \"closingIssuesReferences\": [{\"number\": 1, \"url\": \"https://github.com/example/openwiz-bench-20261128t100000z/issues/1\"}]}]"
+  },
+  {
+   "argv": [
+    "gh",
+    "auth",
+    "token"
+   ],
+   "stdout": "dummy-token\n"
+  },
+  {
+   "argv": [
+    "node",
+    "/wizsite/scripts/live-check.mjs",
+    "--repo",
+    "example/openwiz-bench-20261128t100000z",
+    "--prod",
+    "--json"
+   ],
+   "stdout": "{\"ok\": false, \"repo\": \"example/openwiz-bench-20261128t100000z\", \"pages\": [{\"page\": \"You\", \"pass\": true, \"detail\": \"agrees with GitHub\"}, {\"page\": \"Specs\", \"pass\": true, \"detail\": \"agrees with GitHub\"}, {\"page\": \"Agents\", \"pass\": true, \"detail\": \"agrees with GitHub\"}, {\"page\": \"Canvas\", \"pass\": false, \"detail\": \"shows No tickets yet, GitHub has 1\"}, {\"page\": \"Models\", \"pass\": true, \"detail\": \"agrees with GitHub\"}]}",
+   "code": 1
+  },
+  {
+   "argv": [
+    "gh",
+    "repo",
+    "delete",
+    "example/openwiz-bench-20261128t100000z",
+    "--yes"
+   ],
+   "stderr": "HTTP 403: Must have admin rights to Repository. (needs the delete_repo scope)\n",
+   "code": 1
+  },
+  {
+   "argv": [
+    "gh",
+    "repo",
+    "archive",
+    "example/openwiz-bench-20261128t100000z",
+    "--yes"
+   ],
+   "stdout": ""
+  }
+ ]
+}
