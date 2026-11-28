@@ -3,6 +3,8 @@ use std::io;
 use std::path::Path;
 use std::time::Instant;
 
+use openwiz_core::loops::marker::is_id;
+pub use openwiz_core::loops::marker::{marker, split_marker, split_marker as marker_id};
 use openwiz_core::source::SourceError;
 use serde_json::{Map, Value, json};
 
@@ -787,14 +789,6 @@ impl<'a, 'c> Fields<'a, 'c> {
     }
 }
 
-fn is_id(s: &str) -> bool {
-    let b = s.as_bytes();
-    (1..=64).contains(&b.len())
-        && (b[0].is_ascii_lowercase() || b[0].is_ascii_digit())
-        && b.iter()
-            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || *c == b'-')
-}
-
 fn placeholder(text: &str) -> Option<&str> {
     let inner = text.strip_prefix("{{")?;
     let end = inner.find("}}")?;
@@ -1434,16 +1428,6 @@ pub fn instant(time: &str) -> Option<(i64, String)> {
         return None;
     }
     Some((seconds, fraction))
-}
-
-pub fn marker(id: &str) -> String {
-    format!("[wizloop:{id}]")
-}
-
-pub fn split_marker(name: &str) -> Option<(&str, &str)> {
-    let open = name.rfind(" [wizloop:")?;
-    let id = name[open + " [wizloop:".len()..].strip_suffix(']')?;
-    is_id(id).then(|| (id, &name[..open]))
 }
 
 pub fn derived_id(name: &str) -> String {
@@ -2312,13 +2296,6 @@ pub fn read_list(
             Ok(object.clone())
         })
         .collect()
-}
-
-pub fn marker_id(name: &str) -> Option<(&str, &str)> {
-    let rest = name.strip_suffix(']')?;
-    let at = rest.rfind(" [wizloop:")?;
-    let id = &rest[at + " [wizloop:".len()..];
-    is_id(id).then_some((id, &name[..at]))
 }
 
 pub fn derive_id(name: &str) -> Option<String> {
