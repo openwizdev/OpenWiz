@@ -1,0 +1,53 @@
+{
+  "candidate": {
+    "schema": "openwiz.factory-bench.v1",
+    "version": "2.0.0",
+    "commit": "2222222222222222222222222222222222222222",
+    "hash": "0cf42311464f94d433cb99ce4ff7dd405b9fe24b780751e070bd2b1b23e1fac1",
+    "tasks": [
+      {
+        "id": "trim-lines",
+        "result": "pass",
+        "wall_minutes": 1.5,
+        "tokens": 50,
+        "attempts": 1,
+        "link": "https://example.com/synthetic/trim-lines/pull/1"
+      },
+      {
+        "id": "count-words",
+        "result": "pass",
+        "wall_minutes": 1.5,
+        "tokens": 50,
+        "attempts": 1,
+        "link": "https://example.com/synthetic/count-words/pull/1"
+      }
+    ]
+  },
+  "previous": {
+    "schema": "openwiz.factory-bench.v1",
+    "version": "1.9.0",
+    "commit": "3333333333333333333333333333333333333333",
+    "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "tasks": [
+      {
+        "id": "trim-lines",
+        "result": "pass",
+        "wall_minutes": 1.5,
+        "tokens": 50,
+        "attempts": 1,
+        "link": "https://example.com/synthetic/trim-lines/pull/1"
+      },
+      {
+        "id": "count-words",
+        "result": "pass",
+        "wall_minutes": 1.5,
+        "tokens": 50,
+        "attempts": 1,
+        "link": "https://example.com/synthetic/count-words/pull/1"
+      }
+    ]
+  },
+  "expected": "baseline",
+  "score": "1",
+  "unproved": []
+}

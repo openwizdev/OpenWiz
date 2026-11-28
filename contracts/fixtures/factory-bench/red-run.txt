@@ -1,0 +1,24 @@
+test_refuses_a_planted_bad_task (__main__.FactoryBench.test_refuses_a_planted_bad_task) ...
+  test_refuses_a_planted_bad_task (__main__.FactoryBench.test_refuses_a_planted_bad_task) (field='licence') ... FAIL
+  test_refuses_a_planted_bad_task (__main__.FactoryBench.test_refuses_a_planted_bad_task) (field='commit') ... FAIL
+
+======================================================================
+FAIL: test_refuses_a_planted_bad_task (__main__.FactoryBench.test_refuses_a_planted_bad_task) (field='licence')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/factory-bench/test_fixtures.py", line 133, in test_refuses_a_planted_bad_task
+    self.assertTrue(any(f".source.{field}:" in error
+AssertionError: False is not true : schema accepted a planted bad licence
+
+======================================================================
+FAIL: test_refuses_a_planted_bad_task (__main__.FactoryBench.test_refuses_a_planted_bad_task) (field='commit')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/factory-bench/test_fixtures.py", line 133, in test_refuses_a_planted_bad_task
+    self.assertTrue(any(f".source.{field}:" in error
+AssertionError: False is not true : schema accepted a planted bad commit
+
+----------------------------------------------------------------------
+Ran 1 test
+
+FAILED (failures=2)
