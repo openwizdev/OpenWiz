@@ -1,0 +1,30 @@
+$ python3 -I adapters/capy/test_driver.py -v   (agent CLI stubs first on PATH; the driver is the template, copied and renamed; KY1 at 2292b177)
+test_a_host_error_is_a_fixed_refusal ... FAIL
+test_a_lost_create_is_retried_with_the_same_request_id_and_starts_one_thread ... FAIL
+test_an_effort_the_model_does_not_offer_is_the_exact_refusal_and_starts_nothing ... FAIL
+test_an_unknown_run_is_refused_by_wake_and_stop ... FAIL
+test_effort_reaches_the_host_as_the_model_reasoning_mode ... FAIL
+test_every_request_reaches_the_host_with_the_key_header_only ... FAIL
+test_inputs_off_the_schema_are_refused_before_any_request ... ok
+test_kit_passes_all_five_on_the_fake_host ... FAIL
+test_no_driver_file_names_the_key_or_the_keychain ... ok
+test_start_creates_one_thread_in_the_repository_project_on_the_harness_model ... FAIL
+test_start_refuses_a_harness_capy_has_no_subscription_for ... FAIL
+test_start_takes_the_only_project_and_refuses_when_none_or_many_list_the_repository ... FAIL
+test_stop_interrupts_then_archives_and_a_wake_after_it_is_refused ... FAIL
+test_version_and_schema ... ok
+test_wake_steers_a_message_into_the_same_thread_and_its_note_is_edited ... FAIL
+AssertionError: Tuples differ: (1, {'error': 'harness claude-code is not installed here[74 chars]in'}) != (1, {'error': 'Capy answered 401 to GET /api/v1/projects[54 chars]ry"})
+AssertionError: 1 != 0 : {'error': 'harness claude-code is not installed here', 'next': 'install claude-code and sign in to it yourself, then start again'}
+AssertionError: Tuples differ: (1, {'error': 'the input needs exactly repository, ticke[71 chars]in'}) != (1, {'error': 'Capy cannot run claude-synthetic-1 at eff[144 chars]lt"})
+AssertionError: Tuples differ: (1, {'error': 'run is not valid', 'next': 'fix run as `driver schema` shows'}) != (1, {'error': 'Capy has no run jam_01UNKNOWN', 'next': 'start a new run'})
+AssertionError: 1 != 0 : {'error': 'the input needs exactly repository, ticket, skill, harness, model', 'next': 'send only those fields; never a login'}
+AssertionError: 1 != 0 : {'error': 'harness claude-code is not installed here', 'next': 'install claude-code and sign in to it yourself, then start again'}
+AssertionError: Tuples differ: (['pa[58 chars]1', 'fail start: harness claude-code is not in[148 chars], '') != (['pa[58 chars]1', 'pass start: the run posted builder status[278 chars], '')
+AssertionError: 1 != 0 : {'error': 'harness claude-code is not installed here', 'next': 'install claude-code and sign in to it yourself, then start again'}
+AssertionError: {'err[27 chars] not installed here', 'next': 'install gemini-[45 chars]ain'} != {'err[27 chars] not one Capy runs for OpenWiz', 'next': 'use [29 chars]dex'}
+AssertionError: {'error': 'harness claude-code is not installed here[73 chars]ain'} != {'error': 'no Capy project lists example/elsewhere, [128 chars]ain'}
+AssertionError: 1 != 0 : {'error': 'harness claude-code is not installed here', 'next': 'install claude-code and sign in to it yourself, then start again'}
+AssertionError: 1 != 0 : {'error': 'harness claude-code is not installed here', 'next': 'install claude-code and sign in to it yourself, then start again'}
+Ran 15 tests in 8.522s
+FAILED (failures=12)

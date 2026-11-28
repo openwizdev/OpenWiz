@@ -1,0 +1,19 @@
+$ python3 -I adapters/capy/test_driver.py -v   (agent CLI stubs first on PATH; the driver at 45349f25, before the CAPY_PROJECT_ID fix; KY1 at 2292b177)
+test_a_host_error_is_a_fixed_refusal ... ok
+test_a_lost_create_is_retried_with_the_same_request_id_and_starts_one_thread ... ok
+test_an_effort_the_model_does_not_offer_is_the_exact_refusal_and_starts_nothing ... ok
+test_an_unknown_run_is_refused_by_wake_and_stop ... ok
+test_effort_reaches_the_host_as_the_model_reasoning_mode ... ok
+test_every_request_reaches_the_host_with_the_key_header_only ... ok
+test_inputs_off_the_schema_are_refused_before_any_request ... ok
+test_kit_passes_all_five_on_the_fake_host ... ok
+test_no_driver_file_names_the_key_or_the_keychain ... ok
+test_start_creates_one_thread_in_the_repository_project_on_the_harness_model ... ok
+test_start_refuses_a_harness_capy_has_no_subscription_for ... ok
+test_start_takes_capy_project_id_else_the_project_listing_the_repository_else_refuses ... FAIL
+test_stop_interrupts_then_archives_and_a_wake_after_it_is_refused ... ok
+test_version_and_schema ... ok
+test_wake_steers_a_message_into_the_same_thread_and_its_note_is_edited ... ok
+AssertionError: Tuples differ: (0, {'run': 'jam_01SYNTHETIC0000000000000'}) != (1, {'error': 'no Capy project lists examp[152 chars]in'})
+Ran 15 tests in 12.455s
+FAILED (failures=1)
