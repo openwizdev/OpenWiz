@@ -1,0 +1,178 @@
+# Red (review at bc20508): this commit's test_driver.py run against bc20508's driver, README and fake Conductor. The fleet caller's retries send a lost create three times, no effort reaches Conductor, a stop Conductor did not confirm says the run is stopped, and the README revokes only the local copy.
+# Command: env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/conductor/test_driver.py (with the pinned WizSkills installed)
+
+test_a_failed_archive_says_so_and_the_run_stays_stopped (__main__.Conductor.test_a_failed_archive_says_so_and_the_run_stays_stopped) ... FAIL
+test_a_lost_start_reply_is_never_retried (__main__.Conductor.test_a_lost_start_reply_is_never_retried) ... ok
+test_a_refused_start_starts_nothing_and_says_what_to_do (__main__.Conductor.test_a_refused_start_starts_nothing_and_says_what_to_do) ... ok
+test_a_start_the_helper_refuses_leaves_no_input_in_run_state (__main__.Conductor.test_a_start_the_helper_refuses_leaves_no_input_in_run_state) ... ok
+test_a_stop_conductor_does_not_confirm_never_says_the_run_stopped (__main__.Conductor.test_a_stop_conductor_does_not_confirm_never_says_the_run_stopped) ... FAIL
+test_an_effort_conductor_takes_reaches_it_and_any_other_is_refused (__main__.Conductor.test_an_effort_conductor_takes_reaches_it_and_any_other_is_refused) ... FAIL
+test_nothing_is_called_without_a_harness_or_a_state_folder (__main__.Conductor.test_nothing_is_called_without_a_harness_or_a_state_folder) ...
+  test_nothing_is_called_without_a_harness_or_a_state_folder (__main__.Conductor.test_nothing_is_called_without_a_harness_or_a_state_folder) [an effort that is not a word] ... FAIL
+test_start_wake_and_stop_reach_one_workspace (__main__.Conductor.test_start_wake_and_stop_reach_one_workspace) ... ok
+test_the_fleet_caller_sends_one_create_when_the_answer_is_lost (__main__.Conductor.test_the_fleet_caller_sends_one_create_when_the_answer_is_lost) ...
+  test_the_fleet_caller_sends_one_create_when_the_answer_is_lost (__main__.Conductor.test_the_fleet_caller_sends_one_create_when_the_answer_is_lost) (fault={'lose': True}) ... FAIL
+  test_the_fleet_caller_sends_one_create_when_the_answer_is_lost (__main__.Conductor.test_the_fleet_caller_sends_one_create_when_the_answer_is_lost) (fault={'status': 503}) ... FAIL
+  test_the_fleet_caller_sends_one_create_when_the_answer_is_lost (__main__.Conductor.test_the_fleet_caller_sends_one_create_when_the_answer_is_lost) (fault={'status': 408}) ... FAIL
+test_the_fleet_caller_sends_one_create_when_the_answer_is_lost (__main__.Conductor.test_the_fleet_caller_sends_one_create_when_the_answer_is_lost) ... FAIL
+test_the_key_reaches_conductor_only_through_the_helper (__main__.Conductor.test_the_key_reaches_conductor_only_through_the_helper) ... ok
+test_the_kit_passes_all_five (__main__.Conductor.test_the_kit_passes_all_five) ... FAIL
+test_the_readme_revokes_the_key_at_conductor_before_the_local_copy (__main__.Conductor.test_the_readme_revokes_the_key_at_conductor_before_the_local_copy) ... FAIL
+test_the_scoped_kit_still_sees_a_process_the_run_leaves (__main__.Conductor.test_the_scoped_kit_still_sees_a_process_the_run_leaves) ... FAIL
+
+======================================================================
+FAIL: test_a_failed_archive_says_so_and_the_run_stays_stopped (__main__.Conductor.test_a_failed_archive_says_so_and_the_run_stays_stopped)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/conductor/test_driver.py", line 422, in test_a_failed_archive_says_so_and_the_run_stays_stopped
+    self.assertNotIn('is stopped', out['error'], 'it says a run whose workspace still runs is stopped')
+AssertionError: 'is stopped' unexpectedly found in 'run run-<id> is stopped, but Conductor did not archive workspace ws_fake0001 (500: A planted failure.)' : it says a run whose workspace still runs is stopped
+
+======================================================================
+FAIL: test_a_stop_conductor_does_not_confirm_never_says_the_run_stopped (__main__.Conductor.test_a_stop_conductor_does_not_confirm_never_says_the_run_stopped)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/conductor/test_driver.py", line 396, in test_a_stop_conductor_does_not_confirm_never_says_the_run_stopped
+    self.assertNotIn('is stopped', out['error'])
+AssertionError: 'is stopped' unexpectedly found in 'run run-<id> is stopped, but Conductor did not archive workspace ws_fake0001 (503: A planted failure.)'
+
+======================================================================
+FAIL: test_an_effort_conductor_takes_reaches_it_and_any_other_is_refused (__main__.Conductor.test_an_effort_conductor_takes_reaches_it_and_any_other_is_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/conductor/test_driver.py", line 338, in test_an_effort_conductor_takes_reaches_it_and_any_other_is_refused
+    self.assertIn('effort', self.driver('version')[1]['can'])
+AssertionError: 'effort' not found in ['start', 'wake', 'stop', 'many-at-once', 'own-sandbox']
+
+======================================================================
+FAIL: test_nothing_is_called_without_a_harness_or_a_state_folder (__main__.Conductor.test_nothing_is_called_without_a_harness_or_a_state_folder) [an effort that is not a word]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/conductor/test_driver.py", line 333, in test_nothing_is_called_without_a_harness_or_a_state_folder
+    self.assertIn('nothing was started' if name != 'an effort that is not a word' else 'effort is not '
+AssertionError: 'effort is not valid' not found in "Conductor can't run harness claude at effort (not one plain word): the driver sends Conductor no effort; nothing was started"
+
+======================================================================
+FAIL: test_the_fleet_caller_sends_one_create_when_the_answer_is_lost (__main__.Conductor.test_the_fleet_caller_sends_one_create_when_the_answer_is_lost) (fault={'lose': True})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/conductor/test_driver.py", line 375, in test_the_fleet_caller_sends_one_create_when_the_answer_is_lost
+    self.assertEqual(self.calls()[0], [('POST', '/v0/workspaces')] * n, 'the caller sent the create again')
+AssertionError: Lists differ: [('PO[16 chars]aces'), ('POST', '/v0/workspaces'), ('POST', '/v0/workspaces')] != [('PO[16 chars]aces')]
+
+First list contains 2 additional elements.
+First extra element 1:
+('POST', '/v0/workspaces')
+
+- [('POST', '/v0/workspaces'),
+?                            ^
+
++ [('POST', '/v0/workspaces')]
+?                            ^
+
+-  ('POST', '/v0/workspaces'),
+-  ('POST', '/v0/workspaces')] : the caller sent the create again
+
+======================================================================
+FAIL: test_the_fleet_caller_sends_one_create_when_the_answer_is_lost (__main__.Conductor.test_the_fleet_caller_sends_one_create_when_the_answer_is_lost) (fault={'status': 503})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/conductor/test_driver.py", line 375, in test_the_fleet_caller_sends_one_create_when_the_answer_is_lost
+    self.assertEqual(self.calls()[0], [('POST', '/v0/workspaces')] * n, 'the caller sent the create again')
+AssertionError: Lists differ: [('PO[45 chars]ces'), ('POST', '/v0/workspaces'), ('POST', '/[67 chars]es')] != [('PO[45 chars]ces')]
+
+First list contains 4 additional elements.
+First extra element 2:
+('POST', '/v0/workspaces')
+
++ [('POST', '/v0/workspaces'), ('POST', '/v0/workspaces')]
+- [('POST', '/v0/workspaces'),
+-  ('POST', '/v0/workspaces'),
+-  ('POST', '/v0/workspaces'),
+-  ('POST', '/v0/workspaces'),
+-  ('POST', '/v0/workspaces'),
+-  ('POST', '/v0/workspaces')] : the caller sent the create again
+
+======================================================================
+FAIL: test_the_fleet_caller_sends_one_create_when_the_answer_is_lost (__main__.Conductor.test_the_fleet_caller_sends_one_create_when_the_answer_is_lost) (fault={'status': 408})
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/conductor/test_driver.py", line 375, in test_the_fleet_caller_sends_one_create_when_the_answer_is_lost
+    self.assertEqual(self.calls()[0], [('POST', '/v0/workspaces')] * n, 'the caller sent the create again')
+AssertionError: Lists differ: [('PO[73 chars]ces'), ('POST', '/v0/workspaces'), ('POST', '/[123 chars]es')] != [('PO[73 chars]ces')]
+
+First list contains 6 additional elements.
+First extra element 3:
+('POST', '/v0/workspaces')
+
+  [('POST', '/v0/workspaces'),
+   ('POST', '/v0/workspaces'),
+-  ('POST', '/v0/workspaces'),
+-  ('POST', '/v0/workspaces'),
+-  ('POST', '/v0/workspaces'),
+-  ('POST', '/v0/workspaces'),
+-  ('POST', '/v0/workspaces'),
+-  ('POST', '/v0/workspaces'),
+   ('POST', '/v0/workspaces')] : the caller sent the create again
+
+======================================================================
+FAIL: test_the_fleet_caller_sends_one_create_when_the_answer_is_lost (__main__.Conductor.test_the_fleet_caller_sends_one_create_when_the_answer_is_lost)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/conductor/test_driver.py", line 382, in test_the_fleet_caller_sends_one_create_when_the_answer_is_lost
+    self.assertEqual(len(self.workspaces()), 1, 'a lost create made more than one workspace')
+AssertionError: 3 != 1 : a lost create made more than one workspace
+
+======================================================================
+FAIL: test_the_kit_passes_all_five (__main__.Conductor.test_the_kit_passes_all_five)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/conductor/test_driver.py", line 230, in test_the_kit_passes_all_five
+    self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
+AssertionError: Tuples differ: (0, [[119 chars]ort: a start with it was refused, as the READM[293 chars]er']) != (0, [[119 chars]ort: medium reached the kit's fake conductor h[275 chars]er'])
+
+First differing element 1:
+['pas[115 chars]ort: a start with it was refused, as the READM[292 chars]der']
+['pas[115 chars]ort: medium reached the kit's fake conductor h[274 chars]der']
+
+  (0,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+-   'pass start: the run posted builder status note 1; effort: a start with it '
+?                                                               ^^^^^^^^^^ ^^^
+
++   'pass start: the run posted builder status note 1; effort: medium reached '
+?                                                              +++++++++ ^ ^^
+
+-   "was refused, as the README's Effort: line says",
++   "the kit's fake conductor host",
+    'pass wake: the run edited builder status note 1',
+    'pass stop: the run ended, and a wake after it is refused',
+    'pass token: no login or token passed through the driver, and on start, wake '
+    'and stop the conductor key reached its host only from the key helper, in '
+    'its header']) :
+
+======================================================================
+FAIL: test_the_readme_revokes_the_key_at_conductor_before_the_local_copy (__main__.Conductor.test_the_readme_revokes_the_key_at_conductor_before_the_local_copy)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/conductor/test_driver.py", line 413, in test_the_readme_revokes_the_key_at_conductor_before_the_local_copy
+    self.assertIn("Conductor's API keys page", line)
+AssertionError: "Conductor's API keys page" not found in '- OpenWiz never stores it. Remove it from your environment or keychain to revoke it.'
+
+======================================================================
+FAIL: test_the_scoped_kit_still_sees_a_process_the_run_leaves (__main__.Conductor.test_the_scoped_kit_still_sees_a_process_the_run_leaves)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/conductor/test_driver.py", line 259, in test_the_scoped_kit_still_sees_a_process_the_run_leaves
+    self.assertIn('fail start: effort: a process the start with effort began still runs', p.stdout,
+AssertionError: 'fail start: effort: a process the start with effort began still runs' not found in "pass version: openwiz:records v1, and the schema is driver v1\npass start: the run posted builder status note 1; effort: a start with it was refused, as the README's Effort: line says\npass wake: the run edited builder status note 1\nfail stop: a process the run started still runs after stop\npass token: no login or token passed through the driver, and on start, wake and stop the conductor key reached its host only from the key helper, in its header\n" : pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 1; effort: a start with it was refused, as the README's Effort: line says
+pass wake: the run edited builder status note 1
+fail stop: a process the run started still runs after stop
+pass token: no login or token passed through the driver, and on start, wake and stop the conductor key reached its host only from the key helper, in its header
+
+
+----------------------------------------------------------------------
+Ran 13 tests
+
+FAILED (failures=11)

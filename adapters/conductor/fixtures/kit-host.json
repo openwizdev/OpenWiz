@@ -1,0 +1,12 @@
+{
+  "answers": [
+    {"method": "POST", "path": "/v0/workspaces", "status": 201,
+     "body": {"workspaceId": "ws_kit0001", "sessionId": "se_kit0001", "deepLink": "conductor://workspace/ws_kit0001"}},
+    {"method": "POST", "path": "/v0/sessions/se_[A-Za-z0-9]+/messages", "status": 201,
+     "body": {"messageId": "00000000-0000-4000-8000-000000000002", "state": "sent"}},
+    {"method": "POST", "path": "/v0/sessions/se_[A-Za-z0-9]+/cancel", "status": 200,
+     "body": {"workspaceId": "ws_kit0001", "sessionId": "se_kit0001", "status": "idle", "canceledQueuedMessages": 0}},
+    {"method": "POST", "path": "/v0/workspaces/ws_[A-Za-z0-9]+/archive", "status": 200,
+     "body": {"workspaceId": "ws_kit0001", "status": "archived"}}
+  ]
+}

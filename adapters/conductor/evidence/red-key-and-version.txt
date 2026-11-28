@@ -1,0 +1,60 @@
+# Redacted at the N4 port (#1992): the key variable's name is written <key variable>, because driver v1 N4 lets no file of the driver name it. The original log is at commit 7cc6bb69.
+# red at 34bd24e9 (driver unchanged; new tests, PATH pinned to fixtures/bin and python3)
+$ python3 -I adapters/conductor/test_driver.py
+test_a_failed_archive_says_so_and_the_run_stays_stopped (__main__.Conductor.test_a_failed_archive_says_so_and_the_run_stays_stopped) ... ok
+test_a_lost_start_reply_is_never_retried (__main__.Conductor.test_a_lost_start_reply_is_never_retried) ... ok
+test_a_refused_start_starts_nothing_and_says_what_to_do (__main__.Conductor.test_a_refused_start_starts_nothing_and_says_what_to_do) ... ok
+test_an_old_curl_is_refused_by_its_version (__main__.Conductor.test_an_old_curl_is_refused_by_its_version) ...
+  test_an_old_curl_is_refused_by_its_version (__main__.Conductor.test_an_old_curl_is_refused_by_its_version) [7.88.1] ... FAIL
+  test_an_old_curl_is_refused_by_its_version (__main__.Conductor.test_an_old_curl_is_refused_by_its_version) [8.2.1] ... FAIL
+test_an_old_curl_is_refused_by_its_version (__main__.Conductor.test_an_old_curl_is_refused_by_its_version) ... FAIL
+test_nothing_is_called_without_a_key_a_harness_or_a_state_folder (__main__.Conductor.test_nothing_is_called_without_a_key_a_harness_or_a_state_folder) ... ok
+test_start_wake_and_stop_reach_one_workspace (__main__.Conductor.test_start_wake_and_stop_reach_one_workspace) ... ok
+test_the_driver_never_reads_the_key (__main__.Conductor.test_the_driver_never_reads_the_key) ... ok
+test_the_kit_passes_all_five (__main__.Conductor.test_the_kit_passes_all_five) ... ok
+
+======================================================================
+FAIL: test_an_old_curl_is_refused_by_its_version (__main__.Conductor.test_an_old_curl_is_refused_by_its_version) [7.88.1]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/conductor/test_driver.py", line 166, in test_an_old_curl_is_refused_by_its_version
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'run-<id>'}
+
+======================================================================
+FAIL: test_an_old_curl_is_refused_by_its_version (__main__.Conductor.test_an_old_curl_is_refused_by_its_version) [8.2.1]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/conductor/test_driver.py", line 166, in test_an_old_curl_is_refused_by_its_version
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'run-<id>'}
+
+======================================================================
+FAIL: test_an_old_curl_is_refused_by_its_version (__main__.Conductor.test_an_old_curl_is_refused_by_its_version)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/conductor/test_driver.py", line 169, in test_an_old_curl_is_refused_by_its_version
+    self.assertEqual(self.calls(), [], 'it called Conductor with a curl too old to send the key')
+AssertionError: Lists differ: [('POST', '/v0/workspaces'), ('POST', '/v0/workspaces')] != []
+
+First list contains 2 additional elements.
+First extra element 0:
+('POST', '/v0/workspaces')
+
+- [('POST', '/v0/workspaces'), ('POST', '/v0/workspaces')]
++ [] : it called Conductor with a curl too old to send the key
+
+----------------------------------------------------------------------
+Ran 8 tests in <n>s
+
+FAILED (failures=3)
+
+$ # planted in start(): os.environ['<key variable>']
+$ python3 -I adapters/conductor/test_driver.py Conductor.test_the_driver_never_reads_the_key
+AssertionError: 1 != 0 : {"error": "the driver failed: AssertionError", "next": "read its code, fix it, retry"}
+FAILED (failures=1)
+
+$ # planted in start(): subprocess.run(['true'], env=dict(os.environ, KEY_COPY=os.environ['<key variable>']))
+$ python3 -I adapters/conductor/test_driver.py Conductor.test_the_driver_never_reads_the_key
+AssertionError: 1 != 0 : {"error": "the driver failed: AssertionError", "next": "read its code, fix it, retry"}
+FAILED (failures=1)

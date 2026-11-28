@@ -1,4 +1,10 @@
 {
+  "conductor": {
+    "origin": "https://api.conductor.build",
+    "variable": "CONDUCTOR_API_KEY",
+    "keychain": "openwiz-conductor",
+    "header": "authorization-bearer"
+  },
   "cursor-cloud": {
     "origin": "https://api.cursor.com",
     "variable": "CURSOR_API_KEY",

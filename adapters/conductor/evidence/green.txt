@@ -1,0 +1,16 @@
+# at 54c16276
+$ python3 -I adapters/conductor/test_driver.py   # under env -i; each test builds its environment from scratch; PATH: fixtures/bin and a python3 link only; the kit runs scoped to its own run
+test_a_failed_archive_says_so_and_the_run_stays_stopped (__main__.Conductor.test_a_failed_archive_says_so_and_the_run_stays_stopped) ... ok
+test_a_lost_start_reply_is_never_retried (__main__.Conductor.test_a_lost_start_reply_is_never_retried) ... ok
+test_a_refused_start_starts_nothing_and_says_what_to_do (__main__.Conductor.test_a_refused_start_starts_nothing_and_says_what_to_do) ... ok
+test_an_old_curl_is_refused_by_its_version (__main__.Conductor.test_an_old_curl_is_refused_by_its_version) ... ok
+test_nothing_is_called_without_a_key_a_harness_or_a_state_folder (__main__.Conductor.test_nothing_is_called_without_a_key_a_harness_or_a_state_folder) ... ok
+test_start_wake_and_stop_reach_one_workspace (__main__.Conductor.test_start_wake_and_stop_reach_one_workspace) ... ok
+test_the_driver_never_reads_the_key (__main__.Conductor.test_the_driver_never_reads_the_key) ... ok
+test_the_kit_passes_all_five (__main__.Conductor.test_the_kit_passes_all_five) ... ok
+test_the_scoped_kit_still_sees_a_process_the_run_leaves (__main__.Conductor.test_the_scoped_kit_still_sees_a_process_the_run_leaves) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in <n>s
+
+OK

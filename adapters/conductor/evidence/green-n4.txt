@@ -1,0 +1,16 @@
+# Green (N4 port): the driver's tests, the kit's five checks with its key check on the loopback fake Conductor, under 33 safety stubs.
+# Command: env -u OPENWIZ_GITHUB_APP_KEY env -i PATH=<33 safety stubs>:/usr/bin:/bin HOME=<temp> LANG=C.UTF-8 python3 -I adapters/conductor/test_driver.py
+
+test_a_failed_archive_says_so_and_the_run_stays_stopped (__main__.Conductor.test_a_failed_archive_says_so_and_the_run_stays_stopped) ... ok
+test_a_lost_start_reply_is_never_retried (__main__.Conductor.test_a_lost_start_reply_is_never_retried) ... ok
+test_a_refused_start_starts_nothing_and_says_what_to_do (__main__.Conductor.test_a_refused_start_starts_nothing_and_says_what_to_do) ... ok
+test_nothing_is_called_without_a_harness_a_state_folder_or_with_an_effort (__main__.Conductor.test_nothing_is_called_without_a_harness_a_state_folder_or_with_an_effort) ... ok
+test_start_wake_and_stop_reach_one_workspace (__main__.Conductor.test_start_wake_and_stop_reach_one_workspace) ... ok
+test_the_key_reaches_conductor_only_through_the_helper (__main__.Conductor.test_the_key_reaches_conductor_only_through_the_helper) ... ok
+test_the_kit_passes_all_five (__main__.Conductor.test_the_kit_passes_all_five) ... ok
+test_the_scoped_kit_still_sees_a_process_the_run_leaves (__main__.Conductor.test_the_scoped_kit_still_sees_a_process_the_run_leaves) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests
+
+OK

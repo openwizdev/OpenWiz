@@ -1,0 +1,67 @@
+# Red (review at df6aeca): this commit's test_driver.py run against df6aeca's driver. The effort refusal repeats a key pasted into the harness or effort field.
+# Command: env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/conductor/test_driver.py (with the pinned WizSkills installed)
+
+test_a_failed_archive_says_so_and_the_run_stays_stopped (__main__.Conductor.test_a_failed_archive_says_so_and_the_run_stays_stopped) ... ok
+test_a_lost_start_reply_is_never_retried (__main__.Conductor.test_a_lost_start_reply_is_never_retried) ... ok
+test_a_refused_start_starts_nothing_and_says_what_to_do (__main__.Conductor.test_a_refused_start_starts_nothing_and_says_what_to_do) ... ok
+test_a_start_the_helper_refuses_leaves_no_input_in_run_state (__main__.Conductor.test_a_start_the_helper_refuses_leaves_no_input_in_run_state) ... ok
+test_a_stop_conductor_does_not_confirm_never_says_the_run_stopped (__main__.Conductor.test_a_stop_conductor_does_not_confirm_never_says_the_run_stopped) ... ok
+test_an_effort_conductor_takes_reaches_it_and_any_other_is_refused (__main__.Conductor.test_an_effort_conductor_takes_reaches_it_and_any_other_is_refused) ...
+  test_an_effort_conductor_takes_reaches_it_and_any_other_is_refused (__main__.Conductor.test_an_effort_conductor_takes_reaches_it_and_any_other_is_refused) (harness='pi', effort='high') ... FAIL
+  test_an_effort_conductor_takes_reaches_it_and_any_other_is_refused (__main__.Conductor.test_an_effort_conductor_takes_reaches_it_and_any_other_is_refused) (harness='claude', effort='minimal') ... FAIL
+test_an_effort_refusal_never_repeats_a_value_it_was_sent (__main__.Conductor.test_an_effort_refusal_never_repeats_a_value_it_was_sent) ...
+  test_an_effort_refusal_never_repeats_a_value_it_was_sent (__main__.Conductor.test_an_effort_refusal_never_repeats_a_value_it_was_sent) [harness] ... FAIL
+  test_an_effort_refusal_never_repeats_a_value_it_was_sent (__main__.Conductor.test_an_effort_refusal_never_repeats_a_value_it_was_sent) [effort] ... FAIL
+  test_an_effort_refusal_never_repeats_a_value_it_was_sent (__main__.Conductor.test_an_effort_refusal_never_repeats_a_value_it_was_sent) [both] ... FAIL
+test_nothing_is_called_without_a_harness_or_a_state_folder (__main__.Conductor.test_nothing_is_called_without_a_harness_or_a_state_folder) ... ok
+test_start_wake_and_stop_reach_one_workspace (__main__.Conductor.test_start_wake_and_stop_reach_one_workspace) ... ok
+test_the_fleet_caller_sends_one_create_when_the_answer_is_lost (__main__.Conductor.test_the_fleet_caller_sends_one_create_when_the_answer_is_lost) ... ok
+test_the_key_reaches_conductor_only_through_the_helper (__main__.Conductor.test_the_key_reaches_conductor_only_through_the_helper) ... ok
+test_the_kit_passes_all_five (__main__.Conductor.test_the_kit_passes_all_five) ... ok
+test_the_readme_revokes_the_key_at_conductor_before_the_local_copy (__main__.Conductor.test_the_readme_revokes_the_key_at_conductor_before_the_local_copy) ... ok
+test_the_scoped_kit_still_sees_a_process_the_run_leaves (__main__.Conductor.test_the_scoped_kit_still_sees_a_process_the_run_leaves) ... ok
+
+======================================================================
+FAIL: test_an_effort_conductor_takes_reaches_it_and_any_other_is_refused (__main__.Conductor.test_an_effort_conductor_takes_reaches_it_and_any_other_is_refused) (harness='pi', effort='high')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/conductor/test_driver.py", line 362, in test_an_effort_conductor_takes_reaches_it_and_any_other_is_refused
+    self.assertIn(named, out['error'])
+AssertionError: 'that harness at effort high' not found in "Conductor can't run harness pi at effort high; nothing was started"
+
+======================================================================
+FAIL: test_an_effort_conductor_takes_reaches_it_and_any_other_is_refused (__main__.Conductor.test_an_effort_conductor_takes_reaches_it_and_any_other_is_refused) (harness='claude', effort='minimal')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/conductor/test_driver.py", line 362, in test_an_effort_conductor_takes_reaches_it_and_any_other_is_refused
+    self.assertIn(named, out['error'])
+AssertionError: 'harness claude at that effort' not found in "Conductor can't run harness claude at effort minimal; nothing was started"
+
+======================================================================
+FAIL: test_an_effort_refusal_never_repeats_a_value_it_was_sent (__main__.Conductor.test_an_effort_refusal_never_repeats_a_value_it_was_sent) [harness]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/conductor/test_driver.py", line 380, in test_an_effort_refusal_never_repeats_a_value_it_was_sent
+    self.assertNotIn(marker, p.stdout + p.stderr, 'the effort refusal repeated a pasted key')
+AssertionError: 'syn-test-key-790015c' unexpectedly found in '{"error": "Conductor can\'t run harness syn-test-key-790015c76c2cd29510599869 at effort high; nothing was started", "next": "this host can\'t set effort: remove the effort for this harness in your Models table or Roster to run it at the host\'s default"}\n' : the effort refusal repeated a pasted key
+
+======================================================================
+FAIL: test_an_effort_refusal_never_repeats_a_value_it_was_sent (__main__.Conductor.test_an_effort_refusal_never_repeats_a_value_it_was_sent) [effort]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/conductor/test_driver.py", line 380, in test_an_effort_refusal_never_repeats_a_value_it_was_sent
+    self.assertNotIn(marker, p.stdout + p.stderr, 'the effort refusal repeated a pasted key')
+AssertionError: 'syn-test-key-790015c' unexpectedly found in '{"error": "Conductor can\'t run harness claude at effort syn-test-key-790015c; nothing was started", "next": "this host can\'t set effort: remove the effort for this harness in your Models table or Roster to run it at the host\'s default"}\n' : the effort refusal repeated a pasted key
+
+======================================================================
+FAIL: test_an_effort_refusal_never_repeats_a_value_it_was_sent (__main__.Conductor.test_an_effort_refusal_never_repeats_a_value_it_was_sent) [both]
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/conductor/test_driver.py", line 380, in test_an_effort_refusal_never_repeats_a_value_it_was_sent
+    self.assertNotIn(marker, p.stdout + p.stderr, 'the effort refusal repeated a pasted key')
+AssertionError: 'syn-test-key-790015c' unexpectedly found in '{"error": "Conductor can\'t run harness syn-test-key-790015c76c2cd29510599869 at effort syn-test-key-790015c; nothing was started", "next": "this host can\'t set effort: remove the effort for this harness in your Models table or Roster to run it at the host\'s default"}\n' : the effort refusal repeated a pasted key
+
+----------------------------------------------------------------------
+Ran 14 tests
+
+FAILED (failures=5)
