@@ -135,6 +135,27 @@ fi
         self.assertEqual(self.selector.readlink(), self.old)
         self.assertFalse(self.record.exists())
 
+    def test_rewritten_staged_manifest_cannot_redefine_verified_bytes(self):
+        asset = b'modified\n'
+        (self.new / 'runtime/fixture-version').write_bytes(asset)
+        manifest = self.new / 'install-manifest.json'
+        value = json.loads(manifest.read_bytes())
+        entry = next(item for item in value['assets'] if item['path'] == 'runtime/fixture-version')
+        entry.update(sha256=install.sha(asset), bytes=len(asset))
+        manifest.write_text(json.dumps(value), encoding='utf-8')
+        with self.assertRaisesRegex(install.Refused, 'archive asset mismatch'):
+            self.forward()
+        self.assertEqual(self.selector.readlink(), self.old)
+        self.assertFalse(self.record.exists())
+
+    def test_pending_build_cannot_replace_the_last_good_version(self):
+        self.forward()
+        record = self.record.read_bytes()
+        with self.assertRaisesRegex(install.Refused, 'awaits health confirmation'):
+            self.forward()
+        self.assertEqual(self.record.read_bytes(), record)
+        self.assertEqual(self.selector.readlink(), self.new)
+
     def test_uses_the_installers_lock(self):
         self.tool()
         with (self.root / 'install.lock').open('rb') as lock:
