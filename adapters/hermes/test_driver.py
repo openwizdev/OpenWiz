@@ -132,25 +132,39 @@ class Hermes(unittest.TestCase):
         self.assertIn('effort', out['can'])
 
     def test_a_hermes_start_passes_reasoning_at_start_and_wake(self):
-        code, out = self.driver('start', dict(REQUEST, harness='hermes', effort='medium'))
-        self.assertEqual(code, 0, out)
-        self.assertTrue(self.until(lambda: self.logged() and not self.alive(self.logged()[-1][0])),
-                        'the first turn never ended')
-        self.assertEqual(self.driver('wake', out), (0, dict(out, woke=True)))
-        self.assertTrue(self.until(lambda: len(self.logged()) >= 2), 'the wake started no turn')
-        for row in self.logged()[-2:]:
-            argv = row[4]
-            self.assertEqual(argv[argv.index('--reasoning') + 1], 'medium')
+        for model, effort in (('synthetic-model-1', 'medium'),
+                              ('anthropic/claude-sonnet-4.6', 'medium'),
+                              ('openrouter/anthropic/' + 'a' * 79, 'ultra')):
+            with self.subTest(model=model, effort=effort):
+                before = len(self.logged())
+                code, out = self.driver('start', dict(REQUEST, harness='hermes', model=model, effort=effort))
+                self.assertEqual(code, 0, out)
+                self.assertTrue(self.until(lambda: len(self.logged()) > before
+                                           and not self.alive(self.logged()[-1][0])),
+                                'the first turn never ended')
+                self.assertEqual(self.driver('wake', out), (0, dict(out, woke=True)))
+                self.assertTrue(self.until(lambda: len(self.logged()) >= before + 2), 'the wake started no turn')
+                for row in self.logged()[-2:]:
+                    argv = row[4]
+                    self.assertEqual(argv[argv.index('-m') + 1], model)
+                    self.assertEqual(argv[argv.index('--reasoning') + 1], effort)
 
     def test_an_effort_hermes_cannot_set_is_refused_and_starts_nothing(self):
         cases = (dict(REQUEST, effort='medium'), dict(REQUEST, harness='codex', effort='high'),
-                 dict(REQUEST, harness='hermes', effort='ultracode'), dict(REQUEST, harness='pi', effort='medium'))
+                 dict(REQUEST, harness='hermes', effort='ultracode'), dict(REQUEST, harness='pi', effort='medium'),
+                 dict(REQUEST, harness='claude', model='anthropic/claude-sonnet-4.6', effort='medium'),
+                 dict(REQUEST, harness='codex', model='openrouter/anthropic/claude-sonnet-4.6', effort='high'))
         for req in cases:
-            with self.subTest(harness=req['harness'], effort=req['effort']):
+            with self.subTest(harness=req['harness'], model=req['model'], effort=req['effort']):
                 code, out = self.driver('start', req)
-                self.assertEqual((code, out['next']), (1, CANT), out)
+                self.assertEqual((code, out.get('next')), (1, CANT), out)
                 self.assertIn(req['harness'], out['error'])
                 self.assertIn(req['effort'], out['error'])
+        for bad in ('a' * 101, '/anthropic/claude-sonnet-4.6', 'anthropic/', 'anthropic//claude-sonnet-4.6'):
+            with self.subTest(bad_model=bad):
+                code, out = self.driver('start', dict(REQUEST, harness='hermes', model=bad, effort='medium'))
+                self.assertEqual((code, out), (1, {'error': 'model is not valid',
+                                                   'next': 'fix model as `driver schema` shows'}))
         self.assertEqual((self.logged(), self.ours()), ([], []))
         self.assertFalse(os.path.isdir(self.state) and os.listdir(self.state), 'a refused start saved a run')
 
@@ -177,6 +191,9 @@ class Hermes(unittest.TestCase):
         self.assertTrue(table['hermes'].startswith('`--reasoning <level>`'))
         self.assertTrue(table['claude'].startswith("can't"))
         self.assertTrue(table['codex'].startswith("can't"))
+        readme = '\n'.join(lines)
+        self.assertIn('--format stream-json', readme)
+        self.assertIn('v2026.9.24', readme)
 
     def test_kit_passes_all_five(self):
         p = subprocess.run([sys.executable, '-I', KIT, '--driver', DRIVER, '--repo', 'example/site',
