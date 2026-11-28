@@ -130,6 +130,10 @@ class DocsCommandsTests(unittest.TestCase):
             > ~~~ sh
             > printf 'quoted block ran\\n'
             > ~~~
+
+                ```sh
+                printf 'should never run\\n'
+                ```
             """)
         result = self.invoke("commands.md")
         self.assertEqual(result.returncode, 0, result.stdout)
@@ -138,6 +142,13 @@ class DocsCommandsTests(unittest.TestCase):
         self.assertIn("list block ran", result.stdout)
         self.assertIn("PASS commands.md:13", result.stdout)
         self.assertIn("quoted block ran", result.stdout)
+
+    def test_missing_input_fails_and_other_files_run(self):
+        self.write("commands.md", "```sh\ntrue\n```\n")
+        result = self.invoke("missing.md", "commands.md")
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("FAIL missing.md", result.stdout)
+        self.assertIn("PASS commands.md:1", result.stdout)
 
     def test_home_credentials_fakes_and_network_are_isolated(self):
         for name in ("gh", "openwiz", "room-cli", "boat", "aws"):
@@ -168,8 +179,8 @@ class DocsCommandsTests(unittest.TestCase):
         for name in ("gh", "openwiz", "room-cli", "boat", "aws"):
             self.assertIn(f"fake: {name}\n", result.stdout)
         self.assertNotIn("caller command ran", result.stdout)
-        self.assertIn("PASS commands.md:14", result.stdout)
-        homes = [Path(line) for line in result.stdout.splitlines() if line.startswith("/")]
+        self.assertIn("PASS commands.md:15", result.stdout)
+        homes = [Path(line[2:]) for line in result.stdout.splitlines() if line.startswith("| /")]
         self.assertEqual(len(homes), 1, result.stdout)
         self.assertFalse(homes[0].exists())
         self.assertEqual(list(self.caller_home.iterdir()), [])

@@ -1,0 +1,24 @@
+$ python3 -I tools/docs-commands/test_docs_commands.py
+
+FAIL: test_examples_in_other_fences_are_ignored_and_nested_fences_run (__main__.DocsCommandsTests.test_examples_in_other_fences_are_ignored_and_nested_fences_run)
+AssertionError: 2 != 0 : /usr/bin/python3: can't open file 'tools/docs-commands/docs_commands.py': [Errno 2] No such file or directory
+FAIL: test_failing_command_stops_its_block_and_other_blocks_run (__main__.DocsCommandsTests.test_failing_command_stops_its_block_and_other_blocks_run)
+AssertionError: 2 != 1 : /usr/bin/python3: can't open file 'tools/docs-commands/docs_commands.py': [Errno 2] No such file or directory
+FAIL: test_home_credentials_fakes_and_network_are_isolated (__main__.DocsCommandsTests.test_home_credentials_fakes_and_network_are_isolated)
+AssertionError: 2 != 0 : /usr/bin/python3: can't open file 'tools/docs-commands/docs_commands.py': [Errno 2] No such file or directory
+FAIL: test_missing_input_fails_and_other_files_run (__main__.DocsCommandsTests.test_missing_input_fails_and_other_files_run)
+AssertionError: 2 != 1 : /usr/bin/python3: can't open file 'tools/docs-commands/docs_commands.py': [Errno 2] No such file or directory
+FAIL: test_missing_or_empty_skip_reasons_fail_before_execution (__main__.DocsCommandsTests.test_missing_or_empty_skip_reasons_fail_before_execution) (info='sh no-run')
+AssertionError: 2 != 1 : /usr/bin/python3: can't open file 'tools/docs-commands/docs_commands.py': [Errno 2] No such file or directory
+FAIL: test_missing_or_empty_skip_reasons_fail_before_execution (__main__.DocsCommandsTests.test_missing_or_empty_skip_reasons_fail_before_execution) (info='bash no-run:')
+AssertionError: 2 != 1 : /usr/bin/python3: can't open file 'tools/docs-commands/docs_commands.py': [Errno 2] No such file or directory
+FAIL: test_missing_or_empty_skip_reasons_fail_before_execution (__main__.DocsCommandsTests.test_missing_or_empty_skip_reasons_fail_before_execution) (info='shell no-run:   ')
+AssertionError: 2 != 1 : /usr/bin/python3: can't open file 'tools/docs-commands/docs_commands.py': [Errno 2] No such file or directory
+FAIL: test_missing_or_empty_skip_reasons_fail_before_execution (__main__.DocsCommandsTests.test_missing_or_empty_skip_reasons_fail_before_execution) (info='sh no-run missing-colon')
+AssertionError: 2 != 1 : /usr/bin/python3: can't open file 'tools/docs-commands/docs_commands.py': [Errno 2] No such file or directory
+FAIL: test_passing_shells_and_multiple_files (__main__.DocsCommandsTests.test_passing_shells_and_multiple_files)
+AssertionError: 2 != 0 : /usr/bin/python3: can't open file 'tools/docs-commands/docs_commands.py': [Errno 2] No such file or directory
+FAIL: test_skip_reports_its_source_and_reason (__main__.DocsCommandsTests.test_skip_reports_its_source_and_reason)
+AssertionError: 2 != 0 : /usr/bin/python3: can't open file 'tools/docs-commands/docs_commands.py': [Errno 2] No such file or directory
+Ran 7 tests in 0.209s
+FAILED (failures=10)
