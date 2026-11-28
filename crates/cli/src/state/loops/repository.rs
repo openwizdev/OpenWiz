@@ -18,9 +18,9 @@ pub struct Definition {
     pub value: Value,
     pub revision: String,
 }
-struct GitRead(Vec<String>);
+pub(crate) struct GitRead(Vec<String>);
 impl GitRead {
-    fn parse(args: &[&str]) -> Result<Self, String> {
+    pub(crate) fn parse(args: &[&str]) -> Result<Self, String> {
         let allowed = match args {
             ["config", "--local", "--no-includes", "--null", "--list"] => true,
             [
@@ -81,7 +81,7 @@ fn run_git(root: &Path, read: &GitRead) -> Result<Vec<u8>, String> {
     }
     Ok(out.stdout)
 }
-fn validate_config(bytes: &[u8]) -> Result<(), String> {
+pub(crate) fn validate_config(bytes: &[u8]) -> Result<(), String> {
     let refused = || "loop checkout configuration is not allowlisted".to_owned();
     let config = std::str::from_utf8(bytes).map_err(|_| refused())?;
     if !config.is_empty() && !config.ends_with('\0') {

@@ -2,8 +2,10 @@ use openwiz_adapter_github::tick::{Comment, Event, Result};
 use openwiz_core::fleet::fleets::IssueRow;
 use openwiz_core::fleet::model::{NonEmpty, Number};
 use openwiz_core::fleet::tick::*;
-use openwiz_core::messaging::sha256_hex;
+use openwiz_core::messaging::{Sha256Hasher, sha256_hex};
+use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet};
+use std::fmt::Write as _;
 
 pub fn issue(row: &IssueRow) -> openwiz_core::fleet::model::Issue {
     openwiz_core::fleet::model::Issue {
@@ -89,9 +91,13 @@ pub fn record_authors(rules: &str) -> Result<BTreeSet<String>> {
         .collect()
 }
 pub fn authored(c: &Comment, authors: &BTreeSet<String>) -> bool {
-    c.author
-        .as_deref()
-        .is_some_and(|a| authors.contains(&a.to_ascii_lowercase()))
+    c.author.as_deref().is_some_and(|a| {
+        if a.bytes().any(|b| b.is_ascii_uppercase()) {
+            authors.contains(&a.to_ascii_lowercase())
+        } else {
+            authors.contains(a)
+        }
+    })
 }
 pub fn factory(mut comments: Vec<Comment>, authors: &BTreeSet<String>) -> Vec<Comment> {
     comments.retain(|c| authored(c, authors));
@@ -108,11 +114,11 @@ pub fn lines(comments: &[Comment]) -> impl Iterator<Item = &str> {
 }
 
 fn body_hash(body: &str) -> String {
-    let mut normalized = String::new();
+    let mut hasher = Sha256Hasher::new();
     for part in body.split_inclusive('\n') {
-        let mut line = part.to_owned();
-        let b = line.as_bytes();
+        let b = part.as_bytes();
         let indent = b.iter().take_while(|c| matches!(c, b' ' | b'\t')).count();
+        let mut replaced = false;
         if b.get(indent)
             .is_some_and(|c| matches!(c, b'-' | b'*' | b'+'))
         {
@@ -125,46 +131,51 @@ fn body_hash(body: &str) -> String {
                 && b.get(pos + 3)
                     .is_none_or(|c| matches!(c, b' ' | b'\t' | b'\r' | b'\n'))
             {
-                line.replace_range(pos + 1..pos + 2, " ");
+                hasher.update(&b[..pos + 1]);
+                hasher.update(b" ");
+                hasher.update(&b[pos + 2..]);
+                replaced = true;
             }
         }
-        normalized.push_str(&line);
+        if !replaced {
+            hasher.update(b);
+        }
     }
-    normalized.push('\n');
-    sha256_hex(normalized.as_bytes())
+    hasher.update(b"\n");
+    hasher.finish()
 }
 pub fn revision(spec: &IssueRow, rows: &[&IssueRow]) -> String {
     let mut rows = rows.to_vec();
     rows.sort_by_key(|r| r.number);
-    let mut text = format!(
-        "plan-graph revision v2\nspec #{} body sha256 {}\n",
+    let mut text = String::with_capacity(128 + rows.len() * 128);
+    let _ = writeln!(
+        text,
+        "plan-graph revision v2\nspec #{} body sha256 {}",
         spec.number,
         body_hash(&spec.body)
     );
+    let mut blockers = Vec::new();
     for row in rows {
-        let mut blockers = row
-            .blocked_by
-            .nodes
-            .iter()
-            .map(|b| b.number)
-            .collect::<Vec<_>>();
-        blockers.sort();
-        let blocked = if blockers.is_empty() {
-            "none".into()
+        blockers.clear();
+        blockers.extend(row.blocked_by.nodes.iter().map(|b| b.number));
+        blockers.sort_unstable();
+        let _ = write!(text, "ticket #{} blocked-by ", row.number);
+        if blockers.is_empty() {
+            text.push_str("none");
         } else {
-            blockers
-                .iter()
-                .map(|n| format!("#{n}"))
-                .collect::<Vec<_>>()
-                .join(" ")
-        };
-        text.push_str(&format!(
-            "ticket #{} blocked-by {} body sha256 {} title {}\n",
-            row.number,
-            blocked,
+            for (i, blocker) in blockers.iter().enumerate() {
+                if i > 0 {
+                    text.push(' ');
+                }
+                let _ = write!(text, "#{blocker}");
+            }
+        }
+        let _ = writeln!(
+            text,
+            " body sha256 {} title {}",
             body_hash(&row.body),
             row.title
-        ));
+        );
     }
     text
 }
@@ -369,9 +380,24 @@ pub fn approval(comments: &[Comment], legacy: bool) -> Result<Option<PlanApprova
     if table.len() < 2 || table.windows(2).any(|p| p[1].0 != p[0].0 + 1) {
         return Err("approval table is not one contiguous block");
     }
+    let mut rev_rows: BTreeMap<Number, Option<(&str, &str)>> = BTreeMap::new();
+    let mut ticket_lines = 0usize;
+    for line in text.lines() {
+        if let Some(after) = line.strip_prefix("ticket #") {
+            ticket_lines += 1;
+            if let Some((raw_id, rest)) = after.split_once(" blocked-by ")
+                && let Ok(id) = n(raw_id)
+            {
+                rev_rows
+                    .entry(id)
+                    .and_modify(|slot| *slot = None)
+                    .or_insert(Some((line, rest)));
+            }
+        }
+    }
     for (index, (_, l)) in table.iter().enumerate() {
         let mut escaped = false;
-        let cells = l
+        let raw_cells = l
             .trim_end()
             .split(|ch| {
                 let separator = ch == '|' && !escaped;
@@ -379,20 +405,25 @@ pub fn approval(comments: &[Comment], legacy: bool) -> Result<Option<PlanApprova
                 separator
             })
             .collect::<Vec<_>>();
-        let ["", cells @ .., ""] = cells.as_slice() else {
+        let ["", raw_cells @ .., ""] = raw_cells.as_slice() else {
             return Err("invalid approval row");
         };
-        let cells = cells.iter().map(|s| s.trim()).collect::<Vec<_>>();
         if index == 0 {
-            if cells != ["Ticket", "Title", "Blocked by", "Label"] {
+            if raw_cells.len() != 4
+                || raw_cells[0].trim() != "Ticket"
+                || raw_cells[1].trim() != "Title"
+                || raw_cells[2].trim() != "Blocked by"
+                || raw_cells[3].trim() != "Label"
+            {
                 return Err("invalid approval table header");
             }
             headers += 1;
             continue;
         }
         if index == 1 {
-            if cells.len() != 4
-                || !cells.iter().all(|c| {
+            if raw_cells.len() != 4
+                || !raw_cells.iter().all(|c| {
+                    let c = c.trim();
                     let c = c.strip_prefix(':').unwrap_or(c);
                     let c = c.strip_suffix(':').unwrap_or(c);
                     c.len() >= 3 && c.bytes().all(|b| b == b'-')
@@ -402,38 +433,48 @@ pub fn approval(comments: &[Comment], legacy: bool) -> Result<Option<PlanApprova
             }
             continue;
         }
-        if cells.len() != 4 || cells[1].is_empty() {
+        if raw_cells.len() != 4 {
             return Err("invalid approval table");
         }
-        let id = n(cells[0].strip_prefix('#').ok_or("invalid ticket cell")?)?;
-        let ready = match cells[3] {
+        let c0 = raw_cells[0].trim();
+        let c1 = raw_cells[1].trim();
+        let c2 = raw_cells[2].trim();
+        let c3 = raw_cells[3].trim();
+        if c1.is_empty() {
+            return Err("invalid approval table");
+        }
+        let id = n(c0.strip_prefix('#').ok_or("invalid ticket cell")?)?;
+        let ready = match c3 {
             "ready-for-agent" => Ready::Agent,
             "ready-for-human" => Ready::Human,
             _ => return Err("unknown approved role"),
         };
-        let prefix = format!("ticket #{id} blocked-by ");
-        let revrow = text
-            .lines()
-            .filter(|l| l.starts_with(&prefix))
-            .collect::<Vec<_>>();
-        let title = cells[1].replace("\\|", "|");
-        if revrow.len() != 1 || !revrow[0].ends_with(&format!(" title {title}")) {
+        let title: Cow<'_, str> = if c1.contains("\\|") {
+            Cow::Owned(c1.replace("\\|", "|"))
+        } else {
+            Cow::Borrowed(c1)
+        };
+        let Some(Some((rev_line, rest))) = rev_rows.get(&id) else {
+            return Err("table disagrees with revision");
+        };
+        if !rev_line
+            .strip_suffix(title.as_ref())
+            .is_some_and(|before| before.ends_with(" title "))
+        {
             return Err("table disagrees with revision");
         }
-        let blockers = revrow[0]
-            .strip_prefix(&prefix)
-            .unwrap()
+        let blockers = rest
             .split_once(" body sha256 ")
             .ok_or("invalid revision row")?
             .0;
-        if blocker_set(blockers)? != blocker_set(cells[2])? {
+        if blocker_set(blockers)? != blocker_set(c2)? {
             return Err("table blockers disagree with revision");
         }
         if rows.insert(id, ready).is_some() {
             return Err("duplicate approved ticket");
         }
     }
-    if headers != 1 || text.lines().filter(|l| l.starts_with("ticket #")).count() != rows.len() {
+    if headers != 1 || ticket_lines != rows.len() {
         return Err("incomplete approval table");
     }
     Ok(Some(PlanApproval {
@@ -513,7 +554,9 @@ pub fn ticket_records(comments: &[Comment]) -> TicketRecords {
 pub fn pr_records(comments: &[Comment], retired_rechecks: &BTreeSet<Number>) -> PrRecords {
     let mut r = PrRecords::default();
     for c in comments {
-        let l = first(c);
+        let Some(after) = first(c).strip_prefix("launch-fleet: ") else {
+            continue;
+        };
         for (prefix, out) in [
             ("findings sent ", &mut r.findings_sent),
             ("CI failure sent ", &mut r.ci_sent),
@@ -525,7 +568,7 @@ pub fn pr_records(comments: &[Comment], retired_rechecks: &BTreeSet<Number>) -> 
             if prefix == "re-check sent " && retired_rechecks.contains(&c.id) {
                 continue;
             }
-            if let Some(tail) = l.strip_prefix(&format!("launch-fleet: {prefix}")) {
+            if let Some(tail) = after.strip_prefix(prefix) {
                 let (head, rest) = tail.split_at_checked(40).unwrap_or(("", ""));
                 let valid_suffix = if prefix == "re-check sent " {
                     rest.is_empty()
@@ -694,6 +737,7 @@ pub fn fallback_replacement(
     }
 }
 
+#[cfg_attr(test, derive(Debug, PartialEq, Eq))]
 pub struct ReviewRecord {
     pub comment: Number,
     pub kind: &'static str,
@@ -703,18 +747,25 @@ pub struct ReviewRecord {
     pub updated: u64,
 }
 pub fn review_records(comments: &[Comment]) -> Result<Vec<ReviewRecord>> {
-    let mut ordered = comments.iter().collect::<Vec<_>>();
+    const PREFIXES: [(&str, &str); 5] = [
+        ("review started", "review started "),
+        ("re-check sent", "re-check sent "),
+        ("review told again", "review told again "),
+        ("review given up", "review given up "),
+        ("review failed", "review failed "),
+    ];
+    let mut ordered = comments
+        .iter()
+        .filter(|c| first(c).starts_with("launch-fleet: "))
+        .collect::<Vec<_>>();
     ordered.sort_by_key(|c| (c.created, c.id));
     let mut out = Vec::new();
     for c in ordered {
-        for kind in [
-            "review started",
-            "re-check sent",
-            "review told again",
-            "review given up",
-            "review failed",
-        ] {
-            let Some(tail) = first(c).strip_prefix(&format!("launch-fleet: {kind} ")) else {
+        let Some(after) = first(c).strip_prefix("launch-fleet: ") else {
+            continue;
+        };
+        for (kind, prefix) in PREFIXES {
+            let Some(tail) = after.strip_prefix(prefix) else {
                 continue;
             };
             if kind == "review failed" && !tail.contains(", thread ") {
@@ -755,4 +806,473 @@ pub fn review_records(comments: &[Comment]) -> Result<Vec<ReviewRecord>> {
         }
     }
     Ok(out)
+}
+
+#[cfg(test)]
+pub(crate) mod records_oracle_tests {
+    use super::*;
+    use openwiz_core::fleet::fleets::{Link, Links};
+    use openwiz_core::fleet::model::IssueState;
+
+    pub(crate) fn assert_oracles_match(
+        spec: &IssueRow,
+        ticket: &IssueRow,
+        comments: &[Comment],
+        retired: &BTreeSet<Number>,
+        authors: &BTreeSet<String>,
+    ) {
+        assert_eq!(body_hash(&spec.body), body_hash_previous(&spec.body));
+        assert_eq!(body_hash(&ticket.body), body_hash_previous(&ticket.body));
+        assert_eq!(
+            revision(spec, &[ticket]),
+            revision_previous(spec, &[ticket])
+        );
+        for legacy in [false, true] {
+            assert_eq!(
+                approval(comments, legacy),
+                approval_previous(comments, legacy)
+            );
+        }
+        assert_eq!(
+            pr_records(comments, retired),
+            pr_records_previous(comments, retired)
+        );
+        assert_eq!(review_records(comments), review_records_previous(comments));
+        for c in comments {
+            let old = c
+                .author
+                .as_deref()
+                .is_some_and(|a| authors.contains(&a.to_ascii_lowercase()));
+            assert_eq!(authored(c, authors), old);
+        }
+    }
+
+    fn body_hash_previous(body: &str) -> String {
+        let mut normalized = String::new();
+        for part in body.split_inclusive('\n') {
+            let mut line = part.to_owned();
+            let b = line.as_bytes();
+            let indent = b.iter().take_while(|c| matches!(c, b' ' | b'\t')).count();
+            if b.get(indent)
+                .is_some_and(|c| matches!(c, b'-' | b'*' | b'+'))
+            {
+                let mut pos = indent + 1;
+                while b.get(pos).is_some_and(|c| matches!(c, b' ' | b'\t')) {
+                    pos += 1;
+                }
+                if pos > indent + 1
+                    && matches!(b.get(pos..pos + 3), Some(b"[x]" | b"[X]"))
+                    && b.get(pos + 3)
+                        .is_none_or(|c| matches!(c, b' ' | b'\t' | b'\r' | b'\n'))
+                {
+                    line.replace_range(pos + 1..pos + 2, " ");
+                }
+            }
+            normalized.push_str(&line);
+        }
+        normalized.push('\n');
+        sha256_hex(normalized.as_bytes())
+    }
+
+    fn revision_previous(spec: &IssueRow, rows: &[&IssueRow]) -> String {
+        let mut rows = rows.to_vec();
+        rows.sort_by_key(|r| r.number);
+        let mut text = format!(
+            "plan-graph revision v2\nspec #{} body sha256 {}\n",
+            spec.number,
+            body_hash_previous(&spec.body)
+        );
+        for row in rows {
+            let mut blockers = row
+                .blocked_by
+                .nodes
+                .iter()
+                .map(|b| b.number)
+                .collect::<Vec<_>>();
+            blockers.sort();
+            let blocked = if blockers.is_empty() {
+                "none".into()
+            } else {
+                blockers
+                    .iter()
+                    .map(|n| format!("#{n}"))
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            };
+            text.push_str(&format!(
+                "ticket #{} blocked-by {} body sha256 {} title {}\n",
+                row.number,
+                blocked,
+                body_hash_previous(&row.body),
+                row.title
+            ));
+        }
+        text
+    }
+
+    fn approval_previous(comments: &[Comment], legacy: bool) -> Result<Option<PlanApproval>> {
+        let Some(c) = comments
+            .iter()
+            .filter(|c| approval_header(c).starts_with("**Plan graph approved by"))
+            .max_by_key(|c| c.id)
+        else {
+            return Ok(None);
+        };
+        let header = approval_header(c);
+        let (_, rest) = header
+            .split_once(", revision ")
+            .ok_or("approval has no revision")?;
+        let (rev, words) = rest.split_once(":** ").ok_or("invalid approval heading")?;
+        if !public_approval_ok(c, words) && !(legacy && approval_words_ok(words)) {
+            return Err("approval has no valid decision and private pointer");
+        }
+        let revision = n(rev)?;
+        let hashes = c
+            .body
+            .lines()
+            .filter_map(|l| {
+                l.strip_prefix("Fingerprint: `")
+                    .and_then(|s| s.strip_suffix('`'))
+            })
+            .collect::<Vec<_>>();
+        let [hash] = hashes.as_slice() else {
+            return Err("approval fingerprint missing or repeated");
+        };
+        let fp = Fingerprint::parse(hash).ok_or("invalid fingerprint")?;
+        let blocks = c.body.match_indices("```text\n").collect::<Vec<_>>();
+        let [(start, _)] = blocks.as_slice() else {
+            return Err("approval revision text missing or repeated");
+        };
+        let tail = &c.body[start + 8..];
+        let (text, _) = tail.split_once("```").ok_or("unclosed revision text")?;
+        if !(text.starts_with("plan-graph revision v2\n")
+            || text.starts_with("plan-graph revision v1\n"))
+            || !text.ends_with('\n')
+            || sha256_hex(text.as_bytes()) != *hash
+        {
+            return Err("invalid revision fingerprint");
+        }
+        let mut rows = BTreeMap::new();
+        let mut headers = 0;
+        let table = approval_table(&c.body);
+        if table.len() < 2 || table.windows(2).any(|p| p[1].0 != p[0].0 + 1) {
+            return Err("approval table is not one contiguous block");
+        }
+        for (index, (_, l)) in table.iter().enumerate() {
+            let mut escaped = false;
+            let cells = l
+                .trim_end()
+                .split(|ch| {
+                    let separator = ch == '|' && !escaped;
+                    escaped = ch == '\\' && !escaped;
+                    separator
+                })
+                .collect::<Vec<_>>();
+            let ["", cells @ .., ""] = cells.as_slice() else {
+                return Err("invalid approval row");
+            };
+            let cells = cells.iter().map(|s| s.trim()).collect::<Vec<_>>();
+            if index == 0 {
+                if cells != ["Ticket", "Title", "Blocked by", "Label"] {
+                    return Err("invalid approval table header");
+                }
+                headers += 1;
+                continue;
+            }
+            if index == 1 {
+                if cells.len() != 4
+                    || !cells.iter().all(|c| {
+                        let c = c.strip_prefix(':').unwrap_or(c);
+                        let c = c.strip_suffix(':').unwrap_or(c);
+                        c.len() >= 3 && c.bytes().all(|b| b == b'-')
+                    })
+                {
+                    return Err("invalid approval table separator");
+                }
+                continue;
+            }
+            if cells.len() != 4 || cells[1].is_empty() {
+                return Err("invalid approval table");
+            }
+            let id = n(cells[0].strip_prefix('#').ok_or("invalid ticket cell")?)?;
+            let ready = match cells[3] {
+                "ready-for-agent" => Ready::Agent,
+                "ready-for-human" => Ready::Human,
+                _ => return Err("unknown approved role"),
+            };
+            let prefix = format!("ticket #{id} blocked-by ");
+            let revrow = text
+                .lines()
+                .filter(|l| l.starts_with(&prefix))
+                .collect::<Vec<_>>();
+            let title = cells[1].replace("\\|", "|");
+            if revrow.len() != 1 || !revrow[0].ends_with(&format!(" title {title}")) {
+                return Err("table disagrees with revision");
+            }
+            let blockers = revrow[0]
+                .strip_prefix(&prefix)
+                .unwrap()
+                .split_once(" body sha256 ")
+                .ok_or("invalid revision row")?
+                .0;
+            if blocker_set(blockers)? != blocker_set(cells[2])? {
+                return Err("table blockers disagree with revision");
+            }
+            if rows.insert(id, ready).is_some() {
+                return Err("duplicate approved ticket");
+            }
+        }
+        if headers != 1 || text.lines().filter(|l| l.starts_with("ticket #")).count() != rows.len()
+        {
+            return Err("incomplete approval table");
+        }
+        Ok(Some(PlanApproval {
+            approval: Approval {
+                comment: c.id,
+                revision,
+                fingerprint: fp,
+            },
+            rows,
+            approved_at: c.created,
+        }))
+    }
+
+    fn pr_records_previous(comments: &[Comment], retired_rechecks: &BTreeSet<Number>) -> PrRecords {
+        let mut r = PrRecords::default();
+        for c in comments {
+            let l = first(c);
+            for (prefix, out) in [
+                ("findings sent ", &mut r.findings_sent),
+                ("CI failure sent ", &mut r.ci_sent),
+                ("re-check sent ", &mut r.recheck_sent),
+                ("dispute asked ", &mut r.dispute_asked),
+                ("diagnosis asked ", &mut r.diagnosis_asked),
+                ("merge blocked ", &mut r.merge_blocked),
+            ] {
+                if prefix == "re-check sent " && retired_rechecks.contains(&c.id) {
+                    continue;
+                }
+                if let Some(tail) = l.strip_prefix(&format!("launch-fleet: {prefix}")) {
+                    let (head, rest) = tail.split_at_checked(40).unwrap_or(("", ""));
+                    let valid_suffix = if prefix == "re-check sent " {
+                        rest.is_empty()
+                            || rest
+                                .strip_prefix(", thread ")
+                                .is_some_and(openwiz_core::fleet::starts::safe_id)
+                    } else if prefix == "merge blocked " {
+                        rest.starts_with(": ") && rest.len() > 2
+                    } else {
+                        rest.is_empty()
+                    };
+                    if valid_suffix && let Some(c) = openwiz_core::fleet::model::Commit::parse(head)
+                    {
+                        out.push(c);
+                    }
+                }
+            }
+        }
+        r
+    }
+
+    fn review_records_previous(comments: &[Comment]) -> Result<Vec<ReviewRecord>> {
+        let mut ordered = comments.iter().collect::<Vec<_>>();
+        ordered.sort_by_key(|c| (c.created, c.id));
+        let mut out = Vec::new();
+        for c in ordered {
+            for kind in [
+                "review started",
+                "re-check sent",
+                "review told again",
+                "review given up",
+                "review failed",
+            ] {
+                let Some(tail) = first(c).strip_prefix(&format!("launch-fleet: {kind} ")) else {
+                    continue;
+                };
+                if kind == "review failed" && !tail.contains(", thread ") {
+                    continue;
+                }
+                let (head, thread) = if let Some((head, tail)) = tail.split_once(", thread ") {
+                    let thread = if kind == "review failed" {
+                        let (thread, why) =
+                            tail.split_once(": ").ok_or("invalid review failure")?;
+                        if why.is_empty() {
+                            return Err("empty review failure");
+                        }
+                        thread
+                    } else {
+                        tail
+                    };
+                    if !openwiz_core::fleet::starts::safe_id(thread) {
+                        return Err("invalid reviewer thread");
+                    }
+                    (head, Some(NonEmpty::new(thread).unwrap()))
+                } else if kind == "review given up" {
+                    let (head, why) = tail.split_once(": ").ok_or("invalid review give-up")?;
+                    if why.is_empty() {
+                        return Err("empty review give-up");
+                    }
+                    (head, None)
+                } else {
+                    (tail, None)
+                };
+                out.push(ReviewRecord {
+                    comment: c.id,
+                    kind,
+                    head: openwiz_core::fleet::model::Commit::parse(head)
+                        .ok_or("invalid review head")?,
+                    thread,
+                    created: c.created,
+                    updated: c.updated,
+                });
+            }
+        }
+        Ok(out)
+    }
+
+    #[test]
+    fn body_hash_and_revision_match_previous_oracle() {
+        let bodies = [
+            "",
+            "\n",
+            "- [x] done",
+            "- [X] done\n",
+            "  \t* \t[x]\r\n+ [X]\titem\n- [x]no-space\n-[x] no-gap\n- [ ] open\n",
+            "unicode 日本\n\t- [x] é\n- [X]",
+            &"- [x] repeated line\n".repeat(40),
+        ];
+        for b in bodies {
+            assert_eq!(body_hash(b), body_hash_previous(b), "body={b:?}");
+        }
+        let make = |num: u64, body: &str, blockers: &[u64]| IssueRow {
+            number: Number::new(num).unwrap(),
+            id: NonEmpty::new(format!("I_{num}")).unwrap(),
+            title: format!("Title {num} | pipe"),
+            state: IssueState::Open,
+            milestone: None,
+            labels: vec![],
+            body: body.to_owned(),
+            sub_issues: Links {
+                nodes: vec![],
+                total: 0,
+            },
+            blocked_by: Links {
+                nodes: blockers
+                    .iter()
+                    .map(|&b| Link {
+                        number: Number::new(b).unwrap(),
+                        id: NonEmpty::new(format!("I_{b}")).unwrap(),
+                    })
+                    .collect(),
+                total: blockers.len() as u64,
+            },
+        };
+        let spec = make(1, bodies[4], &[]);
+        let t1 = make(4, bodies[3], &[3, 2]);
+        let t2 = make(2, bodies[5], &[]);
+        let t3 = make(3, bodies[2], &[2]);
+        assert_eq!(
+            revision(&spec, &[&t1, &t2, &t3]),
+            revision_previous(&spec, &[&t1, &t2, &t3])
+        );
+    }
+
+    #[test]
+    fn approval_pr_and_review_records_match_previous_oracles() {
+        let rev = "plan-graph revision v2\nspec #1 body sha256 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\nticket #2 blocked-by none body sha256 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb title Alpha | Beta\nticket #3 blocked-by #2 body sha256 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc title Gamma\n";
+        let fp = sha256_hex(rev.as_bytes());
+        let good = format!(
+            "**Plan graph approved by synthetic, revision 1:** \"go\"\n\nFingerprint: `{fp}`\n\n| Ticket | Title | Blocked by | Label |\n| --- | --- | --- | --- |\n| #2 | Alpha \\| Beta | none | ready-for-agent |\n| #3 | Gamma | #2 | ready-for-human |\n\n```text\n{rev}```\n"
+        );
+        let dup_rev = format!(
+            "{rev}ticket #2 blocked-by none body sha256 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb title Alpha | Beta\n"
+        );
+        let dup_fp = sha256_hex(dup_rev.as_bytes());
+        let dup_body = format!(
+            "**Plan graph approved by synthetic, revision 1:** \"go\"\n\nFingerprint: `{dup_fp}`\n\n| Ticket | Title | Blocked by | Label |\n| --- | --- | --- | --- |\n| #2 | Alpha \\| Beta | none | ready-for-agent |\n| #3 | Gamma | #2 | ready-for-human |\n\n```text\n{dup_rev}```\n"
+        );
+        let overlap_rev = "plan-graph revision v2\nticket #2 blocked-by title  body sha256 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb title X\n";
+        let overlap_fp = sha256_hex(overlap_rev.as_bytes());
+        let overlap_body = format!(
+            "**Plan graph approved by synthetic, revision 1:** \"go\"\n\nFingerprint: `{overlap_fp}`\n\n| Ticket | Title | Blocked by | Label |\n| --- | --- | --- | --- |\n| #2 | X | none | ready-for-agent |\n\n```text\n{overlap_rev}```\n"
+        );
+        for body in [good, dup_body, overlap_body] {
+            let cs = [Comment {
+                id: Number::new(10).unwrap(),
+                author: Some("synthetic-bot".to_owned()),
+                body,
+                created: 100,
+                updated: 100,
+            }];
+            for legacy in [false, true] {
+                assert_eq!(approval(&cs, legacy), approval_previous(&cs, legacy));
+            }
+        }
+
+        let sha = "a".repeat(40);
+        let pr_cs = [
+            Comment {
+                id: Number::new(1).unwrap(),
+                author: Some("Synthetic-Bot".to_owned()),
+                body: format!("launch-fleet: findings sent {sha}"),
+                created: 10,
+                updated: 10,
+            },
+            Comment {
+                id: Number::new(2).unwrap(),
+                author: Some("synthetic-bot".to_owned()),
+                body: format!("launch-fleet: re-check sent {sha}, thread thr_syn_1"),
+                created: 20,
+                updated: 20,
+            },
+            Comment {
+                id: Number::new(3).unwrap(),
+                author: Some("other".to_owned()),
+                body: format!("launch-fleet: merge blocked {sha}: base moved"),
+                created: 30,
+                updated: 30,
+            },
+            Comment {
+                id: Number::new(4).unwrap(),
+                author: None,
+                body: format!("launch-fleet: review started {sha}, thread thr_syn_1"),
+                created: 15,
+                updated: 15,
+            },
+            Comment {
+                id: Number::new(5).unwrap(),
+                author: Some("synthetic-bot".to_owned()),
+                body: format!("launch-fleet: review failed {sha}, thread thr_syn_1: timed out"),
+                created: 25,
+                updated: 25,
+            },
+            Comment {
+                id: Number::new(6).unwrap(),
+                author: Some("synthetic-bot".to_owned()),
+                body: "VERDICT: APPROVE at aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".to_owned(),
+                created: 5,
+                updated: 5,
+            },
+        ];
+        let mut authors = BTreeSet::new();
+        authors.insert("synthetic-bot".to_owned());
+        for c in &pr_cs {
+            let old = c
+                .author
+                .as_deref()
+                .is_some_and(|a| authors.contains(&a.to_ascii_lowercase()));
+            assert_eq!(authored(c, &authors), old);
+        }
+        let mut retired = BTreeSet::new();
+        retired.insert(Number::new(2).unwrap());
+        assert_eq!(
+            pr_records(&pr_cs, &retired),
+            pr_records_previous(&pr_cs, &retired)
+        );
+        assert_eq!(
+            pr_records(&pr_cs, &BTreeSet::new()),
+            pr_records_previous(&pr_cs, &BTreeSet::new())
+        );
+        assert_eq!(review_records(&pr_cs), review_records_previous(&pr_cs));
+    }
 }

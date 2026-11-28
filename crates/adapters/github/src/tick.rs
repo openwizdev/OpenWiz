@@ -104,6 +104,7 @@ pub struct RepositoryComments {
     pub comments: BTreeMap<Number, Vec<Comment>>,
     pub unread: BTreeSet<Number>,
 }
+#[cfg_attr(test, derive(Debug, PartialEq, Eq))]
 pub struct PullRequests {
     pub rows: Vec<openwiz_core::fleet::fleets::PrRow>,
     pub closed: BTreeMap<Number, Vec<(openwiz_core::fleet::fleets::Link, String)>>,
@@ -138,8 +139,6 @@ impl TickReads {
         &self.executor
     }
     pub fn pull_requests(&self, deadline: Instant) -> Result<PullRequests> {
-        use openwiz_core::fleet::fleets::{Link, PrFacts, PrRow};
-        use openwiz_core::fleet::tickets::PrState;
         let v = self.json(
             &[
                 "pr",
@@ -153,75 +152,7 @@ impl TickReads {
             ],
             deadline,
         )?;
-        let mut rows = Vec::new();
-        let mut closed = BTreeMap::new();
-        for v in array(&v)? {
-            let row = object(v, &crate::fleets::PR_FIELDS.split(',').collect::<Vec<_>>())?;
-            if string(&row["title"])?.is_empty() {
-                return Err("empty PR title");
-            }
-            let mut references = Vec::new();
-            for r in array(&v["closingIssuesReferences"])? {
-                let r = object(r, &["id", "number", "repository", "url"])?;
-                let repo = object(&r["repository"], &["id", "name", "owner"])?;
-                string(&repo["id"])?;
-                string(&repo["name"])?;
-                let owner = object(&repo["owner"], &["id", "login"])?;
-                string(&owner["id"])?;
-                string(&owner["login"])?;
-                references.push((
-                    Link {
-                        number: number(&r["number"])?,
-                        id: NonEmpty::new(string(&r["id"])?.to_owned()).ok_or("empty issue id")?,
-                    },
-                    string(&r["url"])?.to_owned(),
-                ));
-            }
-            unique(references.iter().map(|(r, _)| r.number.get()))?;
-            unique(references.iter().map(|(r, _)| &r.id))?;
-            if string(&row["state"])? == "CLOSED" {
-                let number = number(&row["number"])?;
-                row["isDraft"].as_bool().ok_or("invalid draft flag")?;
-                for key in ["baseRefName", "headRefName", "headRefOid"] {
-                    string(&row[key])?;
-                }
-                if !row["mergeCommit"].is_null() || !row["mergedAt"].is_null() {
-                    return Err("closed PR has merge facts");
-                }
-                closed.insert(number, references);
-                rows.push(PrRow::Closed { number });
-                continue;
-            }
-            let mut view = v.clone();
-            view.as_object_mut()
-                .ok_or("PR is not an object")?
-                .remove("title");
-            let p = crate::tickets::pull_request(
-                &serde_json::to_vec(&view).map_err(|_| "PR encoding failed")?,
-            )
-            .map_err(|_| "PR inventory unread")?;
-            let facts = PrFacts {
-                number: p.number,
-                draft: p.draft,
-                head_branch: p.head_branch,
-                head_commit: p.head_commit,
-                base_branch: p.base_branch,
-                closes: references.iter().map(|(r, _)| r.clone()).collect(),
-            };
-            rows.push(match p.state {
-                PrState::Open => PrRow::Open(facts),
-                PrState::Merged {
-                    merge_commit,
-                    merged_at,
-                } => PrRow::Merged {
-                    facts,
-                    merge_commit,
-                    merged_at,
-                },
-                PrState::Closed => return Err("PR state changed while parsing"),
-            });
-        }
-        Ok(PullRequests { rows, closed })
+        parse_pull_requests(&v)
     }
     fn call(&self, argv: &[&str], deadline: Instant) -> Result<Vec<u8>> {
         let call = Invocation::new(argv).ok_or("tick read is not allowlisted")?;
@@ -744,4 +675,290 @@ fn comment(o: &Map<String, Value>) -> Result<Comment> {
         created,
         updated,
     })
+}
+
+const PR_LIST_KEYS: [&str; 10] = [
+    "baseRefName",
+    "closingIssuesReferences",
+    "headRefName",
+    "headRefOid",
+    "isDraft",
+    "mergeCommit",
+    "mergedAt",
+    "number",
+    "state",
+    "title",
+];
+
+fn parse_pull_requests(v: &Value) -> Result<PullRequests> {
+    use openwiz_core::fleet::fleets::{Link, PrFacts, PrRow};
+    use openwiz_core::fleet::tickets::PrState;
+    let items = array(v)?;
+    let mut rows = Vec::with_capacity(items.len());
+    let mut closed = BTreeMap::new();
+    for v in items {
+        let row = object(v, &PR_LIST_KEYS)?;
+        if string(&row["title"])?.is_empty() {
+            return Err("empty PR title");
+        }
+        let closing = array(&row["closingIssuesReferences"])?;
+        let mut references = Vec::with_capacity(closing.len());
+        for r in closing {
+            let r = object(r, &["id", "number", "repository", "url"])?;
+            let repo = object(&r["repository"], &["id", "name", "owner"])?;
+            string(&repo["id"])?;
+            string(&repo["name"])?;
+            let owner = object(&repo["owner"], &["id", "login"])?;
+            string(&owner["id"])?;
+            string(&owner["login"])?;
+            references.push((
+                Link {
+                    number: number(&r["number"])?,
+                    id: NonEmpty::new(string(&r["id"])?.to_owned()).ok_or("empty issue id")?,
+                },
+                string(&r["url"])?.to_owned(),
+            ));
+        }
+        if references.len() > 1 {
+            unique(references.iter().map(|(r, _)| r.number.get()))?;
+            unique(references.iter().map(|(r, _)| &r.id))?;
+        }
+        if string(&row["state"])? == "CLOSED" {
+            let number = number(&row["number"])?;
+            row["isDraft"].as_bool().ok_or("invalid draft flag")?;
+            for key in ["baseRefName", "headRefName", "headRefOid"] {
+                string(&row[key])?;
+            }
+            if !row["mergeCommit"].is_null() || !row["mergedAt"].is_null() {
+                return Err("closed PR has merge facts");
+            }
+            closed.insert(number, references);
+            rows.push(PrRow::Closed { number });
+            continue;
+        }
+        let p =
+            crate::tickets::pull_request_object(row, false).map_err(|_| "PR inventory unread")?;
+        let facts = PrFacts {
+            number: p.number,
+            draft: p.draft,
+            head_branch: p.head_branch,
+            head_commit: p.head_commit,
+            base_branch: p.base_branch,
+            closes: references.into_iter().map(|(r, _)| r).collect(),
+        };
+        rows.push(match p.state {
+            PrState::Open => PrRow::Open(facts),
+            PrState::Merged {
+                merge_commit,
+                merged_at,
+            } => PrRow::Merged {
+                facts,
+                merge_commit,
+                merged_at,
+            },
+            PrState::Closed => return Err("PR state changed while parsing"),
+        });
+    }
+    Ok(PullRequests { rows, closed })
+}
+
+#[cfg(test)]
+mod pull_requests_oracle_tests {
+    use super::*;
+    use serde_json::json;
+
+    fn previous(v: &Value) -> Result<PullRequests> {
+        use openwiz_core::fleet::fleets::{Link, PrFacts, PrRow};
+        use openwiz_core::fleet::tickets::PrState;
+        let mut rows = Vec::new();
+        let mut closed = BTreeMap::new();
+        for v in array(v)? {
+            let row = object(v, &crate::fleets::PR_FIELDS.split(',').collect::<Vec<_>>())?;
+            if string(&row["title"])?.is_empty() {
+                return Err("empty PR title");
+            }
+            let mut references = Vec::new();
+            for r in array(&v["closingIssuesReferences"])? {
+                let r = object(r, &["id", "number", "repository", "url"])?;
+                let repo = object(&r["repository"], &["id", "name", "owner"])?;
+                string(&repo["id"])?;
+                string(&repo["name"])?;
+                let owner = object(&repo["owner"], &["id", "login"])?;
+                string(&owner["id"])?;
+                string(&owner["login"])?;
+                references.push((
+                    Link {
+                        number: number(&r["number"])?,
+                        id: NonEmpty::new(string(&r["id"])?.to_owned()).ok_or("empty issue id")?,
+                    },
+                    string(&r["url"])?.to_owned(),
+                ));
+            }
+            unique(references.iter().map(|(r, _)| r.number.get()))?;
+            unique(references.iter().map(|(r, _)| &r.id))?;
+            if string(&row["state"])? == "CLOSED" {
+                let number = number(&row["number"])?;
+                row["isDraft"].as_bool().ok_or("invalid draft flag")?;
+                for key in ["baseRefName", "headRefName", "headRefOid"] {
+                    string(&row[key])?;
+                }
+                if !row["mergeCommit"].is_null() || !row["mergedAt"].is_null() {
+                    return Err("closed PR has merge facts");
+                }
+                closed.insert(number, references);
+                rows.push(PrRow::Closed { number });
+                continue;
+            }
+            let mut view = v.clone();
+            view.as_object_mut()
+                .ok_or("PR is not an object")?
+                .remove("title");
+            let p = crate::tickets::pull_request(
+                &serde_json::to_vec(&view).map_err(|_| "PR encoding failed")?,
+            )
+            .map_err(|_| "PR inventory unread")?;
+            let facts = PrFacts {
+                number: p.number,
+                draft: p.draft,
+                head_branch: p.head_branch,
+                head_commit: p.head_commit,
+                base_branch: p.base_branch,
+                closes: references.iter().map(|(r, _)| r.clone()).collect(),
+            };
+            rows.push(match p.state {
+                PrState::Open => PrRow::Open(facts),
+                PrState::Merged {
+                    merge_commit,
+                    merged_at,
+                } => PrRow::Merged {
+                    facts,
+                    merge_commit,
+                    merged_at,
+                },
+                PrState::Closed => return Err("PR state changed while parsing"),
+            });
+        }
+        Ok(PullRequests { rows, closed })
+    }
+
+    fn base_pr(number: u64, state: &str) -> Value {
+        let (merge_commit, merged_at) = if state == "MERGED" {
+            (
+                json!({"oid": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}),
+                json!("2026-11-20T00:00:00Z"),
+            )
+        } else {
+            (Value::Null, Value::Null)
+        };
+        json!({
+            "baseRefName": "main",
+            "closingIssuesReferences": [{
+                "id": format!("I_syn_{number}"),
+                "number": number,
+                "repository": {"id": "R1", "name": "synthetic-repo", "owner": {"id": "O1", "login": "synthetic-owner"}},
+                "url": format!("https://github.com/synthetic-owner/synthetic-repo/issues/{number}")
+            }],
+            "headRefName": format!("room/syn-{number}"),
+            "headRefOid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "isDraft": false,
+            "mergeCommit": merge_commit,
+            "mergedAt": merged_at,
+            "number": number + 100,
+            "state": state,
+            "title": format!("Synthetic PR {number}")
+        })
+    }
+
+    #[test]
+    fn pr_list_keys_match_fleets_pr_fields() {
+        let expected: Vec<&str> = crate::fleets::PR_FIELDS.split(',').collect();
+        assert_eq!(PR_LIST_KEYS.as_slice(), expected.as_slice());
+    }
+
+    #[test]
+    fn direct_pull_requests_matches_previous_oracle() {
+        let valid = json!([
+            base_pr(1, "OPEN"),
+            base_pr(2, "MERGED"),
+            base_pr(3, "CLOSED"),
+        ]);
+        assert_eq!(parse_pull_requests(&valid), previous(&valid));
+
+        let mut rng = 0x9e37_79b9_7f4a_7c15u64;
+        let mut next = || {
+            rng ^= rng << 13;
+            rng ^= rng >> 7;
+            rng ^= rng << 17;
+            rng
+        };
+        let keys = [
+            "baseRefName",
+            "closingIssuesReferences",
+            "headRefName",
+            "headRefOid",
+            "isDraft",
+            "mergeCommit",
+            "mergedAt",
+            "number",
+            "state",
+            "title",
+        ];
+        for i in 0..1000u64 {
+            let state = match i % 4 {
+                0 => "OPEN",
+                1 => "MERGED",
+                2 => "CLOSED",
+                _ => "UNKNOWN",
+            };
+            let mut pr = base_pr(i + 1, state);
+            let obj = pr.as_object_mut().unwrap();
+            let key = keys[(next() as usize) % keys.len()];
+            match next() % 11 {
+                0 => {
+                    obj.insert(key.to_owned(), Value::Null);
+                }
+                1 => {
+                    obj.insert(key.to_owned(), json!(""));
+                }
+                2 => {
+                    obj.insert(key.to_owned(), json!(0));
+                }
+                3 => {
+                    obj.insert(key.to_owned(), json!(true));
+                }
+                4 => {
+                    obj.insert(key.to_owned(), json!("2026-02-29T00:00:00Z"));
+                }
+                5 => {
+                    obj.insert(key.to_owned(), json!({"oid": "not-a-sha"}));
+                }
+                6 => {
+                    obj.insert(
+                        key.to_owned(),
+                        json!({"oid": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "extra": 1}),
+                    );
+                }
+                7 => {
+                    obj.remove(key);
+                }
+                8 => {
+                    obj.insert("extra".to_owned(), json!(1));
+                }
+                9 => {
+                    let dup = obj["closingIssuesReferences"][0].clone();
+                    obj["closingIssuesReferences"]
+                        .as_array_mut()
+                        .unwrap()
+                        .push(dup);
+                }
+                _ => {}
+            }
+            let doc = Value::Array(vec![pr]);
+            assert_eq!(
+                parse_pull_requests(&doc),
+                previous(&doc),
+                "mismatch on case {i}: {doc}"
+            );
+        }
+    }
 }

@@ -77,6 +77,10 @@ fn origin_matches(checkout: &Path, repository: &str) -> bool {
     let Ok(config) = fs::read_to_string(path) else {
         return false;
     };
+    origin_matches_config(&config, repository)
+}
+
+pub(crate) fn origin_matches_config(config: &str, repository: &str) -> bool {
     let mut origin = false;
     let mut sections = 0;
     let mut urls = vec![];
@@ -96,7 +100,9 @@ fn origin_matches(checkout: &Path, repository: &str) -> bool {
                 if !lower.starts_with("[remote \"") || !line.ends_with("\"]") {
                     return false;
                 }
-                let name = &line[9..line.len() - 2];
+                let Some(name) = line.get(9..line.len().saturating_sub(2)) else {
+                    return false;
+                };
                 if name.is_empty() || name.contains(['"', '\\']) {
                     return false;
                 }
@@ -139,4 +145,31 @@ fn origin_matches(checkout: &Path, repository: &str) -> bool {
                     .eq_ignore_ascii_case(repository)
             })
         })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::os::unix::fs::DirBuilderExt;
+
+    #[test]
+    fn origin_matches_rejects_short_remote_header_without_panicking() {
+        let root = std::env::temp_dir().join(format!("ow-config-remote-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::DirBuilder::new()
+            .recursive(true)
+            .mode(0o700)
+            .create(root.join(".git"))
+            .unwrap();
+        for malformed in [
+            "[remote \"]\n",
+            "[REMOTE \"]\n",
+            "[remote \"\"]\n",
+            "[remote \"]\nurl = https://github.com/synthetic-owner/synthetic-repo.git\n",
+        ] {
+            fs::write(root.join(".git/config"), malformed).unwrap();
+            assert!(!origin_matches(&root, "synthetic-owner/synthetic-repo"));
+        }
+        let _ = fs::remove_dir_all(&root);
+    }
 }

@@ -84,7 +84,7 @@ pub fn run(args: &[OsString], out: &mut dyn Write, err: &mut dyn Write) -> i32 {
     code
 }
 
-fn usable(args: &[OsString]) -> bool {
+pub(crate) fn usable(args: &[OsString]) -> bool {
     let mut seen = Vec::new();
     let mut items = args.iter();
     while let Some(arg) = items.next() {
@@ -176,7 +176,7 @@ fn failure(
     code
 }
 
-fn outcome(bytes: &[u8], code: i32) -> Option<serde_json::Value> {
+pub(crate) fn outcome(bytes: &[u8], code: i32) -> Option<serde_json::Value> {
     let mut input = serde_json::Deserializer::from_slice(bytes);
     let report = serde::Deserialize::deserialize(&mut input).ok()?;
     input.end().ok()?;

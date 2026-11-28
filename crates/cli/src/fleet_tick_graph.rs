@@ -116,12 +116,142 @@ struct Reviewers {
     agents: Vec<(u64, Reviewer)>,
     retired_rechecks: BTreeSet<Number>,
 }
+struct PrIndex {
+    open_by_issue: BTreeMap<Number, Vec<usize>>,
+    merged_by_issue: BTreeMap<Number, Vec<usize>>,
+    open_or_merged_by_issue: BTreeMap<Number, Vec<Number>>,
+    closed_by_issue: BTreeMap<Number, Vec<Number>>,
+    merged_commits: BTreeMap<Number, Commit>,
+    merged_on_default: Vec<usize>,
+}
+impl PrIndex {
+    fn build(
+        prs: &[PrRow],
+        closed_prs: &BTreeMap<Number, ClosedPrReferences>,
+        default_branch: &NonEmpty,
+    ) -> Self {
+        let mut open_by_issue: BTreeMap<Number, Vec<usize>> = BTreeMap::new();
+        let mut merged_by_issue: BTreeMap<Number, Vec<usize>> = BTreeMap::new();
+        let mut open_or_merged_by_issue: BTreeMap<Number, Vec<Number>> = BTreeMap::new();
+        let mut merged_commits: BTreeMap<Number, Commit> = BTreeMap::new();
+        let mut merged_on_default: Vec<usize> = Vec::new();
+        let push_unique_idx = |map: &mut BTreeMap<Number, Vec<usize>>, key: Number, idx: usize| {
+            let list = map.entry(key).or_default();
+            if list.last() != Some(&idx) {
+                list.push(idx);
+            }
+        };
+        let push_unique_num = |map: &mut BTreeMap<Number, Vec<Number>>, key: Number, pr: Number| {
+            let list = map.entry(key).or_default();
+            if list.last() != Some(&pr) {
+                list.push(pr);
+            }
+        };
+        for (idx, row) in prs.iter().enumerate() {
+            match row {
+                PrRow::Open(facts) => {
+                    for link in &facts.closes {
+                        push_unique_idx(&mut open_by_issue, link.number, idx);
+                        push_unique_num(&mut open_or_merged_by_issue, link.number, facts.number);
+                    }
+                }
+                PrRow::Merged {
+                    facts,
+                    merge_commit,
+                    ..
+                } => {
+                    merged_commits.insert(facts.number, merge_commit.clone());
+                    if facts.base_branch == *default_branch {
+                        merged_on_default.push(idx);
+                    }
+                    for link in &facts.closes {
+                        push_unique_idx(&mut merged_by_issue, link.number, idx);
+                        push_unique_num(&mut open_or_merged_by_issue, link.number, facts.number);
+                    }
+                }
+                PrRow::Closed { .. } => {}
+            }
+        }
+        let mut closed_by_issue: BTreeMap<Number, Vec<Number>> = BTreeMap::new();
+        for (&pr, refs) in closed_prs {
+            if let Ok(targets) = &refs.targets {
+                for &issue in targets {
+                    push_unique_num(&mut closed_by_issue, issue, pr);
+                }
+            }
+        }
+        Self {
+            open_by_issue,
+            merged_by_issue,
+            open_or_merged_by_issue,
+            closed_by_issue,
+            merged_commits,
+            merged_on_default,
+        }
+    }
+    fn open_for(&self, issue: Number) -> &[usize] {
+        self.open_by_issue.get(&issue).map_or(&[], Vec::as_slice)
+    }
+    fn merged_for(&self, issue: Number) -> &[usize] {
+        self.merged_by_issue.get(&issue).map_or(&[], Vec::as_slice)
+    }
+    fn ticket_prs(&self, issue: Number) -> Vec<Number> {
+        let a = self
+            .open_or_merged_by_issue
+            .get(&issue)
+            .map_or(&[][..], Vec::as_slice);
+        let b = self
+            .closed_by_issue
+            .get(&issue)
+            .map_or(&[][..], Vec::as_slice);
+        let mut out = Vec::with_capacity(a.len() + b.len());
+        out.extend_from_slice(a);
+        out.extend_from_slice(b);
+        out
+    }
+}
+struct StartIndex {
+    builders: BTreeMap<Number, Vec<usize>>,
+    reviewers: BTreeMap<Number, Vec<usize>>,
+}
+impl StartIndex {
+    fn build(starts: &[StartRecord]) -> Self {
+        let mut builders: BTreeMap<Number, Vec<usize>> = BTreeMap::new();
+        let mut reviewers: BTreeMap<Number, Vec<usize>> = BTreeMap::new();
+        for (idx, record) in starts.iter().enumerate() {
+            match record.key().role() {
+                starts::Role::Builder => {
+                    builders.entry(record.key().number()).or_default().push(idx);
+                }
+                starts::Role::Reviewer => {
+                    reviewers
+                        .entry(record.key().number())
+                        .or_default()
+                        .push(idx);
+                }
+            }
+        }
+        Self {
+            builders,
+            reviewers,
+        }
+    }
+    fn builders_for(&self, ticket: Number) -> &[usize] {
+        self.builders.get(&ticket).map_or(&[], Vec::as_slice)
+    }
+    fn reviewers_for(&self, pr: Number) -> &[usize] {
+        self.reviewers.get(&pr).map_or(&[], Vec::as_slice)
+    }
+}
 pub struct World {
     legacy_records: bool,
     cache: Rc<RefCell<MergeCache>>,
     base: Commit,
     unread_comments: BTreeSet<Number>,
     closed_prs: BTreeMap<Number, ClosedPrReferences>,
+    pr_index: PrIndex,
+    start_index: StartIndex,
+    prefetched_approvals: BTreeMap<Number, Option<PlanApproval>>,
     pr_reads: BTreeMap<Number, Result<OpenReads>>,
     pub deadline: Instant,
     pub repository: openwiz_adapter_github::tick::Repository,
@@ -313,12 +443,17 @@ impl World {
         .and_then(|call| gh.executor().run(&call, deadline).ok())
         .and_then(|bytes| openwiz_adapter_github::tick::document(&bytes).ok())
         .is_some_and(|metadata| records::private_repository(&repository.name, &metadata));
+        let pr_index = PrIndex::build(&prs, &closed_prs, &repository.default);
+        let start_index = StartIndex::build(&starts);
         let mut world = Self {
             legacy_records,
             cache,
             base: branch,
             unread_comments,
             closed_prs,
+            pr_index,
+            start_index,
+            prefetched_approvals: BTreeMap::new(),
             pr_reads: BTreeMap::new(),
             deadline,
             snapshot: Snapshot {
@@ -383,23 +518,17 @@ impl World {
             &self.authors,
         ))
     }
-    fn read_comments(
-        &mut self,
-        gh: &TickReads,
-        number: Number,
-        deadline: Instant,
-    ) -> Result<Vec<Comment>> {
+    fn ensure_comments(&mut self, gh: &TickReads, number: Number, deadline: Instant) -> Result<()> {
         if self.unread_comments.contains(&number) {
             return Err("issue comments unread");
         }
         if let Some(c) = self.comments.get(&number) {
-            records::check_forms(c, self.legacy_records)?;
-            return Ok(c.clone());
+            return records::check_forms(c, self.legacy_records);
         }
         let c = self.read_factory(gh, number, deadline)?;
         records::check_forms(&c, self.legacy_records)?;
-        self.comments.insert(number, c.clone());
-        Ok(c)
+        self.comments.insert(number, c);
+        Ok(())
     }
     fn summary_needs_merges(
         &self,
@@ -425,17 +554,20 @@ impl World {
             .flat_map(|s| self.issues[s].sub_issues.nodes.iter().map(|l| l.number))
             .collect::<BTreeSet<_>>();
         let mut work = 0_usize;
+        let mut related_prs = BTreeSet::new();
         for ticket in &tickets {
+            if let Some(prs) = self.pr_index.open_or_merged_by_issue.get(ticket) {
+                related_prs.extend(prs.iter().copied());
+            }
+            if let Some(prs) = self.pr_index.closed_by_issue.get(ticket) {
+                related_prs.extend(prs.iter().copied());
+            }
             if self.unread_comments.contains(ticket) {
                 continue;
             }
             let mut builders = BTreeSet::new();
-            for r in self
-                .starts
-                .iter()
-                .filter(|r| r.key().role() == starts::Role::Builder && r.key().number() == *ticket)
-            {
-                for a in r.attempts() {
+            for &idx in self.start_index.builders_for(*ticket) {
+                for a in self.starts[idx].attempts() {
                     if let AttemptOutcome::Created { thread_id } = &a.outcome
                         && starts::safe_id(thread_id)
                     {
@@ -454,23 +586,8 @@ impl World {
             }
             work = work.saturating_add(builders.len());
         }
-        for p in &self.prs {
-            let (pr, related) = match p {
-                PrRow::Open(p) | PrRow::Merged { facts: p, .. } => (
-                    p.number,
-                    p.closes.iter().any(|l| tickets.contains(&l.number)),
-                ),
-                PrRow::Closed { number } => (
-                    *number,
-                    self.closed_prs.get(number).is_some_and(|refs| {
-                        refs.targets
-                            .as_ref()
-                            .is_ok_and(|ns| ns.iter().any(|n| tickets.contains(n)))
-                    }),
-                ),
-            };
-            if related
-                && !self.unread_comments.contains(&pr)
+        for pr in related_prs {
+            if !self.unread_comments.contains(&pr)
                 && let Some(cs) = self.comments.get(&pr)
                 && let Ok(reviewers) = self.reviewers(None, pr, cs, false, deadline)
             {
@@ -512,23 +629,14 @@ impl World {
             for link in &row.sub_issues.nodes {
                 let ticket = &self.issues[&link.number];
                 if ticket.state == openwiz_core::fleet::model::IssueState::Open {
-                    let prs = self
-                        .prs
-                        .iter()
-                        .filter_map(|p| match p {
-                            PrRow::Open(p)
-                                if p.closes.iter().any(|l| l.number == ticket.number) =>
-                            {
-                                Some(p)
-                            }
-                            _ => None,
-                        })
-                        .collect::<Vec<_>>();
-                    if let [p] = prs.as_slice() {
-                        open.insert(p.number, (*p).clone());
+                    let open_idxs = self.pr_index.open_for(ticket.number);
+                    if let [idx] = open_idxs
+                        && let PrRow::Open(p) = &self.prs[*idx]
+                    {
+                        open.insert(p.number, p.clone());
                     }
                     targets.extend(ticket.blocked_by.nodes.iter().map(|l| l.number));
-                    if !self.prs.iter().any(|p| matches!(p, PrRow::Open(p) if p.closes.iter().any(|l| l.number == ticket.number))) {
+                    if open_idxs.is_empty() {
                         targets.insert(ticket.number);
                     }
                     contracts |= records::relies(&ticket.body).is_ok_and(|p| !p.is_empty());
@@ -540,30 +648,29 @@ impl World {
                 && contracts
                 && let Some(a) = &approval
             {
-                for p in &self.prs {
+                let approved_at =
+                    i64::try_from(a.approved_at).map_err(|_| "approval time overflow")?;
+                for &idx in &self.pr_index.merged_on_default {
                     if let PrRow::Merged {
-                        facts,
                         merge_commit,
                         merged_at,
-                    } = p
-                        && facts.base_branch == self.repository.default
-                        && merged_at.0
-                            >= i64::try_from(a.approved_at).map_err(|_| "approval time overflow")?
+                        ..
+                    } = &self.prs[idx]
+                        && merged_at.0 >= approved_at
                     {
                         commits.insert(merge_commit.clone());
                     }
                 }
             }
+            self.prefetched_approvals.insert(*spec, approval);
         }
         for target in targets {
-            let matched = self.prs.iter().filter(|p| matches!(p, PrRow::Merged { facts, .. } if facts.closes.iter().any(|l| l.number == target))).collect::<Vec<_>>();
-            if let [
-                PrRow::Merged {
+            if let [idx] = self.pr_index.merged_for(target)
+                && let PrRow::Merged {
                     facts,
                     merge_commit,
                     ..
-                },
-            ] = matched.as_slice()
+                } = &self.prs[*idx]
                 && facts.base_branch == self.repository.default
             {
                 commits.insert(merge_commit.clone());
@@ -637,24 +744,28 @@ impl World {
         spec: Number,
         deadline: Instant,
     ) -> Result<FleetFacts> {
-        let row = self.issues[&spec].clone();
-        let comments = self.read_comments(gh, spec, deadline)?;
-        let approval = records::approval(&comments, self.legacy_records)?;
+        self.ensure_comments(gh, spec, deadline)?;
+        let approval = match self.prefetched_approvals.remove(&spec) {
+            Some(a) => a,
+            None => records::approval(&self.comments[&spec], self.legacy_records)?,
+        };
+        let row = &self.issues[&spec];
+        let comments = &self.comments[&spec];
         let rows = row
             .sub_issues
             .nodes
             .iter()
             .map(|l| &self.issues[&l.number])
             .collect::<Vec<_>>();
-        let fingerprint_now = records::fingerprint(&row, &rows);
-        let mut spec_records = records::spec_records(&comments);
+        let fingerprint_now = records::fingerprint(row, &rows);
+        let mut spec_records = records::spec_records(comments);
         let fp = serde_json::to_value(&fingerprint_now).map_err(|_| "fingerprint unavailable")?;
         let current_prefix = format!(
             "launch-fleet: needs approval: changed since revision {} (fingerprint now {})",
             approval.as_ref().map_or(0, |a| a.approval.revision.get()),
             &fp.as_str().ok_or("invalid fingerprint")?[..12]
         );
-        if records::has(&comments, &current_prefix) {
+        if records::has(comments, &current_prefix) {
             spec_records.approval_notified.push(fingerprint_now.clone());
         }
         let mut changes = vec![];
@@ -664,15 +775,14 @@ impl World {
                     && records::relies(&r.body).is_ok_and(|p| !p.is_empty())
             });
         if contracts_needed && let Some(a) = &approval {
-            for pr in &self.prs {
+            let approved_at = i64::try_from(a.approved_at).map_err(|_| "approval time overflow")?;
+            for &idx in &self.pr_index.merged_on_default {
                 if let PrRow::Merged {
                     facts,
                     merge_commit,
                     merged_at,
-                } = pr
-                    && facts.base_branch == self.repository.default
-                    && merged_at.0
-                        >= i64::try_from(a.approved_at).map_err(|_| "approval time overflow")?
+                } = &self.prs[idx]
+                    && merged_at.0 >= approved_at
                 {
                     let pr = merged(facts, merge_commit, *merged_at);
                     let read_back = self.contains(gh, &pr, deadline)?;
@@ -698,19 +808,27 @@ impl World {
             }
         }
         let closed_pr_unneeded =
-            !self.summary_needs_merges(&row, approval.as_ref(), spec_records.summary_written);
-        let mut tickets = vec![];
-        for l in &row.sub_issues.nodes {
-            let result = self.ticket(gh, room, l.number, closed_pr_unneeded, deadline);
+            !self.summary_needs_merges(row, approval.as_ref(), spec_records.summary_written);
+        let issue = records::issue(row);
+        let sub_issues = row
+            .sub_issues
+            .nodes
+            .iter()
+            .map(|l| l.number)
+            .collect::<Vec<_>>();
+        let mut tickets = Vec::with_capacity(sub_issues.len());
+        for number in sub_issues {
+            let result = self.ticket(gh, room, number, closed_pr_unneeded, deadline);
             tickets.push(TicketInput {
-                number: l.number,
+                number,
                 facts: result
                     .map(Observed::Complete)
                     .unwrap_or_else(|_| Observed::Unread(vec![Problem::Records])),
             });
         }
+        let row = &self.issues[&spec];
         Ok(FleetFacts {
-            issue: records::issue(&row),
+            issue,
             approval,
             fingerprint_now,
             tickets,
@@ -754,11 +872,11 @@ impl World {
         gh: &TickReads,
         deadline: Instant,
     ) -> Result<Option<MergeInput>> {
-        let matching = self.prs.iter().filter(|p| matches!(p,PrRow::Merged {facts,..} if facts.closes.iter().any(|r| r.number == issue))).collect::<Vec<_>>();
+        let matching = self.pr_index.merged_for(issue);
         if matching.len() > 1 {
             return Err("multiple merged PRs");
         }
-        match matching.first() {
+        match matching.first().map(|&idx| &self.prs[idx]) {
             Some(PrRow::Merged {
                 facts,
                 merge_commit,
@@ -842,212 +960,198 @@ impl World {
         closed_pr_unneeded: bool,
         deadline: Instant,
     ) -> Result<TicketFacts> {
-        let row = self.issues[&id].clone();
-        let comments = self.read_comments(gh, id, deadline)?;
-        let mut blockers = vec![];
-        for l in row
-            .blocked_by
-            .nodes
-            .iter()
-            .filter(|_| row.state == openwiz_core::fleet::model::IssueState::Open)
-        {
-            blockers.push(BlockerInput {
-                number: l.number,
-                state: self.issues[&l.number].state,
-                merged: self.merge_for(l.number, gh, deadline)?,
-            });
-        }
-        let mut starts = vec![];
-        let mut builders = BTreeSet::new();
-        for r in self
-            .starts
-            .iter()
-            .filter(|r| r.key().role() == starts::Role::Builder && r.key().number() == id)
-        {
-            starts.extend(start_facts(r, &comments));
-            for a in r.attempts() {
-                if let AttemptOutcome::Created { thread_id } = &a.outcome {
-                    builders.insert(thread_id.clone());
-                }
-            }
-        }
-        for l in records::lines(&comments) {
-            if let Some(s) = l.strip_prefix("launch-fleet: started, thread ") {
-                if !starts::safe_id(s) {
-                    return Err("invalid builder record");
-                }
-                builders.insert(s.into());
-            }
-        }
-        let checked = records::checked_builder(&comments);
-        if checked.is_none()
-            && records::lines(&comments).any(|l| l.starts_with("launch-fleet: start checked"))
-        {
-            return Err("builder checked records malformed or conflicting");
-        }
-        if let Some((Some(thread), _)) = &checked {
-            builders.insert(thread.as_str().to_owned());
-        }
-        let public_builder = records::has(&comments, "launch-fleet: started")
-            || records::lines(&comments)
-                .any(|l| l.starts_with("launch-fleet: start checked, branch "));
-        if public_builder {
-            let prefix = format!("#{id}: ");
-            let titled = self.titled_thread(
-                room,
-                |title| title.starts_with(&prefix),
-                checked.as_ref().map(|(_, b)| b.as_str()),
-                deadline,
-            )?;
-            if let Some(thread) = titled {
-                builders.insert(thread);
-            }
-            if builders.is_empty()
-                && !(room.is_none() && records::has(&comments, "launch-fleet: archived"))
-            {
-                return Err("public builder gone or out of reach");
-            }
-        }
-        let replacement = records::fallback_replacement(&comments)?;
-        let builder_replaced = replacement.is_some();
-        if let Some((old, replacement, branch)) = replacement {
-            if checked.as_ref() != Some(&(Some(replacement), branch)) {
-                return Err("fallback replacement does not match the checked branch");
-            }
-            builders.remove(old.as_str());
-            starts
-                .retain(|s| !matches!(&s.state, StartState::Started { thread } if *thread == old));
-        }
-        if builders.len() > 1 {
-            return Err("more than one builder");
-        }
-        if public_builder
-            && let (Some(room), Some((_, branch)), Some(thread)) =
-                (room, checked.as_ref(), builders.iter().next())
-            && !branch_matches(room, thread, branch.as_str(), deadline)?
-        {
-            return Err("builder branch conflicts with checked record");
-        }
-        let checked = checked.and_then(|(_, branch)| {
-            builders
+        self.ensure_comments(gh, id, deadline)?;
+        let (blockers, starts, checked, archived, builder, builder_replaced) = {
+            let row = &self.issues[&id];
+            let comments = &self.comments[&id];
+            let mut blockers = vec![];
+            for l in row
+                .blocked_by
+                .nodes
                 .iter()
-                .next()
-                .and_then(NonEmpty::new)
-                .map(|thread| (thread, branch))
-        });
-        let archived = records::has(&comments, "launch-fleet: archived");
-        if row.state == openwiz_core::fleet::model::IssueState::Closed && !archived {
-            let mut heads = BTreeSet::new();
-            let mut other_heads = BTreeSet::new();
-            for p in self.prs.iter().filter_map(|p| match p {
-                PrRow::Open(p) | PrRow::Merged { facts: p, .. } => Some(p),
-                _ => None,
-            }) {
-                if p.closes.iter().any(|r| r.number == id) {
-                    heads.insert(p.head_commit.as_str());
-                } else if !p.closes.is_empty() {
-                    other_heads.insert(p.head_commit.as_str());
+                .filter(|_| row.state == openwiz_core::fleet::model::IssueState::Open)
+            {
+                blockers.push(BlockerInput {
+                    number: l.number,
+                    state: self.issues[&l.number].state,
+                    merged: self.merge_for(l.number, gh, deadline)?,
+                });
+            }
+            let mut starts = vec![];
+            let mut builders = BTreeSet::new();
+            for &idx in self.start_index.builders_for(id) {
+                let r = &self.starts[idx];
+                starts.extend(start_facts(r, comments));
+                for a in r.attempts() {
+                    if let AttemptOutcome::Created { thread_id } = &a.outcome {
+                        builders.insert(thread_id.clone());
+                    }
                 }
             }
-            let unrelated = |head: &str| other_heads.contains(head) && !heads.contains(head);
-            for (pr, refs) in &self.closed_prs {
-                let candidate = refs.candidates.contains(&id);
-                let known = self.unread_comments.contains(pr)
-                    || self.starts.iter().any(|r| {
-                        r.key().role() == starts::Role::Reviewer
-                            && r.key().number() == *pr
-                            && (candidate
-                                || r.key().commit().is_none_or(|h| !unrelated(h.as_str())))
-                    })
-                    || self.comments.get(pr).is_some_and(|cs| {
-                        records::lines(cs).any(|l| {
-                            [
-                                "launch-fleet: review started ",
-                                "launch-fleet: review told again ",
-                                "launch-fleet: review failed ",
-                                "launch-fleet: review given up ",
-                                "launch-fleet: re-check sent ",
-                            ]
-                            .iter()
-                            .filter_map(|p| l.strip_prefix(p))
-                            .any(|s| {
-                                candidate
-                                    || s.get(..40).is_none_or(|head| {
-                                        Commit::parse(head).is_none() || !unrelated(head)
-                                    })
-                            })
-                        })
-                    });
-                if known {
-                    refs.targets.as_ref().map_err(|e| *e)?;
+            for l in records::lines(comments) {
+                if let Some(s) = l.strip_prefix("launch-fleet: started, thread ") {
+                    if !starts::safe_id(s) {
+                        return Err("invalid builder record");
+                    }
+                    builders.insert(s.into());
                 }
             }
-        }
-        let builder = builders
-            .into_iter()
-            .next()
-            .map(|id| agent(room, &id, archived, deadline))
-            .transpose()?;
-        let open = self
-            .prs
-            .iter()
-            .filter_map(|p| match p {
-                PrRow::Open(p) if p.closes.iter().any(|r| r.number == id) => Some(p.clone()),
-                _ => None,
-            })
-            .collect::<Vec<_>>();
-        let mut reviewers = vec![];
-        let ticket_prs = self
-            .prs
-            .iter()
-            .filter_map(|p| match p {
-                PrRow::Open(p) | PrRow::Merged { facts: p, .. }
-                    if p.closes.iter().any(|r| r.number == id) =>
+            let checked = records::checked_builder(comments);
+            if checked.is_none()
+                && records::lines(comments).any(|l| l.starts_with("launch-fleet: start checked"))
+            {
+                return Err("builder checked records malformed or conflicting");
+            }
+            if let Some((Some(thread), _)) = &checked {
+                builders.insert(thread.as_str().to_owned());
+            }
+            let public_builder = records::has(comments, "launch-fleet: started")
+                || records::lines(comments)
+                    .any(|l| l.starts_with("launch-fleet: start checked, branch "));
+            if public_builder {
+                let prefix = format!("#{id}: ");
+                let titled = self.titled_thread(
+                    room,
+                    |title| title.starts_with(&prefix),
+                    checked.as_ref().map(|(_, b)| b.as_str()),
+                    deadline,
+                )?;
+                if let Some(thread) = titled {
+                    builders.insert(thread);
+                }
+                if builders.is_empty()
+                    && !(room.is_none() && records::has(comments, "launch-fleet: archived"))
                 {
-                    Some(p.number)
+                    return Err("public builder gone or out of reach");
                 }
-                _ => None,
-            })
-            .chain(self.closed_prs.iter().filter_map(|(pr, refs)| {
-                refs.targets
-                    .as_ref()
-                    .ok()
-                    .filter(|ns| ns.contains(&id))
-                    .map(|_| *pr)
-            }))
-            .collect::<Vec<_>>();
-        let mut pr_comments = BTreeMap::new();
+            }
+            let replacement = records::fallback_replacement(comments)?;
+            let builder_replaced = replacement.is_some();
+            if let Some((old, replacement, branch)) = replacement {
+                if checked.as_ref() != Some(&(Some(replacement), branch)) {
+                    return Err("fallback replacement does not match the checked branch");
+                }
+                builders.remove(old.as_str());
+                starts.retain(
+                    |s| !matches!(&s.state, StartState::Started { thread } if *thread == old),
+                );
+            }
+            if builders.len() > 1 {
+                return Err("more than one builder");
+            }
+            if public_builder
+                && let (Some(room), Some((_, branch)), Some(thread)) =
+                    (room, checked.as_ref(), builders.iter().next())
+                && !branch_matches(room, thread, branch.as_str(), deadline)?
+            {
+                return Err("builder branch conflicts with checked record");
+            }
+            let checked = checked.and_then(|(_, branch)| {
+                builders
+                    .iter()
+                    .next()
+                    .and_then(NonEmpty::new)
+                    .map(|thread| (thread, branch))
+            });
+            let archived = records::has(comments, "launch-fleet: archived");
+            if row.state == openwiz_core::fleet::model::IssueState::Closed
+                && !archived
+                && !self.closed_prs.is_empty()
+            {
+                let mut heads = BTreeSet::new();
+                let mut other_heads = BTreeSet::new();
+                for p in self.prs.iter().filter_map(|p| match p {
+                    PrRow::Open(p) | PrRow::Merged { facts: p, .. } => Some(p),
+                    _ => None,
+                }) {
+                    if p.closes.iter().any(|r| r.number == id) {
+                        heads.insert(p.head_commit.as_str());
+                    } else if !p.closes.is_empty() {
+                        other_heads.insert(p.head_commit.as_str());
+                    }
+                }
+                let unrelated = |head: &str| other_heads.contains(head) && !heads.contains(head);
+                for (pr, refs) in &self.closed_prs {
+                    let candidate = refs.candidates.contains(&id);
+                    let known = self.unread_comments.contains(pr)
+                        || self.start_index.reviewers_for(*pr).iter().any(|&idx| {
+                            let r = &self.starts[idx];
+                            candidate || r.key().commit().is_none_or(|h| !unrelated(h.as_str()))
+                        })
+                        || self.comments.get(pr).is_some_and(|cs| {
+                            records::lines(cs).any(|l| {
+                                [
+                                    "launch-fleet: review started ",
+                                    "launch-fleet: review told again ",
+                                    "launch-fleet: review failed ",
+                                    "launch-fleet: review given up ",
+                                    "launch-fleet: re-check sent ",
+                                ]
+                                .iter()
+                                .filter_map(|p| l.strip_prefix(p))
+                                .any(|s| {
+                                    candidate
+                                        || s.get(..40).is_none_or(|head| {
+                                            Commit::parse(head).is_none() || !unrelated(head)
+                                        })
+                                })
+                            })
+                        });
+                    if known {
+                        refs.targets.as_ref().map_err(|e| *e)?;
+                    }
+                }
+            }
+            let builder = builders
+                .into_iter()
+                .next()
+                .map(|id| agent(room, &id, archived, deadline))
+                .transpose()?;
+            (
+                blockers,
+                starts,
+                checked,
+                archived,
+                builder,
+                builder_replaced,
+            )
+        };
+        let ticket_prs = self.pr_index.ticket_prs(id);
+        let mut reviewers = vec![];
         let mut retired_rechecks = BTreeMap::new();
-        for p in &ticket_prs {
-            let c = self.read_comments(gh, *p, deadline)?;
-            let resolved = self.reviewers(room, *p, &c, archived, deadline)?;
+        for p in ticket_prs {
+            self.ensure_comments(gh, p, deadline)?;
+            let resolved = self.reviewers(room, p, &self.comments[&p], archived, deadline)?;
             reviewers.extend(resolved.agents);
-            retired_rechecks.insert(*p, resolved.retired_rechecks);
-            pr_comments.insert(*p, c);
+            retired_rechecks.insert(p, resolved.retired_rechecks);
         }
         reviewers.sort_by_key(|(started, r)| (*started, r.agent.thread.clone()));
         let reviewers = reviewers.into_iter().map(|(_, r)| r).collect();
-        let pr = match open.as_slice() {
+        let row = &self.issues[&id];
+        let comments = &self.comments[&id];
+        let open_idxs = self.pr_index.open_for(id);
+        let pr = match open_idxs {
             _ if closed_pr_unneeded
                 && row.state == openwiz_core::fleet::model::IssueState::Closed =>
             {
                 None
             }
             [] => self.merge_for(id, gh, deadline)?.map(PrInput::Merged),
-            [p] => {
+            [idx] => {
+                let PrRow::Open(p) = &self.prs[*idx] else {
+                    return Err("invalid open PR index");
+                };
                 let reads = self
                     .pr_reads
                     .get(&p.number)
                     .cloned()
                     .unwrap_or_else(|| open_reads(gh, p, deadline, 1))?;
-                let c = &pr_comments[&p.number];
+                let c = &self.comments[&p.number];
                 let ps = self
-                    .starts
+                    .start_index
+                    .reviewers_for(p.number)
                     .iter()
-                    .filter(|r| {
-                        r.key().role() == starts::Role::Reviewer && r.key().number() == p.number
-                    })
-                    .flat_map(|r| start_facts(r, c))
+                    .flat_map(|&sidx| start_facts(&self.starts[sidx], c))
                     .collect();
                 Some(PrInput::Open(Box::new(OpenPr {
                     fields: fields(p),
@@ -1063,76 +1167,79 @@ impl World {
                     records: records::pr_records(c, &retired_rechecks[&p.number]),
                 })))
             }
-            many => Some(PrInput::Several(many.iter().map(|p| p.number).collect())),
+            many => Some(PrInput::Several(
+                many.iter()
+                    .filter_map(|&idx| match &self.prs[idx] {
+                        PrRow::Open(p) => Some(p.number),
+                        _ => None,
+                    })
+                    .collect(),
+            )),
         };
         let events = if row.labels.iter().any(|l| l.as_str() == "held") {
             gh.events(id, deadline)?
         } else {
             vec![]
         };
-        let merges = self
-            .prs
-            .iter()
-            .filter_map(|p| match p {
-                PrRow::Merged {
-                    facts,
-                    merge_commit,
-                    ..
-                } => Some((facts.number, merge_commit.clone())),
-                _ => None,
-            })
-            .collect();
-        let (holds, held_label_comment) = records::holds(&comments, &events, &merges)?;
+        let (holds, held_label_comment) =
+            records::holds(comments, &events, &self.pr_index.merged_commits)?;
         let question = comments
             .iter()
             .rev()
             .find(|c| !records::first(c).starts_with("launch-fleet:"))
             .map(|c| c.id);
-        let builder_source = checked.as_ref().filter(|_| !builder_replaced).and_then(|(thread, branch)| {
-            let room = room?;
-            if builder.as_ref()?.thread != *thread {
-                return None;
-            }
-            if let Some(PrInput::Open(p)) = &pr
-                && p.fields.head_branch != *branch
-            {
-                return None;
-            }
-            let detail = room
-                .session_detail(&SessionId(thread.as_str().into()), deadline)
-                .ok()?;
-            if detail.session.id.0 != thread.as_str() || !detail.session.problems.is_empty() {
-                return None;
-            }
-            let family = match detail.session.provider {
-                Fact::Known(ref p) if p == "codex" => BuilderFamily::Gpt,
-                Fact::Known(ref p) if p == "claude-code" => BuilderFamily::Claude,
-                _ => return None,
-            };
-            let stopped =
-                matches!(detail.session.status, Fact::Known(ref s) if s == "idle" || s == "error");
-            let plan_limit = family == BuilderFamily::Claude
-                && stopped
-                && room
-                    .session_output(&SessionId(thread.as_str().into()), deadline)
-                    .ok()
-                    .filter(|o| o.problems.is_empty())
-                    .is_some_and(|o| {
-                        [o.output, o.error].iter().any(
-                            |f| matches!(f, Fact::Known(Some(text)) if claude_plan_limit(text)),
-                        )
-                    });
-            Some(BuilderSource {
-                thread: thread.clone(),
-                branch: branch.clone(),
-                family,
-                plan_limit,
-            })
-        });
-        let mut ticket_records = records::ticket_records(&comments);
-        ticket_records.builder_fallback_due = records::fallback_due(&comments);
+        let builder_source =
+            checked
+                .as_ref()
+                .filter(|_| !builder_replaced)
+                .and_then(|(thread, branch)| {
+                    let room = room?;
+                    if builder.as_ref()?.thread != *thread {
+                        return None;
+                    }
+                    if let Some(PrInput::Open(p)) = &pr
+                        && p.fields.head_branch != *branch
+                    {
+                        return None;
+                    }
+                    let detail = room
+                        .session_detail(&SessionId(thread.as_str().into()), deadline)
+                        .ok()?;
+                    if detail.session.id.0 != thread.as_str() || !detail.session.problems.is_empty()
+                    {
+                        return None;
+                    }
+                    let family = match detail.session.provider {
+                        Fact::Known(ref p) if p == "codex" => BuilderFamily::Gpt,
+                        Fact::Known(ref p) if p == "claude-code" => BuilderFamily::Claude,
+                        _ => return None,
+                    };
+                    let stopped = matches!(
+                        detail.session.status,
+                        Fact::Known(ref s) if s == "idle" || s == "error"
+                    );
+                    let plan_limit = family == BuilderFamily::Claude
+                        && stopped
+                        && room
+                            .session_output(&SessionId(thread.as_str().into()), deadline)
+                            .ok()
+                            .filter(|o| o.problems.is_empty())
+                            .is_some_and(|o| {
+                                [o.output, o.error].iter().any(|f| {
+                                matches!(f, Fact::Known(Some(text)) if claude_plan_limit(text))
+                            })
+                            });
+                    Some(BuilderSource {
+                        thread: thread.clone(),
+                        branch: branch.clone(),
+                        family,
+                        plan_limit,
+                    })
+                });
+        let mut ticket_records = records::ticket_records(comments);
+        ticket_records.builder_fallback_due = records::fallback_due(comments);
         Ok(TicketFacts {
-            issue: records::issue(&row),
+            issue: records::issue(row),
             blockers,
             pr,
             builder,
@@ -1161,11 +1268,8 @@ impl World {
             });
         }
         let mut known: BTreeMap<String, (Commit, u64, u64)> = BTreeMap::new();
-        for r in self
-            .starts
-            .iter()
-            .filter(|r| r.key().role() == starts::Role::Reviewer && r.key().number() == pr)
-        {
+        for &idx in self.start_index.reviewers_for(pr) {
+            let r = &self.starts[idx];
             for a in r.attempts() {
                 if let AttemptOutcome::Created { thread_id } = &a.outcome {
                     known.insert(
@@ -1203,13 +1307,11 @@ impl World {
         for (index, r) in records.iter().enumerate() {
             if r.kind == "review started" {
                 let mut candidates = self
-                    .starts
+                    .start_index
+                    .reviewers_for(pr)
                     .iter()
-                    .filter(|s| {
-                        s.key().role() == starts::Role::Reviewer
-                            && s.key().number() == pr
-                            && s.key().commit() == Some(&r.head)
-                    })
+                    .map(|&idx| &self.starts[idx])
+                    .filter(|s| s.key().commit() == Some(&r.head))
                     .flat_map(|s| s.attempts())
                     .filter_map(|a| match &a.outcome {
                         AttemptOutcome::Created { thread_id } => Some(thread_id.clone()),
@@ -1450,5 +1552,250 @@ mod budget_tests {
             PlanningDeadline::Initial(original).with_work(5).unwrap(),
             observed - Duration::from_secs(90)
         );
+    }
+}
+
+#[cfg(test)]
+mod index_oracle_tests {
+    use super::*;
+    use openwiz_core::fleet::fleets::Link;
+    use openwiz_core::fleet::starts::{Attempt, Repository, StartKey};
+    use openwiz_core::model::Timestamp;
+    use openwiz_core::new_thread::Settings;
+
+    fn n(v: u64) -> Number {
+        Number::new(v).unwrap()
+    }
+
+    fn sha(v: u64) -> Commit {
+        Commit::parse(&format!("{v:040x}")).unwrap()
+    }
+
+    fn link(issue: u64) -> Link {
+        Link {
+            number: n(issue),
+            id: NonEmpty::new(format!("I_{issue}")).unwrap(),
+        }
+    }
+
+    fn open_for_previous(prs: &[PrRow], issue: Number) -> Vec<Number> {
+        prs.iter()
+            .filter_map(|p| match p {
+                PrRow::Open(p) if p.closes.iter().any(|l| l.number == issue) => Some(p.number),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn merged_for_previous(prs: &[PrRow], issue: Number) -> Vec<Number> {
+        prs.iter()
+            .filter_map(|p| match p {
+                PrRow::Merged { facts, .. } if facts.closes.iter().any(|l| l.number == issue) => {
+                    Some(facts.number)
+                }
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn ticket_prs_previous(
+        prs: &[PrRow],
+        closed_prs: &BTreeMap<Number, ClosedPrReferences>,
+        issue: Number,
+    ) -> Vec<Number> {
+        prs.iter()
+            .filter_map(|p| match p {
+                PrRow::Open(p) | PrRow::Merged { facts: p, .. }
+                    if p.closes.iter().any(|r| r.number == issue) =>
+                {
+                    Some(p.number)
+                }
+                _ => None,
+            })
+            .chain(closed_prs.iter().filter_map(|(pr, refs)| {
+                refs.targets
+                    .as_ref()
+                    .ok()
+                    .filter(|ns| ns.contains(&issue))
+                    .map(|_| *pr)
+            }))
+            .collect()
+    }
+
+    fn merges_map_previous(prs: &[PrRow]) -> BTreeMap<Number, Commit> {
+        prs.iter()
+            .filter_map(|p| match p {
+                PrRow::Merged {
+                    facts,
+                    merge_commit,
+                    ..
+                } => Some((facts.number, merge_commit.clone())),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn merged_on_default_previous(prs: &[PrRow], default: &NonEmpty) -> Vec<Number> {
+        prs.iter()
+            .filter_map(|p| match p {
+                PrRow::Merged { facts, .. } if facts.base_branch == *default => Some(facts.number),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn pr_and_start_indices_match_linear_scan_oracles() {
+        let default = NonEmpty::new("main").unwrap();
+        let other = NonEmpty::new("release").unwrap();
+        let repo = Repository::parse("synthetic-owner/synthetic-repo").unwrap();
+        let settings = Settings {
+            harness: "codex".to_owned(),
+            model: "gpt-6.2-sol".to_owned(),
+            effort: "medium".to_owned(),
+        };
+        let mut rng = 0x1234_5678_9abc_def0u64;
+        let mut next = || {
+            rng ^= rng << 13;
+            rng ^= rng >> 7;
+            rng ^= rng << 17;
+            rng
+        };
+
+        for case in 0..200u64 {
+            let mut prs = Vec::new();
+            let mut closed_prs = BTreeMap::new();
+            for i in 1..=25u64 {
+                let pr_num = n(100 + i);
+                let closes_count = (next() % 4) as usize;
+                let mut closes = Vec::new();
+                for _ in 0..closes_count {
+                    closes.push(link(1 + (next() % 12)));
+                }
+                let base = if next() % 3 == 0 {
+                    other.clone()
+                } else {
+                    default.clone()
+                };
+                match next() % 3 {
+                    0 => prs.push(PrRow::Open(PrFacts {
+                        number: pr_num,
+                        draft: next() & 1 == 1,
+                        head_branch: NonEmpty::new(format!("room/syn-{i}")).unwrap(),
+                        head_commit: sha(case * 100 + i),
+                        base_branch: base,
+                        closes,
+                    })),
+                    1 => prs.push(PrRow::Merged {
+                        facts: PrFacts {
+                            number: pr_num,
+                            draft: false,
+                            head_branch: NonEmpty::new(format!("room/syn-{i}")).unwrap(),
+                            head_commit: sha(case * 100 + i),
+                            base_branch: base,
+                            closes,
+                        },
+                        merge_commit: sha(case * 1000 + i),
+                        merged_at: Timestamp(1_760_000_000_000 + i as i64),
+                    }),
+                    _ => {
+                        let targets = if next() % 4 == 0 {
+                            Err("closed PR references incomplete")
+                        } else {
+                            Ok(closes.iter().map(|l| l.number).collect())
+                        };
+                        closed_prs.insert(
+                            pr_num,
+                            ClosedPrReferences {
+                                candidates: closes.iter().map(|l| l.number).collect(),
+                                targets,
+                            },
+                        );
+                        prs.push(PrRow::Closed { number: pr_num });
+                    }
+                }
+            }
+            let index = PrIndex::build(&prs, &closed_prs, &default);
+            assert_eq!(index.merged_commits, merges_map_previous(&prs));
+            let got_default: Vec<Number> = index
+                .merged_on_default
+                .iter()
+                .map(|&idx| match &prs[idx] {
+                    PrRow::Merged { facts, .. } => facts.number,
+                    _ => unreachable!(),
+                })
+                .collect();
+            assert_eq!(got_default, merged_on_default_previous(&prs, &default));
+            for issue_id in 1..=14u64 {
+                let issue = n(issue_id);
+                let got_open: Vec<Number> = index
+                    .open_for(issue)
+                    .iter()
+                    .map(|&idx| match &prs[idx] {
+                        PrRow::Open(p) => p.number,
+                        _ => unreachable!(),
+                    })
+                    .collect();
+                assert_eq!(got_open, open_for_previous(&prs, issue));
+                let got_merged: Vec<Number> = index
+                    .merged_for(issue)
+                    .iter()
+                    .map(|&idx| match &prs[idx] {
+                        PrRow::Merged { facts, .. } => facts.number,
+                        _ => unreachable!(),
+                    })
+                    .collect();
+                assert_eq!(got_merged, merged_for_previous(&prs, issue));
+                assert_eq!(
+                    index.ticket_prs(issue),
+                    ticket_prs_previous(&prs, &closed_prs, issue)
+                );
+            }
+
+            let mut starts_vec = Vec::new();
+            for s in 1..=16u64 {
+                let target = n(1 + (next() % 12));
+                let key = if next() & 1 == 0 {
+                    StartKey::builder(repo.clone(), target)
+                } else {
+                    StartKey::reviewer(repo.clone(), target, sha(s))
+                };
+                let rec = StartRecord::from_parts(
+                    key.id(),
+                    key,
+                    "prj_syn_1".to_owned(),
+                    settings.clone(),
+                    vec![Attempt {
+                        op_id: OpId::parse(&format!("op-syn-{s}")).unwrap(),
+                        at: Timestamp(s as i64),
+                        outcome: AttemptOutcome::Pending,
+                    }],
+                )
+                .unwrap();
+                starts_vec.push(rec);
+            }
+            let sindex = StartIndex::build(&starts_vec);
+            for id in 1..=14u64 {
+                let num = n(id);
+                let expected_b: Vec<usize> = starts_vec
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, r)| {
+                        r.key().role() == starts::Role::Builder && r.key().number() == num
+                    })
+                    .map(|(i, _)| i)
+                    .collect();
+                assert_eq!(sindex.builders_for(num), expected_b.as_slice());
+                let expected_r: Vec<usize> = starts_vec
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, r)| {
+                        r.key().role() == starts::Role::Reviewer && r.key().number() == num
+                    })
+                    .map(|(i, _)| i)
+                    .collect();
+                assert_eq!(sindex.reviewers_for(num), expected_r.as_slice());
+            }
+        }
     }
 }
