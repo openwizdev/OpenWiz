@@ -4,6 +4,7 @@ import urllib.error
 import urllib.request
 
 ENV = 'TYPESAFE_API_KEY'
+OPT_IN = 'OPENWIZ_JEV'
 URL = 'https://api.typesafe.ai/v1/systemone'
 MODEL = 'jev-1.14.0'
 MAX_STATE_CHARS = 24000
@@ -84,7 +85,13 @@ class FakeClient(SystemOne):
         return {'model': self._model, 'answers': self._answers or {}, 'usage': {'input_tokens': 0, 'output_tokens': 0}}
 
 
+def opted_in():
+    return os.environ.get(OPT_IN) == '1'
+
+
 def from_env():
+    if not opted_in():
+        return None
     key = os.environ.get(ENV, '')
     if not isinstance(key, str) or not key.strip():
         return None
@@ -152,7 +159,9 @@ def box(response, name):
     answer = _answer(response, name, 'box')
     edges = answer.get('box')
     confidence = answer.get('confidence')
-    if not isinstance(edges, dict) or not _finite(confidence) or not 0 <= confidence <= 1:
+    if not isinstance(edges, dict):
+        raise TypeSafeError('shape')
+    if confidence is not None and (not _finite(confidence) or not 0 <= confidence <= 1):
         raise TypeSafeError('shape')
     found = {}
     for edge in ('top', 'bottom', 'left', 'right'):
@@ -160,7 +169,7 @@ def box(response, name):
         if not _finite(value) or not 0 <= value <= 1:
             raise TypeSafeError('shape')
         found[edge] = float(value)
-    return found, float(confidence)
+    return found, None if confidence is None else float(confidence)
 
 
 def _answer(response, name, kind):

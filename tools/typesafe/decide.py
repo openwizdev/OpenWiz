@@ -56,6 +56,6 @@ def score_ready(response, name, confidence_at):
 
 def box_ready(response, name, confidence_at):
     edges, confidence = client.box(response, name)
-    if confidence < confidence_at:
+    if confidence is None or confidence < confidence_at:
         return None
     return edges, confidence

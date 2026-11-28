@@ -61,11 +61,11 @@ def main(argv):
             return 1
         report(path, data)
     if not live:
-        print('live: skipped (pass --live once TYPESAFE_API_KEY is set)')
+        print('live: skipped (pass --live with OPENWIZ_JEV=1 and TYPESAFE_API_KEY set)')
         return 0
     ask = client.from_env()
     if ask is None:
-        print('live: TYPESAFE_API_KEY is unset; no request was sent', file=sys.stderr)
+        print('live: OPENWIZ_JEV=1 or TYPESAFE_API_KEY is unset; no request was sent', file=sys.stderr)
         return 2
     for path in paths:
         data = json.loads(path.read_text())
