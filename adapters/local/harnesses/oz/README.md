@@ -50,7 +50,7 @@ oz can't set effort apart from the model, so the row declares effort none, as `r
 1. `RunAgentArgs` and the global options in `crates/warp_cli` (at `f8223cef` and at the June release tag) have no effort, reasoning or thinking flag, and no setting for one.
 2. [Model choice](https://docs.warp.dev/agents/inference/model-choice/): the reasoning level is part of the model id: for OpenAI models "The `low`, `medium`, `high`, `xhigh`, and `max` suffixes select increasing reasoning levels", and for Anthropic models "Suffixes select effort level", with ids such as `claude-5-2-fable-high`. The levels differ per model (some families stop at `xhigh`, some have only `-thinking`), so no fixed effort map holds for every model.
 
-So pick the level through the model id in your Models table, and leave the effort empty for `oz`. A start that carries an effort is a D3 error that starts nothing, with this `next`: "this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default".
+So pick the level through the model id in your Models table, and leave the effort empty for `oz`. Once the local driver's `effort` start field is on, a start that carries an effort is a D3 error that starts nothing, with this `next`: "this host can't set effort: remove the effort for this harness in your Models table or Roster to run it at the host's default" (today the local driver's request check refuses any start carrying `effort` and starts nothing either).
 
 ## Not installed, not signed in
 

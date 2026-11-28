@@ -19,7 +19,7 @@ python3 -I kernel/live-rig/rig.py --hosts kernel/live-rig/hosts --settings <file
 PATH=<stubs>:$PATH env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/test_rig.py   # its own tests, on fixtures
 ```
 
-`<stubs>` is a fresh `mktemp -d` folder holding a refusing stub (it prints a refusal to stderr and exits 1) for each agent CLI: claude, codex, cursor-agent, agent, pi, opencode, copilot, goose, gemini, kimi, qwen, cline, kilo, crush, vibe, auggie, kiro-cli, junie, amp, agy, oz, sculpt, hermes, acpx and droid. CI's step makes the same folder and runs every `kernel/live-rig/test_*.py` and `kernel/live-rig/*/test_*.py` this way.
+`<stubs>` is a fresh `mktemp -d` folder holding a refusing stub (it prints a refusal to stderr and exits 1) for each agent CLI: claude, codex, cursor-agent, agent, cursor, pi, opencode, copilot, goose, gemini, kimi, qwen, cline, kilo, kilocode, crush, vibe, auggie, kiro-cli, junie, amp, agy, oz, sculpt, hermes, acpx, droid, boat, room-cli, runpane, pane, openhands, devin, warp, grok, codespaces and conductor. CI's step makes the same folder and runs every `kernel/live-rig/test_*.py` and `kernel/live-rig/*/test_*.py` this way.
 
 - `--settings`: a local JSON file outside the repository, `{"repo": "<owner>/<name>", "ticket": <n>}`, naming the throwaway repository and ticket the kit uses ([the kit's throwaway ticket](../driver-kit/README.md#the-throwaway-ticket)).
 - `--out`: a folder outside the checkout. It holds the lock (`rig.lock`), so two runs never overlap: a second one prints `rig.py: another run holds the lock` and exits 0.

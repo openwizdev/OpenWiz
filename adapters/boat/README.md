@@ -2,7 +2,7 @@
 
 Login: held by boat.dev
 
-Effort: passed as `boat prompt --reasoning-effort <effort>`, on the start's turn and every wake's, for each level `boat prompt --help` lists for the start's harness and model, when driver v1 can represent that model ID (it takes no slash, so a pi model such as `openrouter:anthropic/claude-opus-5.5` is refused as `model is not valid`) ([boat's CLI reference](https://docs.boat.dev/cli-reference)). Any other harness, model or level is refused with driver v1's refusal text before anything is saved or started; a start without an effort runs at boat's default.
+Effort: passed as `boat prompt --reasoning-effort <effort>`, on the start's turn and every wake's, for each level `boat prompt --help` lists for the start's harness and model ([boat's CLI reference](https://docs.boat.dev/cli-reference)). Any other harness, model or level is refused with driver v1's refusal text before anything is saved or started; a start without an effort runs at boat's default.
 
 | Harness | Effort (as boat CLI 1.0.105 lists it) |
 | --- | --- |

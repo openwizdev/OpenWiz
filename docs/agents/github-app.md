@@ -1,5 +1,7 @@
 # The OpenWiz GitHub App: the person's checklist
 
+**Status (legacy route):** today the App identity is off for everyone (#2394), and spec #1837 replaced this CloudRoom-secret route with the owner-side token service ([`docs/github-app.md`](../github-app.md#the-token-service-ga2)); put no App key in a CloudRoom secret or prompt. This page documents `tools/github-app/setup.py --agent-for`, kept as the legacy record.
+
 GI4 of spec #2537 (#2546), revised for 0.0.16 by T3 (#606). The agent prepares
 an OpenWiz App with GitHub's manifest flow; the person clicks twice: **Create**,
 then **Install**. Everything else is the agent's. The factory's App and the

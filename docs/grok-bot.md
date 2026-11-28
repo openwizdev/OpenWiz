@@ -24,16 +24,16 @@ Every sign-in and connection below is your own click. OpenWiz never touches a lo
 2. **Connect GitHub.** Add Grok Bot's GitHub app. It acts as the GitHub account you authorize. Check what access it asks for, and go on only if you can limit it to your demo repository.
 3. **Add the OpenWiz skills from one pinned source.** The skills run scripts that sit beside each skill file, so the text and the scripts must come from the same version. Ask your Bot:
 
-   > On your computer, run `git clone --depth 1 --branch v0.1.2 https://github.com/openwizdev/WizSkills`. Save each `skills/<name>/SKILL.md` in it as a skill. When you use one, read it from that folder and run its scripts from there.
+   > On your computer, run `git clone --depth 1 --branch v0.2.1 https://github.com/openwizdev/WizSkills`. Save each `skills/<name>/SKILL.md` in it as a skill. When you use one, read it from that folder and run its scripts from there.
 
-   `v0.1.2` is the version this OpenWiz release uses. A terminal command may stop on an **Allow / Skip** card. Allow it only if it is that command. Untested.
+   `v0.2.1` is the version OpenWiz 0.1.0, the current release, pins in its `wizskills.lock`. A terminal command may stop on an **Allow / Skip** card. Allow it only if it is that command. Untested.
 4. **Ask a first question.** For example:
 
    > Use the grill skill on: a small idea for my repository
 
    Or ask "Use ask-wiz: what should I do first?"
 
-**About grok-bot.directory.** OpenWiz is submitted for listing on [grok-bot.directory](https://grok-bot.directory). The listing is pending and not yet checked. Install only from the pinned `v0.1.2` clone in step 3.
+**About grok-bot.directory.** OpenWiz is submitted for listing on [grok-bot.directory](https://grok-bot.directory). The listing is pending and not yet checked. Install only from the pinned `v0.2.1` clone in step 3.
 
 ## Run a first fleet
 
@@ -47,7 +47,7 @@ Then follow [Install OpenWiz](install.md) and [Your first hour](first-hour.md). 
 
 | When | What | Status |
 | --- | --- | --- |
-| Today | `v0.1.2` skills in Grok Bot for talking work: grill, plan-graph, research, where-are-we, ask-wiz | Untested end to end |
+| Today | `v0.2.1` skills in Grok Bot for talking work: grill, to-spec, to-tickets, research, where-are-we, ask-wiz | Untested end to end |
 | Today | A first fleet from Claude Code or Codex | The normal install path |
 | Today | Your Bot watching that fleet through GitHub | Untested |
 | 0.1.1 | Grok Bot as the orchestrator that starts builders ([#1396](https://github.com/openwizdev/OpenWiz/issues/1396)) | A planned proof |

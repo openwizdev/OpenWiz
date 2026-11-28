@@ -128,4 +128,4 @@ Before these, `publish` alone reads its own record: a complete publication retur
 
 ## Prebuilt artifacts
 
-The manual `Packages` workflow builds Apple silicon Mac, Intel Mac and Linux x86_64 archives at the exact source commit, each with its `openwiz.build-products.v1` inventory (`build_products.py`, `package.py`), manifest, `SHA256SUMS` and stable `openwiz-<target>.manifest.json` and `.sha256` aliases. It never publishes. A release must carry all three targets' exact files. The installer side is in `contracts/install.v1.md` and `contracts/setup.v1.md`.
+The manual `Packages` workflow builds Apple silicon Mac, Intel Mac, Linux x86_64 and Linux arm64 archives at the exact source commit, each with its `openwiz.build-products.v1` inventory (`build_products.py`, `package.py`), manifest, `SHA256SUMS` and stable `openwiz-<target>.manifest.json` and `.sha256` aliases. It never publishes. A release must carry all four targets' exact files. The installer side is in `contracts/install.v1.md` and `contracts/setup.v1.md`.

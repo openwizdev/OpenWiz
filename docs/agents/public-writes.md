@@ -10,4 +10,4 @@ The card for every public write: a commit, branch, pull request, issue, comment 
 
 **Fleet records** (`launch-fleet: …`) and every other public record name tickets, pull requests, commits and branches, never a thread.
 
-**Checks do the rest:** commits must be authored by a GitHub noreply address (`$T author` sets it); the pre-push hook and CI's `privacy` check refuse the shapes above in the tree, commit messages and pull request title and body. Nothing checks an issue or pull request comment for you: before `gh ... comment --body-file <file>`, run `python3 -I skills/launch-fleet/scripts/context.py check <file>`. Images and quoted personal facts are the reviewer's to catch.
+**Checks do the rest:** commits must be authored by a GitHub noreply address (`$T author` sets it); the pre-push hook and CI's `privacy` check refuse the shapes above in the tree, commit messages and pull request title and body. Nothing checks an issue or pull request comment for you: before `gh ... comment --body-file <file>`, run `python3 -I tools/privacy-check/check.py --body-file <file>`. Images and quoted personal facts are the reviewer's to catch.

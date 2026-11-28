@@ -4,7 +4,7 @@
 against a recording fake `gh`. No account, credential or network is used.
 The separate `changelog` job runs these tests and then `check.py` on every
 pull request to `main` or `release-*`, including label addition/removal, and on
-merge groups. Like `ci.yml`'s jobs, it runs on the `CI_RUNS_ON` repository
+merge groups. Unlike `ci.yml`'s jobs, which run on `ubuntu-24.04`, it runs on the `CI_RUNS_ON` repository
 variable's runner, else GitHub's `ubuntu-24.04` (#1307). Making it required is a
 repository setting, outside this action.
 

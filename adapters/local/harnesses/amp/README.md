@@ -23,7 +23,7 @@ The row passes the user's effort to Amp, in the contract's first form. Each effo
 1. [Model Selector](https://ampcode.com/docs/model-selector#effort): "`--effort` (or `effort`) sets its effort; without it, the thread runs at the model's default effort. This works ... in execute mode (`-x`)", with the example `amp -x "Review this repository" --model openai/gpt-6-astra --effort xhigh`; and "In execute mode, `--effort` needs a model. Amp rejects an effort the model does not support." Amp never drops a level silently, so the row may claim it.
 2. The CLI's `--help`: "Set the reasoning effort for a new thread on a model (from --model, or a model passed to --mode); omit for the model's default". Its errors: "The --effort flag requires a model, such as --model openai/gpt-6-astra --effort high." and "The --effort flag is only supported when creating a new thread." So `{effort}` is in `start` only, after `--model {model}`.
 
-A start with an effort Amp has no level for is refused by the driver with its D3 error and starts nothing.
+Once the local driver's `effort` start field is on, a start with one of those levels passes `--effort <level>`, and a start with an effort Amp has no level for is refused by the driver with its D3 error and starts nothing; today the local driver's request check refuses any start that carries `effort` (`the input needs exactly repository, ticket, skill, harness, model`).
 
 ## The census check: does stop end Amp's background subagents?
 

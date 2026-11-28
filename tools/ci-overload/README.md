@@ -22,6 +22,6 @@ python3 -I tools/ci-overload/test_supply.py           # the supplier from a clea
 | Missing input file | unknown (refuses this call; does not latch durable pause) |
 | Stale, partial or invalid input or state | unknown, pause |
 
-While paused, `merge-batch`, `automatic-refresh` and `nonessential-poll` are refused; `completion` and `reconciliation` stay allowed so admitted work can finish. `fleet.sh overload` runs `LAUNCH_FLEET_OVERLOAD_SUPPLY` when set, or its shipped default supplier when neither `LAUNCH_FLEET_OVERLOAD_SUPPLY` nor `LAUNCH_FLEET_OVERLOAD_INPUT` is set.
+While paused, `merge-batch`, `automatic-refresh` and `nonessential-poll` are refused; `completion` and `reconciliation` stay allowed so admitted work can finish. `fleet.sh overload` runs `LAUNCH_FLEET_OVERLOAD_SUPPLY` when set; when neither it nor `LAUNCH_FLEET_OVERLOAD_INPUT` is set, the guard gets no input and refuses new work as unknown.
 
 The pause is durable: keep one private state path per repository, never in a temporary folder, and keep its `<state>.pending/` journal beside it. A later healthy snapshot never clears it (there is **no automatic resumption**). Once the operator confirms the overload is resolved, clear the durable pause and its pending journal under the state lock with `python3 -I tools/ci-overload/alarm.py --repository OWNER/NAME --state /abs/private/pause.json --action resume` (or `fleet.sh overload resume`), rather than deleting files manually. `escalation: due_not_sent` means only that an escalation is due; this tool sends nothing.

@@ -98,7 +98,7 @@ The triage labels are in [triage-labels.md](triage-labels.md). A fleet adds `hel
 
 | Label | Means | Put on by | Taken off by |
 | --- | --- | --- | --- |
-| `held` | The ticket is held: it waits for the user's approval of a changed plan or contract, and never starts while it has this label. It has no ready label while held | `plan-graph`, before it changes an approved plan; `launch-fleet`, when a merge changes a contract the ticket relies on | `plan-graph`, as it puts the ready label back once the new approval is recorded; `launch-fleet`'s `release` line, if it is still on after that |
+| `held` | The ticket is held: it waits for the user's approval of a changed plan or contract, and never starts while it has this label. It has no ready label while held | `to-tickets`, before it changes an approved plan; `launch-fleet`, when a merge changes a contract the ticket relies on | `to-tickets`, as it puts the ready label back once the new approval is recorded; `launch-fleet`'s `release` line, if it is still on after that |
 
 The skill that holds a ticket first creates `held`, once, with the description "Held: waits for the user's approval". `polish` means a small follow-up in the polish backlog; it never blocks a spec. A spec closes when all its planned tickets have verified merges and its live check, if any, has passed. Source: Jake, 2026-10-31 and 2026-11-04 ([private record](https://github.com/jparker2006/ClosedWiz/issues/1275#issuecomment-6704671951)).
 
@@ -116,7 +116,7 @@ Rust 1.99.1 with `rustfmt` and `clippy`; there is no `rust-toolchain.toml`.
 | 3 | root | `cargo clippy --workspace --all-targets -- -D warnings` | `ci` |
 | 4 | root | `cargo build --workspace` | `ci` |
 | 5 | root | `cargo test --workspace` | `ci` |
-| 6 | root | `cargo test -p openwiz-tests --test checks pending` | `ci` |
+| 6 | root | `cargo test -p openwiz-tests --test checks` | `ci` |
 | 7 | root | `cargo build --release` | `ci` |
 
 Source: [AGENTS.md, Commands](../../AGENTS.md#commands), and [the CI workflow](../../.github/workflows/ci.yml).
@@ -125,15 +125,15 @@ Source: [AGENTS.md, Commands](../../AGENTS.md#commands), and [the CI workflow](.
 
 | Check | Runs | Required on |
 | --- | --- | --- |
-| `ci` | The saved plan, always-run checks, every selected lane and each selected skill suite must pass; failed, cancelled or missing work fails | `main`, `release-*` |
+| `ci` | `lint`, `rust`, `release`, `owned-paths` (on pull requests) and `line-budget` must all pass; a draft, failed, cancelled or missing job fails | `main`, `release-*` |
 
 **Additional public check: `privacy` (O3).** It checks the public tree, commit range and PR text on every public pull request, merge group and push to `main`. OpenWiz's ruleset requires it on `main` and `release-*`, alongside the product checks named in the fleet table. The check-name migration belongs to #1262; its required `ci` check replaces the earlier product check names when that ticket lands. O7 preserves the table it receives, including that migration. O3 fixes its check name as `privacy`, verified in [PR #1846](https://github.com/jparker2006/ClosedWiz/pull/1846) at implementation pin `51e9b6b7791dcf9b077fd7163d1b4ad30990d23e`; O12 still applies and reads back the public ruleset. ClosedWiz preparation keeps the existing product-check table so current readers and fixtures keep working.
 
-A draft fails the plan and `ci`; marking it ready starts a full run. Source: [the workflow](../../.github/workflows/ci.yml) and the repository ruleset "CI must pass": no bypass, no force-push, no branch deletion.
+A draft fails `ci`; marking it ready starts a full run. Source: [the workflow](../../.github/workflows/ci.yml) and the repository ruleset "CI must pass": no bypass, no force-push, no branch deletion.
 
 ## GitHub identity
 
-Agents act on GitHub as the OpenWiz App, under [`openwiz.github-identity.v1`](../../contracts/github-identity.v1.md). Commits stay authored as Jake, with his GitHub noreply address.
+Agents will act on GitHub as the OpenWiz App, under [`openwiz.github-identity.v1`](../../contracts/github-identity.v1.md); today the App identity is off for everyone (#2394), so every agent acts as today's account. Commits stay authored as Jake, with his GitHub noreply address.
 
 | Setting | Value |
 | --- | --- |
@@ -178,7 +178,7 @@ Source: the first six rows are the fleet's action gates; the next three are the 
 - **How a merge is done:** after `launch-fleet`'s admission check, `gh pr merge <N> --merge --match-head-commit <approved head>`, with a body naming the approval. Only `merged` at the approved head, read back, is a verified merge.
 - **The merge queue checks the base** on OpenWiz: the approved head needs green required checks before queuing, and only the queue's passing result merges. No `--admin` bypass. A failed group means the builder merges `main` in and reruns affected checks.
 - **Fixing a red `main`:** the orchestrator may file and approve one fix-forward issue whose only job is to make `main` pass again; it is built and reviewed like any ticket. Its approval comment opens `**Approved on its own by Jake, <date>:** under his standing approval for fixes to a red main`, with `Private record: <pointer>` on the next line.
-- **Wording-only contract changes (C2):** the orchestrator, never a tick, may release a ticket held only because a contract it relies on was reworded, as `plan-graph`'s "A wording-only change (C2)" says. Any doubt goes to Jake.
+- **Wording-only contract changes (C2):** the orchestrator, never a tick, may release a ticket held only because a contract it relies on was reworded, as `to-tickets`' "A wording-only change (C2)" says. Any doubt goes to Jake.
 - **Never retarget a pull request:** close it and open a new one against the other base. Never force-push.
 
 Source: Jake, 2026-10-30, 2026-11-01 and 2026-11-05 (ADR 0008; [private record](https://github.com/jparker2006/ClosedWiz/issues/1275#issuecomment-6704671951)); release rules in [ADR 0020](../adr/0020-release-on-demand.md).

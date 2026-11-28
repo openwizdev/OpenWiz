@@ -1,6 +1,6 @@
 # WizSkills installer (for agents)
 
-ClosedWiz installs the WizSkills release pinned in `wizskills.lock` into the
+OpenWiz installs the WizSkills release pinned in `wizskills.lock` into the
 gitignored `.wizskills/`, like any user. The contract is
 [WizSkills v1](../../contracts/wizskills.v1.md).
 
@@ -27,8 +27,8 @@ every file's raw bytes and mode, ignored and untracked files included. No
 Git configuration or attribute of the caller or the release changes what is
 verified, and the release installer fetches only the verified local copy.
 
-**Contract copies.** The five carried contracts in `.wizskills/contracts/`
-must equal ClosedWiz's own `contracts/` files byte for byte:
+**Contract copies.** The nine carried contract files in `.wizskills/contracts/`
+must equal OpenWiz's own `contracts/` files byte for byte:
 
 ```sh
 python3 -I tools/wizskills/check_contracts.py
