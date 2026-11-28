@@ -171,7 +171,7 @@
   "changelog-thanks": {
     "schema": "openwiz.contributions.v1",
     "kind": "changelog_thanks",
-    "line": "Show the stitch count. Thanks @sample-stitcher."
+    "line": "Show the stitch count, with thanks to @sample-stitcher."
   },
   "perk-on-merge": {
     "schema": "openwiz.contributions.v1",

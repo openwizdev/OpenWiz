@@ -1,5 +1,3 @@
-"""Validate the synthetic examples of openwiz.contributions.v1."""
-
 import json
 from pathlib import Path
 import unittest
