@@ -2,12 +2,14 @@
 # SECURITY: driver v1 N4. Every OpenHands Cloud call goes through the kit's key helper, which alone reads the key
 # and picks the address; this driver sends it only a host name, a method, a path and a body, and never names, reads
 # or prints the key. It shows no text the host answered: each error names only the status, the method and the path.
-import json, os, re, subprocess, sys, time, uuid
+import fcntl, hashlib, json, os, re, subprocess, sys, time, uuid
+from contextlib import contextmanager
 sys.dont_write_bytecode = True
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 HELPER = os.path.realpath(os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'hostkey.py'))
 HOST = 'openhands'
+STATE = os.environ.get('OPENWIZ_OPENHANDS_STATE') or os.path.expanduser('~/.local/state/openwiz/openhands')
 VERSION = {'driver': 'openhands', 'records': ['openwiz:records v1'], 'can': ['start', 'wake', 'stop']}
 START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
          'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
@@ -55,13 +57,13 @@ def read(fields):
     return req
 
 
-def ask(method, path, body=None, also=()):
+def ask(method, path, body=None, also=(), timeout=110):
     request = {'host': HOST, 'method': method, 'path': path}
     if body is not None:
         request['body'] = body
     try:
         p = subprocess.run([sys.executable, '-I', HELPER], input=json.dumps(request), capture_output=True,
-                           text=True, timeout=110)
+                           text=True, timeout=timeout)
         out = json.loads(p.stdout)
     except (OSError, subprocess.TimeoutExpired, ValueError):
         raise Refused('the key helper gave no answer', 'run kernel/driver-kit/hostkey.py by hand to see why')
@@ -82,8 +84,8 @@ def untrusted(run, method, path):
         run, method, path.partition('?')[0]), 'check run %s in OpenHands Cloud, then retry' % run)
 
 
-def act(run, method, path, body=None, also=()):
-    status, got = ask(method, path, body, also)
+def act(run, method, path, body=None, also=(), timeout=110):
+    status, got = ask(method, path, body, also, timeout)
     if status == 200 and not (isinstance(got, dict) and got.get('success') is True):
         raise Refused('run %s: OpenHands Cloud did not confirm %s %s' % (run, method, path),
                       'check run %s in OpenHands Cloud, then retry' % run)
@@ -116,9 +118,9 @@ def same(a, b):
     return isinstance(a, str) and a.replace('-', '').lower() == b.replace('-', '')
 
 
-def conversation(run):
+def conversation(run, timeout=110):
     path = '/api/v1/app-conversations?ids=' + run
-    _, found = ask('GET', path)
+    _, found = ask('GET', path, timeout=timeout)
     if not (isinstance(found, list) and len(found) == 1):
         raise untrusted(run, 'GET', path)
     conv = found[0]
@@ -159,15 +161,21 @@ def started(run):
     return state, conv
 
 
-def send(run, message, end):
+def send(run, conv, message, end):
     path = '/api/v1/app-conversations/%s/send-message' % run
-    while True:
-        status, _ = act(run, 'POST', path, message, also=(409,))
+    while time.monotonic() < end:
+        if conv['sandbox_status'] == 'PAUSED':
+            act(run, 'POST', '/api/v1/sandboxes/%s/resume' % conv['sandbox_id'], timeout=end - time.monotonic())
+        status, _ = act(run, 'POST', path, message, also=(409,), timeout=end - time.monotonic())
         if status != 409:
             return
-        if time.monotonic() > end:
-            raise Refused('run %s\'s sandbox did not come back on OpenHands Cloud' % run, 'wake run %s again soon' % run)
+        if end - time.monotonic() <= POLL:
+            break
         time.sleep(POLL)
+        conv = conversation(run, timeout=end - time.monotonic())
+        if conv is None:
+            raise Refused('OpenHands Cloud no longer has conversation %s' % run, 'check run %s before waking it' % run)
+    raise Refused('run %s\'s sandbox did not come back on OpenHands Cloud' % run, 'wake run %s again soon' % run)
 
 
 def end_run(run, conv):
@@ -193,9 +201,7 @@ def wake(run):
         raise Refused({'unknown': 'OpenHands Cloud has no run %s', 'stopped': 'run %s is stopped',
                        'failed': 'run %s never started on OpenHands Cloud'}[state] % run, 'start a new run')
     end = time.monotonic() + WAIT
-    if conv['sandbox_status'] == 'PAUSED':
-        act(run, 'POST', '/api/v1/sandboxes/%s/resume' % conv['sandbox_id'])
-    send(run, {'role': 'user', 'run': True, 'content': [{'type': 'text', 'text': WOKEN}]}, end)
+    send(run, conv, {'role': 'user', 'run': True, 'content': [{'type': 'text', 'text': WOKEN}]}, end)
     return {'run': run, 'woke': True}
 
 
@@ -203,9 +209,117 @@ def stop(run):
     state, conv = started(run)
     if state == 'starting':
         raise Refused('run %s is still starting on OpenHands Cloud' % run, 'stop run %s again in a minute' % run)
+    if state == 'unknown' and os.path.isfile(receipt(run)):
+        raise Refused('OpenHands Cloud has not confirmed the outcome of start for run %s' % run,
+                      'check run %s and any pending start in OpenHands Cloud, then see the driver README' % run)
     if state == 'ready':
         end_run(run, conv)
+    forget_start(run)
     return {'run': run, 'stopped': True}
+
+
+def receipt(run):
+    return os.path.join(STATE, run + '.pending')
+
+
+@contextmanager
+def start_lock():
+    try:
+        os.makedirs(STATE, mode=0o700, exist_ok=True)
+        with os.fdopen(os.open(os.path.join(STATE, 'starts.lock'), os.O_RDWR | os.O_CREAT, 0o600), 'r+b') as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            yield
+    except OSError:
+        raise Refused('the driver could not access its pending starts',
+                      'check write access to the OpenHands driver state folder, then try again')
+
+
+def reserve_start(request):
+    identity = dict(request, repository=request['repository'].lower(), harness=HARNESSES[request['harness']])
+    fingerprint = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
+    with start_lock():
+        for name in os.listdir(STATE):
+            if not re.fullmatch(UUID + r'\.pending', name):
+                continue
+            run = name.removesuffix('.pending')
+            with open(receipt(run)) as saved:
+                found = saved.read()
+            if not re.fullmatch(r'[0-9a-f]{64}', found):
+                raise Refused('the pending start for run %s is unreadable' % run,
+                              'check run %s in OpenHands Cloud, then see the driver README' % run)
+            if found == fingerprint:
+                return run, False
+        run = str(uuid.uuid4())
+        pending = os.path.join(STATE, 'start.new')
+        with os.fdopen(os.open(pending, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), 'w') as saved:
+            saved.write(fingerprint)
+            saved.flush()
+            os.fsync(saved.fileno())
+        os.replace(pending, receipt(run))
+        return run, True
+
+
+def forget_start(run):
+    if os.path.isfile(receipt(run)):
+        with start_lock():
+            try:
+                os.unlink(receipt(run))
+            except FileNotFoundError:
+                pass
+
+
+def recover_start(run, why):
+    end = time.monotonic() + WAIT
+    while True:
+        try:
+            conv = conversation(run, timeout=max(0.25, end - time.monotonic()))
+        except Refused:
+            conv = None
+        if conv and conv['sandbox_status'] not in ('ERROR', 'MISSING'):
+            return
+        left = end - time.monotonic()
+        if left <= 0:
+            raise Refused('run %s may have started: %s' % (run, why),
+                          'retry start to check run %s, or use `driver stop` to end it' % run)
+        time.sleep(min(POLL, left))
+
+
+def start(req):
+    run, reserved = reserve_start(req)
+    if not reserved:
+        recover_start(run, 'OpenHands Cloud has not confirmed the previous start')
+        forget_start(run)
+        return {'run': run}
+    try:
+        chosen = profile(req['harness'], req['model'])
+    except Refused:
+        forget_start(run)
+        raise
+    prompt = 'Build the ticket: %s#%d, with the %s skill.' % (req['repository'], req['ticket'], req['skill'])
+    message = {'role': 'user', 'run': True, 'content': [{'type': 'text', 'text': prompt}]}
+    create = {'agent_profile_id': chosen, 'selected_repository': req['repository'], 'git_provider': 'github',
+              'title': 'OpenWiz: %s#%d' % (req['repository'], req['ticket']), 'initial_message': message,
+              'conversation_id': run}
+    path = '/api/v1/app-conversations'
+    rejected = (400, 401, 403, 422)
+    try:
+        status, task = ask('POST', path, create, also=rejected)
+        if status == 200:
+            if not (isinstance(task, dict) and isinstance(task.get('id'), str) and task.get('status') in TASK):
+                raise untrusted(run, 'POST', path)
+            made = task.get('app_conversation_id')
+            if (made is not None or task['status'] == 'READY') and not same(made, run):
+                raise untrusted(run, 'POST', path)
+    except Exception as e:
+        why = e.args[0] if isinstance(e, Refused) else 'the driver failed: ' + type(e).__name__
+        recover_start(run, why)
+    else:
+        if status in rejected or task['status'] == 'ERROR':
+            forget_start(run)
+            raise Refused('OpenHands Cloud refused to start run %s' % run,
+                          'check your profile and OpenHands Cloud, then start again')
+    forget_start(run)
+    return {'run': run}
 
 
 def answer(cmd):
@@ -222,25 +336,7 @@ def answer(cmd):
         if req['harness'] not in HARNESSES:
             raise Refused('harness %s is not one OpenHands Cloud runs for OpenWiz' % req['harness'],
                           'use claude-code (or claude) or codex')
-        chosen, run = profile(req['harness'], req['model']), str(uuid.uuid4())
-        prompt = 'Build the ticket: %s#%d, with the %s skill.' % (req['repository'], req['ticket'], req['skill'])
-        message = {'role': 'user', 'run': True, 'content': [{'type': 'text', 'text': prompt}]}
-        create = {'conversation_id': run, 'agent_profile_id': chosen, 'selected_repository': req['repository'],
-                  'git_provider': 'github', 'title': 'OpenWiz: %s#%d' % (req['repository'], req['ticket']),
-                  'initial_message': message}
-        try:
-            _, task = ask('POST', '/api/v1/app-conversations', create)
-            if not (isinstance(task, dict) and isinstance(task.get('id'), str) and task.get('status') in TASK
-                    and (task.get('app_conversation_id') is None or same(task['app_conversation_id'], run))):
-                raise Refused('OpenHands Cloud\'s answer to POST /api/v1/app-conversations is not the shape it '
-                              'documents', '')
-            if task['status'] == 'ERROR':
-                raise Refused('OpenHands Cloud could not start the conversation', '')
-        except Exception as e:
-            why = e.args[0] if isinstance(e, Refused) else 'the driver failed: ' + type(e).__name__
-            raise Refused('run %s may have started: %s' % (run, why),
-                          'stop run %s with `driver stop`, then start again' % run)
-        return {'run': run}
+        return start(req)
     if cmd in ('wake', 'stop'):
         run = read(RUN)['run']
         try:

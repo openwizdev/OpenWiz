@@ -30,6 +30,7 @@ class FakeOpenHands:
         self.starting_lookups, self.pause_after_turn = starting_lookups, pause_after_turn
         self.requests, self.conversations, self.tasks, self.answers = [], {}, {}, []
         self.key_requests = 0
+        self.pause_before_send = False
         self.lock = threading.Lock()
         host = self
 
@@ -171,6 +172,9 @@ class FakeOpenHands:
                 return 404, {'detail': 'Conversation or sandbox not found'}
             if c['deleted']:
                 return 410, {'detail': 'Conversation is archived'}
+            if self.pause_before_send:
+                c['sandbox_status'] = 'PAUSED'
+                self.pause_before_send = False
             if c['sandbox_status'] != 'RUNNING':
                 return 409, {'detail': 'Sandbox is not running. Resume it first'}
             c['messages'].append(body['content'][0]['text'])

@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -28,9 +29,8 @@ KIT_PASS = ['pass version: openwiz:records v1, and the schema is driver v1',
             'pass stop: the run ended, and a wake after it is refused',
             'pass token: no login or token passed through the driver, and on start, wake and stop the openhands '
             'key reached its host only from the key helper, in its header']
-
-
 QUALIFIED = 'openrouter/anthropic/claude-sonnet-4.6'
+WOKEN = 'You were woken: read the ticket again and carry on.'
 
 
 def saved(server, model, tag):
@@ -38,14 +38,10 @@ def saved(server, model, tag):
             'scope': 'personal', 'acp_server': server, 'acp_model': model}
 
 
-def module(path, name):
-    spec = importlib.util.spec_from_loader(name, importlib.machinery.SourceFileLoader(name, path))
-    m = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(m)
-    return m
-
-
-fake = module(os.path.join(HERE, 'fixtures', 'fake_openhands.py'), 'fake_openhands')
+fixture = importlib.machinery.SourceFileLoader('fake_openhands', os.path.join(HERE, 'fixtures', 'fake_openhands.py'))
+spec = importlib.util.spec_from_loader(fixture.name, fixture)
+fake = importlib.util.module_from_spec(spec)
+fixture.exec_module(fake)
 
 
 def tracker(folder):
@@ -65,16 +61,24 @@ class Driver(unittest.TestCase):
         self.mark = secrets.token_hex(8)
         self.tracker = tracker(self.folder)
         self.host = self.fake()
-        self.env = dict(os.environ, KIT_TEST=self.mark,
-                        OPENWIZ_HOSTKEY_TEST_ORIGIN=self.host.origin)
+        self.env = dict(os.environ, KIT_TEST=self.mark, OPENWIZ_OPENHANDS_POLL='0.01',
+                        OPENWIZ_OPENHANDS_STATE=self.folder, OPENWIZ_HOSTKEY_TEST_ORIGIN=self.host.origin)
 
     def fake(self, **kw):
         host = fake.FakeOpenHands(KEY, self.tracker, **kw)
         self.addCleanup(host.close)
         return host
 
+    def use_host(self, **kw):
+        self.host = self.fake(**kw)
+        self.env['OPENWIZ_HOSTKEY_TEST_ORIGIN'] = self.host.origin
+
     def tearDown(self):
-        for pid in filter(str.isdigit, os.listdir('/proc')):
+        try:
+            pids = os.listdir('/proc')
+        except FileNotFoundError:
+            return
+        for pid in filter(str.isdigit, pids):
             try:
                 with open('/proc/%s/environ' % pid, 'rb') as f:
                     if ('KIT_TEST=' + self.mark).encode() in f.read().split(b'\0'):
@@ -101,32 +105,26 @@ class Driver(unittest.TestCase):
         with open(self.tracker) as f:
             return [c for c in json.load(f)['comments'] if 'state: working' in c['body']]
 
-    def kit(self, driver=DRIVER, model='Synthetic 1', **env):
-        p = subprocess.run([sys.executable, '-I', KIT, '--driver', driver, '--repo', 'example/site', '--ticket', '7',
+    def kit(self, model):
+        p = subprocess.run([sys.executable, '-I', KIT, '--driver', DRIVER, '--repo', 'example/site', '--ticket', '7',
                             '--harness', 'claude-code', '--model', model, '--tracker', self.tracker,
-                            '--wait', '8'], env=dict(self.env, **env), capture_output=True, text=True, timeout=300)
+                            '--wait', '8'], env=self.env, capture_output=True, text=True, timeout=300)
         return p.returncode, p.stdout.splitlines(), p.stderr
 
     def test_kit_passes_all_five_on_the_fake_host(self):
-        code, out, err = self.kit()
-        self.assertEqual((out, err), (KIT_PASS, ''))
-        self.assertEqual(code, 0)
-
-    def test_kit_passes_all_five_on_the_users_saved_profile_model(self):
-        for model in ('claude-sonnet-4.6', QUALIFIED):
+        for model in ('Synthetic 1', 'claude-sonnet-4.6', QUALIFIED):
             with self.subTest(model=model):
                 tracker(self.folder)
-                self.host = self.fake(profiles=fake.PROFILES + [saved('claude-code', model, 'e')])
-                code, out, err = self.kit(model=model, OPENWIZ_HOSTKEY_TEST_ORIGIN=self.host.origin)
-                self.assertEqual((out, err), (KIT_PASS, ''))
-                self.assertEqual(code, 0)
+                if model != 'Synthetic 1':
+                    self.use_host(profiles=fake.PROFILES + [saved('claude-code', model, 'e')])
+                self.assertEqual(self.kit(model=model), (0, KIT_PASS, ''))
 
     def test_every_request_reaches_the_host_with_the_key_header_only(self):
         run = self.started()
         self.driver('wake', {'run': run})
         self.driver('stop', {'run': run})
         self.assertTrue(self.host.requests)
-        for method, path, body, auth in self.host.requests:
+        for _, path, body, auth in self.host.requests:
             self.assertEqual(auth, 'Bearer ' + KEY)
             self.assertNotIn(KEY, path + body.decode())
 
@@ -147,14 +145,11 @@ class Driver(unittest.TestCase):
         self.assertIn(('GET', '/api/agent-profiles/codex-synthetic?scope=org'), self.host.calls())
 
     def test_start_refuses_without_a_profile_for_the_harness(self):
-        for harness, model in (('codex', 'Synthetic 1'), ('gemini-cli', 'Synthetic 1')):
-            code, out = self.driver('start', dict(START, harness=harness, model=model))
-            self.assertEqual(code, 1)
-            self.assertNotIn('POST', [m for m, _ in self.host.calls()])
-        code, out = self.driver('start', dict(START, harness='codex', model='Synthetic 1'))
-        self.assertEqual(out['error'], 'OpenHands Cloud has no ACP agent profile for codex with model Synthetic 1')
-        code, out = self.driver('start', dict(START, harness='gemini-cli'))
-        self.assertEqual(out['error'], 'harness gemini-cli is not one OpenHands Cloud runs for OpenWiz')
+        for harness, message in (('codex', 'OpenHands Cloud has no ACP agent profile for codex with model Synthetic 1'),
+                                 ('gemini-cli', 'harness gemini-cli is not one OpenHands Cloud runs for OpenWiz')):
+            code, out = self.driver('start', dict(START, harness=harness))
+            self.assertEqual((code, out['error']), (1, message))
+        self.assertEqual(self.mutations(), [])
 
     def test_wake_resumes_the_paused_sandbox_then_sends_the_message(self):
         run = self.started()
@@ -166,17 +161,22 @@ class Driver(unittest.TestCase):
         posts = [p for m, p in self.host.calls() if m == 'POST']
         self.assertEqual(posts, ['/api/v1/sandboxes/%s/resume' % sandbox,
                                  '/api/v1/app-conversations/%s/send-message' % run])
-        self.assertEqual(self.host.conversations[run]['messages'],
-                         ['You were woken: read the ticket again and carry on.'])
+        self.assertEqual(self.host.conversations[run]['messages'], [WOKEN])
         self.assertEqual(len(self.notes()), 2)
 
-    def test_wake_of_a_running_sandbox_sends_without_resuming(self):
-        self.host = self.fake(pause_after_turn=False)
-        self.env['OPENWIZ_HOSTKEY_TEST_ORIGIN'] = self.host.origin
-        run = self.started()
-        self.driver('wake', {'run': run})
-        self.assertNotIn('resume', ' '.join(p for _, p in self.host.calls()))
-        self.assertEqual(len(self.host.conversations[run]['messages']), 1)
+    def test_wake_of_a_running_sandbox_resumes_only_if_it_pauses_during_send(self):
+        self.use_host(pause_after_turn=False)
+        for late_pause in (False, True):
+            with self.subTest(late_pause=late_pause):
+                run = self.started()
+                self.host.requests.clear()
+                self.host.pause_before_send = late_pause
+                self.assertEqual(self.driver('wake', {'run': run}, OPENWIZ_OPENHANDS_WAIT='2'),
+                                 (0, {'run': run, 'woke': True}))
+                send = '/api/v1/app-conversations/%s/send-message' % run
+                resume = '/api/v1/sandboxes/%s/resume' % self.host.conversations[run]['sandbox_id']
+                self.assertEqual([p for _, p in self.mutations()], [send, resume, send] if late_pause else [send])
+                self.assertEqual(len(self.host.conversations[run]['messages']), 1)
 
     def test_stop_pauses_then_deletes_and_wake_after_is_refused(self):
         run = self.started()
@@ -195,24 +195,29 @@ class Driver(unittest.TestCase):
         self.assertEqual((code, out), (0, {'run': run, 'stopped': True}))
 
     def test_stop_while_starting_waits_for_the_conversation_then_ends_it(self):
-        self.host = self.fake(starting_lookups=3)
-        self.env['OPENWIZ_HOSTKEY_TEST_ORIGIN'] = self.host.origin
+        self.use_host(starting_lookups=3)
         run = self.started()
-        code, out = self.driver('stop', {'run': run}, OPENWIZ_OPENHANDS_POLL='0.01')
+        code, out = self.driver('stop', {'run': run})
         self.assertEqual((code, out), (0, {'run': run, 'stopped': True}))
         self.assertTrue(self.host.conversations[run]['deleted'])
 
-    def test_a_lost_start_names_its_run_so_stop_can_end_it(self):
-        self.host = self.fake(lose_start=True)
-        self.env['OPENWIZ_HOSTKEY_TEST_ORIGIN'] = self.host.origin
-        code, out = self.driver('start', START)
-        self.assertEqual(code, 1)
+    def test_a_lost_start_reply_and_unavailable_lookup_retry_the_same_run(self):
+        self.use_host(lose_start=True)
+        self.host.answer('GET', '/api/v1/app-conversations', 503, None, times=2)
+        for _ in range(2):
+            code, out = self.driver('start', START, OPENWIZ_OPENHANDS_WAIT='0')
+            self.assertEqual(code, 1)
+            self.assertIn(next(iter(self.host.conversations)), out['error'])
         [run] = self.host.conversations
-        self.assertEqual(out, {'error': 'run %s may have started: OpenHands Cloud answered 503 to POST '
-                                        '/api/v1/app-conversations' % run,
-                               'next': 'stop run %s with `driver stop`, then start again' % run})
+        self.assertEqual(self.driver('start', START), (0, {'run': run}))
+        self.assertEqual(self.mutations(), [('POST', '/api/v1/app-conversations')])
+        self.assertEqual(len(self.notes()), 1)
         self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
         self.assertTrue(self.host.conversations[run]['deleted'])
+
+    def test_teardown_without_proc(self):
+        with patch.object(os, 'listdir', side_effect=FileNotFoundError):
+            self.tearDown()
 
     def refused(self, cmd, run, **env):
         code, out = self.driver(cmd, {'run': run}, **env)
@@ -239,12 +244,9 @@ class Driver(unittest.TestCase):
                 self.host.answer('GET', '/api/v1/app-conversations', 200, body, times=1)
                 self.refused('wake', run)
                 self.assertEqual(self.mutations(), [])
-                self.assertFalse(self.host.conversations[run]['deleted'])
-                self.assertEqual(self.host.conversations[run]['messages'], [])
 
     def test_stop_and_wake_refuse_an_unreadable_task_lookup(self):
-        self.host = self.fake(starting_lookups=100)
-        self.env['OPENWIZ_HOSTKEY_TEST_ORIGIN'] = self.host.origin
+        self.use_host(starting_lookups=100)
         for reply in (None, {}, {'items': None}, {'items': ['x']}, {'items': [{'status': 'BOGUS'}]},
                       {'items': [{'status': 'READY', 'app_conversation_id': '00000000-0000-4000-8000-0000000000aa'}]},
                       {'items': [{'status': 'WORKING'}, {'status': 'WORKING'}]}):
@@ -253,26 +255,27 @@ class Driver(unittest.TestCase):
                 self.host.requests.clear()
                 for cmd in ('stop', 'wake'):
                     self.host.answer('GET', '/api/v1/app-conversations/start-tasks/search', 200, reply, times=1)
-                    self.refused(cmd, run, OPENWIZ_OPENHANDS_POLL='0.01')
+                    self.refused(cmd, run)
                 self.assertEqual(self.mutations(), [])
 
     def test_a_run_absent_from_both_lookups_is_stopped_but_not_woken(self):
         run = '00000000-0000-4000-8000-0000000000ff'
         self.assertEqual(self.driver('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
+        self.assertEqual(self.driver('wake', {'run': run}),
+                         (1, {'error': 'OpenHands Cloud has no run ' + run, 'next': 'start a new run'}))
         self.assertEqual(self.mutations(), [])
 
     def test_start_refuses_an_unacknowledged_create_naming_the_run(self):
-        for reply in (None, [], {}, {'status': 'BOGUS', 'id': 'task-synthetic'},
-                      {'status': 'WORKING', 'id': None},
-                      {'status': 'READY', 'id': 'task-synthetic',
-                       'app_conversation_id': '00000000-0000-4000-8000-0000000000aa'}):
+        replies = (None, [], {}, {'status': 'BOGUS', 'id': 'task-synthetic'}, {'status': 'WORKING', 'id': None},
+                   {'status': 'READY', 'id': 'task-synthetic', 'app_conversation_id': '00000000-0000-4000-8000-0000000000aa'})
+        for ticket, reply in enumerate(replies, 10):
             with self.subTest(reply=reply):
                 self.host.answer('POST', '/api/v1/app-conversations', 200, reply, times=1)
-                code, out = self.driver('start', START)
+                code, out = self.driver('start', dict(START, ticket=ticket), OPENWIZ_OPENHANDS_WAIT='0')
                 self.assertEqual(code, 1, out)
                 run = re.search(UUID, out['error']).group(0)
                 self.assertTrue(out['error'].startswith('run %s may have started: ' % run), out)
-                self.assertEqual(out['next'], 'stop run %s with `driver stop`, then start again' % run)
+                self.assertIn(run, out['next'])
 
     def test_wake_refuses_an_unconfirmed_send_or_resume(self):
         for path in ('/api/v1/app-conversations/[^/]+/send-message', '/api/v1/sandboxes/[^/]+/resume'):
@@ -280,8 +283,7 @@ class Driver(unittest.TestCase):
                 with self.subTest(path=path, reply=reply):
                     run = self.started()
                     self.host.answer('POST', path, 200, reply, times=1)
-                    out = self.refused('wake', run)
-                    self.assertNotIn('woke', out)
+                    self.refused('wake', run)
                     self.assertEqual(self.host.conversations[run]['messages'], [])
 
     def test_stop_refuses_an_unconfirmed_pause_or_delete(self):
@@ -318,19 +320,15 @@ class Driver(unittest.TestCase):
         self.assertFalse(self.host.conversations[run]['deleted'])
 
     def test_wake_while_starting_waits_then_sends_the_follow_up(self):
-        self.host = self.fake(starting_lookups=3)
-        self.env['OPENWIZ_HOSTKEY_TEST_ORIGIN'] = self.host.origin
+        self.use_host(starting_lookups=3)
         run = self.started()
-        code, out = self.driver('wake', {'run': run}, OPENWIZ_OPENHANDS_POLL='0.01')
-        self.assertEqual((code, out), (0, {'run': run, 'woke': True}))
-        self.assertEqual(self.host.conversations[run]['messages'],
-                         ['You were woken: read the ticket again and carry on.'])
+        self.assertEqual(self.driver('wake', {'run': run}), (0, {'run': run, 'woke': True}))
+        self.assertEqual(self.host.conversations[run]['messages'], [WOKEN])
 
     def test_wake_still_starting_after_the_wait_refuses_with_a_retry(self):
-        self.host = self.fake(starting_lookups=10 ** 6)
-        self.env['OPENWIZ_HOSTKEY_TEST_ORIGIN'] = self.host.origin
+        self.use_host(starting_lookups=10 ** 6)
         run = self.started()
-        out = self.refused('wake', run, OPENWIZ_OPENHANDS_POLL='0.01', OPENWIZ_OPENHANDS_WAIT='0.3')
+        out = self.refused('wake', run, OPENWIZ_OPENHANDS_WAIT='0.3')
         self.assertEqual(out, {'error': 'run %s is still starting on OpenHands Cloud' % run,
                                'next': 'wake run %s again in a minute' % run})
         self.assertFalse([p for m, p in self.host.calls() if 'send-message' in p])
@@ -338,8 +336,7 @@ class Driver(unittest.TestCase):
     def test_start_refuses_when_only_a_default_model_profile_exists(self):
         profiles = fake.PROFILES + [dict(fake.PROFILES[1], id='00000000-0000-4000-8000-00000000000d',
                                          name='claude-default', acp_model=None)]
-        self.host = self.fake(profiles=profiles)
-        self.env['OPENWIZ_HOSTKEY_TEST_ORIGIN'] = self.host.origin
+        self.use_host(profiles=profiles)
         code, out = self.driver('start', dict(START, model='Synthetic 9'))
         self.assertEqual((code, out['error']), (1, 'OpenHands Cloud has no ACP agent profile for claude-code '
                                                    'with model Synthetic 9'))
@@ -350,9 +347,7 @@ class Driver(unittest.TestCase):
 
     def test_start_takes_a_provider_qualified_or_long_model_on_its_exact_profile(self):
         long_model = 'm' * 62
-        self.host = self.fake(profiles=fake.PROFILES + [saved('claude-code', QUALIFIED, 'e'),
-                                                        saved('codex', long_model, 'f')])
-        self.env['OPENWIZ_HOSTKEY_TEST_ORIGIN'] = self.host.origin
+        self.use_host(profiles=fake.PROFILES + [saved('claude-code', QUALIFIED, 'e'), saved('codex', long_model, 'f')])
         for harness, model, chosen in (('claude-code', QUALIFIED, 'e'), ('codex', long_model, 'f')):
             with self.subTest(model=model):
                 run = self.started(harness=harness, model=model)
@@ -364,11 +359,6 @@ class Driver(unittest.TestCase):
                 self.assertEqual(self.driver('start', dict(START, model=model)),
                                  (1, {'error': 'model is not valid', 'next': 'fix model as `driver schema` shows'}))
         self.assertEqual(self.host.requests, [])
-
-    def test_unknown_run_is_refused_by_wake(self):
-        code, out = self.driver('wake', {'run': '00000000-0000-4000-8000-0000000000ff'})
-        self.assertEqual(code, 1)
-        self.assertEqual(out['error'], 'OpenHands Cloud has no run 00000000-0000-4000-8000-0000000000ff')
 
     def test_start_refuses_effort_before_any_request(self):
         code, out = self.driver('start', dict(START, effort='high'))
@@ -382,8 +372,7 @@ class Driver(unittest.TestCase):
     def test_inputs_off_the_schema_are_refused_before_any_request(self):
         for bad in (dict(START, token='kit-probe-not-a-login'), {k: v for k, v in START.items() if k != 'model'},
                     dict(START, ticket='7'), dict(START, repository='https://example.com/x')):
-            code, out = self.driver('start', bad)
-            self.assertEqual(code, 1)
+            self.assertEqual(self.driver('start', bad)[0], 1)
         for bad in ({'run': 'not a uuid'}, {'run': '../x'}, {'run': '00000000-0000-4000-8000-0000000000ff', 'x': 1}):
             for cmd in ('wake', 'stop'):
                 self.assertEqual(self.driver(cmd, bad)[0], 1)
