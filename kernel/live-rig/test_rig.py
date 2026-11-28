@@ -496,15 +496,11 @@ class Rig(unittest.TestCase):
         self.assertTrue(self.kit_calls())
         os.remove(self.gh_log)
         shutil.rmtree(self.out)
-        for extra in (('--drivers', drivers, '--host', 'fixture-template'), ('--host', 'fixture-moved')):
-            with self.subTest(extra):
-                name = 'template' if 'fixture-template' in extra else 'moved'
-                code, out, err = self.rig(*extra)
-                self.assertEqual((code, out), (0, ['skipped %s fake-harness: not installed: driver %s' % (
-                    extra[-1], name)]), err)
-                self.assertEqual(self.record(extra[-1])['skipped'], 'not installed: driver ' + name)
-                self.assertEqual(self.kit_calls(), [])
-                shutil.rmtree(self.out)
+        code, out, err = self.rig('--drivers', drivers, '--host', 'fixture-template')
+        self.assertEqual((code, out), (0, ['skipped fixture-template fake-harness: not installed: driver template']),
+                         err)
+        self.assertEqual(self.record('fixture-template')['skipped'], 'not installed: driver template')
+        self.assertEqual(self.kit_calls(), [])
 
     def test_a_moved_driver_runs_from_an_unpacked_release_for_the_one_host_named(self):
         self.moved_host()
@@ -535,7 +531,8 @@ class Rig(unittest.TestCase):
         os.makedirs(drivers)
         os.symlink(os.path.join(real, 'driver'), os.path.join(drivers, 'driver'))
         for extra in (('--drivers', linked_folder), ('--drivers', linked_driver), ('--drivers', not_file),
-                      ('--release', drivers), ('--release', os.path.join(not_file, 'moved'))):
+                      ('--release', drivers), ('--release', os.path.join(not_file, 'moved')),
+                      ('--release', linked_folder)):
             with self.subTest(extra):
                 code, out, err = self.rig(*extra + ('--host', 'fixture-moved'))
                 self.assertEqual((code, out), (2, []), err)
