@@ -1,0 +1,30 @@
+{
+  "schema": "openwiz.ci-routing.v1",
+  "name": "The billing answer has the wrong shape: the read is unreadable and all-jog stays.",
+  "now": "2026-12-01T00:30:00Z",
+  "before": {
+    "variables": {
+      "OPENWIZ_RUNS_ON": "jog-4vcpu",
+      "OPENWIZ_PRIVATE_RUNS_ON": "jog-4vcpu"
+    },
+    "switches": [
+      "2026-11-20T18:00:00Z ci-routing normal -> all-jog: included minutes used up"
+    ]
+  },
+  "read": {
+    "ok": true,
+    "cause": "malformed",
+    "period": "2026-12",
+    "minutes": "unavailable",
+    "spending": null,
+    "queued": []
+  },
+  "expect": {
+    "state": "all-jog",
+    "variables": {
+      "OPENWIZ_RUNS_ON": "jog-4vcpu",
+      "OPENWIZ_PRIVATE_RUNS_ON": "jog-4vcpu"
+    },
+    "record": null
+  }
+}

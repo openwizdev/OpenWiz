@@ -1,0 +1,46 @@
+{
+  "schema": "openwiz.ci-routing.v1",
+  "name": "A job queued 899 seconds for a limit and one queued an hour for another reason are no signal: normal stays.",
+  "now": "2026-12-14T09:30:00Z",
+  "before": {
+    "variables": {
+      "OPENWIZ_RUNS_ON": "ubuntu-24.04",
+      "OPENWIZ_PRIVATE_RUNS_ON": "jog-4vcpu"
+    },
+    "switches": []
+  },
+  "read": {
+    "ok": true,
+    "period": "2026-12",
+    "minutes": {
+      "used": 49999,
+      "included": 50000
+    },
+    "spending": {
+      "spent_cents": 9999,
+      "limit_cents": 10000
+    },
+    "queued": [
+      {
+        "runner": "github-hosted",
+        "system": "linux",
+        "reason": "concurrency",
+        "queued_seconds": 899
+      },
+      {
+        "runner": "github-hosted",
+        "system": "linux",
+        "reason": "other",
+        "queued_seconds": 3600
+      }
+    ]
+  },
+  "expect": {
+    "state": "normal",
+    "variables": {
+      "OPENWIZ_RUNS_ON": "ubuntu-24.04",
+      "OPENWIZ_PRIVATE_RUNS_ON": "jog-4vcpu"
+    },
+    "record": null
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "schema": "openwiz.ci-routing.v1",
+  "name": "Paid larger-runner minutes reach the spending limit with included minutes left: normal switches to all-jog.",
+  "now": "2026-12-09T16:00:00Z",
+  "before": {
+    "variables": {
+      "OPENWIZ_RUNS_ON": "ubuntu-24.04",
+      "OPENWIZ_PRIVATE_RUNS_ON": "jog-4vcpu"
+    },
+    "switches": []
+  },
+  "read": {
+    "ok": true,
+    "period": "2026-12",
+    "minutes": {
+      "used": 30000,
+      "included": 50000
+    },
+    "spending": {
+      "spent_cents": 10000,
+      "limit_cents": 10000
+    },
+    "queued": []
+  },
+  "expect": {
+    "state": "all-jog",
+    "variables": {
+      "OPENWIZ_RUNS_ON": "jog-4vcpu",
+      "OPENWIZ_PRIVATE_RUNS_ON": "jog-4vcpu"
+    },
+    "record": "2026-12-09T16:00:00Z ci-routing normal -> all-jog: spending limit reached"
+  }
+}

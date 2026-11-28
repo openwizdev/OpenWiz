@@ -1,0 +1,42 @@
+{
+  "schema": "openwiz.ci-routing.v1",
+  "name": "The period has reset but a macOS job still waits 1200 seconds for a concurrency limit: all-jog stays.",
+  "now": "2027-01-01T00:30:00Z",
+  "before": {
+    "variables": {
+      "OPENWIZ_RUNS_ON": "jog-4vcpu",
+      "OPENWIZ_PRIVATE_RUNS_ON": "jog-4vcpu"
+    },
+    "switches": [
+      "2026-12-14T09:30:00Z ci-routing normal -> all-jog: jobs queued for a limit"
+    ]
+  },
+  "read": {
+    "ok": true,
+    "period": "2027-01",
+    "minutes": {
+      "used": 0,
+      "included": 50000
+    },
+    "spending": {
+      "spent_cents": 0,
+      "limit_cents": 0
+    },
+    "queued": [
+      {
+        "runner": "github-hosted",
+        "system": "macos",
+        "reason": "concurrency",
+        "queued_seconds": 1200
+      }
+    ]
+  },
+  "expect": {
+    "state": "all-jog",
+    "variables": {
+      "OPENWIZ_RUNS_ON": "jog-4vcpu",
+      "OPENWIZ_PRIVATE_RUNS_ON": "jog-4vcpu"
+    },
+    "record": null
+  }
+}

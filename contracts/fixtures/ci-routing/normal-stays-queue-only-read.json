@@ -1,0 +1,34 @@
+{
+  "schema": "openwiz.ci-routing.v1",
+  "name": "No billing endpoint answered, so the read has no minutes or spending figures and the queue alone decides: normal stays.",
+  "now": "2026-12-14T09:30:00Z",
+  "before": {
+    "variables": {
+      "OPENWIZ_RUNS_ON": "ubuntu-24.04",
+      "OPENWIZ_PRIVATE_RUNS_ON": "jog-4vcpu"
+    },
+    "switches": []
+  },
+  "read": {
+    "ok": true,
+    "period": "2026-12",
+    "minutes": null,
+    "spending": null,
+    "queued": [
+      {
+        "runner": "github-hosted",
+        "system": "linux",
+        "reason": "concurrency",
+        "queued_seconds": 120
+      }
+    ]
+  },
+  "expect": {
+    "state": "normal",
+    "variables": {
+      "OPENWIZ_RUNS_ON": "ubuntu-24.04",
+      "OPENWIZ_PRIVATE_RUNS_ON": "jog-4vcpu"
+    },
+    "record": null
+  }
+}

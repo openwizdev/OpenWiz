@@ -1,0 +1,46 @@
+{
+  "schema": "openwiz.ci-routing.v1",
+  "name": "A Linux job has waited exactly 900 seconds for a GitHub-hosted runner for a concurrency limit: normal switches to all-jog.",
+  "now": "2026-12-14T09:30:00Z",
+  "before": {
+    "variables": {
+      "OPENWIZ_RUNS_ON": "ubuntu-24.04",
+      "OPENWIZ_PRIVATE_RUNS_ON": "jog-4vcpu"
+    },
+    "switches": []
+  },
+  "read": {
+    "ok": true,
+    "period": "2026-12",
+    "minutes": {
+      "used": 1200,
+      "included": 50000
+    },
+    "spending": {
+      "spent_cents": 0,
+      "limit_cents": 0
+    },
+    "queued": [
+      {
+        "runner": "github-hosted",
+        "system": "linux",
+        "reason": "concurrency",
+        "queued_seconds": 900
+      },
+      {
+        "runner": "github-hosted",
+        "system": "linux",
+        "reason": "concurrency",
+        "queued_seconds": 60
+      }
+    ]
+  },
+  "expect": {
+    "state": "all-jog",
+    "variables": {
+      "OPENWIZ_RUNS_ON": "jog-4vcpu",
+      "OPENWIZ_PRIVATE_RUNS_ON": "jog-4vcpu"
+    },
+    "record": "2026-12-14T09:30:00Z ci-routing normal -> all-jog: jobs queued for a limit"
+  }
+}
