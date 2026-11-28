@@ -1,7 +1,9 @@
 {"answers": [
   {"method": "GET", "path": "/v1/repositories", "status": 200,
    "body": {"items": [{"id": "00000000-0000-4000-8000-0000000000a2", "owner": "example", "name": "site",
-                       "url": "synthetic"}], "nextCursor": null}},
+                       "url": "https://github.com/example/site",
+                       "provider": {"type": "github", "displayName": "synthetic",
+                                    "integrationId": "00000000-0000-4000-8000-0000000000e1"}}], "nextCursor": null}},
   {"method": "POST", "path": "/v1/sessions", "status": 201,
    "body": {"id": "{{request.id}}", "level": 1, "kind": "session", "title": "synthetic"}},
   {"method": "GET", "path": "/v1/sessions/[^/]+", "status": 200,

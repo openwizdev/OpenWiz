@@ -8,10 +8,17 @@ import time
 import urllib.parse
 
 KEY_PATH = '/.openwiz/hostkey-test-key'
+
+
+def repo(rid, owner, name, kind, url):
+    return {'id': rid, 'owner': owner, 'name': name, 'url': url,
+            'provider': {'type': kind, 'displayName': 'synthetic', 'integrationId': '00000000-0000-4000-8000-0000000000e1'}}
+
+
 REPOSITORIES = [
-    {'id': '00000000-0000-4000-8000-0000000000a1', 'owner': 'example', 'name': 'site-old', 'url': 'synthetic'},
-    {'id': '00000000-0000-4000-8000-0000000000a2', 'owner': 'Example', 'name': 'Site', 'url': 'synthetic'},
-    {'id': '00000000-0000-4000-8000-0000000000a3', 'owner': 'other', 'name': 'site', 'url': 'synthetic'},
+    repo('00000000-0000-4000-8000-0000000000a1', 'example', 'site-old', 'github', 'https://github.com/example/site-old'),
+    repo('00000000-0000-4000-8000-0000000000a2', 'Example', 'Site', 'github', 'https://github.com/Example/Site'),
+    repo('00000000-0000-4000-8000-0000000000a3', 'other', 'site', 'github', 'https://github.com/other/site'),
 ]
 UUID = r'[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}'
 NOTE = '\n'.join(['<!-- openwiz:status v1 -->', 'agent: builder', 'state: working', 'harness: %s', 'model: %s',
@@ -112,7 +119,11 @@ class FakeTembo:
         if method == 'GET' and path == '/v1/repositories':
             term = q.get('search', [''])[0].lower()
             items = [r for r in self.repositories if term in (r['owner'] + '/' + r['name']).lower()]
-            return 200, {'items': items, 'nextCursor': None}
+            limit, cursor = int(q.get('limit', ['50'])[0]), q.get('cursor', [None])[0]
+            at = next(i + 1 for i, r in enumerate(items) if r['id'] == cursor) if cursor else 0
+            page = items[at:at + limit]
+            more = at + limit < len(items)
+            return 200, {'items': page, 'nextCursor': page[-1]['id'] if more else None}
         if method == 'POST' and path == '/v1/sessions':
             allowed = {'agent', 'agentOptions', 'codeRepositoryIds', 'description', 'id', 'queueRightAway'}
             sid = (body or {}).get('id')
