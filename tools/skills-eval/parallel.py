@@ -47,7 +47,7 @@ class Budget:
             E.write_json(path, transcript)
 
 
-def resume(out, env_file):
+def resume(out, env_file, checkout=None):
     out = Path(out)
     lock = os.open(out, os.O_RDONLY)
     try:
@@ -59,15 +59,18 @@ def resume(out, env_file):
         if errors:
             raise ValueError('; '.join(errors))
         settings = man['settings']
-        snap = E.snapshot(man['revision']['commit'])
-        errors, cases, _ = E.check(*snap)
+        pin = E.pinned(checkout or os.environ.get('WIZSKILLS_CHECKOUT'), man['wizskills']['commit'])
+        if pin['tree'] != man['wizskills']['tree']:
+            raise ValueError('wizskills tree differs from manifest')
+        snap = E.snapshot(man['revision']['commit'], pin)
+        errors, cases, _ = E.check(*snap, pin, E.earlier_rows(man['revision']['commit']))
         if errors:
             raise ValueError('; '.join(errors))
         key = E._key(argparse.Namespace(env_file=env_file), settings)
         budget = Budget(out, settings['spend_cap_usd'])
         execution = {'schema': 'openwiz.skills-eval.execution.v1', 'workers': 4,
                      'scheduler_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-                     'core_code_hash': E.code_hash(), 'snapshot': man['revision'],
+                     'core_code_hash': E.code_hash(), 'snapshot': man['revision'], 'wizskills': man['wizskills'],
                      'method': 'Resume existing records unchanged; run independent cases with the same frozen driver. '
                                'One serialized durable global reservation before each request, including judges.'}
         ef = out / 'execution.json'
@@ -100,5 +103,10 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser(description=DESCRIPTION)
     p.add_argument('--out', required=True)
     p.add_argument('--env-file', required=True)
+    p.add_argument('--wizskills', help="a full WizSkills checkout holding the set's pinned commit "
+                                      '(default $WIZSKILLS_CHECKOUT)')
     a = p.parse_args()
-    sys.exit(resume(a.out, a.env_file))
+    try:
+        sys.exit(resume(a.out, a.env_file, a.wizskills))
+    except E.Refusal as err:
+        sys.exit(f'refused: {err}')
