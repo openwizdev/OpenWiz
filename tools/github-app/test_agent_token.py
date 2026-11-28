@@ -2376,10 +2376,11 @@ class ActionsRoute(unittest.TestCase):
 
     def start_fake(self, mode="ok"):
         import io
+        import urllib.parse
         import zipfile
 
         state = {"mode": mode, "dispatches": [], "deleted": [], "redirect_auth": [],
-                 "artifacts": [], "logs": [], "rate_hits": 0, "poll_count": 0}
+                 "artifacts": [], "logs": [], "rate_hits": 0, "poll_count": 0, "run_pages": []}
         owner_repo = "synthetic-owner/private-ops"
         other_pub = self.helper.one_time_key()[1] if mode == "unopenable" else None
 
@@ -2460,12 +2461,22 @@ class ActionsRoute(unittest.TestCase):
                         return
                     status = "in_progress" if state["mode"] == "timeout" else "completed"
                     conclusion = "failure" if state["mode"] == "failed-run" else ("success" if status == "completed" else None)
-                    self.send_json(200, {"workflow_runs": [{
+                    run = {
                         "id": 501, "name": "OpenWiz Token Service",
                         "display_title": f"openwiz-mint-{state['nonce']}",
                         "head_branch": "main", "event": "workflow_dispatch",
                         "status": status, "conclusion": conclusion,
-                    }]})
+                    }
+                    query = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
+                    size = int(query.get("per_page", ["30"])[0])
+                    page = int(query.get("page", ["1"])[0])
+                    state["run_pages"].append(page)
+                    runs = [run]
+                    if state["mode"] == "later-page":
+                        runs = [dict(run, id=i, display_title=f"synthetic-later-run-{i}")
+                                for i in range(502, 512)] + runs
+                    first = (page - 1) * size
+                    self.send_json(200, {"total_count": len(runs), "workflow_runs": runs[first:first + size]})
                     return
                 if self.path == f"/repos/{owner_repo}/actions/runs/501":
                     state["poll_count"] += 1
@@ -2546,6 +2557,50 @@ class ActionsRoute(unittest.TestCase):
         self.assertEqual(state["dispatches"][0]["auth"], "Bearer synthetic-owner-account-token")
         self.assertEqual(state["deleted"], [701], "artifact must be deleted after download")
         self.assertEqual(state["redirect_auth"], [None], "Authorization must not cross artifact redirect")
+
+    def test_actions_finds_a_mint_after_ten_newer_runs(self):
+        # comment-ok: catches: polling only the first page when a successful mint is on page two.
+        env, state = self.start_fake("later-page")
+        private = self.helper.Private(env, create=True)
+        self.addCleanup(os.close, private.fd)
+        with mock.patch.object(self.helper, "ACTIONS_TIMEOUT_S", 2), \
+                mock.patch.object(self.helper, "ACTIONS_POLL_S", 0.01):
+            token, _ = self.helper.token_for(private, self.wanted, env)
+        self.assertEqual(token, TOKEN)
+        self.assertEqual(state["run_pages"], [1, 2])
+        self.assertEqual(state["deleted"], [701])
+
+    def test_actions_falls_back_after_download_and_extraction_errors(self):
+        # comment-ok: catches: protocol and decompression errors escaping the fallback and artifact cleanup.
+        import http.client
+        import zipfile
+        import zlib
+
+        read = http.client.HTTPResponse.read
+
+        def interrupted(response, *args, **kwargs):
+            if response.getheader("Content-Type") == "application/zip":
+                raise http.client.IncompleteRead(b"", 1)
+            return read(response, *args, **kwargs)
+
+        for target, method, fault, reason in (
+            (http.client.HTTPResponse, "read", {"new": interrupted}, "unreachable"),
+            (zipfile.ZipExtFile, "read", {"side_effect": zlib.error("synthetic decode failure")}, "bad-answer"),
+        ):
+            with self.subTest(reason=reason):
+                env, state = self.start_fake("ok")
+                private = self.helper.Private(env, create=True)
+                self.addCleanup(os.close, private.fd)
+                err = []
+                with mock.patch.object(target, method, **fault), \
+                        mock.patch.object(self.helper.sys, "stderr", types.SimpleNamespace(write=err.append)):
+                    try:
+                        result = self.helper.token_for(private, self.wanted, env)
+                    except (http.client.IncompleteRead, zlib.error):
+                        self.fail(f"{reason} escaped the Actions fallback")
+                self.assertEqual(result, (None, None))
+                self.assertEqual("".join(err), NOTE.replace("<reason>", reason) + "\n")
+                self.assertEqual(state["deleted"], [701])
 
     def test_actions_failures_fall_back_with_right_reason(self):
         # comment-ok: catches: wrong fallback or a returned token after a missing/failed run, timeout,
