@@ -4,7 +4,7 @@ test_schema_matches_the_kit_byte_for_byte (__main__.Cursor.test_schema_matches_t
 test_readme_declares_effort_under_login (__main__.Cursor.test_readme_declares_effort_under_login) ... FAIL
 test_kit_passes_all_five_with_its_key_check (__main__.Cursor.test_kit_passes_all_five_with_its_key_check) ... FAIL
 test_start_passes_the_exact_effort_to_the_model_parameter_cursor_lists (__main__.Cursor.test_start_passes_the_exact_effort_to_the_model_parameter_cursor_lists) ... FAIL
-test_start_refuses_unsupported_effort_without_creating_an_agent (__main__.Cursor.test_start_refuses_unsupported_effort_without_creating_an_agent) ... 
+test_start_refuses_unsupported_effort_without_creating_an_agent (__main__.Cursor.test_start_refuses_unsupported_effort_without_creating_an_agent) ...
   test_start_refuses_unsupported_effort_without_creating_an_agent (__main__.Cursor.test_start_refuses_unsupported_effort_without_creating_an_agent) (fields={'effort': 'bogus'}) ... FAIL
   test_start_refuses_unsupported_effort_without_creating_an_agent (__main__.Cursor.test_start_refuses_unsupported_effort_without_creating_an_agent) (fields={'model': 'synthetic-no-effort', 'effort': 'medium'}) ... FAIL
   test_start_refuses_unsupported_effort_without_creating_an_agent (__main__.Cursor.test_start_refuses_unsupported_effort_without_creating_an_agent) (fields={'model': 'synthetic-unlisted', 'effort': 'medium'}) ... FAIL

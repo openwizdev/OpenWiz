@@ -10,6 +10,9 @@ CREATE = {'prompt', 'model', 'repos', 'name', 'agentId', 'autoCreatePR'}
 ONE = re.compile(r'/v1/agents/(bc-[0-9a-f-]{36})(/runs|/archive|/runs/(run-[0-9]+)/cancel)?')
 AGENTS, PROCESSES, LOCK = {}, {}, threading.Lock()
 
+with open(os.path.join(HERE, 'kit-host.json')) as f:
+    MODELS = next(a['body'] for a in json.load(f)['answers'] if a['method'] == 'GET' and a['path'] == '/v1/models')
+
 
 def status(run):
     if run['status'] in ACTIVE and PROCESSES[run['pid']].poll() is not None:
@@ -38,6 +41,8 @@ def public(agent):
 
 
 def route(method, path, body):
+    if method == 'GET' and path == '/v1/models':
+        return 200, MODELS
     if method == 'POST' and path == '/v1/agents':
         if not isinstance(body, dict) or set(body) - CREATE or not {'prompt', 'agentId'} <= set(body) or \
                 set(body['prompt']) != {'text'}:
