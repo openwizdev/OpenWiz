@@ -268,16 +268,25 @@ class ReleaseManifestSchemaTests(unittest.TestCase):
 
 
 INDEX_HEADING = "## Indexed record forms (v1)"
-RECORD_FORMS = (
-    "Status note",
-    "Decision request",
-    "Decision answer",
-    "Plan links",
-    "Labels",
-    "Fleet OpenWiz rows",
-    "Fleet record authors",
-    "Fleet models",
-)
+RISK_LINE = r"`Risk: <ordinary\|live\|release\|publish>`"
+RECORD_MARKERS = {
+    "Status note": ("`<!-- openwiz:status v1 -->`",),
+    "Decision request": ('`"schema": "openwiz.decisions.v1"`',),
+    "Decision answer": ("`openwiz decision answer v1`",),
+    "Plan links": ("`## Links` section (`openwiz.plan-links.v1`)", "writer-side form"),
+    "Labels": ("no own marker (kernel records v1 section 1)",),
+    "Fleet OpenWiz rows": ("`## OpenWiz` table (`v1`)",),
+    "Fleet record authors": ("`## GitHub identity` table (`Record authors` row, `v1`)",),
+    "Fleet models": ("`## Models` table (`openwiz.models.v1`)",),
+    "Models-offered snapshot": ('`"schema": "openwiz.models-offered.v1"`',),
+    "Grill file": ("`# Grill: ` title", "`## Round <N>`", RISK_LINE),
+    "Spec and ticket templates": ("pinned by current shape as records `v1`", "`## ` ATX"),
+    "Narrated-spec video comment": (
+        "`[Watch the narrated spec](https://...)` on line 1",
+        "`Steering by comment is off for now: ",
+    ),
+}
+RECORD_FORMS = tuple(RECORD_MARKERS)
 
 
 def parse_index_rows(markdown: str) -> list[list[str]]:
@@ -302,18 +311,18 @@ def parse_index_rows(markdown: str) -> list[list[str]]:
         raise ValueError("index table is missing its header or rows")
 
     def cells(line: str) -> list[str]:
-        if not (line.startswith("|") and line.endswith("|")):
+        if not (line.startswith("|") and line.endswith("|")) or line.endswith(r"\|"):
             raise ValueError(f"malformed index row: {line}")
-        return [cell.strip() for cell in line[1:-1].split("|")]
+        return [cell.strip() for cell in re.split(r"(?<!\\)\|", line[1:-1])]
 
     header = cells(table[0])
-    if header[:2] != ["Record form", "Own marker / version"]:
+    if len(header) != 5 or header[:2] != ["Record form", "Own marker / version"]:
         raise ValueError(f"unexpected index header: {header}")
     rows = []
     for line in table[2:]:
         parsed = cells(line)
-        if len(parsed) < 5 or not parsed[0]:
-            raise ValueError(f"index row has no record form: {line}")
+        if len(parsed) != 5 or not parsed[0]:
+            raise ValueError(f"index row must have 5 cells and a record form: {line}")
         rows.append(parsed)
     return rows
 
@@ -327,12 +336,22 @@ class RecordsContractTests(unittest.TestCase):
         by_name = {row[0]: row for row in rows}
         for name, row in by_name.items():
             with self.subTest(form=name):
+                self.assertEqual(len(row), 5, f"{name} does not have 5 columns")
                 self.assertTrue(row[1].strip(), f"{name} has an empty marker or version cell")
+                for marker in RECORD_MARKERS[name]:
+                    self.assertIn(marker, row[1], f"{name} marker cell lost {marker!r}")
         self.assertEqual(by_name["Labels"][1], "no own marker (kernel records v1 section 1)")
         self.assertIn("the app is the source of `wayfind:map`", by_name["Labels"][3])
         self.assertEqual(by_name["Plan links"][4], "native `blockedBy` links")
-        self.assertIn("writer-side form", by_name["Plan links"][1])
         self.assertEqual(by_name["Fleet OpenWiz rows"][4], "read from #3142")
+        self.assertIn("models-offered.json", by_name["Models-offered snapshot"][2])
+        self.assertIn("docs/grills/<name>.md", by_name["Grill file"][2])
+        self.assertIn("decisions.v1.md", by_name["Grill file"][3])
+        self.assertIn("## Round <N>", by_name["Grill file"][4])
+        self.assertIn("kernel/records.v1.md", by_name["Spec and ticket templates"][3])
+        self.assertIn("## Changelog headline", by_name["Spec and ticket templates"][4])
+        for source in ("to-spec/SKILL.md", "animatic.mjs", "queue.js"):
+            self.assertIn(source, by_name["Narrated-spec video comment"][3])
         self.assertNotIn(
             "docs/adr/0021-app-skills-kernel-ship-as-a-matched-set.md",
             text,
@@ -343,37 +362,30 @@ class RecordsContractTests(unittest.TestCase):
             with self.subTest(token=token):
                 self.assertIn(token, text)
 
-    def test_records_v1_index_table_covers_grill_templates_and_models_offered(self):
-        lines = RECORDS_DOC_PATH.read_text(encoding="utf-8").splitlines()
-        start = next(
-            (i for i, line in enumerate(lines) if line.startswith("| Record form |")),
-            None,
+    def test_parse_index_rows_keeps_escaped_pipes_and_refuses_wrong_column_counts(self):
+        head = (
+            f"{INDEX_HEADING}\n\n"
+            "| Record form | Own marker / version | Where it lives | Source contract | What the app reads |\n"
+            "| --- | --- | --- | --- | --- |\n"
         )
-        self.assertIsNotNone(start, "index table missing")
-        rows = {}
-        for line in lines[start + 2 :]:
-            if not line.startswith("|"):
-                break
-            cells = [c.strip() for c in line[1:-1].split("|")]
-            rows[cells[0]] = cells
-        expected = {
-            "Grill file": ("# Grill: ", "## Round", "docs/grills/"),
-            "Spec and ticket templates": ("## Changelog headline", "kernel/records.v1.md"),
-            "Models-offered snapshot": ("openwiz.models-offered.v1", "models-offered.json"),
-            "Narrated-spec video comment": (
-                "[Watch the narrated spec]",
-                "to-spec/SKILL.md",
-                "animatic.mjs",
-                "queue.js",
-                "Steering by comment is off for now",
+        escaped = head + "| Sample | " + RISK_LINE + " | here | contract | reads |\n"
+        self.assertEqual(
+            parse_index_rows(escaped),
+            [["Sample", RISK_LINE, "here", "contract", "reads"]],
+        )
+        for label, snippet in (
+            ("too many columns", head + "| Sample | v1 | here | contract | reads | extra |\n"),
+            ("too few columns", head + "| Sample | v1 | here | contract |\n"),
+            ("escaped closing pipe", head + "| Sample | v1 | here | contract | reads \\|\n"),
+            (
+                "six-column header",
+                head.replace("| What the app reads |", "| What the app reads | Extra |")
+                + "| Sample | v1 | here | contract | reads |\n",
             ),
-        }
-        for name, markers in expected.items():
-            with self.subTest(row=name):
-                self.assertIn(name, rows, f"index table missing row {name!r}")
-                joined = " | ".join(rows[name])
-                for marker in markers:
-                    self.assertIn(marker, joined, f"row {name!r} missing {marker!r}")
+        ):
+            with self.subTest(case=label):
+                with self.assertRaises(ValueError):
+                    parse_index_rows(snippet)
 
 
 class FleetOpenWizRowsTests(unittest.TestCase):

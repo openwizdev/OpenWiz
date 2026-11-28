@@ -1,12 +1,14 @@
 test_fleet_contract_has_openwiz_rows_section_and_example (__main__.FleetOpenWizRowsTests.test_fleet_contract_has_openwiz_rows_section_and_example) ... ok
 test_openwiz_rows_parser_refuses_bad_tables (__main__.FleetOpenWizRowsTests.test_openwiz_rows_parser_refuses_bad_tables) ... ok
+test_parse_index_rows_keeps_escaped_pipes_and_refuses_wrong_column_counts (__main__.RecordsContractTests.test_parse_index_rows_keeps_escaped_pipes_and_refuses_wrong_column_counts) ... ok
 test_records_v1_indexes_every_app_record_form_and_rules (__main__.RecordsContractTests.test_records_v1_indexes_every_app_record_form_and_rules) ... ok
 test_doc_example_validates (__main__.ReleaseManifestSchemaTests.test_doc_example_validates) ... ok
 test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) ... ok
 test_schema_declares_id_and_title (__main__.ReleaseManifestSchemaTests.test_schema_declares_id_and_title) ... ok
 test_strict_reader_refuses_duplicate_keys_and_float_integer (__main__.ReleaseManifestSchemaTests.test_strict_reader_refuses_duplicate_keys_and_float_integer) ... ok
+test_wizskills_version_matches_lock_pattern_and_accepts_prerelease (__main__.ReleaseManifestSchemaTests.test_wizskills_version_matches_lock_pattern_and_accepts_prerelease) ... ok
 
 ----------------------------------------------------------------------
-Ran 7 tests in 0.014s
+Ran 9 tests in 0.017s
 
 OK
