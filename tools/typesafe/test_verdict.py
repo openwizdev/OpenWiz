@@ -14,5 +14,15 @@ class Verdict(unittest.TestCase):
         self.assertEqual(bench.score_verdict(data), (9, 5, 8))
 
 
+class Sent(unittest.TestCase):
+    def test_only_the_word_of_an_eligible_line_is_sent(self):
+        import verdict
+        sha = 'ab' * 20
+        self.assertEqual(verdict.sent_state(f'VERDICT: APPROVED at {sha}'), 'VERDICT: APPROVED')
+        self.assertIsNone(verdict.sent_state(f'VERDICT: APPROVE at {sha}'))
+        self.assertIsNone(verdict.sent_state('VERDICT: APPROVED at abc1234'))
+        self.assertIsNone(verdict.sent_state(f"VERDICT: {'x' * 41} at {sha}"))
+
+
 if __name__ == '__main__':
     unittest.main()

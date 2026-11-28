@@ -31,7 +31,7 @@ def mentions(skill, text, exists, lst=lambda p: [], extra=None):
                 found.add(cand.rstrip('/') + '/')
     found |= named_docs(text)
     if extra is not None:
-        found |= extra(text)
+        found |= extra(text, frozenset(found))
     return found
 
 

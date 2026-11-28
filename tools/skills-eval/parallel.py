@@ -27,8 +27,11 @@ spec.loader.exec_module(E)
 
 class Cap(Exception):
     def __init__(self, interim):
-        self.transcript = dict(interim, stop='cap', error='Global results-set cap; no request sent',
-                               cost_usd=round(interim['cost_usd'] - interim['uncertain_usd'], 9), uncertain_usd=0)
+        refused = interim.get('reserved_usd', interim['uncertain_usd'])
+        self.transcript = {k: v for k, v in interim.items() if k != 'reserved_usd'}
+        self.transcript.update(stop='cap', error='Global results-set cap; no request sent',
+                               cost_usd=round(interim['cost_usd'] - refused, 9),
+                               uncertain_usd=round(interim['uncertain_usd'] - refused, 9))
 
 
 class Budget:

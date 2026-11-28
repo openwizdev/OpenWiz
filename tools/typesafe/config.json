@@ -81,7 +81,7 @@
         },
         "is_verdict": {
           "type": "noul",
-          "instructions": "This comment is a reviewer's approve or request-changes verdict for the commit it names.",
+          "instructions": "This line is a reviewer's approve or request-changes verdict.",
           "criteria": {
             "true": "The reviewer is giving a verdict on that commit.",
             "false": "The line only mentions a verdict, or it is not one."

@@ -17,8 +17,9 @@ DESCRIPTION = """Skills eval command line (contract.md). Standard library only.
   eval.py compare A B                    compare two scored sets with equal settings and cases hashes
   eval.py tokens --out FILE [--rev REV] [--offline]
   eval.py token-diff BEFORE AFTER
-  eval.py mentions --jev [--rev REV]     also ask Jev which docs each SKILL.md names; sends each SKILL.md to
-                                         TypeSafe; needs OPENWIZ_JEV=1 and TYPESAFE_API_KEY
+  eval.py mentions --jev --skills DIR     also ask Jev which docs each SKILL.md names that keywords missed, for
+                                         a WizSkills checkout; sends those SKILL.md files to TypeSafe; needs
+                                         OPENWIZ_JEV=1 and TYPESAFE_API_KEY
 """
 
 HERE = Path(__file__).resolve().parent
@@ -365,13 +366,35 @@ def cmd_tokens(a):
     return 0
 
 
+def folder_snapshot(root):
+    root = Path(root).resolve()
+    names = sorted(p.relative_to(root).as_posix() for p in root.rglob('*')
+                   if p.is_file() and '.git' not in p.relative_to(root).parts)
+    nameset = set(names)
+
+    def read(p):
+        if p not in nameset:
+            return None
+        try:
+            return (root / p).read_text(encoding='utf-8')
+        except (OSError, UnicodeDecodeError):
+            return None
+
+    def lst(prefix):
+        return [n for n in names if n.startswith(prefix)]
+    return read, lst
+
+
 def cmd_mentions(a):
     ask = jev_mentions.client.from_env() if a.jev else None
     if ask is None:
-        sys.exit('eval.py mentions sends each SKILL.md to TypeSafe: pass --jev with OPENWIZ_JEV=1 and TYPESAFE_API_KEY set')
-    read, lst = snapshot(a.rev)
+        sys.exit('eval.py mentions sends SKILL.md text to TypeSafe: pass --jev with OPENWIZ_JEV=1 and TYPESAFE_API_KEY set')
+    if not a.skills or not (Path(a.skills) / '.claude-plugin' / 'plugin.json').is_file():
+        sys.exit('eval.py mentions needs --skills DIR: a WizSkills checkout with .claude-plugin/plugin.json '
+                 '(the skills moved to WizSkills in #555)')
+    read, lst = folder_snapshot(a.skills)
     errs = T.map_problems(T.load_map(HERE / 'required-text.json'), shipped(read), read, lst,
-                          lambda text: jev_mentions.extra(text, ask))
+                          lambda text, found: jev_mentions.extra(text, ask, found))
     for e in errs:
         print(e)
     print(f'mentions: {len(errs)} problem(s) with keyword and Jev mentions')
@@ -405,8 +428,8 @@ def main(argv=None):
             q.add_argument('--offline', action='store_true')
             q.add_argument('--results', help='results folder whose provider usage is reported; makes no API call')
     q = sub.add_parser('mentions')
-    q.add_argument('--rev', default='HEAD', help='the snapshot commit (default HEAD)')
-    q.add_argument('--jev', action='store_true', help='send each SKILL.md to TypeSafe Jev')
+    q.add_argument('--skills', help='a WizSkills checkout to read the shipped skills from')
+    q.add_argument('--jev', action='store_true', help='send SKILL.md text to TypeSafe Jev')
     q = sub.add_parser('compare')
     q.add_argument('a')
     q.add_argument('b')

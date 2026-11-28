@@ -52,3 +52,12 @@ def _commit(line):
         return False
     _, commit = rest.split(' at ', 1)
     return SHA.fullmatch(commit) is not None
+
+
+def sent_state(line):
+    if exact(line) or not _commit(line):
+        return None
+    word = line.removeprefix('VERDICT: ').split(' at ', 1)[0]
+    if len(word) > MAX_WORD_CHARS:
+        return None
+    return f'VERDICT: {word}'
