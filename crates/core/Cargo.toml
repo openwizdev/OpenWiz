@@ -10,5 +10,9 @@ publish.workspace = true
 [dependencies]
 serde.workspace = true
 
+[[bench]]
+name = "sha256"
+harness = false
+
 [lints]
 workspace = true
