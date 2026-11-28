@@ -88,7 +88,9 @@ NOTES = {('Darwin', 'x86_64'): 'Supported. CloudRoom has no Intel Mac build, so 
          ('Linux', 'aarch64'): 'Supported. CloudRoom has no Linux ARM desktop build; outside a CloudRoom sandbox,'
          ' agents run on this computer or on boat.dev.'}
 WSL_NOTE = 'WSL has community support. It works for some users and the project does not test it.'
-WINDOWS_NOTE = 'Native Windows is not supported. Use Windows Subsystem for Linux (WSL). ' + WSL_NOTE
+SUPPORTED_NOTE = 'OpenWiz installs on macOS (Apple silicon or Intel) and on Linux (x86_64 or aarch64).'
+WINDOWS_NOTE = ('Native Windows is not supported. Use Windows Subsystem for Linux (WSL). '
+                + WSL_NOTE + ' ' + SUPPORTED_NOTE)
 DISK = 512 * 1024 * 1024
 GLIBC = (2, 34)
 TOOLS = (('room-cli', 'Optional: CloudRoom is needed only if you pick it as the host; then install the CloudRoom'
@@ -132,8 +134,7 @@ def glibc_check(which):
 
 def preflight(host, which, disk):
     target = HOSTS.get(host)
-    note = NOTES.get(host, 'Supported.') if target else (
-        'OpenWiz installs on macOS (Apple silicon or Intel) and on Linux (x86_64 or aarch64).')
+    note = NOTES.get(host, 'Supported.') if target else SUPPORTED_NOTE
     if host[0] == 'Linux' and ('microsoft' in platform.release().lower()
                               or os.environ.get('WSL_DISTRO_NAME') or os.environ.get('WSL_INTEROP')):
         note = WSL_NOTE if target else note + ' ' + WSL_NOTE
