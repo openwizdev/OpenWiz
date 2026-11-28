@@ -14,9 +14,13 @@ Your coding agent walks you through the published **OpenWiz 0.1.0** install
 and first fleet in chat, and you can watch progress on GitHub or in the web
 app at [openwiz.dev/app](https://openwiz.dev/app/):
 
-1. **Install OpenWiz.** Paste the one install line into your coding agent and
-   follow the [OpenWiz 0.1.0](install.md#openwiz-010) section of
-   [Install OpenWiz](install.md) (WizSkills `maint/0.2`).
+1. **Install OpenWiz.** Tell your coding agent:
+
+   > Install OpenWiz
+
+   That phrase is the whole install instruction. The agent follows
+   [Install OpenWiz](../AGENTS.md#install-openwiz). Today's commands are the
+   [0.1.0 steps](install.md#openwiz-010).
 2. **Pick a host and connect GitHub.** Choose where your agents run: **this
    computer**, **boat.dev**, or **CloudRoom** (CloudRoom is optional). Your
    installing agent checks each connection on its own (`setup.py check` and

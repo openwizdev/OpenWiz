@@ -13,13 +13,15 @@ You make the decisions: answer a few questions. The agents run the factory: they
 
 ## Quick start
 
-You need Python 3.9 or later, `git`, and the GitHub CLI (`gh`). Then paste this line into your coding agent (Claude Code, Codex or another):
+Tell your coding agent (Claude Code, Codex, Cursor or another):
 
-> Install OpenWiz from github.com/openwizdev/OpenWiz
+> Install OpenWiz
 
-Your agent follows 0.1.0's [install skill](https://github.com/openwizdev/WizSkills/blob/33eef93ba30cd8db256f6fe270e3ed28747a79bd/skills/install/SKILL.md) (WizSkills `maint/0.2`). First it asks where your agents run: **this computer**, with the Claude Code or Codex you're signed in to; **boat.dev**; or **[CloudRoom](https://cloudroom.dev)**. CloudRoom is optional: the install never needs it, and its install and sign-in run only if you pick it. In 0.1.0 the automatic fleet runs in CloudRoom; without CloudRoom you plan, start each builder by hand on this computer or on boat.dev, and review its pull request yourself.
+That phrase is the whole install instruction. The agent follows [Install OpenWiz](AGENTS.md#install-openwiz): it reads GitHub's Latest release and that release's install skill, then runs the install. Any release other than 0.1.0 is cloned only when the whole value of `<tag>` matches `v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)`, using `git clone --depth 1 --branch "$tag" -- https://github.com/openwizdev/OpenWiz "$openwiz"`, and follows the `commit` in that clone's `wizskills.lock`. You need Python 3.9 or later, `git`, and the GitHub CLI (`gh`). It asks where your agents run: **this computer**, with the Claude Code or Codex you're signed in to; **boat.dev**; or **[CloudRoom](https://cloudroom.dev)**. CloudRoom is optional: the install never needs it, and its install and sign-in run only if you pick it. It checks your computer, installs the verified prebuilt release (no Rust or Node), puts OpenWiz's skills into your agents, and checks each connection. Nothing starts until you approve a plan. OpenWiz is free. Your model and host charges are your own.
 
-It checks your computer, installs the verified prebuilt 0.1.0 release (no Rust or Node), puts OpenWiz's skills into your agents, and checks each connection. Nothing starts until you approve a plan. People: see the [install guide's 0.1.0 steps](docs/install.md#openwiz-010) for every step and command. OpenWiz is free. Your model and host charges are your own.
+### OpenWiz 0.1.0
+
+OpenWiz 0.1.0 ("OpenWiz 0.01") is the current release. Its commands are the [install guide's 0.1.0 steps](docs/install.md#openwiz-010). In 0.1.0 the automatic fleet runs in CloudRoom; without CloudRoom you plan, start each builder by hand on this computer or on boat.dev, and review its pull request yourself.
 
 ### OpenWiz 0.1.1
 

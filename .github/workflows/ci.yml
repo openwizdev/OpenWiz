@@ -189,6 +189,7 @@ jobs:
         if: matrix.part == 2
         run: |
           python3 -I tools/install/test_install.py
+          python3 -I tools/install/test_phrase.py
           python3 -I tools/install/test_pull.py
           python3 -I tools/downloads/test_counts.py
           python3 -I tools/install/tests/public-release-security/baseline/test_baseline.py
