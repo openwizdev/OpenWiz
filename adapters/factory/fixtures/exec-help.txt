@@ -1,0 +1,30 @@
+Usage: droid exec [options] [prompt]
+
+Execute a single command (non-interactive mode)
+
+Options:
+  -m, --model <id>            Model ID to use (default: synthetic-model-1)
+  -r, --reasoning-effort <level>  Reasoning effort (defaults per model)
+  -h, --help                  display help for command
+
+Available Models:
+  synthetic-model-plain        Synthetic Model Plain
+  synthetic-model-1            Synthetic Model 1 (default)
+  synthetic-model-max          Synthetic Model Max
+  synthetic-model-narrow       Synthetic Model Narrow
+  synthetic-model-all          Synthetic Model All
+  synthetic-model-legacy       Synthetic Model Legacy [Deprecated]
+
+Custom Models:
+  custom:synthetic-0           Synthetic Custom Model
+
+Model details:
+  - Synthetic Model Plain: supports reasoning: No; supported: [none]; default: none
+  - Synthetic Model 1: supports reasoning: Yes; supported: [low, medium, high, xhigh]; default: medium
+  - Synthetic Model Max: supports reasoning: Yes; supported: [low, medium, high, xhigh, max]; default: medium
+  - Synthetic Model Narrow: supports reasoning: Yes; supported: [off, high]; default: high
+  - Synthetic Model All: supports reasoning: Yes; supported: [none, dynamic, off, minimal, low, medium, high, xhigh, max]; default: high
+  - Synthetic Model Legacy [Deprecated]: supports reasoning: Yes; supported: [minimal, low, medium, high]; default: high
+
+Pinning the Latest Model:
+  Synthetic help fixture for adapters/factory/test_driver.py.

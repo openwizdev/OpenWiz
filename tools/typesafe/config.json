@@ -3,6 +3,7 @@
   "model": "jev-1.14.0",
   "noul": {"yes": 0.7, "no": 0.3},
   "confidence": {"act": 0.7},
+  "price_usd_per_mtok": {"input_tokens": 0.042, "output_tokens": 0},
   "sites": {
     "judge": {
       "combine": "weighted_sum",

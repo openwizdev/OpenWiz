@@ -1,0 +1,20 @@
+# Red run: the saved run file is created mode 0666 when the umask is 0.
+# Command: python3 -I adapters/cursor/test_driver.py Cursor.test_a_saved_run_file_is_created_owner_only_then_renamed
+# Paths in the traceback read <repo>.
+test_a_saved_run_file_is_created_owner_only_then_renamed (__main__.Cursor.test_a_saved_run_file_is_created_owner_only_then_renamed) ... FAIL
+
+======================================================================
+FAIL: test_a_saved_run_file_is_created_owner_only_then_renamed (__main__.Cursor.test_a_saved_run_file_is_created_owner_only_then_renamed)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/cursor/test_driver.py", line 181, in test_a_saved_run_file_is_created_owner_only_then_renamed
+    self.assertEqual(oct(os.stat(saved).st_mode & 0o777), oct(0o600))
+AssertionError: '0o666' != '0o600'
+- 0o666
++ 0o600
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.109s
+
+FAILED (failures=1)

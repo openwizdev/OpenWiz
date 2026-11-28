@@ -1,0 +1,110 @@
+$ python3 -I adapters/pane/test_driver.py   # the new tests against the copied template (adapters/template/driver) at main fc10ee12
+test_a_start_whose_agent_never_gets_ready_closes_its_tab_and_archives_its_pane (__main__.Pane.test_a_start_whose_agent_never_gets_ready_closes_its_tab_and_archives_its_pane) ... FAIL
+test_kit_passes_all_five (__main__.Pane.test_kit_passes_all_five) ... FAIL
+test_start_opens_one_agent_tab_with_the_model_and_no_permission_flag (__main__.Pane.test_start_opens_one_agent_tab_with_the_model_and_no_permission_flag) ... FAIL
+test_start_refuses_before_creating_anything (__main__.Pane.test_start_refuses_before_creating_anything) ... 
+  test_start_refuses_before_creating_anything (__main__.Pane.test_start_refuses_before_creating_anything) (env={}, harness='gemini') ... FAIL
+  test_start_refuses_before_creating_anything (__main__.Pane.test_start_refuses_before_creating_anything) (env={'FAKE_PANE_REPOS': 'other'}, harness='claude') ... FAIL
+  test_start_refuses_before_creating_anything (__main__.Pane.test_start_refuses_before_creating_anything) (env={'FAKE_PANE_REPOS': 'site,site'}, harness='claude') ... FAIL
+  test_start_refuses_before_creating_anything (__main__.Pane.test_start_refuses_before_creating_anything) (env={'FAKE_PANE_DOWN': '1'}, harness='claude') ... FAIL
+test_stop_archives_unpushed_commits_and_answers_again (__main__.Pane.test_stop_archives_unpushed_commits_and_answers_again) ... FAIL
+test_stop_keeps_uncommitted_work_and_says_where (__main__.Pane.test_stop_keeps_uncommitted_work_and_says_where) ... FAIL
+
+======================================================================
+FAIL: test_a_start_whose_agent_never_gets_ready_closes_its_tab_and_archives_its_pane (__main__.Pane.test_a_start_whose_agent_never_gets_ready_closes_its_tab_and_archives_its_pane)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/pane/test_driver.py", line 110, in test_a_start_whose_agent_never_gets_ready_closes_its_tab_and_archives_its_pane
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'run-<id>'}
+
+======================================================================
+FAIL: test_kit_passes_all_five (__main__.Pane.test_kit_passes_all_five)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/pane/test_driver.py", line 71, in test_kit_passes_all_five
+    self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[218 chars]er']) != (0, ['pass version: openwiz:records v1, an[245 chars]er'])
+
+First differing element 0:
+1
+0
+
+- (1,
++ (0,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
+-   'fail start: no builder status note appeared within 8 seconds',
+-   'fail wake: not run: start failed',
+-   'fail stop: not run: start failed',
++   'pass start: the run posted builder status note 1',
++   'pass wake: the run edited builder status note 1',
++   'pass stop: the run ended, and a wake after it is refused',
+    'pass token: no login or token passed through the driver']) : 
+
+======================================================================
+FAIL: test_start_opens_one_agent_tab_with_the_model_and_no_permission_flag (__main__.Pane.test_start_opens_one_agent_tab_with_the_model_and_no_permission_flag)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/pane/test_driver.py", line 86, in test_start_opens_one_agent_tab_with_the_model_and_no_permission_flag
+    self.assertEqual(len(create), 1)
+AssertionError: 0 != 1
+
+======================================================================
+FAIL: test_start_refuses_before_creating_anything (__main__.Pane.test_start_refuses_before_creating_anything) (env={}, harness='gemini')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/pane/test_driver.py", line 104, in test_start_refuses_before_creating_anything
+    self.assertIn(words, out['error'] + ' ' + out['next'])
+AssertionError: 'Pane runs no harness gemini' not found in 'harness gemini is not installed here install gemini and sign in to it yourself, then start again'
+
+======================================================================
+FAIL: test_start_refuses_before_creating_anything (__main__.Pane.test_start_refuses_before_creating_anything) (env={'FAKE_PANE_REPOS': 'other'}, harness='claude')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/pane/test_driver.py", line 103, in test_start_refuses_before_creating_anything
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'run-<id>'}
+
+======================================================================
+FAIL: test_start_refuses_before_creating_anything (__main__.Pane.test_start_refuses_before_creating_anything) (env={'FAKE_PANE_REPOS': 'site,site'}, harness='claude')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/pane/test_driver.py", line 103, in test_start_refuses_before_creating_anything
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'run-<id>'}
+
+======================================================================
+FAIL: test_start_refuses_before_creating_anything (__main__.Pane.test_start_refuses_before_creating_anything) (env={'FAKE_PANE_DOWN': '1'}, harness='claude')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/pane/test_driver.py", line 103, in test_start_refuses_before_creating_anything
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'run-<id>'}
+
+======================================================================
+FAIL: test_stop_archives_unpushed_commits_and_answers_again (__main__.Pane.test_stop_archives_unpushed_commits_and_answers_again)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/pane/test_driver.py", line 137, in test_stop_archives_unpushed_commits_and_answers_again
+    self.assertEqual([('--force' in c) for c in archives], [False, True])
+AssertionError: Lists differ: [] != [False, True]
+
+Second list contains 2 additional elements.
+First extra element 0:
+False
+
+- []
++ [False, True]
+
+======================================================================
+FAIL: test_stop_keeps_uncommitted_work_and_says_where (__main__.Pane.test_stop_keeps_uncommitted_work_and_says_where)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/pane/test_driver.py", line 122, in test_stop_keeps_uncommitted_work_and_says_where
+    self.assertEqual(code, 1, out)
+AssertionError: 0 != 1 : {'run': 'run-<id>', 'stopped': True}
+
+----------------------------------------------------------------------
+Ran 6 tests in 8.902s
+
+FAILED (failures=9)

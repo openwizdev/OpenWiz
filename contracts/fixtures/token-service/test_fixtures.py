@@ -166,20 +166,36 @@ class ThePin(Base):
     def test_the_key_stays_on_the_owners_machine(self):
         # catches: a contract that lets the key travel or lets an agent ask for it.
         key = self.pin["key"]
-        self.assertEqual(key["lives"], "owner's machine only")
+        self.assertEqual(
+            key["lives"],
+            "the owner's machine (pairing and local), or the token-service environment secret of the owner's private repository (actions)",
+        )
         self.assertEqual(key["path"], "<state>/service/app/private-key.pem")
         self.assertEqual((key["file_mode"], key["directory_mode"]), ("0600", "0700"))
         self.assertEqual(key["agents"], "never ask for, read, copy or hold it")
         self.assertEqual(key["leaves_the_machine"], False)
+        self.assertEqual(key.get("actions_environment"), {
+            "name": "token-service",
+            "secret": "OPENWIZ_GITHUB_APP_KEY",
+            "deployment_branches": "main only",
+            "trigger": "workflow_dispatch only",
+            "ref": "refs/heads/main",
+            "delivery": "pipe or descriptor, never a file",
+        })
 
     def test_the_service_has_no_port_and_takes_the_request_on_stdin(self):
         # catches: a reach route that opens a port or puts anything on a command line.
         reach = self.pin["reach"]
         self.assertEqual(reach["listens"], "no port")
         self.assertEqual(reach["request"], "stdin")
-        for argv in reach["routes"].values():
-            self.assertNotIn("token", " ".join(argv).lower())
+        for route_name, argv in reach["routes"].items():
+            if isinstance(argv, list):
+                self.assertNotIn("token", " ".join(argv).lower(), route_name)
         self.assertEqual(reach["routes"]["pairing"][:4], ["room-cli", "mac", "run", "--stdin"])
+        self.assertIn("actions", reach["routes"])
+        self.assertEqual(reach.get("actions_timeout_s"), 120)
+        self.assertIn("actions", reach["configuration"]["OPENWIZ_TOKEN_SERVICE_ROUTE"])
+        self.assertIn("OPENWIZ_TOKEN_SERVICE_REPOSITORY", reach["configuration"])
         # catches: a pairing route that lets the token rest in a pairing log or result record.
         crossing = reach.get("token_crossing", {})
         self.assertEqual(crossing.get("never"), ["command line", "terminal", "log", "record"])
