@@ -21,6 +21,8 @@ KIT = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit')
 HOST = 'cursor-cloud'
 START = {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket', 'harness': 'cursor',
          'model': 'synthetic-model-1'}
+EFFORT_REFUSAL = ("this host can't set effort: remove the effort for this harness in your Models table or Roster "
+                  "to run it at the host's default")
 BUILD = '0123456789abcdef0123456789abcdef01234567'
 ENV_KEYS = ('PATH', 'KIT_TRACKER', 'KIT_TEST', 'OPENWIZ_CURSOR_STATE', 'OPENWIZ_HOSTKEY_TEST_ORIGIN')
 _spec = importlib.util.spec_from_file_location('hostkey', os.path.join(KIT, 'hostkey.py'))
@@ -148,6 +150,10 @@ class Cursor(unittest.TestCase):
         self.assertEqual(sorted(self.env), sorted(ENV_KEYS))
         self.assertRegex(self.env['OPENWIZ_HOSTKEY_TEST_ORIGIN'], r'^http://127\.0\.0\.1:[0-9]+$')
 
+    def test_schema_matches_the_kit_byte_for_byte(self):
+        with open(os.path.join(HERE, 'schema.json'), 'rb') as carried, open(os.path.join(KIT, 'schema.json'), 'rb') as kit:
+            self.assertEqual(carried.read(), kit.read())
+
     def test_kit_passes_all_five_with_its_key_check(self):
         p = subprocess.run([sys.executable, '-I', os.path.join(KIT, 'kit.py'), '--driver', DRIVER, '--repo',
                             'example/site', '--ticket', '7', '--harness', 'cursor', '--model', 'synthetic-model-1',
@@ -155,8 +161,7 @@ class Cursor(unittest.TestCase):
                            env=self.env, capture_output=True, text=True, timeout=300)
         self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
             'pass version: openwiz:records v1, and the schema is driver v1',
-            "pass start: the run posted builder status note 1; effort: a start with it was refused, as the README's "
-            'Effort: line says',
+            'pass start: the run posted builder status note 1; effort: medium reached the kit\'s fake cursor-cloud host',
             'pass wake: the run edited builder status note 1',
             'pass stop: the run ended, and a wake after it is refused',
             'pass token: no login or token passed through the driver, and on start, wake and stop the %s key '
@@ -180,6 +185,46 @@ class Cursor(unittest.TestCase):
                              {'repository': 'example/site', 'ticket': 7, 'skill': 'build-ticket'}})
         self.assertEqual(list(self.agents()), [body['agentId']])
 
+    def test_start_passes_the_exact_effort_to_the_model_parameter_cursor_lists(self):
+        code, version = self.driver('version', None)
+        self.assertEqual(code, 0, version)
+        self.assertIn('effort', version['can'])
+        for model, parameter, effort in (('synthetic-model-1', 'effort', 'medium'),
+                                          ('synthetic-alias', 'reasoning_effort', 'high'),
+                                          ('synthetic-model-3', 'reasoning', 'low')):
+            with self.subTest(model=model, effort=effort):
+                before = len(self.calls())
+                code, out = self.driver('start', dict(START, model=model, effort=effort))
+                self.assertEqual(code, 0, out)
+                lookup, create = self.calls()[before:]
+                self.assertEqual([lookup['call'], create['call']], ['GET /models', 'POST /agents'])
+                self.assertEqual(json.loads(create['body'])['model'], {
+                    'id': model, 'params': [{'id': parameter, 'value': effort}]})
+                self.assertEqual(self.driver('stop', out), (0, dict(out, stopped=True)))
+
+    def test_start_refuses_unsupported_effort_without_creating_an_agent(self):
+        for fields, calls in (({'effort': 'bogus'}, ['GET /models']),
+                              ({'model': 'synthetic-no-effort', 'effort': 'medium'}, ['GET /models']),
+                              ({'model': 'synthetic-unlisted', 'effort': 'medium'}, ['GET /models']),
+                              ({'harness': 'synthetic-harness', 'effort': 'medium'}, [])):
+            with self.subTest(fields=fields):
+                request = dict(START, **fields)
+                before = len(self.calls())
+                code, error = self.driver('start', request)
+                self.assertEqual((code, error['next']), (1, EFFORT_REFUSAL))
+                self.assertIn(request['harness'], error['error'])
+                self.assertIn(request['effort'], error['error'])
+                self.assertEqual([c['call'] for c in self.calls()[before:]], calls)
+                self.assertEqual((self.agents(), self.on_disk()), ({}, ''))
+
+    def test_start_never_creates_an_agent_if_the_effort_lookup_fails(self):
+        self.fault({'GET /models': 503})
+        code, error = self.driver('start', dict(START, effort='medium'))
+        self.assertEqual(code, 1, error)
+        self.assertIn('HTTP 503', error['error'])
+        self.assertEqual([c['call'] for c in self.calls()], ['GET /models'])
+        self.assertEqual((self.agents(), self.on_disk()), ({}, ''))
+
     def test_a_saved_run_file_is_created_owner_only_then_renamed(self):
         previous = os.umask(0)
         try:
@@ -191,12 +236,15 @@ class Cursor(unittest.TestCase):
         self.assertEqual(oct(os.stat(os.path.join(folder, out['run'] + '.json')).st_mode & 0o777), oct(0o600))
         self.assertFalse(any(name.endswith('.json.new') for name in os.listdir(folder)))
 
-    def test_a_provider_qualified_model_reaches_cursor(self):
+    def test_readme_declares_effort_under_login(self):
         with open(os.path.join(HERE, 'README.md'), encoding='utf-8') as f:
             lines = f.read().splitlines()
         login = next(i for i, line in enumerate(lines) if line.startswith('Login:'))
         following = next(line for line in lines[login + 1:] if line.strip())
-        self.assertTrue(following.startswith("Effort: the host can't set it"), following)
+        self.assertTrue(following.startswith('Effort: passed as '), following)
+        self.assertIn('model.params', following)
+
+    def test_a_provider_qualified_model_reaches_cursor(self):
         qualified = 'openrouter/anthropic/claude-sonnet-4.6'
         longest = 'm' * 49 + '/' + 'n' * 50
         self.assertEqual(len(longest), 100)
