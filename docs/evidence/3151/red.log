@@ -1,0 +1,6 @@
+replay_p90_stays_within_150ms FAILED
+fake delay: 200 ms
+p90 keystroke-to-reply was 203.557 ms; the budget is 150 ms
+assertion: p90 <= 150.0
+same run: superseded_request_is_cancelled_and_its_reply_dropped ok
+same run: a_reply_typed_past_is_dropped ok
