@@ -1,0 +1,4 @@
+Initial test-first run with the reader absent.
+Command: python3 -I tools/release/test_grant.py
+Ran 7 tests in 0.370s
+FAILED (failures=31)

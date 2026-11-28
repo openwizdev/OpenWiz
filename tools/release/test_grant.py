@@ -66,7 +66,9 @@ class GrantTest(unittest.TestCase):
         grant = (FIXTURES / "patch-and-pull.md").read_text(encoding="utf-8")
         row = next(line for line in grant.splitlines() if "ship a 0.x.y" in line)
         for broken in (row.replace("Jake", "Synthetic"), row.replace("every", "one"),
-                       row[:-1], row + "\n" + row, row.replace("0.x.y", "0.2.0").replace("patch", "release")):
+                       row[:-1], row + "\n" + row,
+                       row + "\n" + row.replace("Standing", "**Standing").replace(" | Jake", "** | Jake"),
+                       row.replace("0.x.y", "0.2.0").replace("patch", "release")):
             with self.subTest(row=broken):
                 self.check_text(grant.replace(row, broken), INVALID)
 
@@ -82,7 +84,7 @@ class GrantTest(unittest.TestCase):
     def test_unrelated_or_hidden_sections_do_not_grant(self):
         grant = (FIXTURES / "patch-and-pull.md").read_text(encoding="utf-8")
         for document in (grant.replace("Approval rules", "Other rules"),
-                         f"```markdown\n{grant}```\n", f"<!--\n{grant}-->\n"):
+                         f"```markdown\n{grant}```\n", f"<!--\n{grant}-->\n", f"<pre>\n{grant}</pre>\n"):
             with self.subTest(document=document.splitlines()[0]):
                 self.check_text(document, ABSENT)
 
@@ -107,7 +109,8 @@ def guard(event, args):
     write_open = event == "open" and args[2] & (
         os.O_WRONLY | os.O_RDWR | os.O_CREAT | os.O_TRUNC | os.O_APPEND
     )
-    if write_open or event.startswith(("socket.", "subprocess.", "os.")):
+    os_mutation = event.startswith("os.") and event not in {"os.listdir", "os.scandir"}
+    if write_open or os_mutation or event.startswith(("socket.", "subprocess.", "ctypes.")):
         violations.append(event)
         raise RuntimeError(f"unexpected I/O: {event}")
 
