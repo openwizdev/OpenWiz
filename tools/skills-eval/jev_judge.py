@@ -62,9 +62,9 @@ def reserve(state, questions, frozen=None):
 
 def billed(response, frozen=None):
     usage = response.get('usage') if isinstance(response, dict) else None
-    if not isinstance(usage, dict) or 'input_tokens' not in usage:
+    if not isinstance(usage, dict) or any(k not in usage for k in ('input_tokens', 'output_tokens')):
         return None
-    counts = {k: usage.get(k, 0) for k in ('input_tokens', 'output_tokens')}
+    counts = {k: usage[k] for k in ('input_tokens', 'output_tokens')}
     if any(type(v) is not int or v < 0 for v in counts.values()):
         return None
     price = frozen_or_current(frozen)['price_usd_per_mtok']

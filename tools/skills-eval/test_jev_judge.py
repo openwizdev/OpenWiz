@@ -34,8 +34,10 @@ class Billed(client.SystemOne):
         self.calls.append({'state': state, 'questions': questions, 'model': model})
         if self.error:
             raise client.TypeSafeError(self.error)
-        if not self.usage:
+        if self.usage is False:
             return dict(self.response)
+        if self.usage is not True:
+            return dict(self.response, usage=self.usage)
         return dict(self.response, usage={'input_tokens': 1000, 'output_tokens': 3})
 
 
@@ -168,6 +170,15 @@ class Spend(unittest.TestCase):
         self.assertEqual(len(sent), 2)
         self.assertEqual(t['judgment']['verdict'], 'fail')
         self.assertGreater(t['uncertain_usd'], 0)
+
+    def test_incomplete_usage_is_a_failed_call(self):
+        for usage in ({'input_tokens': 1000}, {'output_tokens': 3}, {'input_tokens': -1, 'output_tokens': 0}):
+            with self.subTest(usage=usage):
+                ask = Billed(recorded(0.94, 0.92), usage=usage)
+                t, sent, _, _ = self.run_one(ask)
+                self.assertEqual(len(sent), 2)
+                self.assertEqual(t['judgment']['verdict'], 'fail')
+                self.assertGreater(t['uncertain_usd'], 0)
 
     def test_the_frozen_config_decides_even_if_the_file_changes_mid_run(self):
         ask = Billed(recorded(0.8, 0.8))
