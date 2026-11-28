@@ -34,7 +34,6 @@ NOT_SIGNED_OUT = ['error: failed to run prompt: provider my-openai has no creden
                   'error: failed to run prompt: no default model configured',
                   '{"role":"assistant","content":"the provider is managed:kimi-code"}']
 
-# Kimi Code CLI 2.7.2, v2-run-print.test.ts and startup-error.ts.
 OVERLOAD = 'error: failed to run prompt: provider.overloaded: llm request failed'
 
 
@@ -56,8 +55,6 @@ def model_and_limit():
             first = env.records()[0]
             if first['argv'][-2:] != ['-m', request['model']]:
                 return ['the start changed the model argument']
-            # The supervisor owns the wait. In the test, bypass the delay and
-            # exercise its actual retry, which must use the saved session.
             with open(env.wrapper, 'r+') as f:
                 wrapper = f.read().replace("t.START['effort'] = t.EFFORT",
                                            't.SELF = __file__\nt.limit_sleep = lambda seconds, run: seconds == 60.0')
