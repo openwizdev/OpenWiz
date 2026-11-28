@@ -1,0 +1,4 @@
+$ python3 -I tools/licence-check/test_check.py
+AssertionError: False is not true : licence auditor is missing
+Ran 5 tests
+FAILED (failures=5)
