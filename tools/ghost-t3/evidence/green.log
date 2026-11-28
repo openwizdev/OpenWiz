@@ -1,0 +1,20 @@
+test_bad_and_duplicate_responses_show_nothing (__main__.BrowserTests.test_bad_and_duplicate_responses_show_nothing) ... ok
+test_esc_clears_before_feedback_and_resumes_after_trailing_space (__main__.BrowserTests.test_esc_clears_before_feedback_and_resumes_after_trailing_space) ... ok
+test_golden_recall_cases_show_in_the_composer (__main__.BrowserTests.test_golden_recall_cases_show_in_the_composer) ... ok
+test_selection_and_composer_changes_invalidate_ghost (__main__.BrowserTests.test_selection_and_composer_changes_invalidate_ghost) ... ok
+test_server_text_is_what_shows (__main__.BrowserTests.test_server_text_is_what_shows) ... ok
+test_stale_reply_is_dropped (__main__.BrowserTests.test_stale_reply_is_dropped) ... ok
+test_tab_shift_tab_enter_and_composing_rules (__main__.BrowserTests.test_tab_shift_tab_enter_and_composing_rules) ... ok
+test_tap_accepts_a_word_and_long_press_accepts_all (__main__.BrowserTests.test_tap_accepts_a_word_and_long_press_accepts_all) ... ok
+test_word_accept_keeps_the_leading_space (__main__.BrowserTests.test_word_accept_keeps_the_leading_space) ... ok
+test_unpacked_extension_options_transport_and_refusals (__main__.ExtensionTests.test_unpacked_extension_options_transport_and_refusals) ... ok
+test_duplicate_key_and_proxy_env (__main__.GuardTests.test_duplicate_key_and_proxy_env) ... ok
+test_host_route_payload_and_target_guards (__main__.GuardTests.test_host_route_payload_and_target_guards) ... ok
+test_redirects_are_refused_and_token_never_follows (__main__.GuardTests.test_redirects_are_refused_and_token_never_follows) ... ok
+test_serve_reloads_isolates_bridge_and_skips_other_targets (__main__.InjectorTests.test_serve_reloads_isolates_bridge_and_skips_other_targets) ... ok
+
+----------------------------------------------------------------------
+Ran 14 tests in 10.864s
+
+OK
+recorded [{"case":"grill_code_j1","text":"J1","ghost":" all recs","requests":1,"outcomes":["shown"]},{"case":"ticket_approve_42","text":"approve #4","ghost":"2 and merge","requests":1,"outcomes":["shown"]},{"case":"ship_magic_link","text":"ship magic","ghost":"-link sign-in","requests":1,"outcomes":["shown"]},{"case":"phrase_all_recs","text":"all r","ghost":"ecs","requests":1,"outcomes":["shown"]},{"case":"spec_seat_billing","text":"the seat bil","ghost":"ling spec","requests":1,"outcomes":["shown"]},{"case":"unknown_zzq","text":"zzq","ghost":null,"requests":1,"outcomes":[]},{"case":"typed_through","text":"all r","ghost":"ecs","requests":1,"outcomes":["shown"]},{"case":"typed_through","text":"all re","ghost":"cs","requests":0,"outcomes":["typed_through"]},{"case":"typed_through","text":"all rec","ghost":"s","requests":0,"outcomes":["typed_through"]},{"case":"word_accept_and_accept_all","text":"approve #4","ghost":"2 and merge","requests":1,"outcomes":["shown"]},{"case":"word_accept_and_accept_all","text":"approve #42 ","ghost":"and merge","requests":0,"outcomes":["accepted_word"]},{"case":"word_accept_and_accept_all","text":"approve #42 and ","ghost":"merge","requests":0,"outcomes":["accepted_word"]},{"case":"word_accept_and_accept_all","text":"approve #42 and merge","ghost":null,"requests":0,"outcomes":["accepted_all"]},{"case":"dismiss_esc_until_next_word","text":"J1","ghost":" all recs","requests":1,"outcomes":["shown"]},{"case":"dismiss_esc_until_next_word","text":"J1","ghost":null,"requests":0,"outcomes":["dismissed"]},{"case":"dismiss_esc_until_next_word","text":"J1 ","ghost":null,"requests":0,"outcomes":[]},{"case":"dismiss_esc_until_next_word","text":"J1 ok","ghost":null,"requests":1,"outcomes":[]},{"case":"typed_over_contradicts_ghost","text":"approve #4","ghost":"2 and merge","requests":1,"outcomes":["shown"]},{"case":"typed_over_contradicts_ghost","text":"approve #49","ghost":null,"requests":1,"outcomes":["typed_over"]}]

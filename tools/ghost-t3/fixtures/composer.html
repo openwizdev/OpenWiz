@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Synthetic T3 composer</title>
+<style>
+  button { display: block; }
+  .composer-tiptap {
+    min-height: 2.5em;
+    font: 16px/1.4 sans-serif;
+    white-space: pre-wrap;
+    padding: 4px;
+    border: 1px solid #ccc;
+    color: rgb(20, 20, 20);
+  }
+</style>
+<button id="before" type="button">Before</button>
+<div id="editor" contenteditable="true" role="textbox" aria-multiline="true"
+     data-testid="composer-editor" data-composer-rich-text="false"
+     class="ProseMirror composer-tiptap" spellcheck="false"></div>
+<button id="after" type="button">After</button>
