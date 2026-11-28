@@ -238,6 +238,26 @@
       }
     },
     {
+      "name": "a sealed answer the helper's one-time key cannot open",
+      "service": "bad-answer",
+      "reason": "bad-answer",
+      "call": {
+        "exit": 0,
+        "stdout": "<an answer sealed to another key>"
+      },
+      "out": {
+        "gh": "owner",
+        "git": "owner",
+        "token_file": null,
+        "env": {
+          "OPENWIZ_TOKEN_SERVICE": "/synthetic/openwiz/tools/github-app/token-service.py",
+          "OPENWIZ_TOKEN_SERVICE_ROUTE": "pairing",
+          "OPENWIZ_TOKEN_SERVICE_READBACK": "passed"
+        },
+        "stderr": "openwiz: no openwiz[bot] token (bad-answer); using the owner's GitHub account\n"
+      }
+    },
+    {
       "name": "a repository outside the installation",
       "service": "refusal",
       "reason": "not-installed",
@@ -307,6 +327,64 @@
           "OPENWIZ_TOKEN_SERVICE_READBACK": "passed"
         },
         "stderr": "openwiz: no openwiz[bot] token (unreachable); using the owner's GitHub account\n"
+      }
+    },
+    {
+      "name": "a good answer over the actions route",
+      "service": "answer",
+      "token": "synthetic-write-token",
+      "call": {
+        "exit": 0,
+        "stdout": "<requests.json's good write answer>"
+      },
+      "out": {
+        "gh": "openwiz[bot]",
+        "git": "openwiz[bot]",
+        "token_file": "synthetic-write-token",
+        "env": {
+          "OPENWIZ_TOKEN_SERVICE_ROUTE": "actions",
+          "OPENWIZ_TOKEN_SERVICE_REPOSITORY": "synthetic-owner/private-ops",
+          "GH_TOKEN": "synthetic-write-token"
+        },
+        "stderr": ""
+      }
+    },
+    {
+      "name": "an actions run that times out after 120 seconds",
+      "service": "unreachable",
+      "reason": "unreachable",
+      "call": {
+        "exit": null,
+        "timeout": true
+      },
+      "out": {
+        "gh": "owner",
+        "git": "owner",
+        "token_file": null,
+        "env": {
+          "OPENWIZ_TOKEN_SERVICE_ROUTE": "actions",
+          "OPENWIZ_TOKEN_SERVICE_REPOSITORY": "synthetic-owner/private-ops"
+        },
+        "stderr": "openwiz: no openwiz[bot] token (unreachable); using the owner's GitHub account\n"
+      }
+    },
+    {
+      "name": "an actions artifact that is tampered or cannot be opened",
+      "service": "bad-answer",
+      "reason": "bad-answer",
+      "call": {
+        "exit": 0,
+        "stdout": "<a tampered or unopenable artifact>"
+      },
+      "out": {
+        "gh": "owner",
+        "git": "owner",
+        "token_file": null,
+        "env": {
+          "OPENWIZ_TOKEN_SERVICE_ROUTE": "actions",
+          "OPENWIZ_TOKEN_SERVICE_REPOSITORY": "synthetic-owner/private-ops"
+        },
+        "stderr": "openwiz: no openwiz[bot] token (bad-answer); using the owner's GitHub account\n"
       }
     }
   ]

@@ -1,0 +1,305 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openwiz.dev/contracts/context-engine.v1.schema.json",
+  "title": "OpenWiz context engine v1",
+  "description": "Closed record shapes. Filesystem, scope, reference, merge and repository checks belong to the consumer.",
+  "oneOf": [
+    {"$ref": "#/$defs/connector-manifest"},
+    {"$ref": "#/$defs/transcript"},
+    {"$ref": "#/$defs/saved-post"},
+    {"$ref": "#/$defs/store-layout"},
+    {"$ref": "#/$defs/pillars"},
+    {"$ref": "#/$defs/recap"},
+    {"$ref": "#/$defs/ledger-item"},
+    {"$ref": "#/$defs/ideas"}
+  ],
+  "$defs": {
+    "standalone-token-shape": {
+      "type": "string",
+      "pattern": "\\b(?:gh[pousr]_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{40,}|xox[baprs]-[A-Za-z0-9-]{20,})(?![A-Za-z0-9_-])"
+    },
+    "authorization-token-shape": {
+      "type": "string",
+      "pattern": "\\b[Aa]uthorization:[ \\t]*[Bb]earer[ \\t]+([A-Za-z0-9._~+/-]{20,}=*)"
+    },
+    "private-key-shape": {
+      "type": "string",
+      "pattern": "-----BEGIN ((?:RSA |EC |DSA |OPENSSH |ENCRYPTED )?PRIVATE KEY)-----\\r?\\n[\\s\\S]*?\\r?\\n-----END \\1-----"
+    },
+    "password-shape": {
+      "type": "string",
+      "pattern": "\\b(?:password|passwd|pwd|PASSWORD|PASSWD|PWD)[ \\t]*=[ \\t]*(?:\"(?!\\[redacted:password\\]\")([^\"\\r\\n]+)\"|'(?!\\[redacted:password\\]')([^'\\r\\n]+)')"
+    },
+    "text": {
+      "type": "string",
+      "not": {
+        "anyOf": [
+          {"$ref": "#/$defs/standalone-token-shape"},
+          {"$ref": "#/$defs/authorization-token-shape"},
+          {"$ref": "#/$defs/private-key-shape"},
+          {"$ref": "#/$defs/password-shape"}
+        ]
+      }
+    },
+    "nonempty-text": {"$ref": "#/$defs/text", "pattern": "\\S"},
+    "id": {"$ref": "#/$defs/text", "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"},
+    "slug": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$(?![\\s\\S])"},
+    "utc": {
+      "type": "string",
+      "pattern": "^20[0-9]{2}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](\\.[0-9]+)?Z$(?![\\s\\S])"
+    },
+    "https-link": {"$ref": "#/$defs/text", "pattern": "^https://[^/?#\\s@]+(?:[/?#][^\\s]*)?$(?![\\s\\S])"},
+    "issue-link": {
+      "$ref": "#/$defs/https-link",
+      "pattern": "^https://github\\.com/[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9_.-]+/issues/[1-9][0-9]*$(?![\\s\\S])"
+    },
+    "scope": {
+      "type": "object",
+      "required": ["name", "access"],
+      "properties": {"name": {"$ref": "#/$defs/id"}, "access": {"const": "read"}},
+      "additionalProperties": false
+    },
+    "requirements": {
+      "type": "object",
+      "required": ["account", "plan"],
+      "properties": {"account": {"$ref": "#/$defs/nonempty-text"}, "plan": {"$ref": "#/$defs/nonempty-text"}},
+      "additionalProperties": false
+    },
+    "attachment": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {"id": {"$ref": "#/$defs/id"}},
+      "additionalProperties": false
+    },
+    "transcript-ref": {
+      "type": "object",
+      "required": ["source", "conversation", "message_id"],
+      "properties": {
+        "source": {"$ref": "#/$defs/slug"},
+        "conversation": {"$ref": "#/$defs/id"},
+        "message_id": {"$ref": "#/$defs/id"}
+      },
+      "additionalProperties": false
+    },
+    "pillar": {
+      "type": "object",
+      "required": ["name", "description"],
+      "properties": {"name": {"$ref": "#/$defs/nonempty-text"}, "description": {"$ref": "#/$defs/nonempty-text"}},
+      "additionalProperties": false
+    },
+    "period": {
+      "type": "object",
+      "required": ["start", "end"],
+      "properties": {"start": {"$ref": "#/$defs/utc"}, "end": {"$ref": "#/$defs/utc"}},
+      "additionalProperties": false
+    },
+    "proof": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["link"],
+          "properties": {"link": {"$ref": "#/$defs/https-link"}},
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["record"],
+          "properties": {"record": {"$ref": "#/$defs/id"}},
+          "additionalProperties": false
+        }
+      ]
+    },
+    "closed-state": {
+      "oneOf": [
+        {"$ref": "#/$defs/state-done"},
+        {"$ref": "#/$defs/state-ticketed"},
+        {"$ref": "#/$defs/state-decide"},
+        {"$ref": "#/$defs/state-reply"},
+        {"$ref": "#/$defs/state-drop"}
+      ]
+    },
+    "state-done": {
+      "type": "object",
+      "required": ["kind", "proof"],
+      "properties": {"kind": {"const": "Done"}, "proof": {"$ref": "#/$defs/proof"}},
+      "additionalProperties": false
+    },
+    "state-ticketed": {
+      "type": "object",
+      "required": ["kind", "issue"],
+      "properties": {"kind": {"const": "Ticketed"}, "issue": {"$ref": "#/$defs/issue-link"}},
+      "additionalProperties": false
+    },
+    "state-decide": {
+      "type": "object",
+      "required": ["kind", "question", "recommendation"],
+      "properties": {
+        "kind": {"const": "Decide"},
+        "question": {"$ref": "#/$defs/nonempty-text"},
+        "recommendation": {"$ref": "#/$defs/nonempty-text"}
+      },
+      "additionalProperties": false
+    },
+    "state-reply": {
+      "type": "object",
+      "required": ["kind", "draft", "approval", "sent_by_engine"],
+      "properties": {
+        "kind": {"const": "Reply"},
+        "draft": {"$ref": "#/$defs/nonempty-text"},
+        "approval": {"enum": ["pending", "approved", "declined"]},
+        "sent_by_engine": {"type": "boolean", "const": false}
+      },
+      "additionalProperties": false
+    },
+    "state-drop": {
+      "type": "object",
+      "required": ["kind", "reason"],
+      "properties": {"kind": {"const": "Drop"}, "reason": {"$ref": "#/$defs/nonempty-text"}},
+      "additionalProperties": false
+    },
+    "idea-home": {
+      "type": "object",
+      "required": ["kind", "link"],
+      "properties": {"kind": {"enum": ["spec", "ticket", "grill"]}, "link": {"$ref": "#/$defs/https-link"}},
+      "additionalProperties": false
+    },
+    "idea": {
+      "type": "object",
+      "required": ["saved_post", "idea", "home"],
+      "properties": {
+        "saved_post": {"$ref": "#/$defs/https-link"},
+        "idea": {"$ref": "#/$defs/nonempty-text"},
+        "home": {"$ref": "#/$defs/idea-home"}
+      },
+      "additionalProperties": false
+    },
+    "connector-manifest": {
+      "type": "object",
+      "required": ["schema", "kind", "id", "source", "scopes", "default", "requirements"],
+      "properties": {
+        "schema": {"const": "openwiz.context-engine.v1"},
+        "kind": {"const": "connector-manifest"},
+        "id": {"$ref": "#/$defs/slug"},
+        "source": {"$ref": "#/$defs/slug"},
+        "scopes": {"type": "array", "items": {"$ref": "#/$defs/scope"}, "uniqueItems": true},
+        "default": {"const": "off"},
+        "requirements": {"$ref": "#/$defs/requirements"}
+      },
+      "additionalProperties": false
+    },
+    "transcript": {
+      "type": "object",
+      "required": [
+        "schema",
+        "kind",
+        "source",
+        "conversation",
+        "message_id",
+        "author",
+        "time",
+        "text",
+        "attachments"
+      ],
+      "properties": {
+        "schema": {"const": "openwiz.context-engine.v1"},
+        "kind": {"const": "transcript"},
+        "source": {"$ref": "#/$defs/slug"},
+        "conversation": {"$ref": "#/$defs/id"},
+        "message_id": {"$ref": "#/$defs/id"},
+        "author": {"$ref": "#/$defs/text"},
+        "time": {"$ref": "#/$defs/utc"},
+        "text": {"$ref": "#/$defs/text"},
+        "attachments": {"type": "array", "items": {"$ref": "#/$defs/attachment"}, "uniqueItems": true}
+      },
+      "additionalProperties": false
+    },
+    "saved-post": {
+      "type": "object",
+      "required": ["schema", "kind", "source", "post_id", "link", "author", "time", "text", "action"],
+      "properties": {
+        "schema": {"const": "openwiz.context-engine.v1"},
+        "kind": {"const": "saved-post"},
+        "source": {"$ref": "#/$defs/slug"},
+        "post_id": {"$ref": "#/$defs/id"},
+        "link": {"$ref": "#/$defs/https-link"},
+        "author": {"$ref": "#/$defs/text"},
+        "time": {"$ref": "#/$defs/utc"},
+        "text": {"$ref": "#/$defs/text"},
+        "action": {"enum": ["repost", "bookmark", "like"]}
+      },
+      "additionalProperties": false
+    },
+    "store-layout": {
+      "type": "object",
+      "required": ["schema", "kind", "directory", "in_work_tree", "directory_mode", "file_mode"],
+      "properties": {
+        "schema": {"const": "openwiz.context-engine.v1"},
+        "kind": {"const": "store-layout"},
+        "directory": {"const": "context"},
+        "in_work_tree": {"type": "boolean", "const": false},
+        "directory_mode": {"const": "0700"},
+        "file_mode": {"const": "0600"}
+      },
+      "additionalProperties": false
+    },
+    "pillars": {
+      "type": "object",
+      "required": ["schema", "kind", "pillars"],
+      "properties": {
+        "schema": {"const": "openwiz.context-engine.v1"},
+        "kind": {"const": "pillars"},
+        "pillars": {
+          "type": "object",
+          "propertyNames": {"$ref": "#/$defs/slug"},
+          "additionalProperties": {"$ref": "#/$defs/pillar"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "recap": {
+      "type": "object",
+      "required": ["schema", "kind", "pillar", "period", "text", "citations"],
+      "properties": {
+        "schema": {"const": "openwiz.context-engine.v1"},
+        "kind": {"const": "recap"},
+        "pillar": {"$ref": "#/$defs/slug"},
+        "period": {"$ref": "#/$defs/period"},
+        "text": {"$ref": "#/$defs/nonempty-text"},
+        "citations": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/transcript-ref"},
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "ledger-item": {
+      "type": "object",
+      "required": ["schema", "kind", "id", "state"],
+      "properties": {
+        "schema": {"const": "openwiz.context-engine.v1"},
+        "kind": {"const": "ledger-item"},
+        "id": {"$ref": "#/$defs/id"},
+        "state": {"$ref": "#/$defs/closed-state"}
+      },
+      "additionalProperties": false
+    },
+    "ideas": {
+      "type": "object",
+      "required": ["schema", "kind", "run_id", "version", "target_visibility", "ideas"],
+      "properties": {
+        "schema": {"const": "openwiz.context-engine.v1"},
+        "kind": {"const": "ideas"},
+        "run_id": {"$ref": "#/$defs/id"},
+        "version": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$(?![\\s\\S])"
+        },
+        "target_visibility": {"const": "private"},
+        "ideas": {"type": "array", "items": {"$ref": "#/$defs/idea"}, "uniqueItems": true}
+      },
+      "additionalProperties": false
+    }
+  }
+}

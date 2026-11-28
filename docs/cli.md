@@ -8,3 +8,7 @@ OpenWiz's command line is for agents, scripts and people alike: explicit command
 - Every command takes `--json` and then prints exactly one document on stdout, its existing report or an `openwiz.cli-error.v1` error. Exit codes are fixed per command in the catalogue.
 - Explicit commands never prompt or wait for a terminal.
 - `openwiz` with no arguments prints the help (`openwiz --help`) in a terminal. Piped, it is a usage error (exit 2), as is `openwiz ui`.
+
+## Experimental
+
+`tools/memo` is not an `openwiz` command and is not in `help --agent`. Any harness can run `python3 -I tools/memo/memo.py`. See [MeMo](memo.md).

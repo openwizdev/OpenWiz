@@ -1,0 +1,10 @@
+repository	spdx	result
+openwizdev/.github	Apache-2.0	pass
+openwizdev/marketplace	none	fail
+openwizdev/OpenWiz	Apache-2.0	pass
+openwizdev/todo-demo	none	fail
+openwizdev/WizLoops	Apache-2.0	pass
+openwizdev/WizMarket	Apache-2.0	pass
+openwizdev/WizPlugins	NOASSERTION	fail
+openwizdev/WizSite	Apache-2.0	pass
+openwizdev/WizSkills	Apache-2.0	pass

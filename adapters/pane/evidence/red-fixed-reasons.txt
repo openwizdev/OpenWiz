@@ -1,0 +1,15 @@
+$ python3 -I adapters/pane/test_driver.py Pane.test_errors_carry_fixed_reasons_never_pane_text   # at 5c50e70d plus this test
+test_errors_carry_fixed_reasons_never_pane_text (__main__.Pane.test_errors_carry_fixed_reasons_never_pane_text) ... FAIL
+
+======================================================================
+FAIL: test_errors_carry_fixed_reasons_never_pane_text (__main__.Pane.test_errors_carry_fixed_reasons_never_pane_text)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/pane/test_driver.py", line 85, in test_errors_carry_fixed_reasons_never_pane_text
+    self.assertNotIn('synthetic', out['error'] + out['next'])
+AssertionError: 'synthetic' unexpectedly found in 'runpane repos list failed: synthetic: Pane is not running (daemon-unavailable)open the Pane app, then run it again, then start again'
+
+----------------------------------------------------------------------
+Ran 1 test in <t>s
+
+FAILED (failures=1)

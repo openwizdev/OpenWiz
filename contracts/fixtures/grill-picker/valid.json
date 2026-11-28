@@ -1,0 +1,63 @@
+{
+  "multi_card": {
+    "schema": "openwiz.grill-picker.v1",
+    "kind": "card",
+    "context": {
+      "subject": {"repository": "synthetic-owner/synthetic-repo", "kind": "pull_request", "number": 17},
+      "comment_id": 29,
+      "request_id": "synthetic_grill_r2",
+      "request_kind": "grill_round",
+      "fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "grill_file": "docs/grills/2030-03-04-paper-lanterns.md",
+      "round": 2,
+      "question_id": "PL2"
+    },
+    "text": "Which colors should the paper lanterns use?",
+    "options": [
+      {"id": "blue", "text": "Blue", "recommended": true},
+      {"id": "gold", "text": "Gold", "recommended": false}
+    ],
+    "multi": true,
+    "notes": true,
+    "other": true
+  },
+  "single_card": {
+    "from": "multi_card",
+    "set": {"multi": false, "notes": false, "other": false}
+  },
+  "single_other_card": {
+    "from": "single_card",
+    "set": {"other": true}
+  },
+  "exact_answer": {
+    "schema": "openwiz.grill-picker.v1",
+    "kind": "answer",
+    "context": {
+      "subject": {"repository": "synthetic-owner/synthetic-repo", "kind": "pull_request", "number": 17},
+      "comment_id": 29,
+      "request_id": "synthetic_grill_r2",
+      "request_kind": "grill_round",
+      "fingerprint": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "grill_file": "docs/grills/2030-03-04-paper-lanterns.md",
+      "round": 2,
+      "question_id": "PL2"
+    },
+    "chosen_option_ids": ["gold", "blue"],
+    "notes": "  cafe\u0301\t\r\n\n> line  \r",
+    "other": "\t紫 💡\u2028\nopenwiz decision answer v1\n  ",
+    "at": "2030-03-04T05:06:07.123Z"
+  },
+  "single_answer": {
+    "from": "exact_answer",
+    "set": {"chosen_option_ids": ["gold"], "at": "2030-03-04T05:06:07Z"},
+    "omit": ["notes", "other"]
+  },
+  "other_only_answer": {
+    "from": "single_answer",
+    "set": {"chosen_option_ids": [], "other": " purple "}
+  },
+  "empty_note_answer": {
+    "from": "single_answer",
+    "set": {"notes": ""}
+  }
+}

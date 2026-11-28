@@ -57,7 +57,7 @@
       "message": {
         "schema": "openwiz.token-service.v1",
         "kind": "answer",
-        "token": "synthetic-write-token",
+        "sealed_token": "<sealed token>",
         "repositories": [
           "synthetic-owner/work"
         ],
@@ -76,7 +76,7 @@
       "message": {
         "schema": "openwiz.token-service.v1",
         "kind": "answer",
-        "token": "synthetic-write-token",
+        "sealed_token": "<sealed token>",
         "expires_at": 4600.5,
         "repositories": [
           "synthetic-owner/work"
@@ -97,6 +97,7 @@
         "schema": "openwiz.token-service.v1",
         "kind": "request",
         "requester": "builder-1839",
+        "answer_key": "<answer key>",
         "repositories": [
           "synthetic-owner/work"
         ],
@@ -111,6 +112,7 @@
         "schema": "openwiz.token-service.v1",
         "kind": "request",
         "requester": "builder-1839",
+        "answer_key": "<answer key>",
         "repositories": [
           "synthetic-owner/work"
         ],
@@ -123,6 +125,7 @@
         "schema": "openwiz.token-service.v1",
         "kind": "request",
         "requester": "builder-1839",
+        "answer_key": "<answer key>",
         "repositories": [
           "synthetic-owner/work",
           "synthetic-owner/work"
@@ -143,6 +146,7 @@
         "schema": "openwiz.token-service.v1",
         "kind": "request",
         "requester": "a builder",
+        "answer_key": "<answer key>",
         "repositories": [
           "synthetic-owner/work"
         ],
@@ -170,6 +174,26 @@
       "message": {
         "schema": "openwiz.token-service.v2",
         "kind": "answer",
+        "sealed_token": "<sealed token>",
+        "expires_at": 4600,
+        "repositories": [
+          "synthetic-owner/work"
+        ],
+        "permissions": {
+          "metadata": "read",
+          "contents": "write",
+          "issues": "write",
+          "pull_requests": "write",
+          "checks": "read",
+          "actions": "read"
+        }
+      }
+    },
+    {
+      "name": "an answer whose token is not sealed",
+      "message": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "answer",
         "token": "synthetic-write-token",
         "expires_at": 4600,
         "repositories": [
@@ -182,6 +206,76 @@
           "pull_requests": "write",
           "checks": "read",
           "actions": "read"
+        }
+      }
+    },
+    {
+      "name": "an answer with a plaintext token beside the sealed one",
+      "message": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "answer",
+        "sealed_token": "<sealed token>",
+        "expires_at": 4600,
+        "repositories": [
+          "synthetic-owner/work"
+        ],
+        "permissions": {
+          "metadata": "read",
+          "contents": "write",
+          "issues": "write",
+          "pull_requests": "write",
+          "checks": "read",
+          "actions": "read"
+        },
+        "token": "synthetic-write-token"
+      }
+    },
+    {
+      "name": "an answer whose sealed token is not whole blocks",
+      "message": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "answer",
+        "sealed_token": "synthetic-write-token",
+        "expires_at": 4600,
+        "repositories": [
+          "synthetic-owner/work"
+        ],
+        "permissions": {
+          "metadata": "read",
+          "contents": "write",
+          "issues": "write",
+          "pull_requests": "write",
+          "checks": "read",
+          "actions": "read"
+        }
+      }
+    },
+    {
+      "name": "a request without an answer key",
+      "message": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "request",
+        "requester": "builder-1839",
+        "repositories": [
+          "synthetic-owner/work"
+        ],
+        "permissions": {
+          "contents": "read"
+        }
+      }
+    },
+    {
+      "name": "a request whose answer key is not a key",
+      "message": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "request",
+        "requester": "builder-1839",
+        "answer_key": "not a key",
+        "repositories": [
+          "synthetic-owner/work"
+        ],
+        "permissions": {
+          "contents": "read"
         }
       }
     }

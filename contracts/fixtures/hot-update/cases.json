@@ -1,0 +1,197 @@
+{
+  "schema-version": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "component-manifest", "kind": "kernel", "id": "kernel", "version": "0.2.4", "sha256": "fc8a19ac804e801948ca3b16a99e94e6371e6063d88aef4ec22b43cbcc65e66f"},
+    "broken": {"schema": "openwiz.hot-update.v9", "record": "component-manifest", "kind": "kernel", "id": "kernel", "version": "0.2.4", "sha256": "fc8a19ac804e801948ca3b16a99e94e6371e6063d88aef4ec22b43cbcc65e66f"},
+    "path": ["schema"], "keyword": "const"
+  },
+  "manifest-kernel": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "component-manifest", "kind": "kernel", "id": "kernel", "version": "0.2.4", "sha256": "fc8a19ac804e801948ca3b16a99e94e6371e6063d88aef4ec22b43cbcc65e66f"},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "component-manifest", "kind": "synthetic-kind", "id": "kernel", "version": "0.2.4", "sha256": "fc8a19ac804e801948ca3b16a99e94e6371e6063d88aef4ec22b43cbcc65e66f"},
+    "path": ["kind"], "keyword": "enum"
+  },
+  "manifest-skills": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "component-manifest", "kind": "skills", "id": "synthetic-skill", "version": "0.2.4", "sha256": "fc8a19ac804e801948ca3b16a99e94e6371e6063d88aef4ec22b43cbcc65e66f"},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "component-manifest", "kind": "synthetic-kind", "id": "synthetic-skill", "version": "0.2.4", "sha256": "fc8a19ac804e801948ca3b16a99e94e6371e6063d88aef4ec22b43cbcc65e66f"},
+    "path": ["kind"], "keyword": "enum"
+  },
+  "manifest-driver": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "component-manifest", "kind": "driver", "id": "synthetic-driver", "version": "0.2.4", "sha256": "fc8a19ac804e801948ca3b16a99e94e6371e6063d88aef4ec22b43cbcc65e66f"},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "component-manifest", "kind": "synthetic-kind", "id": "synthetic-driver", "version": "0.2.4", "sha256": "fc8a19ac804e801948ca3b16a99e94e6371e6063d88aef4ec22b43cbcc65e66f"},
+    "path": ["kind"], "keyword": "enum"
+  },
+  "manifest-market-item": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "component-manifest", "kind": "market-item", "id": "synthetic-item", "version": "0.2.4", "sha256": "fc8a19ac804e801948ca3b16a99e94e6371e6063d88aef4ec22b43cbcc65e66f"},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "component-manifest", "kind": "synthetic-kind", "id": "synthetic-item", "version": "0.2.4", "sha256": "fc8a19ac804e801948ca3b16a99e94e6371e6063d88aef4ec22b43cbcc65e66f"},
+    "path": ["kind"], "keyword": "enum"
+  },
+  "manifest-id": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "component-manifest", "kind": "kernel", "id": "kernel", "version": "0.2.4", "sha256": "fc8a19ac804e801948ca3b16a99e94e6371e6063d88aef4ec22b43cbcc65e66f"},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "component-manifest", "kind": "kernel", "id": "../synthetic", "version": "0.2.4", "sha256": "fc8a19ac804e801948ca3b16a99e94e6371e6063d88aef4ec22b43cbcc65e66f"},
+    "path": ["id"], "keyword": "pattern"
+  },
+  "manifest-version": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "component-manifest", "kind": "kernel", "id": "kernel", "version": "0.2.4", "sha256": "fc8a19ac804e801948ca3b16a99e94e6371e6063d88aef4ec22b43cbcc65e66f"},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "component-manifest", "kind": "kernel", "id": "kernel", "version": "v0.2.4", "sha256": "fc8a19ac804e801948ca3b16a99e94e6371e6063d88aef4ec22b43cbcc65e66f"},
+    "path": ["version"], "keyword": "pattern"
+  },
+  "manifest-sha256": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "component-manifest", "kind": "kernel", "id": "kernel", "version": "0.2.4", "sha256": "fc8a19ac804e801948ca3b16a99e94e6371e6063d88aef4ec22b43cbcc65e66f"},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "component-manifest", "kind": "kernel", "id": "kernel", "version": "0.2.4", "sha256": "gc8a19ac804e801948ca3b16a99e94e6371e6063d88aef4ec22b43cbcc65e66f"},
+    "path": ["sha256"], "keyword": "pattern"
+  },
+  "installed-owner-only": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "installed-set", "access": "owner-only", "components": [{"kind": "driver", "id": "synthetic-driver", "current": "0.2.4", "last_good": "0.2.3", "history": [{"version": "0.2.4", "result": "good"}]}]},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "installed-set", "access": "shared", "components": [{"kind": "driver", "id": "synthetic-driver", "current": "0.2.4", "last_good": "0.2.3", "history": [{"version": "0.2.4", "result": "good"}]}]},
+    "path": ["access"], "keyword": "const"
+  },
+  "installed-current": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "installed-set", "access": "owner-only", "components": [{"kind": "driver", "id": "synthetic-driver", "current": "0.2.4", "last_good": "0.2.3", "history": [{"version": "0.2.4", "result": "good"}]}]},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "installed-set", "access": "owner-only", "components": [{"kind": "driver", "id": "synthetic-driver", "last_good": "0.2.3", "history": [{"version": "0.2.4", "result": "good"}]}]},
+    "path": ["components", 0], "keyword": "required"
+  },
+  "installed-last-good": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "installed-set", "access": "owner-only", "components": [{"kind": "driver", "id": "synthetic-driver", "current": "0.2.4", "last_good": "0.2.3", "history": [{"version": "0.2.4", "result": "good"}]}]},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "installed-set", "access": "owner-only", "components": [{"kind": "driver", "id": "synthetic-driver", "current": "0.2.4", "history": [{"version": "0.2.4", "result": "good"}]}]},
+    "path": ["components", 0], "keyword": "required"
+  },
+  "installed-history": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "installed-set", "access": "owner-only", "components": [{"kind": "driver", "id": "synthetic-driver", "current": "0.2.4", "last_good": "0.2.3", "history": [{"version": "0.2.4", "result": "good"}]}]},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "installed-set", "access": "owner-only", "components": [{"kind": "driver", "id": "synthetic-driver", "current": "0.2.4", "last_good": "0.2.3", "history": [{"version": "0.2.9", "result": "good"}, {"version": "0.2.8", "result": "good"}, {"version": "0.2.7", "result": "good"}, {"version": "0.2.6", "result": "good"}, {"version": "0.2.5", "result": "good"}, {"version": "0.2.4", "result": "good"}]}]},
+    "path": ["components", 0, "history"], "keyword": "maxItems"
+  },
+  "swap-stage": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "swap", "kind": "kernel", "id": "kernel", "version": "0.2.4", "rollback_window_minutes": 5, "health_result": "passed", "steps": ["stage-beside", "verify-sha256", "switch-atomically", "health-check", "mark-good"]},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "swap", "kind": "kernel", "id": "kernel", "version": "0.2.4", "rollback_window_minutes": 5, "health_result": "passed", "steps": ["replace-in-place", "verify-sha256", "switch-atomically", "health-check", "mark-good"]},
+    "path": ["steps", 0], "keyword": "const"
+  },
+  "swap-verify": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "swap", "kind": "kernel", "id": "kernel", "version": "0.2.4", "rollback_window_minutes": 5, "health_result": "passed", "steps": ["stage-beside", "verify-sha256", "switch-atomically", "health-check", "mark-good"]},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "swap", "kind": "kernel", "id": "kernel", "version": "0.2.4", "rollback_window_minutes": 5, "health_result": "passed", "steps": ["stage-beside", "switch-atomically", "switch-atomically", "health-check", "mark-good"]},
+    "path": ["steps", 1], "keyword": "const"
+  },
+  "swap-atomic": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "swap", "kind": "kernel", "id": "kernel", "version": "0.2.4", "rollback_window_minutes": 5, "health_result": "passed", "steps": ["stage-beside", "verify-sha256", "switch-atomically", "health-check", "mark-good"]},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "swap", "kind": "kernel", "id": "kernel", "version": "0.2.4", "rollback_window_minutes": 5, "health_result": "passed", "steps": ["stage-beside", "verify-sha256", "switch-in-place", "health-check", "mark-good"]},
+    "path": ["steps", 2], "keyword": "const"
+  },
+  "swap-check": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "swap", "kind": "kernel", "id": "kernel", "version": "0.2.4", "rollback_window_minutes": 5, "health_result": "passed", "steps": ["stage-beside", "verify-sha256", "switch-atomically", "health-check", "mark-good"]},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "swap", "kind": "kernel", "id": "kernel", "version": "0.2.4", "rollback_window_minutes": 5, "health_result": "passed", "steps": ["stage-beside", "verify-sha256", "switch-atomically", "mark-good", "mark-good"]},
+    "path": ["steps", 3], "keyword": "const"
+  },
+  "swap-mark-good": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "swap", "kind": "kernel", "id": "kernel", "version": "0.2.4", "rollback_window_minutes": 5, "health_result": "passed", "steps": ["stage-beside", "verify-sha256", "switch-atomically", "health-check", "mark-good"]},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "swap", "kind": "kernel", "id": "kernel", "version": "0.2.4", "rollback_window_minutes": 5, "health_result": "passed", "steps": ["stage-beside", "verify-sha256", "switch-atomically", "health-check", "roll-back"]},
+    "path": ["steps"], "keyword": "contains"
+  },
+  "swap-roll-back": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "swap", "kind": "kernel", "id": "kernel", "version": "0.2.4", "rollback_window_minutes": 5, "health_result": "failed", "steps": ["stage-beside", "verify-sha256", "switch-atomically", "health-check", "roll-back"]},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "swap", "kind": "kernel", "id": "kernel", "version": "0.2.4", "rollback_window_minutes": 5, "health_result": "failed", "steps": ["stage-beside", "verify-sha256", "switch-atomically", "health-check", "mark-good"]},
+    "path": ["steps"], "keyword": "contains"
+  },
+  "swap-timeout": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "swap", "kind": "kernel", "id": "kernel", "version": "0.2.4", "rollback_window_minutes": 5, "health_result": "timeout", "steps": ["stage-beside", "verify-sha256", "switch-atomically", "health-check", "roll-back"]},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "swap", "kind": "kernel", "id": "kernel", "version": "0.2.4", "rollback_window_minutes": 5, "health_result": "timeout", "steps": ["stage-beside", "verify-sha256", "switch-atomically", "health-check", "mark-good"]},
+    "path": ["steps"], "keyword": "contains"
+  },
+  "rollback-window": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "swap", "kind": "kernel", "id": "kernel", "version": "0.2.4", "rollback_window_minutes": 5, "health_result": "passed", "steps": ["stage-beside", "verify-sha256", "switch-atomically", "health-check", "mark-good"]},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "swap", "kind": "kernel", "id": "kernel", "version": "0.2.4", "rollback_window_minutes": 6, "health_result": "passed", "steps": ["stage-beside", "verify-sha256", "switch-atomically", "health-check", "mark-good"]},
+    "path": ["rollback_window_minutes"], "keyword": "const"
+  },
+  "health-kernel": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "health-check", "kind": "kernel", "id": "kernel", "version": "0.2.4", "probe": "self-check", "result": "passed"},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "health-check", "kind": "kernel", "id": "kernel", "version": "0.2.4", "probe": "lock-verify", "result": "passed"},
+    "path": ["probe"], "keyword": "const"
+  },
+  "health-skills": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "health-check", "kind": "skills", "id": "synthetic-skill", "version": "0.2.4", "probe": "lock-verify", "result": "passed"},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "health-check", "kind": "skills", "id": "synthetic-skill", "version": "0.2.4", "probe": "self-check", "result": "passed"},
+    "path": ["probe"], "keyword": "const"
+  },
+  "health-driver": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "health-check", "kind": "driver", "id": "synthetic-driver", "version": "0.2.4", "probe": "driver-check", "result": "passed"},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "health-check", "kind": "driver", "id": "synthetic-driver", "version": "0.2.4", "probe": "self-check", "result": "passed"},
+    "path": ["probe"], "keyword": "const"
+  },
+  "health-market-item": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "health-check", "kind": "market-item", "id": "synthetic-item", "version": "0.2.4", "probe": "listing-check", "result": "passed"},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "health-check", "kind": "market-item", "id": "synthetic-item", "version": "0.2.4", "probe": "self-check", "result": "passed"},
+    "path": ["probe"], "keyword": "const"
+  },
+  "health-result": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "health-check", "kind": "market-item", "id": "synthetic-item", "version": "0.2.4", "probe": "listing-check", "result": "passed"},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "health-check", "kind": "market-item", "id": "synthetic-item", "version": "0.2.4", "probe": "listing-check", "result": "unknown"},
+    "path": ["result"], "keyword": "enum"
+  },
+  "rollback-health": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "rollback", "kind": "kernel", "id": "kernel", "from": "0.2.4", "to": "0.2.3", "trigger": "health-failed"},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "rollback", "kind": "kernel", "id": "kernel", "from": "0.2.4", "to": "0.2.3", "trigger": "manual"},
+    "path": ["trigger"], "keyword": "enum"
+  },
+  "rollback-pulled": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "rollback", "kind": "kernel", "id": "kernel", "from": "0.2.4", "to": "0.2.3", "trigger": "pulled"},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "rollback", "kind": "kernel", "id": "kernel", "from": "0.2.4", "to": "0.2.3", "trigger": "outdated"},
+    "path": ["trigger"], "keyword": "enum"
+  },
+  "pulled-list": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "release-record", "latest": "0.2.3", "pulled": [{"version": "0.2.4", "last_good": "0.2.3", "reason": "live-check-failed"}]},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "release-record", "latest": "0.2.3"},
+    "path": [], "keyword": "required"
+  },
+  "pulled-last-good": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "release-record", "latest": "0.2.3", "pulled": [{"version": "0.2.4", "last_good": "0.2.3", "reason": "live-check-failed"}]},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "release-record", "latest": "0.2.3", "pulled": [{"version": "0.2.4", "reason": "live-check-failed"}]},
+    "path": ["pulled", 0], "keyword": "required"
+  },
+  "pulled-reason": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "release-record", "latest": "0.2.3", "pulled": [{"version": "0.2.4", "last_good": "0.2.3", "reason": "live-check-failed"}]},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "release-record", "latest": "0.2.3", "pulled": [{"version": "0.2.4", "last_good": "0.2.3", "reason": "newer-version"}]},
+    "path": ["pulled", 0, "reason"], "keyword": "enum"
+  },
+  "launch-at-start": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "launch-pins", "resolution": "at-start", "components": [{"kind": "kernel", "id": "kernel", "version": "0.2.3"}]},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "launch-pins", "resolution": "on-each-use", "components": [{"kind": "kernel", "id": "kernel", "version": "0.2.3"}]},
+    "path": ["resolution"], "keyword": "const"
+  },
+  "launch-exact-version": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "launch-pins", "resolution": "at-start", "components": [{"kind": "kernel", "id": "kernel", "version": "0.2.3"}]},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "launch-pins", "resolution": "at-start", "components": [{"kind": "kernel", "id": "kernel", "version": "current"}]},
+    "path": ["components", 0, "version"], "keyword": "pattern"
+  },
+  "updates-default": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "update-decision", "change": "patch", "confirmation": "required"},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "update-decision", "change": "patch", "confirmation": "automatic"},
+    "path": ["confirmation"], "keyword": "const"
+  },
+  "updates-ask": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "update-decision", "change": "patch", "confirmation": "required", "updates": "ask"},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "update-decision", "change": "patch", "confirmation": "automatic", "updates": "ask"},
+    "path": ["confirmation"], "keyword": "const"
+  },
+  "updates-auto-patches": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "update-decision", "change": "patch", "confirmation": "automatic", "updates": "auto-patches"},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "update-decision", "change": "patch", "confirmation": "automatic", "updates": "automatic"},
+    "path": ["updates"], "keyword": "enum"
+  },
+  "updates-minor": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "update-decision", "change": "minor", "confirmation": "required", "updates": "auto-patches"},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "update-decision", "change": "minor", "confirmation": "automatic", "updates": "auto-patches"},
+    "path": ["confirmation"], "keyword": "const"
+  },
+  "updates-major": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "update-decision", "change": "major", "confirmation": "required", "updates": "auto-patches"},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "update-decision", "change": "major", "confirmation": "automatic", "updates": "auto-patches"},
+    "path": ["confirmation"], "keyword": "const"
+  },
+  "updates-auto-rollback": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "update-decision", "change": "pulled-rollback", "confirmation": "automatic", "updates": "auto-patches"},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "update-decision", "change": "pulled-rollback", "confirmation": "required", "updates": "auto-patches"},
+    "path": ["confirmation"], "keyword": "const"
+  },
+  "updates-ask-rollback": {
+    "valid": {"schema": "openwiz.hot-update.v1", "record": "update-decision", "change": "pulled-rollback", "confirmation": "required", "updates": "ask"},
+    "broken": {"schema": "openwiz.hot-update.v1", "record": "update-decision", "change": "pulled-rollback", "confirmation": "automatic", "updates": "ask"},
+    "path": ["confirmation"], "keyword": "const"
+  }
+}

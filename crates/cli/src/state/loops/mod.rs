@@ -56,24 +56,6 @@ impl Context {
         enabled: bool,
         clock: &dyn openwiz_core::ops::Clock,
     ) -> Result<Value, SwitchError> {
-        self.switch_with_deadline(target, enabled, clock, None)
-    }
-    pub fn switch_with_clock_until(
-        &self,
-        target: &str,
-        enabled: bool,
-        clock: &dyn openwiz_core::ops::Clock,
-        deadline: Instant,
-    ) -> Result<Value, SwitchError> {
-        self.switch_with_deadline(target, enabled, clock, Some(deadline))
-    }
-    fn switch_with_deadline(
-        &self,
-        target: &str,
-        enabled: bool,
-        clock: &dyn openwiz_core::ops::Clock,
-        deadline: Option<Instant>,
-    ) -> Result<Value, SwitchError> {
         self.switch_when(
             target,
             enabled,
@@ -82,11 +64,10 @@ impl Context {
                     .map_err(|_| SwitchError::from("loop clock precedes epoch"))
             },
             &|| clock.monotonic(),
-            deadline,
         )
     }
     pub fn switch(&self, target: &str, enabled: bool, at_ms: u64) -> Result<Value, String> {
-        self.switch_when(target, enabled, &|| Ok(at_ms), &Instant::now, None)
+        self.switch_when(target, enabled, &|| Ok(at_ms), &Instant::now)
             .map_err(|error| error.to_string())
     }
     fn switch_when(
@@ -95,22 +76,12 @@ impl Context {
         enabled: bool,
         at: &dyn Fn() -> Result<u64, SwitchError>,
         monotonic: &dyn Fn() -> Instant,
-        request_deadline: Option<Instant>,
     ) -> Result<Value, SwitchError> {
         at()?;
         self.resolve(target)?;
         let deadline = monotonic()
             .checked_add(SWITCH_LOCK_WAIT)
             .ok_or("loop switch deadline is unavailable")?;
-        let deadline = request_deadline.map_or(deadline, |request| request.min(deadline));
-        let check_request = || {
-            if request_deadline.is_some_and(|request| monotonic() >= request) {
-                Err(SwitchError::Busy)
-            } else {
-                Ok(())
-            }
-        };
-        check_request()?;
         let mut retry = || {
             let left = deadline.saturating_duration_since(monotonic());
             if left.is_zero() {
@@ -140,7 +111,6 @@ impl Context {
             Value::Bool(enabled),
         );
         saved.events.push(event.clone());
-        check_request()?;
         state.save_switch_state(&saved)?;
         Ok(event)
     }

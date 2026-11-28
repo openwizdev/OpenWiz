@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 import ctypes, fcntl, importlib.machinery, importlib.util, io, json, os, re, secrets, shutil, signal, subprocess, sys, time, uuid
 import math, shlex, tempfile
+from datetime import datetime, timedelta, timezone
 
 sys.dont_write_bytecode = True
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+SELF = os.path.abspath(__file__)
 KIT = os.path.join(HERE, '..', '..', 'kernel', 'driver-kit', 'kit.py')
 STATE = os.path.abspath(os.environ.get('OPENWIZ_LOCAL_STATE') or os.path.expanduser('~/.local/state/openwiz-local'))
 APPROVALS = os.path.join(STATE, 'approvals.json')
@@ -20,7 +22,7 @@ HARNESSES = {'claude': lambda model, mode, prompt: ['-p', prompt, '--model', mod
 MODE_ROW = '| Harness permission mode |'
 ROWS = os.path.join(HERE, 'harnesses')
 ROW_FIELDS = ('harness', 'program', 'start', 'wake', 'session', 'modes', 'env', 'effort', 'login', 'daemon')
-OPTIONAL_ROW_FIELDS = ('signed_out', 'login_command', 'login_env', 'precheck', 'stop')
+OPTIONAL_ROW_FIELDS = ('signed_out', 'login_command', 'login_env', 'precheck', 'stop', 'limit')
 PLACEHOLDERS = ('{prompt}', '{model}', '{session}', '{mode}', '{effort}')
 SESSION = r'[A-Za-z0-9._:-]{1,100}'
 EFFORT = r'[a-z][a-z0-9-]{0,19}'
@@ -48,6 +50,34 @@ STOP_NOTES = []
 NO_LSOF = ('driver: lsof could not run or failed, so the driver could not check which processes hold this '
            "run's output file open; it ended only the turns' process groups and the processes their "
            'supervisors recorded')
+LIMIT_TAIL_BYTES = 65536
+LIMIT_TAIL_LINES = 50
+LIMIT_BUFFER_SECONDS = 15
+LIMIT_JITTER_SECONDS = 30
+LIMIT_MAX_WAIT_SECONDS = 6 * 3600
+OVERLOAD_WAITS = (60, 120)
+USAGE_LIMIT = re.compile(r'(?i)(?:' + '|'.join((
+    r"\byou(?:'ve|\s+have)?\s+hit\s+your\s+(?:usage\s+|plan\s+)?limit\b",
+    r'\b(?:rate|usage)[_\s-]+limit[_\s-]+(?:(?:has\s+been|was)\s+)?(?:reached|exceeded)\b',
+    r'\btoo\s+many\s+requests\b',
+    r'\b(?:http\s+|status(?:\s+code)?\s+|api\s+error:?\s*)429\b',
+)) + r')')
+OVERLOAD = re.compile(r'(?i)(?:' + '|'.join((
+    r'\boverloaded_error\b',
+    r'\b(?:api\s+error:?\s*)?529\b[^\n]*\boverloaded\b',
+    r'\b(?:server|service|api|provider|model|anthropic|openai)\b[^.\n]{0,40}\boverloaded\b',
+    r'^[ \t]*(?:[\w .()\[\]-]{0,40}:[ \t]*){0,2}(?:529\s+)?overloaded\b',
+)) + r')', re.M)
+RESET_CUE = re.compile(r'\b(?:resets?|try\s+again|retry|available|wait)(?:\s+at)?\s+', re.I)
+RESET_ISO = re.compile(r'\b\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})\b')
+RESET_UTC = re.compile(r'\b(\d{4}-\d{2}-\d{2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?\s*(?:UTC|GMT)\b', re.I)
+RESET_CLOCK = re.compile(
+    r'(?:(?P<month>[a-z]{3})\s+(?P<day>\d{1,2}),?\s+)?'
+    r'(?P<hour>\d{1,2})(?::(?P<minute>\d{2}))?\s*(?P<ampm>am|pm)?(?![\w:-])'
+    r'(?:\s*(?:\((?P<parenthesized>[^)]*)\)|(?P<zone>UTC\b|GMT\b|[\w+-]+/[\w/+-]+|(?-i:[A-Z]{2,5})\b)))?',
+    re.I)
+RESET_MONTHS = 'jan feb mar apr may jun jul aug sep oct nov dec'.split()
+STOP_SIGNALED = False
 
 
 class Refused(Exception):
@@ -237,6 +267,20 @@ def row_commands(row):
             raise Broken('stop', "it has no {session}, so it could reach other runs' sessions")
 
 
+def check_limit_pattern(row):
+    if 'limit' not in row:
+        return
+    pattern = row['limit']
+    if not plain(pattern):
+        raise Broken('limit', 'it is not one line with no placeholder and nothing credential-shaped')
+    try:
+        matches_empty = re.search(pattern, '', re.I) is not None
+    except re.error:
+        raise Broken('limit', 'its pattern does not compile')
+    if matches_empty:
+        raise Broken('limit', 'its pattern matches empty output, so it would match any failure')
+
+
 def check_row(row, name):
     if not isinstance(row, dict):
         raise Broken('fields', 'it is not one JSON object')
@@ -291,6 +335,7 @@ def check_row(row, name):
         raise Broken('start', 'it has {session}, but the session is reported, not chosen')
     no_credential_arguments(row)
     row_commands(row)
+    check_limit_pattern(row)
     flags = isinstance(effort, dict) and any(isinstance(s, list) for s in effort.values())
     if flags and '{effort}' not in row['start']:
         raise Broken('effort', 'it maps effort values to arguments, but start has no {effort} to pass them')
@@ -328,9 +373,11 @@ def program(harness, effort):
         try:
             row = read_row(os.path.join(ROWS, harness, 'row.json'), harness)
         except Broken as e:
-            raise Refused('%s breaks the harness-row contract (%s: %s); nothing was started'
-                          % (row_file(harness), e.args[0], e.args[1]),
-                          'fix %s as adapters/local/harness-row.md says, then start again' % row_file(harness))
+            error = '%s breaks the harness-row contract (%s: %s); nothing was started' % (
+                row_file(harness), e.args[0], e.args[1])
+            if len(error) > 300:
+                error = '%s breaks the harness-row contract (%s); nothing was started' % (row_file(harness), e.args[0])
+            raise Refused(error, 'fix %s as adapters/local/harness-row.md says, then start again' % row_file(harness))
         if row is None and os.path.isdir(os.path.join(ROWS, harness)):
             raise Refused('%s is missing, so harness %s has no row; nothing was started' % (row_file(harness), harness),
                           'add %s as adapters/local/harness-row.md says, then start again' % row_file(harness))
@@ -783,31 +830,381 @@ def descendants(pid):
     return found
 
 
+def limit_now():
+    return time.time()
+
+
+def limit_jitter():
+    return secrets.randbelow(LIMIT_JITTER_SECONDS * 1000 + 1) / 1000.0
+
+
+def format_reset(ts):
+    return datetime.fromtimestamp(ts, tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+
+def limit_file(run):
+    return os.path.join(STATE, run + '.limit.json')
+
+
+def write_limit_state(run, info):
+    path = limit_file(run)
+    try:
+        fd = os.open(path + '.new', os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, 'w') as f:
+            json.dump(info, f)
+        os.replace(path + '.new', path)
+    except OSError:
+        pass
+
+
+def read_limit_state(run):
+    try:
+        with open(limit_file(run)) as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else None
+    except (OSError, ValueError):
+        return None
+
+
+def clear_limit_state(run):
+    try:
+        os.remove(limit_file(run))
+    except OSError:
+        pass
+
+
+def turn_tail_lines(run, output_from):
+    try:
+        with open(log_path(run), 'rb') as f:
+            f.seek(0, os.SEEK_END)
+            size = f.tell()
+            start = max(output_from or 0, size - LIMIT_TAIL_BYTES)
+            if start >= size:
+                return []
+            f.seek(start)
+            text = f.read().decode(errors='replace')
+    except OSError:
+        return []
+    lines = [l for l in text.splitlines() if l.strip()]
+    return lines[-LIMIT_TAIL_LINES:]
+
+
+def parse_reset_clock(text, now):
+    match = RESET_CLOCK.match(text)
+    if not match:
+        return None
+    zone = (match['parenthesized'] or match['zone'] or '').strip()
+    if match['minute'] is None and match['ampm'] is None and not zone:
+        return None
+    hour, minute = int(match['hour']), int(match['minute'] or 0)
+    if match['ampm']:
+        if not 1 <= hour <= 12:
+            return None
+        hour = hour % 12 + (12 if match['ampm'].lower() == 'pm' else 0)
+    if hour > 23 or minute > 59:
+        return None
+    tz = timezone.utc
+    if zone and zone.upper() not in ('UTC', 'GMT'):
+        if '/' not in zone:
+            return None
+        from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+        try:
+            tz = ZoneInfo(zone)
+        except (ValueError, ZoneInfoNotFoundError):
+            return None
+    base = datetime.fromtimestamp(now, tz=tz)
+    if match['month'] is None:
+        candidate = base.replace(hour=hour, minute=minute, second=0, microsecond=0, fold=0)
+        if candidate.timestamp() <= now:
+            candidate += timedelta(days=1)
+        return candidate.timestamp()
+    month = match['month'].lower()
+    if month not in RESET_MONTHS:
+        return None
+    month, day = RESET_MONTHS.index(month) + 1, int(match['day'])
+    for year in (base.year, base.year + 1):
+        try:
+            candidate = datetime(year, month, day, hour, minute, tzinfo=tz)
+        except ValueError:
+            continue
+        if candidate.timestamp() > now:
+            return candidate.timestamp()
+    return None
+
+
+def parse_reset_time(text, now, cue=None):
+    if cue:
+        text = text[cue.end():]
+    match = (RESET_ISO.match if cue else RESET_ISO.search)(text)
+    if match:
+        raw = match[0].replace('Z', '+00:00')
+        if re.search(r'[+-]\d{4}$', raw):
+            raw = raw[:-2] + ':' + raw[-2:]
+        try:
+            return datetime.fromisoformat(raw).timestamp()
+        except ValueError:
+            return None
+    match = (RESET_UTC.match if cue else RESET_UTC.search)(text)
+    if match:
+        try:
+            return datetime.fromisoformat('%sT%02d:%s:%s+00:00' %
+                                          (match[1], int(match[2]), match[3], match[4] or '00')).timestamp()
+        except ValueError:
+            return None
+    epoch = re.match(r'(\d{10})\b', text) if cue else re.search(r'\|(\d{10})\b', text)
+    if epoch and int(epoch[1]) >= 1700000000:
+        return float(epoch[1])
+    if not cue:
+        return None
+    match = re.match(
+        r'(?:in|after)\s+((?:\d+\s*(?:hours?|hrs?|h|minutes?|mins?|m|seconds?|secs?|s)(?![a-z])(?:\s*(?:,|and)?\s*)?)+)',
+        text, re.I)
+    if match:
+        units = {'h': 3600, 'm': 60, 's': 1}
+        seconds = sum(int(amount) * units[unit[0].lower()]
+                      for amount, unit in re.findall(r'(\d+)\s*([hms])', match[1], re.I))
+        return now + seconds if seconds else None
+    return parse_reset_clock(text, now)
+
+
+def detect_limit(lines, row=None, now=None):
+    now = limit_now() if now is None else now
+    custom = None
+    if row and row.get('limit'):
+        try:
+            custom = re.compile(row['limit'], re.I)
+        except re.error:
+            pass
+    for index in range(len(lines) - 1, -1, -1):
+        text = lines[index]
+        if USAGE_LIMIT.search(text):
+            kind = 'limit'
+        elif OVERLOAD.search(text):
+            kind = 'overload'
+        elif custom and custom.search(text):
+            kind = 'limit'
+        else:
+            continue
+        reset_at = parse_reset_time(text, now, RESET_CUE.search(text))
+        if reset_at is None and index + 1 < len(lines):
+            following = lines[index + 1].lstrip()
+            cue = RESET_CUE.match(following)
+            if cue:
+                reset_at = parse_reset_time(following, now, cue)
+        return {'kind': kind, 'reset_at': reset_at,
+                'too_long': reset_at is not None and (reset_at - now) > LIMIT_MAX_WAIT_SECONDS}
+    return None
+
+
+def limit_refusal(run, info, from_start=False, code=None):
+    what = 'provider overload' if info.get('kind') == 'overload' else 'usage limit'
+    reset_iso = format_reset(info['reset_at']) if info.get('reset_at') is not None else None
+    wake_iso = format_reset(info['wake_at']) if info.get('wake_at') is not None else None
+    if from_start:
+        exit_part = ' (exit %s)' % ('unknown' if code is None else code)
+        if reset_iso:
+            err = 'run %s: the first turn hit a %s; resets at %s%s' % (run, what, reset_iso, exit_part)
+            if info.get('too_long'):
+                nxt = 'reset is more than 6 hours away; start again after %s' % reset_iso
+            else:
+                base = 'wait until after %s, then start again' % reset_iso
+                full = "%s; %s has the turn's output" % (base, log_path(run))
+                nxt = full if len(full) <= 300 else base
+        else:
+            err = 'run %s: the first turn hit %s%s' % (run, what, exit_part)
+            base = 'wait a minute and start again'
+            full = "%s; %s has the turn's output" % (base, log_path(run))
+            nxt = full if len(full) <= 300 else base
+        return err, nxt
+    if info.get('waiting'):
+        if reset_iso:
+            return ('run %s is waiting out a %s; resets at %s' % (run, what, reset_iso),
+                    'the run resumes on its own after %s (around %s); no wake needed' % (reset_iso, wake_iso or reset_iso))
+        return ('run %s is waiting out %s until %s' % (run, what, wake_iso),
+                'the run resumes on its own at %s; no wake needed' % wake_iso)
+    if info.get('too_long') and reset_iso:
+        return ('run %s hit a %s; resets at %s (more than 6 hours away)' % (run, what, reset_iso),
+                'wake the run after %s' % reset_iso)
+    return ('run %s hit a %s' % (run, what), 'wait and wake the run again')
+
+
+def limit_stop_requested(run):
+    if STOP_SIGNALED:
+        return True
+    try:
+        return bool(saved(run).get('stopped'))
+    except (OSError, ValueError, Refused):
+        return False
+
+
+def limit_sleep(seconds, run):
+    end_at = time.monotonic() + max(0.0, seconds)
+    while time.monotonic() < end_at:
+        if limit_stop_requested(run):
+            return False
+        time.sleep(min(0.2, max(0.01, end_at - time.monotonic())))
+    return not limit_stop_requested(run)
+
+
+def check_limit_before_wake(run):
+    info = read_limit_state(run)
+    if not info:
+        return
+    if info.get('waiting'):
+        sup, sup_since = info.get('supervisor'), info.get('supervisor_since')
+        if sup is not None and sup_since is not None and since(sup) == sup_since:
+            raise Refused(*limit_refusal(run, info, from_start=False))
+        clear_limit_state(run)
+        return
+    if info.get('too_long') and info.get('reset_at') is not None:
+        if limit_now() < info['reset_at']:
+            raise Refused(*limit_refusal(run, info, from_start=False))
+        clear_limit_state(run)
+
+
+def next_resume_after_limit(run, output_from, exit_code, counts):
+    if exit_code in (None, 0) or limit_stop_requested(run):
+        return None
+    try:
+        state = saved(run)
+    except (OSError, ValueError, Refused):
+        return None
+    if state.get('starting') or state.get('stopped'):
+        return None
+    info = detect_limit(turn_tail_lines(run, output_from), state.get('row'))
+    if info is None:
+        return None
+    now = limit_now()
+    if info['too_long']:
+        write_limit_state(run, dict(info, waiting=False, supervisor=os.getpid(), supervisor_since=since(os.getpid())))
+        return None
+    if info['reset_at'] is not None:
+        if counts['limit'] >= 1:
+            clear_limit_state(run)
+            return None
+        counts['limit'] += 1
+        wake_at = max(now, info['reset_at']) + LIMIT_BUFFER_SECONDS + limit_jitter()
+        wait_s = max(0.0, wake_at - now)
+    elif info['kind'] == 'overload':
+        if counts['overload'] >= len(OVERLOAD_WAITS):
+            clear_limit_state(run)
+            return None
+        wait_s = float(OVERLOAD_WAITS[counts['overload']])
+        counts['overload'] += 1
+        wake_at = now + wait_s
+    else:
+        if counts['limit'] >= 1:
+            clear_limit_state(run)
+            return None
+        counts['limit'] += 1
+        wait_s = float(OVERLOAD_WAITS[0])
+        wake_at = now + wait_s
+    write_limit_state(run, dict(info, waiting=True, wake_at=wake_at,
+                                supervisor=os.getpid(), supervisor_since=since(os.getpid())))
+    try:
+        log = open_log(run)
+        try:
+            os.write(log, ('driver: %s; waiting until %s to resume on the same model\n'
+                           % (info['kind'], format_reset(wake_at))).encode())
+        finally:
+            os.close(log)
+    except OSError:
+        pass
+    if not limit_sleep(wait_s, run):
+        clear_limit_state(run)
+        return None
+    try:
+        lock_fd = os.open(os.path.join(STATE, run + '.lock'), os.O_RDONLY | os.O_CREAT, 0o600)
+        try:
+            fcntl.flock(lock_fd, fcntl.LOCK_EX)
+            state = saved(run)
+            if STOP_SIGNALED or state.get('stopped'):
+                return None
+            if state.get('row') and state.get('session') is None:
+                state['session'] = reported_session(run, state['row']['session'], state['turns'][0])
+                if state['session'] is None:
+                    return None
+            return resume_turn(run, state)
+        finally:
+            clear_limit_state(run)
+            os.close(lock_fd)
+    except (OSError, ValueError, Refused):
+        return None
+
+
+def resume_turn(run, state):
+    cmd, overlay = command(state, True)
+    overlay = agent_environment(run, state['request']['harness'], overlay)
+    try:
+        log = open_log(run)
+        output_from = os.fstat(log).st_size
+    except OSError:
+        log, output_from = subprocess.DEVNULL, 0
+    try:
+        harness = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=log, stderr=log,
+                                   cwd=work(run), env=dict(os.environ, **overlay))
+    finally:
+        if log != subprocess.DEVNULL:
+            os.close(log)
+    turn = {'pid': harness.pid, 'since': since(harness.pid), 'supervisor': os.getpid(),
+            'supervisor_since': since(os.getpid()), 'output_from': output_from}
+    try:
+        saved(run, dict(state, turns=state['turns'] + [turn]))
+    except OSError:
+        harness.kill()
+        harness.wait()
+        raise
+    return harness, output_from
+
+
+def _on_stop_signal(_sig, _frame):
+    global STOP_SIGNALED
+    STOP_SIGNALED = True
+
+
 def supervise(cmd):
     # SECURITY: the row's env and effort setting go to the harness only; the supervisor and its process tools keep
     # the driver's own environment.
+    run = os.environ['OPENWIZ_RUN']
     overlay = json.loads(os.environ.pop('OPENWIZ_TURN_ENV', '{}'))
+    output_from = int(os.environ.pop('OPENWIZ_OUTPUT_FROM', '0') or '0')
     if LINUX and ctypes.CDLL(None, use_errno=True).prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0) != 0:
         print(json.dumps({'error': 'this host cannot keep a turn\'s processes together'}), flush=True)
         return
     try:
         harness = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=sys.stderr, stderr=sys.stderr,
-                                   cwd=work(os.environ['OPENWIZ_RUN']), env=dict(os.environ, **overlay))
+                                   cwd=work(run), env=dict(os.environ, **overlay))
     except OSError as e:
         print(json.dumps({'error': e.strerror}), flush=True)
         return
-    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+    signal.signal(signal.SIGTERM, _on_stop_signal)
     print(json.dumps({'pid': harness.pid, 'since': since(harness.pid)}), flush=True)
     os.dup2(os.open(os.devnull, os.O_WRONLY), 1)
     if not LINUX:
         os.dup2(os.open(os.devnull, os.O_WRONLY), 2)
-        return look_after_the_turn_on_macos(os.environ['OPENWIZ_RUN'], harness.pid, log_path(os.environ['OPENWIZ_RUN']))
+    counts = {'limit': 0, 'overload': 0}
     while True:
-        try:
-            pid, status = os.wait()
-        except ChildProcessError:
+        exit_code = None
+        if not LINUX:
+            look_after_the_turn_on_macos(run, harness.pid, log_path(run))
+            try:
+                with open(exit_file(run, harness.pid)) as f:
+                    exit_code = int(f.read())
+            except (OSError, ValueError):
+                exit_code = None
+        else:
+            while True:
+                try:
+                    pid, status = os.wait()
+                except ChildProcessError:
+                    break
+                if pid == harness.pid:
+                    exit_code = os.waitstatus_to_exitcode(status)
+                saved_exit(pid, status, harness.pid)
+        resumed = next_resume_after_limit(run, output_from, exit_code, counts)
+        if not resumed:
             return
-        saved_exit(pid, status, harness.pid)
+        harness, output_from = resumed
 
 
 def saved_exit(pid, status, harness):
@@ -895,7 +1292,7 @@ def shells_go_first(path, previous):
 
 def agent_environment(run, harness, overlay):
     if not LINUX:
-        return {}
+        return overlay
     owner = dict(os.environ, **overlay)
     added = {'BASH_ENV': shells_go_first(os.path.join(STATE, run + '.bash-env'), owner.get('BASH_ENV'))}
     if harness == 'claude':
@@ -904,14 +1301,14 @@ def agent_environment(run, harness, overlay):
     cpus = cpu_quota()
     if cpus:
         added.update({name: str(cpus) for name in CPU_VARIABLES if name not in owner})
-    return added
+    return dict(overlay, **added)
 
 
 def launch(state, run, woken):
     req = state['request']
     cmd, extra = command(state, woken)
     try:
-        extra = dict(extra, **agent_environment(run, req['harness'], extra))
+        extra = agent_environment(run, req['harness'], extra)
     except OSError as e:
         raise Refused('could not write this turn\'s shell helper: %s' % e.strerror, WRITABLE)
     try:
@@ -920,8 +1317,9 @@ def launch(state, run, woken):
     except OSError:
         log, output_from = subprocess.DEVNULL, 0
     try:
-        sup = subprocess.Popen([sys.executable, '-I', os.path.abspath(__file__), '--turn'] + cmd,
-                               env=dict(os.environ, OPENWIZ_RUN=run, OPENWIZ_TURN_ENV=json.dumps(extra)),
+        sup = subprocess.Popen([sys.executable, '-I', SELF, '--turn'] + cmd,
+                               env=dict(os.environ, OPENWIZ_RUN=run, OPENWIZ_TURN_ENV=json.dumps(extra),
+                                        OPENWIZ_OUTPUT_FROM=str(output_from)),
                                start_new_session=True,
                                stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=log)
         with sup.stdout:
@@ -948,7 +1346,7 @@ def running(turn):
 
 
 def end(turns, run):
-    kept = [(t['supervisor'], t['supervisor_since']) for t in turns if t and t['supervisor_since'] is not None]
+    kept = list(dict.fromkeys((t['supervisor'], t['supervisor_since']) for t in turns if t and t['supervisor_since'] is not None))
     if lsof_failed_in(run, kept):
         LSOF_COULD_NOT_CHECK.append(run)
     for sig, wait in ((signal.SIGTERM, GRACE), (signal.SIGKILL, 2)):
@@ -958,7 +1356,10 @@ def end(turns, run):
             if not kept:
                 return
             if not LINUX:
-                for p in set(members({s for s, _ in kept}, recorded_by(run, kept), writing_to(log_path(run)))) - sent:
+                targets = set(members({s for s, _ in kept}, recorded_by(run, kept), writing_to(log_path(run))))
+                if not targets:
+                    targets = {s for s, _ in kept}
+                for p in targets - sent:
                     try:
                         os.kill(p, sig)
                         sent.add(p)
@@ -966,13 +1367,15 @@ def end(turns, run):
                         pass
                 time.sleep(0.1)
                 continue
+            under = set().union(*(descendants(s) for s, _ in kept))
+            idle = {s for s, _ in kept if not descendants(s)}
             pinned = {}
-            for p in set().union(*(descendants(s) for s, _ in kept)) - sent:
+            for p in (under | idle) - sent:
                 try:
                     pinned[p] = os.pidfd_open(p)
                 except OSError:
                     pass
-            under = set().union(*(descendants(s) for s, _ in kept))
+            under = set().union(*(descendants(s) for s, _ in kept)) | {s for s, t in kept if since(s) == t and not descendants(s)}
             for p, fd in pinned.items():
                 try:
                     if p in under:
@@ -1037,6 +1440,11 @@ def ended_at_once(run, turn, row=None, precheck_output=None):
     except OSError:
         log = ''
     signed_out = SIGNED_OUT.search(log) or signed_out_by_row(row, turn_output(run, turn))
+    if not signed_out and not REFUSAL.search(log) and code != 0:
+        limit_info = detect_limit(turn_tail_lines(run, turn.get('output_from', 0)), row)
+        if limit_info:
+            end([turn], run)
+            raise Refused(*limit_refusal(run, limit_info, from_start=True, code=code))
     why = ('the harness is not signed in' if signed_out else
            'the harness refused a tool' if REFUSAL.search(log) else None if code == 0 else 'the harness failed')
     if why is None:
@@ -1154,6 +1562,7 @@ def answer(cmd):
                     os.remove(name)
                 except OSError:
                     pass
+            clear_limit_state(run)
             if not kept:
                 raise Refused('run %s has ended, but the driver could not save that it is stopped' % run,
                               WRITABLE + ', then stop it again')
@@ -1162,6 +1571,7 @@ def answer(cmd):
             raise Refused('run %s is stopped' % run, 'start a new run')
         if state.get('starting'):
             raise Refused('run %s never finished starting' % run, 'stop it, then start a new run')
+        check_limit_before_wake(run)
         found = state.get('row') and state['session'] is None
         if found:
             state['session'] = reported_session(run, state['row']['session'], state['turns'][0])

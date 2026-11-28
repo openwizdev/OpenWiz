@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openwiz.dev/contracts/notifications.v1.schema.json",
+  "title": "OpenWiz notifications v1",
+  "$ref": "#/$defs/preferences",
+  "$defs": {
+    "preferences": {
+      "type": "object",
+      "required": ["schema", "kinds", "quiet_hours", "digest", "channels"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": { "const": "openwiz.notifications.v1" },
+        "kinds": {
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/eventKind" },
+          "additionalProperties": { "enum": ["push", "feed", "off"] }
+        },
+        "quiet_hours": {
+          "type": ["object", "null"],
+          "required": ["start", "end", "time_zone"],
+          "additionalProperties": false,
+          "properties": {
+            "start": { "$ref": "#/$defs/localTime" },
+            "end": { "$ref": "#/$defs/localTime" },
+            "time_zone": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_+-]+(/[A-Za-z0-9_+-]+)*$(?![\\s\\S])",
+              "format": "iana-time-zone"
+            }
+          }
+        },
+        "digest": { "enum": ["none", "hourly", "daily"] },
+        "channels": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "not": { "const": "t3" }
+          }
+        }
+      }
+    },
+    "eventKind": {
+      "enum": [
+        "spec-to-approve",
+        "pr-ready-to-merge",
+        "release",
+        "key-needed",
+        "setting-proposal",
+        "blocker",
+        "quota-switch",
+        "driver-suggestion",
+        "request:submitted",
+        "request:triaged",
+        "request:building",
+        "request:pull-request",
+        "request:reviewed",
+        "request:merged",
+        "request:released",
+        "request:working-on-install",
+        "context:Done",
+        "context:Ticketed",
+        "context:Decide",
+        "context:Reply",
+        "context:Drop"
+      ]
+    },
+    "localTime": {
+      "type": "string",
+      "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+      "maxLength": 5
+    },
+    "onlyWhenNeeded": {
+      "description": "Effective policy when the file is absent. This object is never saved as a preferences file.",
+      "const": {
+        "event_defaults": { "needs_owner": "push", "other": "feed" },
+        "quiet_hours": null,
+        "digest": "none",
+        "channels": []
+      }
+    }
+  }
+}

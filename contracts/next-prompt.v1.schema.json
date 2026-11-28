@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:openwiz:schema:next-prompt:v1",
+  "title": "openwiz.next-prompt.v1",
+  "oneOf": [
+    { "$ref": "#/$defs/predict_request" },
+    { "$ref": "#/$defs/predict_response" },
+    { "$ref": "#/$defs/acceptance_record" }
+  ],
+  "$defs": {
+    "schema_id": { "const": "openwiz.next-prompt.v1" },
+    "surface": {
+      "enum": ["openwiz-app", "t3-code", "bb-plugin", "cli", "other"]
+    },
+    "prediction_id": {
+      "type": "string",
+      "minLength": 1,
+      "not": { "pattern": "[^A-Za-z0-9_-]" }
+    },
+    "predict_request": {
+      "type": "object",
+      "required": ["surface"],
+      "additionalProperties": false,
+      "properties": {
+        "surface": { "$ref": "#/$defs/surface" }
+      }
+    },
+    "predict_response": {
+      "type": "object",
+      "required": ["schema", "prediction"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": { "$ref": "#/$defs/schema_id" },
+        "prediction": {
+          "oneOf": [
+            { "$ref": "#/$defs/prediction" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "prediction": {
+      "type": "object",
+      "required": ["id", "prompt", "source", "confidence"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/prediction_id" },
+        "prompt": {
+          "type": "string",
+          "pattern": "\\S",
+          "not": { "pattern": "^\\s*Ask anything\\s*$" }
+        },
+        "source": {
+          "enum": ["open_decision_request", "factory_feed", "factory_states", "recent_owner_ask"]
+        },
+        "confidence": { "type": "number", "minimum": 0.30, "maximum": 1 }
+      }
+    },
+    "acceptance_record": {
+      "type": "object",
+      "required": ["schema", "prediction_id", "at", "surface", "outcome", "storage", "opt_in"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": { "$ref": "#/$defs/schema_id" },
+        "prediction_id": { "$ref": "#/$defs/prediction_id" },
+        "at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "surface": { "$ref": "#/$defs/surface" },
+        "outcome": { "enum": ["shown", "accepted", "accepted_then_edited"] },
+        "storage": { "const": "local" },
+        "opt_in": { "const": true }
+      }
+    }
+  }
+}

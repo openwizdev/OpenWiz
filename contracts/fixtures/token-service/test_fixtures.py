@@ -4,6 +4,7 @@
 Offline and credential-free: it reads only contracts/. Run it from anywhere:
 python3 -I contracts/fixtures/token-service/test_fixtures.py
 """
+import base64
 import json
 from pathlib import Path
 import re
@@ -44,13 +45,11 @@ def strict(text):
 
 
 def leaks(case, token):
-    """Every place in one fixture case that holds TOKEN outside its private places:
-    the answer's token field, the private token file, and exactly GH_TOKEN."""
     found = []
     for key, value in case.items():
         if key in ("out", "before"):
             for slot, held in value.items():
-                if slot in ("message", "token_file"):
+                if slot == "token_file":
                     continue
                 if slot == "env":
                     found += [f"{key}.env.{k}" for k, v in held.items()
@@ -60,6 +59,30 @@ def leaks(case, token):
         elif key != "token" and token in json.dumps(value):
             found.append(key)
     return found
+
+
+def public_key(bits=3072, exponent=65537, algorithm="06092a864886f70d0101010500"):
+    def der(tag, body):
+        size = len(body).to_bytes(2, "big")
+        return bytes([tag]) + (b"\x82" + size if len(body) > 255 else bytes([len(body)])) + body
+    modulus = der(2, b"\0" + ((1 << bits) - 1).to_bytes(bits // 8, "big"))
+    key = der(0x30, modulus + der(2, exponent.to_bytes(3, "big").lstrip(b"\0")))
+    text = base64.b64encode(der(0x30, der(0x30, bytes.fromhex(algorithm)) + der(3, b"\0" + key))).decode()
+    edge = "-----%s PUBLIC KEY-----\n"
+    return edge % "BEGIN" + re.sub("(.{1,64})", "\\1\n", text) + edge % "END"
+
+
+def filled(value, key=None, sealed="A" * 512):
+    def fill(item):
+        if isinstance(item, dict):
+            return {k: fill(v) for k, v in item.items()}
+        if isinstance(item, list):
+            return [fill(v) for v in item]
+        if isinstance(item, str) and item.startswith("{"):
+            return item.replace("<answer key>", json.dumps(key)[1:-1])
+        return {"<answer key>": key, "<sealed token>": sealed}.get(item, item) if isinstance(item, str) else item
+    key = public_key() if key is None else key
+    return fill(value)
 
 
 def resolve(schema, root):
@@ -123,7 +146,7 @@ class Base(unittest.TestCase):
         self.assertTrue(CONTRACT.is_file(), "contracts/token-service.v1.md is missing")
         self.pin = pin_of(CONTRACT)
         self.schema = self.load(SCHEMA)
-        self.fixtures = {name: self.load(HERE / name) for name in FIXTURES}
+        self.fixtures = {name: filled(self.load(HERE / name)) for name in FIXTURES}
 
     def valid(self, message):
         return errors(message, self.schema, self.schema)
@@ -143,27 +166,45 @@ class ThePin(Base):
     def test_the_key_stays_on_the_owners_machine(self):
         # catches: a contract that lets the key travel or lets an agent ask for it.
         key = self.pin["key"]
-        self.assertEqual(key["lives"], "owner's machine only")
+        self.assertEqual(
+            key["lives"],
+            "the owner's machine (pairing and local), or the token-service environment secret of the owner's private repository (actions)",
+        )
         self.assertEqual(key["path"], "<state>/service/app/private-key.pem")
         self.assertEqual((key["file_mode"], key["directory_mode"]), ("0600", "0700"))
         self.assertEqual(key["agents"], "never ask for, read, copy or hold it")
         self.assertEqual(key["leaves_the_machine"], False)
+        self.assertEqual(key.get("actions_environment"), {
+            "name": "token-service",
+            "secret": "OPENWIZ_GITHUB_APP_KEY",
+            "deployment_branches": "main only",
+            "trigger": "workflow_dispatch only",
+            "ref": "refs/heads/main",
+            "delivery": "pipe or descriptor, never a file",
+        })
 
     def test_the_service_has_no_port_and_takes_the_request_on_stdin(self):
         # catches: a reach route that opens a port or puts anything on a command line.
         reach = self.pin["reach"]
         self.assertEqual(reach["listens"], "no port")
         self.assertEqual(reach["request"], "stdin")
-        for argv in reach["routes"].values():
-            self.assertNotIn("token", " ".join(argv).lower())
+        for route_name, argv in reach["routes"].items():
+            if isinstance(argv, list):
+                self.assertNotIn("token", " ".join(argv).lower(), route_name)
         self.assertEqual(reach["routes"]["pairing"][:4], ["room-cli", "mac", "run", "--stdin"])
+        self.assertIn("actions", reach["routes"])
+        self.assertEqual(reach.get("actions_timeout_s"), 120)
+        self.assertIn("actions", reach["configuration"]["OPENWIZ_TOKEN_SERVICE_ROUTE"])
+        self.assertIn("OPENWIZ_TOKEN_SERVICE_REPOSITORY", reach["configuration"])
         # catches: a pairing route that lets the token rest in a pairing log or result record.
         crossing = reach.get("token_crossing", {})
         self.assertEqual(crossing.get("never"), ["command line", "terminal", "log", "record"])
-        self.assertEqual(crossing.get("only"), "piped stdout of one room-cli mac run --stdin call")
+        self.assertEqual(crossing.get("only"), "sealed, as piped stdout of one room-cli mac run --stdin call")
         self.assertEqual(crossing.get("into"), "the caller's private place")
-        self.assertEqual(crossing.get("live_gate"), "GA5 reads back no pairing log or mac run result record keeps it")
-        self.assertEqual(crossing.get("if_kept"), "cloud route stays off; cloud threads fall back with the note")
+        self.assertEqual(crossing.get("live_gate"),
+                         "GA5 reads back that a kept pairing log or mac run result record holds only the sealed answer")
+        self.assertEqual(crossing.get("if_plaintext_kept"),
+                         "cloud route stays off; cloud threads fall back with the note")
 
     def test_every_refusal_has_one_exit_and_one_fixed_sentence(self):
         # catches: a refusal code without a fixed exit or message the helper can rely on.
@@ -174,6 +215,28 @@ class ThePin(Base):
             self.assertIn(row["exit"], (1, 2, 3, 5), code)
             self.assertRegex(row["message"], r"^[A-Z][^\n]*\.$", code)
         self.assertNotIn(0, [row["exit"] for row in refusals.values()])
+
+
+class Sealing(Base):
+    def test_the_schema_takes_only_an_rsa_3072_answer_key(self):
+        # comment-ok: catches: a schema that takes a key the service refuses, or one too weak to seal with.
+        request = self.fixtures["requests.json"]["cases"][0]["request"]
+        self.assertEqual(self.valid(request), [])
+        key = request.get("answer_key", "")
+        for name, bad in (("2048", public_key(2048)), ("4096", public_key(4096)), ("exponent 1", public_key(exponent=1)),
+                          ("RSA-PSS", public_key(algorithm="06092a864886f70d01010a0500")),
+                          ("junk after", key + "x"), ("CRLF", key.replace("\n", "\r\n")), ("not text", 1)):
+            with self.subTest(name):
+                self.assertNotEqual(self.valid(dict(request, answer_key=bad)), [])
+
+    def test_the_pin_says_how_a_token_is_sealed(self):
+        # comment-ok: catches: a contract whose two sides could seal and open differently.
+        self.assertEqual(self.pin["request"].get("answer_key"), {
+            "form": "RSA 3072-bit, exponent 65537, as a PEM SubjectPublicKeyInfo", "used": "one request only",
+            "private_half": "the helper's memory only", "otherwise": "usage"})
+        self.assertEqual(self.pin["answer"].get("sealed_token"), {
+            "padding": "RSA-OAEP", "hash": "SHA-256", "mgf1": "SHA-256", "encoding": "base64",
+            "block_holds_bytes": 318, "block_bytes": 384, "blocks": [1, 8], "cannot_open": "bad-answer"})
 
 
 class Requests(Base):
@@ -340,7 +403,7 @@ class NeverExposed(Base):
         for name in ("requests.json", "fallback.json"):
             for case in self.fixtures[name]["cases"]:
                 out, before = case["out"], case.get("before", {})
-                tokens = {out.get("message", {}).get("token"), case.get("token"),
+                tokens = {case.get("token"),
                           out.get("token_file"), before.get("token_file")} - {None}
                 for token in tokens:
                     self.assertTrue(token.startswith("synthetic-"), case["name"])

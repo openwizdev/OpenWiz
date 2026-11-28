@@ -8,6 +8,13 @@ account and the never-exposed rules. GA2 (#1841) builds the service, GA3
 (#1844) the agent helper and GA4 (#1846) the fleet's use of it. They build to
 this contract.
 
+**Revised in place by #3085**, before any live use: a request carries
+`answer_key` and an answer `sealed_token` in place of `token`. An older service or
+helper meeting a newer one gives a `usage` refusal, so the agent falls back and no
+token is minted. **Extended by #3235** with a third route, `actions`, running as a
+main-only workflow in the owner's private repository and returning the same sealed
+answer.
+
 **This contract grants nothing.** It authorizes no installation, credential,
 token mint, live read or write, or permission change. A fixture or test that
 passes here proves the contract is consistent, never that any of it is live.
@@ -29,13 +36,21 @@ Where they disagree, the contract is wrong and must be fixed.
   "schema": "openwiz.token-service.v1",
   "authority": {"installation": false, "credential": false, "live": false},
   "key": {
-    "lives": "owner's machine only",
+    "lives": "the owner's machine (pairing and local), or the token-service environment secret of the owner's private repository (actions)",
     "path": "<state>/service/app/private-key.pem",
     "file_mode": "0600",
     "directory_mode": "0700",
     "read_by": "the token service only",
     "agents": "never ask for, read, copy or hold it",
-    "leaves_the_machine": false
+    "leaves_the_machine": false,
+    "actions_environment": {
+      "name": "token-service",
+      "secret": "OPENWIZ_GITHUB_APP_KEY",
+      "deployment_branches": "main only",
+      "trigger": "workflow_dispatch only",
+      "ref": "refs/heads/main",
+      "delivery": "pipe or descriptor, never a file"
+    }
   },
   "app_permissions": {
     "metadata": "read",
@@ -50,27 +65,49 @@ Where they disagree, the contract is wrong and must be fixed.
     "request": "stdin",
     "answer": "stdout, one JSON line, read from a pipe",
     "timeout_s": 60,
+    "actions_timeout_s": 120,
     "token_crossing": {
       "never": ["command line", "terminal", "log", "record"],
-      "only": "piped stdout of one room-cli mac run --stdin call",
+      "only": "sealed, as piped stdout of one room-cli mac run --stdin call",
       "into": "the caller's private place",
-      "live_gate": "GA5 reads back no pairing log or mac run result record keeps it",
-      "if_kept": "cloud route stays off; cloud threads fall back with the note"
+      "live_gate": "GA5 reads back that a kept pairing log or mac run result record holds only the sealed answer",
+      "if_plaintext_kept": "cloud route stays off; cloud threads fall back with the note"
     },
     "pairing_gate": {"variable": "OPENWIZ_TOKEN_SERVICE_READBACK", "on_only_when": "passed", "otherwise": "pairing-off"},
     "routes": {
       "pairing": ["room-cli", "mac", "run", "--stdin", "python3 -I '<service>' mint"],
-      "local": ["python3", "-I", "<service>", "mint"]
+      "local": ["python3", "-I", "<service>", "mint"],
+      "actions": "workflow_dispatch on main in OPENWIZ_TOKEN_SERVICE_REPOSITORY, sealed answer artifact named by nonce"
     },
     "configuration": {
       "OPENWIZ_TOKEN_SERVICE": "the service's absolute path on the owner's machine",
-      "OPENWIZ_TOKEN_SERVICE_ROUTE": ["pairing", "local"],
+      "OPENWIZ_TOKEN_SERVICE_ROUTE": ["pairing", "local", "actions"],
+      "OPENWIZ_TOKEN_SERVICE_REPOSITORY": "the owner's private repository (<owner/name>) for the actions route",
       "OPENWIZ_TOKEN_SERVICE_READBACK": "passed only after GA5's live read-back succeeded"
     }
   },
-  "request": {"repeated_key": "usage", "repository_case": "insensitive"},
+  "request": {
+    "repeated_key": "usage",
+    "repository_case": "insensitive",
+    "answer_key": {
+      "form": "RSA 3072-bit, exponent 65537, as a PEM SubjectPublicKeyInfo",
+      "used": "one request only",
+      "private_half": "the helper's memory only",
+      "otherwise": "usage"
+    }
+  },
   "answer": {
     "max_lifetime_s": 3900,
+    "sealed_token": {
+      "padding": "RSA-OAEP",
+      "hash": "SHA-256",
+      "mgf1": "SHA-256",
+      "encoding": "base64",
+      "block_holds_bytes": 318,
+      "block_bytes": 384,
+      "blocks": [1, 8],
+      "cannot_open": "bad-answer"
+    },
     "scope": "exactly the requested repositories and permissions"
   },
   "refusals": {
@@ -104,12 +141,29 @@ Where they disagree, the contract is wrong and must be fixed.
 
 ## Where the key lives
 
-The App's private key lives **only on the owner's machine** (the owner's PC
-now; the VPS later, J258), in the owner's OpenWiz state directory, at
-`<state>/service/app/private-key.pem`, mode 0600 in 0700 directories, where
-the merged minter (`tools/github-app/`) already keeps it. Only the token
-service reads it. It never leaves that machine: not to a cloud sandbox, a
-Cloudroom secret, a pairing call, a prompt, a log or the repository.
+The App's private key lives in one of two places: **the owner's machine (`pairing`
+and `local`), or the `token-service` environment secret of the owner's private
+repository (`actions`)**.
+
+- On the owner's machine (`pairing` and `local`), it sits in the owner's OpenWiz
+  state directory at `<state>/service/app/private-key.pem`, mode 0600 in 0700
+  directories, where the merged minter (`tools/github-app/`) keeps it. Only the
+  token service reads it. It never leaves that machine: not to a cloud sandbox,
+  a Cloudroom secret, a pairing call, a prompt, a log or the repository.
+- On the `actions` route, it lives as the environment secret `OPENWIZ_GITHUB_APP_KEY`
+  (base64 of the PEM) in the `token-service` environment of the owner's private
+  repository, never as a repository secret. **Main-only rule:** only `main`'s
+  workflow code may ever read the key. The workflow triggers on `workflow_dispatch`
+  only, the `token-service` environment's deployment branches are restricted to
+  `main` only, the job refuses any ref other than `refs/heads/main`, `main` is
+  protected by an owner-only ruleset, the OpenWiz checkout is pinned to a commit
+  SHA (never a branch), untrusted inputs reach the script only through `env:`
+  (never inside `${{ }}` in a `run:`), and the key reaches `token-service.py`
+  through a pipe or descriptor, never a file on disk. **Why a branch-triggered
+  workflow must never read the key:** a `push`, `pull_request` or non-`main`
+  dispatch can run untrusted workflow YAML or unreviewed branch code in the same
+  job and exfiltrate the App's private key, which would let an attacker mint
+  installation tokens for every repository the App is installed on.
 
 **Agents never ask for the key.** No agent, helper, brief or request asks for,
 reads, copies or holds it, and nothing in a request names it. The service
@@ -117,13 +171,23 @@ never sends it, and no answer or refusal carries it or the App's JWT.
 
 ## Reaching the service
 
-The service listens on **no port**, public or local. An agent reaches it the
-way it already reaches the owner's machine:
+The service listens on **no port**, public or local. An agent reaches it on one
+of three routes:
 
-- **A cloud thread** runs the service through the owner's existing machine
-  pairing: `room-cli mac run --stdin 'python3 -I <service> mint'`.
-- **A local thread**, already on the owner's machine, runs
+- **A cloud thread (`pairing`)** runs the service through the owner's existing
+  machine pairing: `room-cli mac run --stdin 'python3 -I <service> mint'`.
+- **A local thread (`local`)**, already on the owner's machine, runs
   `python3 -I <service> mint` itself.
+- **An Actions workflow (`actions`)** dispatches `mint-workflow.yml` on `main`
+  in `OPENWIZ_TOKEN_SERVICE_REPOSITORY` (`<owner/name>`, a public setting) with
+  `OPENWIZ_TOKEN_SERVICE_ROUTE=actions`, passing the request JSON (with its
+  one-time `answer_key`) and a fresh random `nonce`. It finds the run by its
+  `run-name` (`openwiz-mint-<nonce>`), waits up to **120 seconds** (backing off
+  on 403 or 429), downloads the single 1-day artifact named by `nonce`, deletes
+  the artifact immediately after download, and opens and checks the sealed
+  answer as on the other routes. The job summary carries only the mint-log
+  fields; no plaintext token ever appears in dispatch inputs, run logs, job
+  summary, artifact or helper output.
 
 `<service>` is the service's absolute path on the owner's machine, from
 `OPENWIZ_TOKEN_SERVICE`; `OPENWIZ_TOKEN_SERVICE_ROUTE` says `pairing` or
@@ -139,12 +203,16 @@ transcript or a log. A call has 60 seconds.
 
 - A token never appears on any command line, in a terminal, or in any log or
   record.
-- It crosses the owner's machine pairing only as the piped standard output of
-  one `room-cli mac run --stdin` call, read straight into the caller's private
-  place.
-- GA5's live check reads back that no pairing log or `mac run` result record
-  keeps it. If one does, the cloud route stays off and cloud threads fall back
-  to the owner's account, with the standard-error note, until that's fixed.
+- It crosses only **sealed** to the request's one-time `answer_key` (#3085), on
+  both routes: the service's output never holds a plaintext token.
+- The sealed answer crosses the owner's machine pairing only as the piped
+  standard output of one `room-cli mac run --stdin` call. Only the asking helper,
+  which holds the private half in memory, opens it, into its private place.
+- The pairing can keep a call's output, such as the result record of a job whose
+  machine disconnected. GA5's live check reads back that a kept pairing log or
+  `mac run` result record holds only the sealed answer. If one holds a plaintext
+  token, the cloud route stays off and cloud threads fall back to the owner's
+  account, with the standard-error note, until that's fixed.
 
 **The pairing route is off by default.** The helper makes a pairing call only
 when `OPENWIZ_TOKEN_SERVICE_READBACK` is exactly `passed`, which the owner
@@ -164,6 +232,7 @@ key, at any depth, is a `usage` refusal, never the last value silently kept.
 
 ```json
 {"schema": "openwiz.token-service.v1", "kind": "request", "requester": "builder-1839",
+ "answer_key": "<PEM public key>",
  "repositories": ["owner/name"], "permissions": {"contents": "write", "metadata": "read"}}
 ```
 
@@ -176,15 +245,36 @@ key, at any depth, is a `usage` refusal, never the last value silently kept.
   use asks for read levels only (github-identity.v1's read profile).
 - **`requester`:** a short synthetic label for the mint log, such as a role and
   ticket number. Never a thread id or a person's name.
+- **`answer_key`:** a public key the helper generates for this request only: RSA,
+  3072-bit, public exponent 65537, as one PEM SubjectPublicKeyInfo exactly as
+  openssl writes it (64-character lines, one line break at the end). A missing or
+  malformed key, or one of any other kind, size or exponent, is a `usage` refusal
+  before any GitHub call. The private half is kept in the helper's memory only: no
+  file, argument or environment variable holds it, openssl reads it through a pipe,
+  and the helper drops it once the answer is opened.
 
 ## The answer
 
 One JSON object (`#/$defs/answer`), exit 0:
 
 ```json
-{"schema": "openwiz.token-service.v1", "kind": "answer", "token": "<token>",
+{"schema": "openwiz.token-service.v1", "kind": "answer", "sealed_token": "<base64>",
  "expires_at": 4600, "repositories": ["owner/name"], "permissions": {"contents": "write", "metadata": "read"}}
 ```
+
+`sealed_token` is the token encrypted to `answer_key` with RSA-OAEP (SHA-256 for
+the hash and MGF1), in base64. One block holds at most 318 bytes, and GitHub's
+installation tokens can be longer (about 520), so the token is cut into pieces of
+318 bytes, the last one shorter or equal, and each is encrypted on its own: 1 to 8
+blocks of 384 bytes, joined in order before the base64. A token of at most 318
+bytes is one plain RSA-OAEP block. A token the service can't seal is revoked and
+answered `unavailable`. The service passes the key and the token to
+`/usr/bin/openssl` only through pipes, never an argument, a file or the
+environment. Sealing keeps the token secret; it doesn't prove who sent the answer,
+which rests on the owner's machine and its pairing, as before.
+
+The helper opens the answer and then checks it. It refuses, as `bad-answer`, one it
+can't open, one whose blocks before the last aren't full, or one with a `token` field.
 
 The token covers **exactly** the requested repositories and permissions,
 nothing wider. `expires_at` is Unix seconds; the token has more than 300 and at
@@ -199,13 +289,13 @@ The service checks in this order and answers the first that applies:
 
 | Refusal | Exit | When |
 | --- | --- | --- |
-| `usage` | 2 | Not one valid request: bad JSON, a missing or unknown field, a bad repository or level |
+| `usage` | 2 | Not one valid request: bad JSON, a missing or unknown field, a bad repository, level or `answer_key` |
 | `one-owner` | 2 | The repositories have more than one owner |
 | `not-installed` | 3 | A repository is not in the App's installation |
 | `permission` | 5 | A permission is not in the App's profile, or above the App's level |
 | `github` | 5 | GitHub refused the exchange, or granted other repositories or permissions |
 | `expiry` | 5 | The minted token has 300 seconds or less left, or claims more than 3900 |
-| `unavailable` | 1 | The service cannot read its App state or key, or cannot reach GitHub |
+| `unavailable` | 1 | The service cannot read its App state or key, cannot reach GitHub, or cannot seal the token |
 
 ## Refresh
 
@@ -233,8 +323,9 @@ helper writes **exactly one line** to standard error per run:
 openwiz: no openwiz[bot] token (<reason>); using the owner's GitHub account
 ```
 
-`<reason>` is `unreachable` (the call failed, timed out, or the service is
-stopped), `bad-answer` (the answer is not one valid answer or refusal, or its
+`<reason>` is `unreachable` (the call failed, timed out, the service is
+stopped, or the helper can't make its one-time key and so makes no call),
+`bad-answer` (the answer is not one valid answer or refusal, can't be opened, or its
 scope or expiry differ from the request and this contract), `pairing-off`
 (the pairing route is configured but its read-back has not passed) or the
 refusal's code.
@@ -251,8 +342,9 @@ does nothing and prints nothing: starts are exactly as today.
 
 - No key or token appears in any output, log, commit, comment, argument list,
   URL, environment other than the `GH_TOKEN` of the child that uses it, or file
-  outside its private place: the key's file on the owner's machine, the
-  service's answer pipe, and the agent's private token file.
+  outside its private place: the key's file on the owner's machine, the pipe the
+  service seals it through, and the agent's private token file. The service's
+  answer holds the token only sealed.
 - **The mint log** is owner-only (0600) on the owner's machine: one line per
   request with `at`, `requester`, `repositories`, `permissions`, `outcome`
   (`minted` or the refusal code) and, when minted, `expires_at`
@@ -271,13 +363,16 @@ does nothing and prints nothing: starts are exactly as today.
 tokens and times are placeholders; times are Unix seconds on a controlled
 clock.
 
+In `requests.json` and `invalid.json`, `<answer key>` stands for the reader's own
+throwaway public key, and `<sealed token>` for the case's `token` sealed to it.
+
 - `requests.json`: a good write and a good read request, and each refusal, with
   the answer or refusal, exit, standard error and mint-log line (GA2's seam).
 - `refresh.json`: tokens with time to spare, at the boundary and expiring, and
   whether the helper refreshes (GA3's seam).
 - `fallback.json`: a pairing whose read-back has not run, was inconclusive,
-  failed or is unknown; an unreachable service, a stopped one, a bad answer,
-  refusals, a failed refresh from a held token, good answers over the pairing
+  failed or is unknown; an unreachable service, a stopped one, bad answers (one
+  the one-time key can't open included), refusals, a failed refresh from a held token, good answers over the pairing
   and locally, and no service configured, with the identity `gh` and git each
   use, the private token file, the environment and standard error (GA3's and
   GA4's seam).

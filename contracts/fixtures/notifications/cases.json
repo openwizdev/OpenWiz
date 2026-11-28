@@ -1,0 +1,161 @@
+[
+  {
+    "rule": "version",
+    "valid": {"schema": "openwiz.notifications.v1", "kinds": {}, "quiet_hours": null, "digest": "none", "channels": []},
+    "broken": {"schema": "openwiz.notifications.v2", "kinds": {}, "quiet_hours": null, "digest": "none", "channels": []},
+    "keyword": "const",
+    "at": ["schema"]
+  },
+  {
+    "rule": "complete-file",
+    "valid": {"schema": "openwiz.notifications.v1", "kinds": {}, "quiet_hours": null, "digest": "none", "channels": []},
+    "broken": {"schema": "openwiz.notifications.v1", "quiet_hours": null, "digest": "none", "channels": []},
+    "keyword": "required",
+    "at": []
+  },
+  {
+    "rule": "extra-field",
+    "valid": {"schema": "openwiz.notifications.v1", "kinds": {}, "quiet_hours": null, "digest": "none", "channels": []},
+    "broken": {"schema": "openwiz.notifications.v1", "kinds": {}, "quiet_hours": null, "digest": "none", "channels": [], "synthetic_extra": true},
+    "keyword": "additionalProperties",
+    "at": []
+  },
+  {
+    "rule": "modes",
+    "valid": {"schema": "openwiz.notifications.v1", "kinds": {"spec-to-approve": "push", "quota-switch": "feed", "release": "off"}, "quiet_hours": null, "digest": "none", "channels": []},
+    "broken": {"schema": "openwiz.notifications.v1", "kinds": {"spec-to-approve": "push", "quota-switch": "feed", "release": "mute"}, "quiet_hours": null, "digest": "none", "channels": []},
+    "keyword": "enum",
+    "at": ["kinds", "release"]
+  },
+  {
+    "rule": "needs-owner-kinds",
+    "valid": {"schema": "openwiz.notifications.v1", "kinds": {"spec-to-approve": "push", "pr-ready-to-merge": "push", "release": "push", "key-needed": "push", "setting-proposal": "push"}, "quiet_hours": null, "digest": "none", "channels": []},
+    "broken": {"schema": "openwiz.notifications.v1", "kinds": {"spec-to-approve": "push", "pr-ready-to-merge": "push", "release": "push", "key-needed": "push", "setting-proposal": "push", "synthetic-approval": "feed"}, "quiet_hours": null, "digest": "none", "channels": []},
+    "keyword": "enum",
+    "at": ["kinds"]
+  },
+  {
+    "rule": "scroll-only-kinds",
+    "valid": {"schema": "openwiz.notifications.v1", "kinds": {"blocker": "feed", "quota-switch": "feed", "driver-suggestion": "feed"}, "quiet_hours": null, "digest": "none", "channels": []},
+    "broken": {"schema": "openwiz.notifications.v1", "kinds": {"blocker": "feed", "quota-switch": "feed", "driver-suggestion": "feed", "synthetic-note": "feed"}, "quiet_hours": null, "digest": "none", "channels": []},
+    "keyword": "enum",
+    "at": ["kinds"]
+  },
+  {
+    "rule": "request-stages",
+    "valid": {"schema": "openwiz.notifications.v1", "kinds": {"request:submitted": "push", "request:triaged": "push", "request:building": "push", "request:pull-request": "push", "request:reviewed": "push", "request:merged": "push", "request:released": "push", "request:working-on-install": "push"}, "quiet_hours": null, "digest": "none", "channels": []},
+    "broken": {"schema": "openwiz.notifications.v1", "kinds": {"request:submitted": "push", "request:triaged": "push", "request:building": "push", "request:pull-request": "push", "request:reviewed": "push", "request:merged": "push", "request:released": "push", "request:working-on-install": "push", "request:synthetic-stage": "feed"}, "quiet_hours": null, "digest": "none", "channels": []},
+    "keyword": "enum",
+    "at": ["kinds"]
+  },
+  {
+    "rule": "context-items",
+    "valid": {"schema": "openwiz.notifications.v1", "kinds": {"context:Done": "feed", "context:Ticketed": "feed", "context:Decide": "feed", "context:Reply": "feed", "context:Drop": "feed"}, "quiet_hours": null, "digest": "none", "channels": []},
+    "broken": {"schema": "openwiz.notifications.v1", "kinds": {"context:Done": "feed", "context:Ticketed": "feed", "context:Decide": "feed", "context:Reply": "feed", "context:Drop": "feed", "context:Synthetic": "feed"}, "quiet_hours": null, "digest": "none", "channels": []},
+    "keyword": "enum",
+    "at": ["kinds"]
+  },
+  {
+    "rule": "quiet-hours",
+    "valid": {"schema": "openwiz.notifications.v1", "kinds": {}, "quiet_hours": {"start": "22:00", "end": "07:00", "time_zone": "America/Chicago"}, "digest": "none", "channels": []},
+    "broken": {"schema": "openwiz.notifications.v1", "kinds": {}, "quiet_hours": "22:00-07:00", "digest": "none", "channels": []},
+    "keyword": "type",
+    "at": ["quiet_hours"]
+  },
+  {
+    "rule": "quiet-hours-clock",
+    "valid": {"schema": "openwiz.notifications.v1", "kinds": {}, "quiet_hours": {"start": "22:00", "end": "07:00", "time_zone": "America/Chicago"}, "digest": "none", "channels": []},
+    "broken": {"schema": "openwiz.notifications.v1", "kinds": {}, "quiet_hours": {"start": "22:00", "end": "24:00", "time_zone": "America/Chicago"}, "digest": "none", "channels": []},
+    "keyword": "pattern",
+    "at": ["quiet_hours", "end"]
+  },
+  {
+    "rule": "quiet-hours-time-zone",
+    "valid": {"schema": "openwiz.notifications.v1", "kinds": {}, "quiet_hours": {"start": "22:00", "end": "07:00", "time_zone": "America/Chicago"}, "digest": "none", "channels": []},
+    "broken": {"schema": "openwiz.notifications.v1", "kinds": {}, "quiet_hours": {"start": "22:00", "end": "07:00"}, "digest": "none", "channels": []},
+    "keyword": "required",
+    "at": ["quiet_hours"]
+  },
+  {
+    "rule": "quiet-hours-iana",
+    "valid": {"schema": "openwiz.notifications.v1", "kinds": {}, "quiet_hours": {"start": "22:00", "end": "07:00", "time_zone": "America/Chicago"}, "digest": "none", "channels": []},
+    "broken": {"schema": "openwiz.notifications.v1", "kinds": {}, "quiet_hours": {"start": "22:00", "end": "07:00", "time_zone": "Etc/Synthetic"}, "digest": "none", "channels": []},
+    "keyword": "format",
+    "at": ["quiet_hours", "time_zone"]
+  },
+  {
+    "rule": "digest-none",
+    "valid": {"schema": "openwiz.notifications.v1", "kinds": {}, "quiet_hours": null, "digest": "none", "channels": []},
+    "broken": {"schema": "openwiz.notifications.v1", "kinds": {}, "quiet_hours": null, "digest": false, "channels": []},
+    "keyword": "enum",
+    "at": ["digest"]
+  },
+  {
+    "rule": "digest-hourly",
+    "valid": {"schema": "openwiz.notifications.v1", "kinds": {}, "quiet_hours": null, "digest": "hourly", "channels": []},
+    "broken": {"schema": "openwiz.notifications.v1", "kinds": {}, "quiet_hours": null, "digest": "weekly", "channels": []},
+    "keyword": "enum",
+    "at": ["digest"]
+  },
+  {
+    "rule": "digest-daily",
+    "valid": {"schema": "openwiz.notifications.v1", "kinds": {}, "quiet_hours": null, "digest": "daily", "channels": []},
+    "broken": {"schema": "openwiz.notifications.v1", "kinds": {}, "quiet_hours": null, "digest": "Daily", "channels": []},
+    "keyword": "enum",
+    "at": ["digest"]
+  },
+  {
+    "rule": "channels",
+    "valid": {"schema": "openwiz.notifications.v1", "kinds": {}, "quiet_hours": null, "digest": "none", "channels": ["synthetic-inbox"]},
+    "broken": {"schema": "openwiz.notifications.v1", "kinds": {}, "quiet_hours": null, "digest": "none", "channels": ["t3"]},
+    "keyword": "not",
+    "at": ["channels", 0]
+  },
+  {
+    "rule": "channels-unique",
+    "valid": {"schema": "openwiz.notifications.v1", "kinds": {}, "quiet_hours": null, "digest": "none", "channels": ["synthetic-inbox"]},
+    "broken": {"schema": "openwiz.notifications.v1", "kinds": {}, "quiet_hours": null, "digest": "none", "channels": ["synthetic-inbox", "synthetic-inbox"]},
+    "keyword": "uniqueItems",
+    "at": ["channels"]
+  },
+  {
+    "rule": "default-needs-owner",
+    "valid": {"event_defaults": {"needs_owner": "push", "other": "feed"}, "quiet_hours": null, "digest": "none", "channels": []},
+    "broken": {"event_defaults": {"needs_owner": "feed", "other": "feed"}, "quiet_hours": null, "digest": "none", "channels": []},
+    "keyword": "const",
+    "at": [],
+    "ref": "#/$defs/onlyWhenNeeded"
+  },
+  {
+    "rule": "default-other",
+    "valid": {"event_defaults": {"needs_owner": "push", "other": "feed"}, "quiet_hours": null, "digest": "none", "channels": []},
+    "broken": {"event_defaults": {"needs_owner": "push", "other": "push"}, "quiet_hours": null, "digest": "none", "channels": []},
+    "keyword": "const",
+    "at": [],
+    "ref": "#/$defs/onlyWhenNeeded"
+  },
+  {
+    "rule": "default-quiet-hours",
+    "valid": {"event_defaults": {"needs_owner": "push", "other": "feed"}, "quiet_hours": null, "digest": "none", "channels": []},
+    "broken": {"event_defaults": {"needs_owner": "push", "other": "feed"}, "quiet_hours": {"start": "22:00", "end": "07:00", "time_zone": "America/Chicago"}, "digest": "none", "channels": []},
+    "keyword": "const",
+    "at": [],
+    "ref": "#/$defs/onlyWhenNeeded"
+  },
+  {
+    "rule": "default-digest",
+    "valid": {"event_defaults": {"needs_owner": "push", "other": "feed"}, "quiet_hours": null, "digest": "none", "channels": []},
+    "broken": {"event_defaults": {"needs_owner": "push", "other": "feed"}, "quiet_hours": null, "digest": "daily", "channels": []},
+    "keyword": "const",
+    "at": [],
+    "ref": "#/$defs/onlyWhenNeeded"
+  },
+  {
+    "rule": "default-channels",
+    "valid": {"event_defaults": {"needs_owner": "push", "other": "feed"}, "quiet_hours": null, "digest": "none", "channels": []},
+    "broken": {"event_defaults": {"needs_owner": "push", "other": "feed"}, "quiet_hours": null, "digest": "none", "channels": ["synthetic-inbox"]},
+    "keyword": "const",
+    "at": [],
+    "ref": "#/$defs/onlyWhenNeeded"
+  }
+]

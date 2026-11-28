@@ -4,12 +4,17 @@ description = "OpenWiz adapter for GitHub: fleet reads through gh, each on its m
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 publish.workspace = true
 
 [dependencies]
 openwiz-core = { path = "../../core" }
 serde.workspace = true
 serde_json.workspace = true
+
+[[bench]]
+name = "parse"
+harness = false
 
 [lints]
 workspace = true

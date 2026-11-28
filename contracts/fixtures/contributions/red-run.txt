@@ -1,0 +1,21 @@
+FF
+======================================================================
+FAIL: test_contract_treats_contribution_content_as_untrusted_data (__main__.ContributionsContract.test_contract_treats_contribution_content_as_untrusted_data)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/synthetic/OpenWiz/contracts/fixtures/contributions/test_fixtures.py", line 43, in test_contract_treats_contribution_content_as_untrusted_data
+    self.assertTrue(contract.is_file(), "the contributions contract is missing")
+AssertionError: False is not true : the contributions contract is missing
+
+======================================================================
+FAIL: test_schema_accepts_valid_records_and_rejects_broken_records (__main__.ContributionsContract.test_schema_accepts_valid_records_and_rejects_broken_records)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/synthetic/OpenWiz/contracts/fixtures/contributions/test_fixtures.py", line 31, in test_schema_accepts_valid_records_and_rejects_broken_records
+    self.assertTrue(schema_path.is_file(), "the contributions schema is missing")
+AssertionError: False is not true : the contributions schema is missing
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.001s
+
+FAILED (failures=2)

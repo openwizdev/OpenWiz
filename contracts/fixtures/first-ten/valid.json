@@ -1,0 +1,97 @@
+{
+  "under-600s": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "receipt",
+    "os": {"name": "linux", "version": "99.1"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 120,
+    "ticket_sizes": ["S", "S", "S"],
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state", "elapsed_ms": 45000},
+      "harness_signed_in": {"source": "onboarding_state", "elapsed_ms": 90000},
+      "grill_confirmed": {"source": "onboarding_state", "elapsed_ms": 210000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000},
+      "first_pull_request_opened": {"source": "github_created_at", "elapsed_ms": 400000},
+      "first_pull_request_merged": {"source": "github_merged_at", "total_ms": 599999}
+    },
+    "status": "pass"
+  },
+  "at-600s": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "receipt",
+    "os": {"name": "linux", "version": "99.1"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 120,
+    "ticket_sizes": ["S", "S", "S"],
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state", "elapsed_ms": 45000},
+      "harness_signed_in": {"source": "onboarding_state", "elapsed_ms": 90000},
+      "grill_confirmed": {"source": "onboarding_state", "elapsed_ms": 210000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000},
+      "first_pull_request_opened": {"source": "github_created_at", "elapsed_ms": 400000},
+      "first_pull_request_merged": {"source": "github_merged_at", "total_ms": 600000}
+    },
+    "status": "fail"
+  },
+  "over-600s": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "receipt",
+    "os": {"name": "linux", "version": "99.1"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 120,
+    "ticket_sizes": ["S", "S", "S"],
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state", "elapsed_ms": 45000},
+      "harness_signed_in": {"source": "onboarding_state", "elapsed_ms": 90000},
+      "grill_confirmed": {"source": "onboarding_state", "elapsed_ms": 210000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000},
+      "first_pull_request_opened": {"source": "github_created_at", "elapsed_ms": 400000},
+      "first_pull_request_merged": {"source": "github_merged_at", "total_ms": 600001}
+    },
+    "status": "fail"
+  },
+  "macos-receipt": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "receipt",
+    "os": {"name": "macos", "version": "99.2"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 120,
+    "ticket_sizes": ["S", "S", "S"],
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state", "elapsed_ms": 45000},
+      "harness_signed_in": {"source": "onboarding_state", "elapsed_ms": 90000},
+      "grill_confirmed": {"source": "onboarding_state", "elapsed_ms": 210000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000},
+      "first_pull_request_opened": {"source": "github_created_at", "elapsed_ms": 400000},
+      "first_pull_request_merged": {"source": "github_merged_at", "total_ms": 599999}
+    },
+    "status": "pass"
+  },
+  "install-started": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "timing",
+    "quick_grill_budget_seconds": 120,
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000}
+    }
+  },
+  "plan-recorded": {
+    "schema": "openwiz.first-ten.v1",
+    "kind": "timing",
+    "os": {"name": "linux", "version": "99.1"},
+    "candidate_version": "0.2.0-rc.1",
+    "quick_grill_budget_seconds": 120,
+    "ticket_sizes": ["S", "S", "S"],
+    "steps": {
+      "install_line_started": {"source": "installer_log", "at_unix_ms": 1800000000000},
+      "setup_done": {"source": "onboarding_state", "elapsed_ms": 45000},
+      "harness_signed_in": {"source": "onboarding_state", "elapsed_ms": 90000},
+      "grill_confirmed": {"source": "onboarding_state", "elapsed_ms": 210000},
+      "plan_approved": {"source": "onboarding_state", "elapsed_ms": 240000}
+    }
+  }
+}

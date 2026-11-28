@@ -1,0 +1,20 @@
+Cursor effort regression tests against the existing driver
+
+test_schema_matches_the_kit_byte_for_byte (__main__.Cursor.test_schema_matches_the_kit_byte_for_byte) ... ok
+test_readme_declares_effort_under_login (__main__.Cursor.test_readme_declares_effort_under_login) ... FAIL
+test_kit_passes_all_five_with_its_key_check (__main__.Cursor.test_kit_passes_all_five_with_its_key_check) ... FAIL
+test_start_passes_the_exact_effort_to_the_model_parameter_cursor_lists (__main__.Cursor.test_start_passes_the_exact_effort_to_the_model_parameter_cursor_lists) ... FAIL
+test_start_refuses_unsupported_effort_without_creating_an_agent (__main__.Cursor.test_start_refuses_unsupported_effort_without_creating_an_agent) ...
+  test_start_refuses_unsupported_effort_without_creating_an_agent (__main__.Cursor.test_start_refuses_unsupported_effort_without_creating_an_agent) (fields={'effort': 'bogus'}) ... FAIL
+  test_start_refuses_unsupported_effort_without_creating_an_agent (__main__.Cursor.test_start_refuses_unsupported_effort_without_creating_an_agent) (fields={'model': 'synthetic-no-effort', 'effort': 'medium'}) ... FAIL
+  test_start_refuses_unsupported_effort_without_creating_an_agent (__main__.Cursor.test_start_refuses_unsupported_effort_without_creating_an_agent) (fields={'model': 'synthetic-unlisted', 'effort': 'medium'}) ... FAIL
+test_start_never_creates_an_agent_if_the_effort_lookup_fails (__main__.Cursor.test_start_never_creates_an_agent_if_the_effort_lookup_fails) ... FAIL
+AssertionError: False is not true : Effort: the host can't set it (the driver uses the Cloud Agents API's model ID and sends no separate effort setting). A start that carries `effort` is refused before contacting Cursor.
+AssertionError: Tuples differ: (0, [[119 chars]ort: a start with it was refused, as the READM[296 chars]er']) != (0, [[119 chars]ort: medium reached the kit's fake cursor-clou[281 chars]er'])
+AssertionError: 'effort' not found in ['start', 'wake', 'stop', 'many-at-once', 'own-sandbox']
+AssertionError: Lists differ: [] != ['GET /models']
+AssertionError: Lists differ: [] != ['GET /models']
+AssertionError: Lists differ: [] != ['GET /models']
+AssertionError: 'HTTP 503' not found in "Cursor can't run harness cursor at effort medium"
+Ran 6 tests in 1.469s
+FAILED (failures=7)

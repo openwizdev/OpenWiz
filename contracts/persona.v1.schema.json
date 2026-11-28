@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OpenWiz persona and theme v1",
+  "oneOf": [
+    {"$ref": "#/$defs/persona"},
+    {"$ref": "#/$defs/theme"}
+  ],
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?![\\s\\S])"},
+    "line": {"type": "string", "pattern": "^[^\\r\\n]*(?![\\s\\S])"},
+    "text": {"type": "string", "pattern": "^(?=[^\\r\\n]*\\S)[^\\r\\n]+(?![\\s\\S])"},
+    "colour": {"type": "string", "pattern": "^#[0-9A-Fa-f]{6}(?![\\s\\S])"},
+    "tokens": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [ "background", "surface", "text", "muted", "accent", "border" ],
+      "properties": {
+        "background": {"$ref": "#/$defs/colour"},
+        "surface": {"$ref": "#/$defs/colour"},
+        "text": {"$ref": "#/$defs/colour"},
+        "muted": {"$ref": "#/$defs/colour"},
+        "accent": {"$ref": "#/$defs/colour"},
+        "border": {"$ref": "#/$defs/colour"}
+      }
+    },
+    "cue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [ "waveform", "frequency_hz", "duration_ms", "gain" ],
+      "properties": {
+        "waveform": {
+          "enum": [ "sine", "triangle" ]
+        },
+        "frequency_hz": {"type": "number", "minimum": 80, "maximum": 2000},
+        "duration_ms": {"type": "integer", "minimum": 1, "maximum": 250},
+        "gain": {"type": "number", "minimum": 0, "maximum": 0.15}
+      }
+    },
+    "room": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [ "palette", "lighting", "mood" ],
+      "properties": {
+        "palette": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/colour"}
+        },
+        "lighting": {"$ref": "#/$defs/text"},
+        "mood": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "pattern": "^[a-z]+(?:-[a-z]+)*(?![\\s\\S])"}
+        }
+      }
+    },
+    "speech": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [ "voice_id", "pace" ],
+      "properties": {
+        "voice_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*(?![\\s\\S])"},
+        "pace": {"type": "number", "minimum": 0.5, "maximum": 2}
+      }
+    },
+    "persona": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [ "schema", "id", "name", "family", "vibe", "tone", "vocabulary", "greeting", "sign_off", "error_style", "docs_tone", "speech" ],
+      "properties": {
+        "schema": {"const": "openwiz.persona.v1"},
+        "id": {"$ref": "#/$defs/id"},
+        "name": {"$ref": "#/$defs/text"},
+        "family": {
+          "enum": [ "film-ai", "character", "pro", "fun" ]
+        },
+        "vibe": {"$ref": "#/$defs/text"},
+        "tone": {"$ref": "#/$defs/text"},
+        "vocabulary": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/text"}
+        },
+        "greeting": {"$ref": "#/$defs/line"},
+        "sign_off": {"$ref": "#/$defs/line"},
+        "error_style": {"$ref": "#/$defs/text"},
+        "docs_tone": {"$ref": "#/$defs/text"},
+        "speech": {"$ref": "#/$defs/speech"}
+      }
+    },
+    "theme": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [ "schema", "id", "light", "dark", "sounds", "room" ],
+      "properties": {
+        "schema": {"const": "openwiz.persona.v1"},
+        "id": {"$ref": "#/$defs/id"},
+        "light": {"$ref": "#/$defs/tokens"},
+        "dark": {"$ref": "#/$defs/tokens"},
+        "sounds": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [],
+          "properties": {
+            "needs_you": {"$ref": "#/$defs/cue"},
+            "status": {"$ref": "#/$defs/cue"}
+          }
+        },
+        "room": {"$ref": "#/$defs/room"}
+      }
+    }
+  }
+}

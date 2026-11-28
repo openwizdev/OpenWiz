@@ -31,6 +31,10 @@ REPO = "synthetic-owner/work"
 WRITE = {"metadata": "read", "contents": "write", "issues": "write",
          "pull_requests": "write", "checks": "read", "actions": "read"}
 READ = {name: "read" for name in WRITE}
+sys.dont_write_bytecode = True
+service_spec = importlib.util.spec_from_file_location("test_token_service", HERE / "test_token_service.py")
+SERVICE_TESTS = importlib.util.module_from_spec(service_spec)
+service_spec.loader.exec_module(SERVICE_TESTS)
 TOKEN, TOKEN2 = "synthetic-agent-token-1", "synthetic-agent-token-2"
 REQ = ("--requester", "builder-1", "--repository", REPO)
 NOTE = PIN["fallback"]["note"]
@@ -38,7 +42,23 @@ WITHHELD = "openwiz: openwiz[bot] token withheld from git"
 URL = f"https://github.com/{REPO}"
 
 FAKE = r'''
-import hashlib, json, os, stat, sys, time
+import base64, hashlib, json, os, stat, subprocess, sys, time
+
+
+def seal(token, key):
+    sealed = b""
+    for at in range(0, len(token), 318):
+        reader, writer = os.pipe()
+        os.write(writer, key.encode())
+        os.close(writer)
+        sealed += subprocess.run(
+            ["/usr/bin/openssl", "pkeyutl", "-encrypt", "-pubin", "-inkey", f"/dev/fd/{reader}",
+             "-pkeyopt", "rsa_padding_mode:oaep", "-pkeyopt", "rsa_oaep_md:sha256", "-pkeyopt", "rsa_mgf1_md:sha256"],
+            input=token[at:at + 318].encode(), stdout=subprocess.PIPE, check=True, pass_fds=(reader,)).stdout
+        os.close(reader)
+    return base64.b64encode(sealed).decode()
+
+
 name, args = sys.argv[1], sys.argv[2:]
 stdin = sys.stdin.read() if name != "gh" else ""
 token = os.environ.get("GH_TOKEN")
@@ -56,7 +76,12 @@ calls = [json.loads(line) for line in open(log) if json.loads(line)["name"] != "
 answers = json.load(open(os.environ["FAKE_ANSWERS"]))
 answer = answers[min(len(calls), len(answers)) - 1]
 time.sleep(answer.get("sleep", 0))
-sys.stdout.write(answer.get("stdout", ""))
+out = answer.get("stdout", "")
+if "seal" in answer:
+    out = out.replace("<sealed token>", seal(answer["seal"], answer.get("to") or json.loads(stdin)["answer_key"]))
+with open(log + ".out", "a") as f:
+    f.write(out)
+sys.stdout.write(out)
 sys.stderr.write(answer.get("stderr", ""))
 sys.exit(answer["exit"])
 '''
@@ -108,10 +133,10 @@ def sha(value):
 
 
 def answer(token=TOKEN, left=3600, repositories=(REPO,), permissions=None):
-    body = {"schema": "openwiz.token-service.v1", "kind": "answer", "token": token,
+    body = {"schema": "openwiz.token-service.v1", "kind": "answer", "sealed_token": "<sealed token>",
             "expires_at": int(time.time()) + left, "repositories": list(repositories),
             "permissions": permissions or WRITE}
-    return {"exit": 0, "stdout": json.dumps(body) + "\n"}
+    return {"exit": 0, "stdout": json.dumps(body) + "\n", "seal": token}
 
 
 def refusal(code):
@@ -137,6 +162,9 @@ def load_helper():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+CONTRACT, SCHEMA = SERVICE_TESTS.CONTRACT, SERVICE_TESTS.SCHEMA
 
 
 class Helper(unittest.TestCase):
@@ -261,6 +289,8 @@ class MintedToken(Helper):
         self.answers(answer(permissions=READ))
         self.start("--read")
         request = json.loads(self.one_call()["stdin"])
+        key = request.pop("answer_key", "")
+        self.assertEqual(CONTRACT.errors(key, SCHEMA["$defs"]["answer_key"], SCHEMA), [])
         self.assertEqual(request, {"schema": "openwiz.token-service.v1", "kind": "request",
                                    "requester": "builder-1", "repositories": [REPO], "permissions": READ})
 
@@ -313,6 +343,113 @@ class MintedToken(Helper):
         self.assertEqual((loose.returncode, self.calls()), (2, []), "a directory others can read is refused")
 
 
+AUDIT = r"""
+import json, os, runpy, stat, subprocess, sys
+root, sys.argv = sys.argv[1], sys.argv[2:]
+started, pipes, outside, leaks, lines, busy = [], [], [], [], [], []
+real = subprocess.run
+
+
+def run(args, **kwargs):
+    done = real(args, **kwargs)
+    if "genpkey" in args:
+        lines.extend(line.decode() for line in done.stdout.splitlines() if b"-----" not in line)
+    return done
+
+
+def hook(event, args):
+    if busy:
+        return
+    busy.append(True)
+    if event == "subprocess.Popen":
+        started.append(json.dumps([args[1], dict(os.environ) if args[3] is None else args[3]]))
+        pipes.extend(stat.S_ISFIFO(os.stat(a).st_mode) for a in args[1] if str(a).startswith("/dev/fd/"))
+    if event == "open" and isinstance(args[2], int) and args[2] & 3 and str(args[0]).startswith("/"):
+        outside.extend([] if str(args[0]).startswith((root, "/dev/null")) else [str(args[0])])
+    if event in ("subprocess.Popen", "os.remove", "os.rename"):
+        for folder, _, names in os.walk(root):
+            for name in names:
+                with open(os.path.join(folder, name), errors="replace") as file:
+                    text = file.read()
+                leaks.extend(name for line in lines if line in text)
+    busy.pop()
+
+
+subprocess.run = run
+sys.addaudithook(hook)
+try:
+    runpy.run_path(sys.argv[0], run_name="__main__")
+except SystemExit as done:
+    code = done.code
+started.append(json.dumps(dict(os.environ)))
+leaks += ["argv or environment" for line in lines for text in started if line in text or "PRIVATE KEY" in text]
+keys = [text for text in started if "genpkey" in text]
+print(json.dumps([code, len(lines) > 30, len(keys), pipes, outside, leaks]))
+"""
+
+
+class Sealed(Helper):
+    def service(self):
+        fixture = SERVICE_TESTS.ServiceFixture()
+        fixture.setUp()
+        self.addCleanup(fixture.doCleanups)
+        github = SERVICE_TESTS.fake_github(fixture.pem, [REPO])
+        url, _calls, fake = github.__enter__()
+        self.addCleanup(github.__exit__, None, None, None)
+        fake["expires_at"] = int(time.time()) + 3600
+        wrapped = self.root / "wrapped.py"
+        wrapped.write_text("import os, runpy, sys\nos.environ['OPENWIZ_SYNTHETIC_GITHUB'] = '1'\n"
+                           f"sys.argv = {[str(SERVICE_TESTS.SERVICE), 'mint', '--state-dir', str(fixture.state), '--api-base', url]!r}\n"
+                           "runpy.run_path(sys.argv[0], run_name='__main__')\n")
+        (self.bin / "python3").unlink()
+        self.pairing = self.root / "pairing.log"
+        (self.root / "pair.py").write_text(
+            "import subprocess, sys\nrequest = sys.stdin.buffer.read()\n"
+            "assert sys.argv[1:4] == ['mac', 'run', '--stdin'] and len(sys.argv) == 5\n"
+            "done = subprocess.run(['sh', '-c', sys.argv[4]], input=request, capture_output=True)\n"
+            f"open({str(self.pairing)!r}, 'ab').write(request + done.stdout + done.stderr)\n"
+            "sys.stdout.buffer.write(done.stdout)\nsys.exit(done.returncode)\n")
+        (self.bin / "room-cli").write_text(f'#!/bin/sh\nexec "{sys.executable}" -I "{self.root}/pair.py" "$@"\n')
+        self.env["OPENWIZ_TOKEN_SERVICE"] = str(wrapped)
+        return fixture, fake
+
+    def test_the_opened_token_is_githubs_on_both_routes_and_only_there(self):
+        # comment-ok: catches: a service and helper that seal and open differently, and a plaintext token in
+        # an output, a kept pairing record or the mint log.
+        fixture, fake = self.service()
+        for route in ("local", "pairing"):
+            for token in (TOKEN, "ghs-" + "a1_.b-" * 86):
+                with self.subTest(route=route, length=len(token)):
+                    shutil.rmtree(self.private, True)
+                    fake["token"] = token
+                    done = self.start(OPENWIZ_TOKEN_SERVICE_ROUTE=route)
+                    self.assertEqual((done.returncode, done.stdout, done.stderr), (0, "", ""))
+                    self.assertEqual(self.held()["token"], token)
+                    self.assert_never_exposed(done, tokens=(token,))
+                    fixture.assert_nothing_exposed(token, done.stdout)
+        record = [json.loads(line) for line in self.pairing.read_text().splitlines()]
+        self.assertEqual([row["kind"] for row in record], ["request", "answer"] * 2)
+        self.assertNotIn("token", record[1])
+        self.assertEqual(len({row["answer_key"] for row in record[::2]}), 2, "each request has its own key")
+
+    def test_the_private_key_is_only_ever_in_memory_and_a_pipe(self):
+        # comment-ok: catches: a one-time private key on a command line, in an environment or in any file, even briefly.
+        self.answers(answer(token="synthetic-" + "x1" * 255))
+        done = subprocess.run([sys.executable, "-I", "-c", AUDIT, str(self.root), str(HELPER), "start", *REQ],
+                              capture_output=True, text=True, env=self.env, timeout=60)
+        self.assertEqual(done.stderr, "")
+        self.assertEqual(json.loads(done.stdout), [0, True, 1, [True, True], [], []])
+
+    def test_a_helper_that_cannot_make_its_key_asks_nothing(self):
+        # comment-ok: catches: a request sent with no key, or a traceback in place of the one fallback note.
+        helper = load_helper()
+        helper.OPENSSL = str(self.root / "absent")
+        wanted = {"requester": "builder-1", "repositories": [REPO], "permissions": WRITE}
+        argv = [str(self.bin / "room-cli"), "mac"]
+        self.assertEqual(helper.mint(argv, wanted, self.env), ("unreachable", None, None))
+        self.assertEqual(self.calls(), [])
+
+
 class Fallback(Helper):
     def test_unreachable_service_falls_back_with_one_note(self):
         self.answers({"exit": 1, "stdout": "", "stderr": "synthetic: owner's machine unavailable"})
@@ -351,19 +488,30 @@ class Fallback(Helper):
         wider = answer(repositories=(REPO, "synthetic-owner/other"))
         short = answer(left=200)
         long = answer(left=4000)
-        twice = {"exit": 0, "stdout": answer()["stdout"].replace('"kind"', '"token": "x", "kind"')}
+        twice = {"exit": 0, "stdout": answer()["stdout"].replace('"kind"', '"sealed_token": "x", "kind"')}
+        plain = {"exit": 0, "stdout": answer()["stdout"].replace("sealed_token", "token").replace("<sealed token>", TOKEN)}
+        beside = dict(answer(), stdout=answer()["stdout"].replace('"kind"', '"token": "x", "kind"'))
+        other_key = dict(answer(), to=SERVICE_TESTS.ASKER.key)
+        unsealed = [dict(answer(), stdout=answer()["stdout"].replace("<sealed token>", value))
+                    for value in (TOKEN, "", "A" * 512, "A" * 511 + "!", "<sealed token>" * 9, "<sealed token>" * 2)]
+        listed = dict(answer(), stdout=answer()["stdout"].replace('"<sealed token>"', '["<sealed token>"]'))
         bad_exit = dict(refusal("permission"), exit=0)
         injected = answer(token="synthetic\nusername=x")
         failed_answer = dict(answer(), exit=5)
         for reason, item in [*cases.items(), ("bad-answer", wider), ("bad-answer", short),
                              ("bad-answer", long), ("bad-answer", twice), ("bad-answer", bad_exit),
-                             ("bad-answer", injected), ("bad-answer", failed_answer)]:
+                             ("bad-answer", injected), ("bad-answer", failed_answer), ("bad-answer", plain),
+                             ("bad-answer", beside), ("bad-answer", other_key), ("bad-answer", answer(token="a" * 318 * 9)), ("bad-answer", listed),
+                             *[("bad-answer", item) for item in unsealed]]:
             with self.subTest(reason=reason, item=item["stdout"][:60]):
                 self.log.unlink(missing_ok=True)
                 self.answers(item)
                 result = self.start()
                 self.assertEqual(result.returncode, 0)
                 self.assert_fallback(result, reason)
+                if item in (plain, unsealed[0]):
+                    self.assertIn(TOKEN, Path(f"{self.log}.out").read_text())
+                    Path(f"{self.log}.out").unlink()
                 self.assert_never_exposed(result)
         reasons = {c["reason"] for c in json.loads((FIXTURES / "fallback.json").read_text())["cases"]
                    if "reason" in c}
@@ -2216,6 +2364,300 @@ class SystemGh(Helper):
         with mock.patch.object(self.helper_module.sys, "platform", "darwin"):
             self.assertIsNone(self.identity_of(self.table()), "the run binds no system gh off Linux")
         self.assertIsNotNone(self.identity_of(self.table()), "on Linux it is accepted")
+
+
+class ActionsRoute(unittest.TestCase):
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp(prefix="agent-actions-"))
+        self.addCleanup(shutil.rmtree, self.root, True)
+        self.private = self.root / "private"
+        self.private.mkdir(mode=0o700)
+        self.helper = load_helper()
+        self.wanted = {"requester": "builder-3235", "repositories": [REPO], "permissions": WRITE}
+
+    def start_fake(self, mode="ok"):
+        import io
+        import urllib.parse
+        import zipfile
+
+        state = {"mode": mode, "dispatches": [], "deleted": [], "redirect_auth": [],
+                 "artifacts": [], "logs": [], "rate_hits": 0, "poll_count": 0, "run_pages": []}
+        owner_repo = "synthetic-owner/private-ops"
+        other_pub = self.helper.one_time_key()[1] if mode == "unopenable" else None
+
+        def seal_to(token, key):
+            sealed = b""
+            for at in range(0, len(token), 318):
+                r, w = os.pipe()
+                os.write(w, key.encode())
+                os.close(w)
+                sealed += subprocess.run(
+                    ["/usr/bin/openssl", "pkeyutl", "-encrypt", "-pubin", "-inkey", f"/dev/fd/{r}",
+                     "-pkeyopt", "rsa_padding_mode:oaep", "-pkeyopt", "rsa_oaep_md:sha256",
+                     "-pkeyopt", "rsa_mgf1_md:sha256"],
+                    input=token[at:at + 318].encode(), stdout=subprocess.PIPE, check=True, pass_fds=(r,)).stdout
+                os.close(r)
+            return base64.b64encode(sealed).decode()
+
+        def make_zip(payload, filename="answer.json"):
+            buf = io.BytesIO()
+            with zipfile.ZipFile(buf, "w") as zf:
+                zf.writestr(filename, payload)
+            return buf.getvalue()
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *_args):
+                pass
+
+            def send_json(self, code, body, headers=None):
+                data = json.dumps(body).encode()
+                self.send_response(code)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(data)))
+                for k, v in (headers or {}).items():
+                    self.send_header(k, v)
+                self.end_headers()
+                self.wfile.write(data)
+
+            def do_POST(self):
+                length = int(self.headers.get("Content-Length", "0"))
+                body = json.loads(self.rfile.read(length).decode())
+                if state["mode"] == "backoff" and state["rate_hits"] == 0:
+                    state["rate_hits"] += 1
+                    self.send_json(429, {"message": "rate limited"}, {"Retry-After": "0"})
+                    return
+                state["dispatches"].append({"path": self.path, "body": body, "auth": self.headers.get("Authorization")})
+                req = json.loads(body["inputs"]["request"])
+                state["nonce"] = body["inputs"]["nonce"]
+                state["logs"].append(json.dumps({"requester": req["requester"], "outcome": "minted"}))
+                if state["mode"] == "tampered-zip":
+                    raw = b"not-a-zip"
+                elif state["mode"] == "tampered-body":
+                    raw = make_zip(json.dumps({"schema": "openwiz.token-service.v1", "kind": "answer",
+                                               "sealed_token": "A" * 512, "expires_at": int(time.time()) + 3600,
+                                               "repositories": ["other/repo"], "permissions": WRITE}))
+                elif state["mode"] == "refusal":
+                    raw = make_zip(json.dumps({"schema": "openwiz.token-service.v1", "kind": "refusal",
+                                               "refusal": "not-installed",
+                                               "message": PIN["refusals"]["not-installed"]["message"]}))
+                else:
+                    key = other_pub if state["mode"] == "unopenable" else req["answer_key"]
+                    raw = make_zip(json.dumps({"schema": "openwiz.token-service.v1", "kind": "answer",
+                                               "sealed_token": seal_to(TOKEN, key),
+                                               "expires_at": int(time.time()) + 3600,
+                                               "repositories": [REPO], "permissions": WRITE}))
+                state["zip"] = raw
+                state["artifacts"].append(raw)
+                self.send_response(204)
+                self.end_headers()
+
+            def do_GET(self):
+                if state["mode"] == "backoff" and state["rate_hits"] == 1:
+                    state["rate_hits"] += 1
+                    self.send_json(403, {"message": "secondary rate limit"}, {"Retry-After": "0"})
+                    return
+                if self.path.startswith(f"/repos/{owner_repo}/actions/workflows/mint-workflow.yml/runs"):
+                    if state["mode"] == "missing-run":
+                        self.send_json(200, {"workflow_runs": []})
+                        return
+                    status = "in_progress" if state["mode"] == "timeout" else "completed"
+                    conclusion = "failure" if state["mode"] == "failed-run" else ("success" if status == "completed" else None)
+                    run = {
+                        "id": 501, "name": "OpenWiz Token Service",
+                        "display_title": f"openwiz-mint-{state['nonce']}",
+                        "head_branch": "main", "event": "workflow_dispatch",
+                        "status": status, "conclusion": conclusion,
+                    }
+                    query = urllib.parse.parse_qs(urllib.parse.urlsplit(self.path).query)
+                    size = int(query.get("per_page", ["30"])[0])
+                    page = int(query.get("page", ["1"])[0])
+                    state["run_pages"].append(page)
+                    runs = [run]
+                    if state["mode"] == "later-page":
+                        runs = [dict(run, id=i, display_title=f"synthetic-later-run-{i}")
+                                for i in range(502, 512)] + runs
+                    first = (page - 1) * size
+                    self.send_json(200, {"total_count": len(runs), "workflow_runs": runs[first:first + size]})
+                    return
+                if self.path == f"/repos/{owner_repo}/actions/runs/501":
+                    state["poll_count"] += 1
+                    self.send_json(200, {"id": 501, "status": "in_progress", "conclusion": None})
+                    return
+                if self.path == f"/repos/{owner_repo}/actions/runs/501/artifacts":
+                    items = [] if state["mode"] == "missing-artifact" else [
+                        {"id": 701, "name": state["nonce"], "expired": False}]
+                    self.send_json(200, {"artifacts": items})
+                    return
+                if self.path == f"/repos/{owner_repo}/actions/artifacts/701/zip":
+                    self.send_response(302)
+                    self.send_header("Location", f"http://127.0.0.1:{self.server.server_address[1]}/download/701")
+                    self.end_headers()
+                    return
+                if self.path == "/download/701":
+                    state["redirect_auth"].append(self.headers.get("Authorization"))
+                    data = state["zip"]
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/zip")
+                    self.send_header("Content-Length", str(len(data)))
+                    self.end_headers()
+                    self.wfile.write(data)
+                    return
+                self.send_response(404)
+                self.end_headers()
+
+            def do_DELETE(self):
+                if self.path == f"/repos/{owner_repo}/actions/artifacts/701":
+                    state["delete_attempted"] = True
+                    if state["mode"] == "delete-failed":
+                        self.send_error(500)
+                        return
+                    state["deleted"].append(701)
+                    self.send_response(204)
+                    self.end_headers()
+                    return
+                self.send_response(404)
+                self.end_headers()
+
+        server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        server.helper = self.helper
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(server.shutdown)
+        self.addCleanup(server.server_close)
+        base = f"http://127.0.0.1:{server.server_address[1]}"
+        env = {
+            "PATH": os.environ.get("PATH", os.defpath),
+            "OPENWIZ_AGENT_TOKEN_DIR": str(self.private),
+            "OPENWIZ_TOKEN_SERVICE_ROUTE": "actions",
+            "OPENWIZ_TOKEN_SERVICE_REPOSITORY": owner_repo,
+            "OPENWIZ_GITHUB_API_BASE": base,
+            "GH_TOKEN": "synthetic-owner-account-token",
+        }
+        return env, state
+
+    def test_actions_round_trip_and_deletes_artifact(self):
+        # comment-ok: catches: matching the workflow name instead of the run title, wrong-host credentials,
+        # wrong dispatch ref, auth on redirect, or an artifact left behind after download.
+        env, state = self.start_fake("ok")
+        gh = self.root / "gh"
+        gh.write_text("#!/bin/sh\n"
+                      'case "$3:$4" in\n'
+                      "  --hostname:github.com) echo synthetic-owner-account-token ;;\n"
+                      "  *) echo synthetic-enterprise-account-token ;;\n"
+                      "esac\n")
+        gh.chmod(0o700)
+        env.update(PATH=f"{self.root}{os.pathsep}{env['PATH']}", GH_HOST="enterprise.example.invalid")
+        env.pop("GH_TOKEN")
+        private = self.helper.Private(env, create=True)
+        self.addCleanup(os.close, private.fd)
+        token, expires_at = self.helper.token_for(private, self.wanted, env)
+        self.assertEqual(token, TOKEN)
+        self.assertGreater(expires_at, int(time.time()) + 300)
+        self.assertEqual(len(state["dispatches"]), 1)
+        self.assertEqual(state["dispatches"][0]["body"]["ref"], "main")
+        self.assertEqual(state["dispatches"][0]["auth"], "Bearer synthetic-owner-account-token")
+        self.assertEqual(state["deleted"], [701], "artifact must be deleted after download")
+        self.assertEqual(state["redirect_auth"], [None], "Authorization must not cross artifact redirect")
+
+    def test_actions_finds_a_mint_after_ten_newer_runs(self):
+        # comment-ok: catches: polling only the first page when a successful mint is on page two.
+        env, state = self.start_fake("later-page")
+        private = self.helper.Private(env, create=True)
+        self.addCleanup(os.close, private.fd)
+        with mock.patch.object(self.helper, "ACTIONS_TIMEOUT_S", 2), \
+                mock.patch.object(self.helper, "ACTIONS_POLL_S", 0.01):
+            token, _ = self.helper.token_for(private, self.wanted, env)
+        self.assertEqual(token, TOKEN)
+        self.assertEqual(state["run_pages"], [1, 2])
+        self.assertEqual(state["deleted"], [701])
+
+    def test_actions_falls_back_after_download_and_extraction_errors(self):
+        # comment-ok: catches: protocol and decompression errors escaping the fallback and artifact cleanup.
+        import http.client
+        import zipfile
+        import zlib
+
+        read = http.client.HTTPResponse.read
+
+        def interrupted(response, *args, **kwargs):
+            if response.getheader("Content-Type") == "application/zip":
+                raise http.client.IncompleteRead(b"", 1)
+            return read(response, *args, **kwargs)
+
+        for target, method, fault, reason in (
+            (http.client.HTTPResponse, "read", {"new": interrupted}, "unreachable"),
+            (zipfile.ZipExtFile, "read", {"side_effect": zlib.error("synthetic decode failure")}, "bad-answer"),
+        ):
+            with self.subTest(reason=reason):
+                env, state = self.start_fake("ok")
+                private = self.helper.Private(env, create=True)
+                self.addCleanup(os.close, private.fd)
+                err = []
+                with mock.patch.object(target, method, **fault), \
+                        mock.patch.object(self.helper.sys, "stderr", types.SimpleNamespace(write=err.append)):
+                    try:
+                        result = self.helper.token_for(private, self.wanted, env)
+                    except (http.client.IncompleteRead, zlib.error):
+                        self.fail(f"{reason} escaped the Actions fallback")
+                self.assertEqual(result, (None, None))
+                self.assertEqual("".join(err), NOTE.replace("<reason>", reason) + "\n")
+                self.assertEqual(state["deleted"], [701])
+
+    def test_actions_failures_fall_back_with_right_reason(self):
+        # comment-ok: catches: wrong fallback or a returned token after a missing/failed run, timeout,
+        # failed deletion, missing/tampered artifact, unopenable answer, or contract refusal.
+        cases = [
+            ("missing-run", "unreachable", []),
+            ("timeout", "unreachable", []),
+            ("failed-run", "unreachable", []),
+            ("missing-artifact", "unreachable", []),
+            ("delete-failed", "unreachable", []),
+            ("tampered-zip", "bad-answer", [701]),
+            ("tampered-body", "bad-answer", [701]),
+            ("unopenable", "bad-answer", [701]),
+            ("refusal", "not-installed", [701]),
+        ]
+        for mode, expected_reason, expected_deleted in cases:
+            with self.subTest(mode):
+                env, state = self.start_fake(mode)
+                env["OPENWIZ_AGENT_TOKEN_DIR"] = str(self.private / mode)
+                private = self.helper.Private(env, create=True)
+                self.addCleanup(os.close, private.fd)
+                err = []
+                with mock.patch.object(self.helper, "ACTIONS_TIMEOUT_S",
+                                       0.08 if mode in ("missing-run", "timeout") else 2), \
+                        mock.patch.object(self.helper, "ACTIONS_POLL_S", 0.01), \
+                        mock.patch.object(self.helper.sys, "stderr",
+                                          types.SimpleNamespace(write=err.append)):
+                    token, expires_at = self.helper.token_for(private, self.wanted, env)
+                self.assertEqual((token, expires_at), (None, None))
+                self.assertEqual("".join(err), NOTE.replace("<reason>", expected_reason) + "\n")
+                self.assertEqual(state["deleted"], expected_deleted)
+                if mode == "delete-failed":
+                    self.assertEqual((state["redirect_auth"], state["delete_attempted"]), ([None], True))
+
+    def test_actions_backs_off_on_403_and_429(self):
+        # comment-ok: catches: failing immediately on GitHub 403/429 instead of backing off and retrying.
+        env, state = self.start_fake("backoff")
+        private = self.helper.Private(env, create=True)
+        self.addCleanup(os.close, private.fd)
+        with mock.patch.object(self.helper, "ACTIONS_POLL_S", 0.01):
+            token, _ = self.helper.token_for(private, self.wanted, env)
+        self.assertEqual(token, TOKEN)
+        self.assertEqual(state["rate_hits"], 2)
+        self.assertEqual(state["deleted"], [701])
+
+    def test_actions_never_exposes_plaintext_token(self):
+        # comment-ok: catches: plaintext token appearing in dispatch inputs, fake run logs, artifact zip, or helper output.
+        env, state = self.start_fake("ok")
+        done = subprocess.run([sys.executable, "-I", str(HELPER), "start", *REQ],
+                              env=env, capture_output=True, text=True, timeout=30)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        for blob in (json.dumps(state["dispatches"]), "\n".join(state["logs"]),
+                     done.stdout, done.stderr):
+            self.assertNotIn(TOKEN, blob)
+        for raw in state["artifacts"]:
+            self.assertNotIn(TOKEN.encode(), raw)
 
 
 if __name__ == "__main__":

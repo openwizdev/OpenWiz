@@ -25,21 +25,6 @@ pub const HARNESS_PROVIDERS: &[(&str, &str)] =
 
 pub const CLI_REASONING_LEVELS: &[&str] = &["low", "medium", "high", "xhigh", "max"];
 
-pub const CATALOGUE_KEYS: &[&str] = &["ready", "harnesses"];
-
-pub const HARNESS_KEYS: &[&str] = &[
-    "id",
-    "model",
-    "reasoning_levels",
-    "models",
-    "attachments",
-    "steer",
-];
-
-pub const MODEL_KEYS: &[&str] = &["model", "reasoning_levels"];
-
-pub const ATTACHMENT_KEYS: &[&str] = &["files", "images"];
-
 pub fn spawn_argv(spawn: &SpawnRequest) -> Result<Vec<String>, InvalidRequest> {
     spawn_invocation(spawn).map(|invocation| invocation.argv())
 }
@@ -431,12 +416,10 @@ impl<'de> Visitor<'de> for KeysOnceVisitor {
     }
 }
 
-fn keys_once(stdout: &[u8], read: &str) -> Result<(), SourceError> {
-    serde_json::from_slice::<KeysOnce>(stdout)
-        .map(|_| ())
-        .map_err(|_| SourceError::Malformed {
-            detail: format!("{read}: not JSON, or a key given twice"),
-        })
+fn json_value(stdout: &[u8], read: &str) -> Result<Value, SourceError> {
+    crate::json_once::parse(stdout, false).map_err(|_| SourceError::Malformed {
+        detail: format!("{read}: not JSON, or a key given twice"),
+    })
 }
 
 pub fn spawn_receipt(stdout: &[u8], project_id: &str) -> SpawnReply {
@@ -475,11 +458,10 @@ pub fn spawn_receipt(stdout: &[u8], project_id: &str) -> SpawnReply {
 }
 
 pub fn parse_shown_thread(stdout: &[u8], thread_id: &str) -> Result<ShownThread, SourceError> {
-    keys_once(stdout, "thread show")?;
+    let doc = json_value(stdout, "thread show")?;
     let malformed = |detail: &str| SourceError::Malformed {
         detail: detail.to_owned(),
     };
-    let doc: Value = serde_json::from_slice(stdout).map_err(|_| malformed("not JSON"))?;
     let Some(thread) = doc.get("thread").filter(|t| t.is_object()) else {
         return Err(malformed("no thread object"));
     };
@@ -548,8 +530,8 @@ fn not_a_list(read: &str) -> SourceError {
 }
 
 fn rows(stdout: &[u8], read: &str) -> Result<Vec<Value>, SourceError> {
-    match serde_json::from_slice::<Value>(stdout) {
-        Ok(Value::Array(rows)) => Ok(rows),
+    match json_value(stdout, read)? {
+        Value::Array(rows) => Ok(rows),
         _ => Err(not_a_list(read)),
     }
 }
@@ -566,7 +548,6 @@ fn string_field(row: &Map<String, Value>, read: &str, field: &str) -> Fact<Strin
 
 pub fn parse_projects(stdout: &[u8]) -> Result<Vec<ProjectCandidate>, SourceError> {
     let read = "project list";
-    keys_once(stdout, read)?;
     Ok(rows(stdout, read)?
         .iter()
         .filter_map(Value::as_object)
@@ -601,7 +582,6 @@ pub fn parse_observed_threads(
     since: Timestamp,
 ) -> Result<Vec<ObservedThread>, SourceError> {
     let read = "thread list";
-    keys_once(stdout, read)?;
     Ok(rows(stdout, read)?
         .iter()
         .filter_map(Value::as_object)
@@ -729,5 +709,55 @@ impl NewThreadClient for CloudRoomSource {
         };
         let out = process::run(self.program(), &list, deadline).map_err(withheld)?;
         parse_observed_threads(&out, project_id, since)
+    }
+}
+
+#[cfg(test)]
+mod oracle {
+    use openwiz_core::model::Timestamp;
+    use openwiz_core::source::SourceError;
+    use serde_json::Value;
+
+    use super::{parse_observed_threads, parse_projects, parse_shown_thread};
+
+    #[test]
+    fn json_refusals_match_the_two_pass_oracle() {
+        for bytes in crate::json_once::oracle::samples() {
+            let old = crate::json_once::oracle::two_pass(false, &bytes);
+            let projects = parse_projects(&bytes);
+            let shown = parse_shown_thread(&bytes, "thr_syn");
+            let threads = parse_observed_threads(&bytes, "prj_syn", Timestamp(0));
+            match old {
+                Err(crate::json_once::oracle::Pass::First) => {
+                    let detail = |read: &str| SourceError::Malformed {
+                        detail: format!("{read}: not JSON, or a key given twice"),
+                    };
+                    assert_eq!(projects, Err(detail("project list")));
+                    assert_eq!(shown, Err(detail("thread show")));
+                    assert_eq!(threads, Err(detail("thread list")));
+                }
+                Ok(Value::Array(_)) => {
+                    assert!(projects.is_ok());
+                    assert!(threads.is_ok());
+                }
+                Ok(_) => {
+                    assert_eq!(
+                        projects,
+                        Err(SourceError::Malformed {
+                            detail: "project list is not a JSON list".to_owned(),
+                        })
+                    );
+                    assert_eq!(
+                        threads,
+                        Err(SourceError::Malformed {
+                            detail: "thread list is not a JSON list".to_owned(),
+                        })
+                    );
+                }
+                Err(crate::json_once::oracle::Pass::Second) => {
+                    panic!("the second parse refused bytes the first accepted: {bytes:?}")
+                }
+            }
+        }
     }
 }

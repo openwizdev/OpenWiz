@@ -125,11 +125,11 @@ Source: [AGENTS.md, Commands](../../AGENTS.md#commands), and [the CI workflow](.
 
 | Check | Runs | Required on |
 | --- | --- | --- |
-| `ci` | The saved plan, always-run checks, every selected lane and each selected skill suite must pass; failed, cancelled or missing work fails | `main`, `release-*` |
+| `ci` | Every job must pass: `lint`, `rust`, `release`, `line-budget` and, on pull requests, `owned-paths`; a failed, cancelled or missing job fails it | `main`, `release-*` |
 
-**Additional public check: `privacy` (O3).** It checks the public tree, commit range and PR text on every public pull request, merge group and push to `main`. OpenWiz's ruleset requires it on `main` and `release-*`, alongside the product checks named in the fleet table. The check-name migration belongs to #1262; its required `ci` check replaces the earlier product check names when that ticket lands. O7 preserves the table it receives, including that migration. O3 fixes its check name as `privacy`, verified in [PR #1846](https://github.com/jparker2006/ClosedWiz/pull/1846) at implementation pin `51e9b6b7791dcf9b077fd7163d1b4ad30990d23e`; O12 still applies and reads back the public ruleset. ClosedWiz preparation keeps the existing product-check table so current readers and fixtures keep working.
+**Additional public check: `privacy` (O3).** It is [its own workflow](../../.github/workflows/privacy.yml), which checks the public tree, commit range and PR text on every public pull request, merge group and push to `main`. OpenWiz's ruleset requires it on `main` and `release-*`, beside `ci`.
 
-A draft fails the plan and `ci`; marking it ready starts a full run. Selection rules are in [the selection contract](../../contracts/ci-selection.v1.md). Source: [the workflow](../../.github/workflows/ci.yml) and the repository ruleset "CI must pass": no bypass, no force-push, no branch deletion.
+A draft skips `lint`, `rust`, `release` and `line-budget` and fails `ci`; marking it ready starts a full run. Source: [the workflow](../../.github/workflows/ci.yml) and the repository ruleset "CI must pass": no bypass, no force-push, no branch deletion.
 
 ## GitHub identity
 

@@ -1,0 +1,5 @@
+{
+  "schema": "openwiz.settings-cli.v1",
+  "kind": "refused",
+  "reason": "The selected account is reserved."
+}

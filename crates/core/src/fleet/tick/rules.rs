@@ -203,12 +203,6 @@ impl Rules {
             super::BuilderFamily::Gpt => self.fixers[1].as_ref(),
         }
     }
-    pub fn required_checks(&self) -> &[RequiredCheck] {
-        &self.ci_checks
-    }
-    pub fn merge_rule(&self) -> MergeRule {
-        self.merge
-    }
 }
 
 fn table<'a>(

@@ -1,0 +1,32 @@
+test_each_report (__main__.UpdateFixtures.test_each_report) ... FAIL
+test_refuses_unknown_fields_and_bad_values (__main__.UpdateFixtures.test_refuses_unknown_fields_and_bad_values) ... FAIL
+test_unverified_requires_a_failure_reason_and_carries_no_changelog (__main__.UpdateFixtures.test_unverified_requires_a_failure_reason_and_carries_no_changelog) ... FAIL
+
+======================================================================
+FAIL: test_each_report (__main__.UpdateFixtures.test_each_report)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/update/test_fixtures.py", line 17, in setUp
+    self.assertTrue(SCHEMA.is_file(), "update.v1.schema.json is missing")
+AssertionError: False is not true : update.v1.schema.json is missing
+
+======================================================================
+FAIL: test_refuses_unknown_fields_and_bad_values (__main__.UpdateFixtures.test_refuses_unknown_fields_and_bad_values)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/update/test_fixtures.py", line 17, in setUp
+    self.assertTrue(SCHEMA.is_file(), "update.v1.schema.json is missing")
+AssertionError: False is not true : update.v1.schema.json is missing
+
+======================================================================
+FAIL: test_unverified_requires_a_failure_reason_and_carries_no_changelog (__main__.UpdateFixtures.test_unverified_requires_a_failure_reason_and_carries_no_changelog)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/update/test_fixtures.py", line 17, in setUp
+    self.assertTrue(SCHEMA.is_file(), "update.v1.schema.json is missing")
+AssertionError: False is not true : update.v1.schema.json is missing
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.001s
+
+FAILED (failures=3)

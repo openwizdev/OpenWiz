@@ -1,0 +1,7 @@
+{
+  "current": "0.1.10",
+  "latest": "0.1.9",
+  "verified": true,
+  "reason": "not-newer",
+  "changelog_line": "OpenWiz shows the installed version in setup."
+}

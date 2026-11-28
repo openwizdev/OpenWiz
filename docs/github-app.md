@@ -174,7 +174,8 @@ The token service mints agents' one-hour `openwiz[bot]` installation tokens on t
 owner's machine, beside the key. It listens on no port. An agent runs it per token:
 through the owner's machine pairing from a cloud thread, or locally from a local
 thread. The request goes on standard input and the answer comes back as one JSON
-line on standard output.
+line on standard output. The answer holds the token only **sealed** to the one-time
+public key in the request, so a kept copy of the output holds no usable token.
 
 Run these commands **as the owner, on the machine that holds the App's state**. Pass the
 same `--state-dir` as setup (by default `~/.local/state/openwiz`):
@@ -199,6 +200,11 @@ python3 -I tools/github-app/token-service.py stop --state-dir "$HOME/.local/stat
   GitHub's grant is checked against the request. A wider or different grant, or a
   request outside the installation or profile, gets the contract's refusal and never
   a token.
+- **Sealing.** Each request carries `answer_key`, an RSA 3072-bit public key made for
+  that request. The service encrypts the token to it with `/usr/bin/openssl` (RSA-OAEP,
+  SHA-256), passing the key and the token through pipes, and answers `sealed_token`.
+  Any other key is a `usage` refusal before GitHub is called. A minted token it can't
+  seal is revoked at GitHub and answered `unavailable`.
 - **Time left.** The expiry is checked on a fresh clock after GitHub answers. The
   token must have more than five minutes plus ten seconds left (for the log write and
   the pipe), and at most 65 minutes. A slow exchange can't hand over a token already
@@ -212,12 +218,49 @@ python3 -I tools/github-app/token-service.py stop --state-dir "$HOME/.local/stat
   permissions granted, the outcome and the expiry. It never holds a token. A log
   that others can read, or a symlink in its place, makes every mint `unavailable`.
   The line is written before the token is handed over.
-- **Never exposed.** No token or key reaches the command line, standard error or any
-  file but the key's own. Standard error stays empty except for the stopped
+- **Never exposed.** No plaintext token reaches the command line, standard output,
+  standard error or any file, and no key but the key's own file. Standard error stays empty except for the stopped
   service's one sentence.
 - **Tests.** `python3 -I tools/github-app/test_token_service.py` runs every
   `contracts/fixtures/token-service/requests.json` case and the guards above against
   a fake GitHub with a throwaway key.
+
+## The Actions token-service route
+
+An agent can also reach the token service through a `main`-only GitHub Actions
+workflow in the owner's private repository (`OPENWIZ_TOKEN_SERVICE_ROUTE=actions`
+and `OPENWIZ_TOKEN_SERVICE_REPOSITORY=<owner/name>`), using the workflow template
+at `tools/github-app/mint-workflow.yml` and the same sealed-answer contract
+([`token-service.v1`](../contracts/token-service.v1.md)). Only `main`'s workflow
+code may ever read the App's private key: a branch-triggered or non-`main`
+workflow must never read it.
+
+Owner setup steps:
+
+1. **Create the `token-service` environment** in the private repository with
+   deployment branches restricted to `main` only. Add environment variables
+   `OPENWIZ_GITHUB_APP_ID` (the numeric App ID) and, for the factory App,
+   `OPENWIZ_GITHUB_APP_MODE=factory`.
+2. **Make a fresh App key into its secret**, through GitHub's own form: generate
+   a new private key in the App's settings, base64-encode the PEM, and save it
+   as the `token-service` environment secret `OPENWIZ_GITHUB_APP_KEY` (never a
+   repository secret).
+3. **Protect `main` with a ruleset** so only the owner can change it (no branch
+   bypass or agent push to `main`).
+4. **Copy the template** (`tools/github-app/mint-workflow.yml`) into the private
+   repository's `.github/workflows/mint-workflow.yml` on `main`, keeping its
+   pinned `openwizdev/OpenWiz` commit SHA and pinned action SHAs.
+5. **Delete the old key** in the App's settings once the new route is verified.
+
+With `OPENWIZ_TOKEN_SERVICE_ROUTE=actions` and
+`OPENWIZ_TOKEN_SERVICE_REPOSITORY=<owner/name>`, `agent-token.py` dispatches the
+workflow on `main` with the request (and one-time `answer_key`) plus a fresh
+random `nonce`, waits up to 120 seconds (backing off on 403 or 429), downloads
+and immediately deletes the 1-day artifact named by `nonce`, and opens and checks
+the sealed answer in memory. Any failure falls back to the owner's account with
+the standard-error note. Offline proofs run with
+`python3 -I tools/github-app/test_mint_workflow.py` and
+`python3 -I tools/github-app/test_agent_token.py`.
 
 ## Pairing App selection
 
@@ -340,13 +383,18 @@ python3 -I tools/github-app/agent-token.py run $REQ -- git push origin HEAD
   owner's machine) and `OPENWIZ_TOKEN_SERVICE_ROUTE` (`pairing` for a cloud thread,
   `local` on the owner's machine). The pairing route is **off** until
   `OPENWIZ_TOKEN_SERVICE_READBACK` is exactly `passed`, which the owner sets only after
-  GA5's live read-back finds no pairing log or `mac run` result record keeping a
-  token. With `OPENWIZ_TOKEN_SERVICE` unset, `start` and `run` change nothing and
+  GA5's live read-back finds that a kept pairing log or `mac run` result record holds
+  only the sealed answer. With `OPENWIZ_TOKEN_SERVICE` unset, `start` and `run` change nothing and
   print nothing.
-- **How the token crosses.** The request goes on standard input; the token comes
-  back only as the piped standard output of one `room-cli mac run --stdin` call (or
-  the local call), read straight into the private file. The call's standard error is
-  discarded. No token is ever on a command line, in a terminal or in a log.
+- **How the token crosses.** For each request the helper makes a one-time RSA 3072-bit
+  key pair with `/usr/bin/openssl` and sends the public half as `answer_key`, on standard
+  input. The private half stays in the helper's memory: no file, argument or environment
+  variable holds it, and openssl reads it through a pipe. The token comes back only
+  sealed to that key, as the piped standard output of one `room-cli mac run --stdin`
+  call (or the local call). The helper opens it, checks it and writes it to the private
+  file; the private key is then dropped. An answer it can't open is `bad-answer`; when
+  it can't make a key it makes no call and falls back as `unreachable`. The call's
+  standard error is discarded. No token is ever on a command line, in a terminal or in a log.
 - **The private files.** One cache file (0600) per requester and scope, so agents on one
   account never share or replace each other's tokens, in a 0700 directory you own,
   outside every Git working tree and reached through no symlink: `OPENWIZ_AGENT_TOKEN_DIR`,
@@ -477,6 +525,46 @@ Delete its private key in GitHub's App settings if rotating it. Remove the local
 not revoke already minted tokens. Then remove `<state>/tokens/`, the refresh
 helper's cache.
 
+## PR opener (stopgap)
+
+Until the owner's token service is live, `.github/workflows/pr-opener.yml` opens
+a pull request against `main` as `openwiz[bot]` from `main`'s own workflow file.
+Only `main`'s copy of the workflow may ever read the App's key: the workflow
+triggers on `workflow_dispatch` only, its `open-pr` job runs in the
+`app-pr-opener` environment, refuses any ref other than `refs/heads/main`, and
+never checks out or executes code from the requested branch.
+
+### Owner setup
+
+Perform these steps on your own GitHub login in **Settings → Environments**:
+
+1. Create an environment named `app-pr-opener`.
+2. Under **Deployment branches and tags**, choose **Selected branches and tags**
+   and add a branch rule for `main` only.
+3. Add `OPENWIZ_GITHUB_APP_KEY` (the App's PEM private key, base64-encoded on
+   one line) as an **environment secret** in `app-pr-opener`. Never store it as
+   a repository secret.
+4. Add `OPENWIZ_GITHUB_APP_ID` (the App's public numeric ID) as an **environment
+   variable** in `app-pr-opener`.
+
+### Usage
+
+Agents dispatch the workflow against `main`, passing untrusted inputs as JSON on
+stdin with `--json` (`head` must match `room/**` and already exist):
+
+```sh
+gh workflow run pr-opener.yml --ref main --json <<'EOF'
+{"head":"room/example-branch","title":"#1234: example title","body":"Closes #1234\n","draft":"false"}
+EOF
+```
+
+`tools/github-app/pr-opener.py` signs the App JWT with `/usr/bin/openssl` over a
+pipe descriptor, mints an installation token scoped to this one repository with
+`pull_requests: write`, `contents: read` and `metadata: read`, verifies GitHub
+granted that exact scope, leaves any existing open pull request for `head`
+alone, records only the pull request number in the job summary, and revokes the
+token (`DELETE /installation/token`) before exit on both success and failure.
+
 ## Fixture proof
 
 ```sh
@@ -489,7 +577,7 @@ an HTTP endpoint on `127.0.0.1`, never GitHub or CloudRoom. (The setup page's br
 proofs went with the web view in #1264.) `--api-base` exists for
 this seam: only the fixed production API or explicit HTTP `127.0.0.1:PORT` is
 accepted, and redirects are refused. Never use real keys with the test endpoint.
-The `rust` CI job runs these fixtures in its "The skills' tests" step
+The `release` CI job (part 2) runs these fixtures in its "The GitHub App" step
 (`.github/workflows/ci.yml`).
 
 Sources (GitHub documentation, read 2026-11-01):

@@ -1,0 +1,46 @@
+FFFF
+======================================================================
+FAIL: test_malformed_snapshots_are_refused (__main__.StatesContract.test_malformed_snapshots_are_refused)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/synthetic/checkout/contracts/fixtures/agent-states/test_fixtures.py", line 68, in test_malformed_snapshots_are_refused
+    validator = self.validator()
+                ^^^^^^^^^^^^^^^^
+  File "/home/synthetic/checkout/contracts/fixtures/agent-states/test_fixtures.py", line 25, in validator
+    self.assertTrue(SCHEMA.is_file(), "the states schema must exist")
+AssertionError: False is not true : the states schema must exist
+
+======================================================================
+FAIL: test_ping_form_and_refusals (__main__.StatesContract.test_ping_form_and_refusals)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/synthetic/checkout/contracts/fixtures/agent-states/test_fixtures.py", line 102, in test_ping_form_and_refusals
+    validator = self.validator("ping")
+                ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/synthetic/checkout/contracts/fixtures/agent-states/test_fixtures.py", line 25, in validator
+    self.assertTrue(SCHEMA.is_file(), "the states schema must exist")
+AssertionError: False is not true : the states schema must exist
+
+======================================================================
+FAIL: test_recheck_keeps_name_and_fresh_fix_has_its_own_name (__main__.StatesContract.test_recheck_keeps_name_and_fresh_fix_has_its_own_name)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/synthetic/checkout/contracts/fixtures/agent-states/test_fixtures.py", line 56, in test_recheck_keeps_name_and_fresh_fix_has_its_own_name
+    validator = self.validator()
+                ^^^^^^^^^^^^^^^^
+  File "/home/synthetic/checkout/contracts/fixtures/agent-states/test_fixtures.py", line 25, in validator
+    self.assertTrue(SCHEMA.is_file(), "the states schema must exist")
+AssertionError: False is not true : the states schema must exist
+
+======================================================================
+FAIL: test_ticket_and_agent_states_have_record_examples (__main__.StatesContract.test_ticket_and_agent_states_have_record_examples)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/synthetic/checkout/contracts/fixtures/agent-states/test_fixtures.py", line 33, in test_ticket_and_agent_states_have_record_examples
+    self.assertTrue(CONTRACT.is_file(), "the state-to-record contract must exist")
+AssertionError: False is not true : the state-to-record contract must exist
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.001s
+
+FAILED (failures=4)

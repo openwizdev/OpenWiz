@@ -9,21 +9,23 @@
 
 You make the decisions: answer a few questions. The agents run the factory: they write the spec and the tickets, build, review and merge. You watch it ship.
 
-**Status:** OpenWiz 0.1.1 ("OpenWiz 0.02") is out: the [release](https://github.com/openwizdev/OpenWiz/releases/tag/v0.1.1) installs on macOS (Apple silicon or Intel) and on Linux on x86_64 (glibc 2.34 or later), with no CloudRoom. CloudRoom offers no Intel Mac build today, so on an Intel Mac your agents run on this computer or on boat.dev. OpenWiz builds itself, in public, in this repo.
+**Status:** OpenWiz 0.1.0 ("OpenWiz 0.01") is the current release: the [release](https://github.com/openwizdev/OpenWiz/releases/tag/v0.1.0) installs on macOS (Apple silicon or Intel) and on Linux on x86_64 (glibc 2.34 or later), with no CloudRoom. CloudRoom offers no Intel Mac build today, so on an Intel Mac your agents run on this computer or on boat.dev. OpenWiz 0.1.1 ("OpenWiz 0.02") is coming next and is not released yet. OpenWiz builds itself, in public, in this repo.
 
 ## Quick start
 
-You need Python 3.9 or later, `git`, and the GitHub CLI (`gh`). Then paste this line into your coding agent (Claude Code, Codex or another):
+Tell your coding agent (Claude Code, Codex, Cursor or another):
 
-> Install OpenWiz from github.com/openwizdev/OpenWiz
+> Install OpenWiz
 
-Your agent follows the [install skill](https://github.com/openwizdev/WizSkills/blob/v0.4.0/skills/install/SKILL.md). First it asks where your agents run: **this computer**, with the Claude Code or Codex you're signed in to; **boat.dev**; or **[CloudRoom](https://cloudroom.dev)**. CloudRoom is optional: the install never needs it, and its install and sign-in run only if you pick it. In 0.1.1 the automatic fleet runs on this computer, on boat.dev or in CloudRoom. With this computer or boat.dev, a scheduled job on this computer, shown first and installed on your yes, checks GitHub every ten minutes and starts or wakes the fleet only when work is due; builders and reviewers start through OpenWiz's drivers with your own Claude Code or Codex login.
-
-It checks your computer, installs the verified prebuilt release (no Rust or Node), puts OpenWiz's skills into your agents, and checks each connection. Nothing starts until you approve a plan. People: see the [install guide](docs/install.md) for every step and command. OpenWiz is free. Your model and host charges are your own.
+That phrase is the whole install instruction. The agent follows [Install OpenWiz](AGENTS.md#install-openwiz): it reads GitHub's Latest release and that release's install skill, then runs the install. Any release other than 0.1.0 is cloned only when the whole value of `<tag>` matches `v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)`, using `git clone --depth 1 --branch "$tag" -- https://github.com/openwizdev/OpenWiz "$openwiz"`, and follows the `commit` in that clone's `wizskills.lock`. You need Python 3.9 or later, `git`, and the GitHub CLI (`gh`). It asks where your agents run: **this computer**, with the Claude Code or Codex you're signed in to; **boat.dev**; or **[CloudRoom](https://cloudroom.dev)**. CloudRoom is optional: the install never needs it, and its install and sign-in run only if you pick it. It checks your computer, installs the verified prebuilt release (no Rust or Node), puts OpenWiz's skills into your agents, and checks each connection. Nothing starts until you approve a plan. OpenWiz is free. Your model and host charges are your own.
 
 ### OpenWiz 0.1.0
 
-OpenWiz 0.1.0 ("OpenWiz 0.01") also installs with no CloudRoom, on Apple silicon, an Intel Mac or Linux on x86_64, through its own [install skill](https://github.com/openwizdev/WizSkills/blob/maint/0.2/skills/install/SKILL.md) (WizSkills `maint/0.2`). With 0.1.1 as the Latest release, select 0.1.0's own files as the [guide's 0.1.0 steps](docs/install.md#openwiz-010) show. On 0.1.0 the automatic fleet runs in CloudRoom; without CloudRoom you plan, start each builder by hand on this computer or on boat.dev, and review its pull request yourself.
+OpenWiz 0.1.0 ("OpenWiz 0.01") is the current release. Its commands are the [install guide's 0.1.0 steps](docs/install.md#openwiz-010). In 0.1.0 the automatic fleet runs in CloudRoom; without CloudRoom you plan, start each builder by hand on this computer or on boat.dev, and review its pull request yourself.
+
+### OpenWiz 0.1.1
+
+OpenWiz 0.1.1 ("OpenWiz 0.02") is coming; it has no release date yet. In 0.1.1 the automatic fleet also runs on this computer or on boat.dev: a scheduled job on this computer, shown first and installed on your yes, checks GitHub every ten minutes and starts or wakes the fleet only when work is due. The [install guide](docs/install.md) already describes its steps.
 
 ## How it works
 
@@ -40,11 +42,16 @@ The kernel is small. Three parts:
 
 OpenWiz never touches a login. Your agents use their own signed-in tools, and there is no server of ours.
 
+## Chrome
+
+The [Chrome side panel](extensions/chrome/README.md) chats with a local agent about the page you are on. Load it unpacked, start its loopback bridge, and the agent can read, click, type or navigate only in tabs you allow. You can revoke that while the panel and the page show that the agent is acting. It does not call CloudRoom and it does not add a hosted service.
+
 | Path | What it is |
 | --- | --- |
 | `kernel/` | The records and driver rules, and their test kits |
 | `adapters/` | The drivers, one folder per host |
 | `crates/` | The `openwiz` command (Rust) |
+| `extensions/chrome` | The Chrome side panel and the loopback bridge it talks to |
 | `docs/` | Guides and public decisions |
 
 ## Versions

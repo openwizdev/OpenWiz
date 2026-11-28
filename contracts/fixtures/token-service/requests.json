@@ -1,6 +1,6 @@
 {
   "synthetic": true,
-  "note": "GA2's seam. Owners, tokens and times are synthetic placeholders; times are Unix seconds on a controlled clock. 'github' names what the fake GitHub does to a valid request.",
+  "note": "GA2's seam. Owners, tokens and times are synthetic placeholders; times are Unix seconds on a controlled clock. 'github' names what the fake GitHub does to a valid request. '<answer key>' stands for the reader's own throwaway RSA 3072-bit public key, and '<sealed token>' for the case's token sealed to it.",
   "now": 1000,
   "installed": [
     "synthetic-owner/work",
@@ -20,6 +20,7 @@
         "schema": "openwiz.token-service.v1",
         "kind": "request",
         "requester": "builder-1839",
+        "answer_key": "<answer key>",
         "repositories": [
           "synthetic-owner/work"
         ],
@@ -32,13 +33,14 @@
           "actions": "read"
         }
       },
+      "token": "synthetic-write-token",
       "out": {
         "exit": 0,
         "stderr": "",
         "message": {
           "schema": "openwiz.token-service.v1",
           "kind": "answer",
-          "token": "synthetic-write-token",
+          "sealed_token": "<sealed token>",
           "expires_at": 4600,
           "repositories": [
             "synthetic-owner/work"
@@ -86,6 +88,7 @@
         "schema": "openwiz.token-service.v1",
         "kind": "request",
         "requester": "reviewer-1839",
+        "answer_key": "<answer key>",
         "repositories": [
           "synthetic-owner/work",
           "synthetic-owner/tools"
@@ -99,13 +102,14 @@
           "actions": "read"
         }
       },
+      "token": "synthetic-read-token",
       "out": {
         "exit": 0,
         "stderr": "",
         "message": {
           "schema": "openwiz.token-service.v1",
           "kind": "answer",
-          "token": "synthetic-read-token",
+          "sealed_token": "<sealed token>",
           "expires_at": 4500,
           "repositories": [
             "synthetic-owner/work",
@@ -171,6 +175,83 @@
       }
     },
     {
+      "name": "a request without an answer key",
+      "argv": [
+        "room-cli",
+        "mac",
+        "run",
+        "--stdin",
+        "python3 -I '/synthetic/openwiz/tools/github-app/token-service.py' mint"
+      ],
+      "request": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "request",
+        "requester": "builder-1839",
+        "repositories": [
+          "Synthetic-Owner/Work"
+        ],
+        "permissions": {
+          "metadata": "read"
+        }
+      },
+      "out": {
+        "exit": 2,
+        "stderr": "",
+        "message": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "refusal",
+          "refusal": "usage",
+          "message": "Token refused: the request is not one valid token-service request."
+        },
+        "log": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "mint-log",
+          "at": 1000,
+          "requester": "-",
+          "outcome": "usage"
+        }
+      }
+    },
+    {
+      "name": "a request whose answer key is not a key",
+      "argv": [
+        "room-cli",
+        "mac",
+        "run",
+        "--stdin",
+        "python3 -I '/synthetic/openwiz/tools/github-app/token-service.py' mint"
+      ],
+      "request": {
+        "schema": "openwiz.token-service.v1",
+        "kind": "request",
+        "requester": "builder-1839",
+        "answer_key": "not a key",
+        "repositories": [
+          "Synthetic-Owner/Work"
+        ],
+        "permissions": {
+          "metadata": "read"
+        }
+      },
+      "out": {
+        "exit": 2,
+        "stderr": "",
+        "message": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "refusal",
+          "refusal": "usage",
+          "message": "Token refused: the request is not one valid token-service request."
+        },
+        "log": {
+          "schema": "openwiz.token-service.v1",
+          "kind": "mint-log",
+          "at": 1000,
+          "requester": "-",
+          "outcome": "usage"
+        }
+      }
+    },
+    {
       "name": "a request with a repeated key",
       "argv": [
         "room-cli",
@@ -179,7 +260,7 @@
         "--stdin",
         "python3 -I '/synthetic/openwiz/tools/github-app/token-service.py' mint"
       ],
-      "request": "{\"schema\": \"openwiz.token-service.v1\", \"kind\": \"request\", \"requester\": \"builder-1839\", \"repositories\": [\"synthetic-owner/work\"], \"permissions\": {\"metadata\": \"read\"}, \"permissions\": {\"contents\": \"write\"}}",
+      "request": "{\"schema\": \"openwiz.token-service.v1\", \"kind\": \"request\", \"requester\": \"builder-1839\", \"answer_key\": \"<answer key>\", \"repositories\": [\"synthetic-owner/work\"], \"permissions\": {\"metadata\": \"read\"}, \"permissions\": {\"contents\": \"write\"}}",
       "out": {
         "exit": 2,
         "stderr": "",
@@ -211,6 +292,7 @@
         "schema": "openwiz.token-service.v1",
         "kind": "request",
         "requester": "builder-1839",
+        "answer_key": "<answer key>",
         "repositories": [
           "Synthetic-Owner/Work"
         ],
@@ -218,13 +300,14 @@
           "metadata": "read"
         }
       },
+      "token": "synthetic-case-token",
       "out": {
         "exit": 0,
         "stderr": "",
         "message": {
           "schema": "openwiz.token-service.v1",
           "kind": "answer",
-          "token": "synthetic-case-token",
+          "sealed_token": "<sealed token>",
           "expires_at": 4600,
           "repositories": [
             "Synthetic-Owner/Work"
@@ -262,6 +345,7 @@
         "schema": "openwiz.token-service.v1",
         "kind": "request",
         "requester": "builder-1839",
+        "answer_key": "<answer key>",
         "repositories": [
           "synthetic-owner/work"
         ],
@@ -306,6 +390,7 @@
         "schema": "openwiz.token-service.v1",
         "kind": "request",
         "requester": "builder-1839",
+        "answer_key": "<answer key>",
         "repositories": [],
         "permissions": {
           "metadata": "read",
@@ -347,6 +432,7 @@
         "schema": "openwiz.token-service.v1",
         "kind": "request",
         "requester": "builder-1839",
+        "answer_key": "<answer key>",
         "repositories": [
           "synthetic-owner/work",
           "other-owner/work"
@@ -395,6 +481,7 @@
         "schema": "openwiz.token-service.v1",
         "kind": "request",
         "requester": "builder-1839",
+        "answer_key": "<answer key>",
         "repositories": [
           "synthetic-owner/elsewhere"
         ],
@@ -441,6 +528,7 @@
         "schema": "openwiz.token-service.v1",
         "kind": "request",
         "requester": "builder-1839",
+        "answer_key": "<answer key>",
         "repositories": [
           "synthetic-owner/work"
         ],
@@ -482,6 +570,7 @@
         "schema": "openwiz.token-service.v1",
         "kind": "request",
         "requester": "builder-1839",
+        "answer_key": "<answer key>",
         "repositories": [
           "synthetic-owner/work"
         ],
@@ -528,6 +617,7 @@
         "schema": "openwiz.token-service.v1",
         "kind": "request",
         "requester": "builder-1839",
+        "answer_key": "<answer key>",
         "repositories": [
           "synthetic-owner/work"
         ],
@@ -575,6 +665,7 @@
         "schema": "openwiz.token-service.v1",
         "kind": "request",
         "requester": "builder-1839",
+        "answer_key": "<answer key>",
         "repositories": [
           "synthetic-owner/work"
         ],
@@ -622,6 +713,7 @@
         "schema": "openwiz.token-service.v1",
         "kind": "request",
         "requester": "builder-1839",
+        "answer_key": "<answer key>",
         "repositories": [
           "synthetic-owner/work"
         ],

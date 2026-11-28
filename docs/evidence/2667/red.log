@@ -1,0 +1,55 @@
+$ python3 -I tools/install/test_install.py LinuxArm -v
+test_install_assets_accepts_linux_aarch64_and_refuses_target_mismatch (__main__.LinuxArm.test_install_assets_accepts_linux_aarch64_and_refuses_target_mismatch) ... FAIL
+test_install_contract_schema_and_code_agree_on_targets (__main__.LinuxArm.test_install_contract_schema_and_code_agree_on_targets) ... FAIL
+test_preflight_accepts_linux_aarch64_and_refuses_other_arm (__main__.LinuxArm.test_preflight_accepts_linux_aarch64_and_refuses_other_arm) ... FAIL
+
+======================================================================
+FAIL: test_install_assets_accepts_linux_aarch64_and_refuses_target_mismatch (__main__.LinuxArm.test_install_assets_accepts_linux_aarch64_and_refuses_target_mismatch)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/test_install.py", line 482, in test_install_assets_accepts_linux_aarch64_and_refuses_target_mismatch
+    self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+AssertionError: 5 != 0 : {"schema": "openwiz.install-error.v1", "outcome": "refused", "command": "install", "reason": "unsupported package target; no build was selected or changed"}
+
+
+======================================================================
+FAIL: test_install_contract_schema_and_code_agree_on_targets (__main__.LinuxArm.test_install_contract_schema_and_code_agree_on_targets)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/test_install.py", line 520, in test_install_contract_schema_and_code_agree_on_targets
+    self.assertEqual(sorted(installer.TARGETS), sorted(expected))
+AssertionError: Lists differ: ['aar[16 chars]n', 'x86_64-apple-darwin', 'x86_64-unknown-linux-gnu'] != ['aar[16 chars]n', 'aarch64-unknown-linux-gnu', 'x86_64-apple[32 chars]gnu']
+
+First differing element 1:
+'x86_64-apple-darwin'
+'aarch64-unknown-linux-gnu'
+
+Second list contains 1 additional elements.
+First extra element 3:
+'x86_64-unknown-linux-gnu'
+
+- ['aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-unknown-linux-gnu']
++ ['aarch64-apple-darwin',
++  'aarch64-unknown-linux-gnu',
++  'x86_64-apple-darwin',
++  'x86_64-unknown-linux-gnu']
+
+======================================================================
+FAIL: test_preflight_accepts_linux_aarch64_and_refuses_other_arm (__main__.LinuxArm.test_preflight_accepts_linux_aarch64_and_refuses_other_arm)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<checkout>/tools/install/test_install.py", line 446, in test_preflight_accepts_linux_aarch64_and_refuses_other_arm
+    self.assertEqual((code, value['ready'], value['target']), (0, True, self.ARM), value)
+AssertionError: Tuples differ: (5, False, None) != (0, True, 'aarch64-unknown-linux-gnu')
+
+First differing element 0:
+5
+0
+
+- (5, False, None)
++ (0, True, 'aarch64-unknown-linux-gnu') : {'schema': 'openwiz.preflight.v1', 'ready': False, 'target': None, 'checks': [{'id': 'python', 'state': 'ok', 'next': 'Python 3.11 is enough.'}, {'id': 'target', 'state': 'refused', 'next': 'OpenWiz installs on macOS on Apple silicon and on Linux on x86_64.'}, {'id': 'disk', 'state': 'ok', 'next': 'Enough free space.'}, {'id': 'glibc', 'state': 'ok', 'next': 'glibc 2.36 is enough.'}, {'id': 'room-cli', 'state': 'missing', 'next': 'Optional: CloudRoom is needed only if you pick it as the host; then install the CloudRoom app and sign in, which provides room-cli.'}, {'id': 'gh', 'state': 'ok', 'next': 'Found on PATH; setup checks it.'}, {'id': 'git', 'state': 'ok', 'next': 'Found on PATH; setup checks it.'}], 'reason': 'Read this machine only, running only ldd --version; nothing was installed.'}
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.087s
+
+FAILED (failures=3)

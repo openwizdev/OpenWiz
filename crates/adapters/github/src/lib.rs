@@ -1,8 +1,8 @@
 pub mod allowlist;
 pub mod app;
 pub mod decisions;
-pub mod events;
 pub mod fleets;
+mod json_once;
 pub mod plan;
 pub mod process;
 pub mod tickets;

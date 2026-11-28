@@ -779,6 +779,7 @@ const RELEASE_CANDIDATE_TARGETS: &[&str] = &[
     "aarch64-apple-darwin",
     "x86_64-apple-darwin",
     "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
 ];
 const RELEASE_CANDIDATE_POINTERS: &[&str] = &[
     "https://github.com/jparker2006/ClosedWiz/issues/9001#issuecomment-9000000001",

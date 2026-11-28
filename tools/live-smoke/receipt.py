@@ -39,7 +39,7 @@ def _waived(waiver, body):
     return waiver['risk']
 RISK_CLAIM = {'send': 'send', 'new': 'new', 'app_permissions': 'app', 'spending': None}
 PRODUCTS = ('cli', 'server', 'service', 'web', 'runtime')
-TARGETS = ('aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-unknown-linux-gnu')
+TARGETS = ('aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-unknown-linux-gnu', 'aarch64-unknown-linux-gnu')
 PC_GAP = 'Agent-run PC smoke only: no Mac, real-device, real-radio or WebKit observation.'
 NOT_LIVE_GAP = 'Fixture or dry-run evidence: diagnostic only, never a live result.'
 LIVE_LINE = 'Live-checked'

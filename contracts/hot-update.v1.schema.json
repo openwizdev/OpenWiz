@@ -1,0 +1,219 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:openwiz:schema:hot-update:v1",
+  "title": "openwiz.hot-update.v1",
+  "type": "object",
+  "required": ["schema", "record"],
+  "properties": {
+    "schema": { "const": "openwiz.hot-update.v1" },
+    "record": {
+      "enum": ["component-manifest", "installed-set", "swap", "health-check", "rollback", "release-record", "launch-pins", "update-decision"]
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "record": { "const": "component-manifest" } }, "required": ["record"] },
+      "then": { "$ref": "#/$defs/component_manifest" }
+    },
+    {
+      "if": { "properties": { "record": { "const": "installed-set" } }, "required": ["record"] },
+      "then": { "$ref": "#/$defs/installed_set" }
+    },
+    {
+      "if": { "properties": { "record": { "const": "swap" } }, "required": ["record"] },
+      "then": { "$ref": "#/$defs/swap" }
+    },
+    {
+      "if": { "properties": { "record": { "const": "health-check" } }, "required": ["record"] },
+      "then": { "$ref": "#/$defs/health_check" }
+    },
+    {
+      "if": { "properties": { "record": { "const": "rollback" } }, "required": ["record"] },
+      "then": { "$ref": "#/$defs/rollback" }
+    },
+    {
+      "if": { "properties": { "record": { "const": "release-record" } }, "required": ["record"] },
+      "then": { "$ref": "#/$defs/release_record" }
+    },
+    {
+      "if": { "properties": { "record": { "const": "launch-pins" } }, "required": ["record"] },
+      "then": { "$ref": "#/$defs/launch_pins" }
+    },
+    {
+      "if": { "properties": { "record": { "const": "update-decision" } }, "required": ["record"] },
+      "then": { "$ref": "#/$defs/update_decision" }
+    }
+  ],
+  "unevaluatedProperties": false,
+  "$defs": {
+    "component": {
+      "type": "object",
+      "required": ["kind", "id"],
+      "properties": {
+        "kind": { "enum": ["kernel", "skills", "driver", "market-item"] },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "not": { "pattern": "\\n" }
+        }
+      }
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+      "not": { "pattern": "\\n" }
+    },
+    "versioned_component": {
+      "$ref": "#/$defs/component",
+      "required": ["version"],
+      "properties": {
+        "version": { "$ref": "#/$defs/version" }
+      }
+    },
+    "component_manifest": {
+      "$ref": "#/$defs/versioned_component",
+      "required": ["sha256"],
+      "properties": {
+        "sha256": { "type": "string", "minLength": 64, "maxLength": 64, "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "installed_set": {
+      "required": ["access", "components"],
+      "properties": {
+        "access": { "const": "owner-only" },
+        "components": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/installed_component" }
+        }
+      }
+    },
+    "installed_component": {
+      "$ref": "#/$defs/component",
+      "required": ["current", "last_good", "history"],
+      "properties": {
+        "current": { "$ref": "#/$defs/version" },
+        "last_good": { "$ref": "#/$defs/version" },
+        "history": {
+          "type": "array",
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "required": ["version", "result"],
+            "properties": {
+              "version": { "$ref": "#/$defs/version" },
+              "result": { "enum": ["good", "health-failed", "pulled"] }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "health_result": { "enum": ["passed", "failed", "timeout"] },
+    "swap": {
+      "$ref": "#/$defs/versioned_component",
+      "required": ["rollback_window_minutes", "health_result", "steps"],
+      "properties": {
+        "rollback_window_minutes": { "const": 5 },
+        "health_result": { "$ref": "#/$defs/health_result" },
+        "steps": {
+          "type": "array",
+          "minItems": 5,
+          "prefixItems": [
+            { "const": "stage-beside" },
+            { "const": "verify-sha256" },
+            { "const": "switch-atomically" },
+            { "const": "health-check" },
+            { "enum": ["mark-good", "roll-back"] }
+          ],
+          "items": false
+        }
+      },
+      "if": { "properties": { "health_result": { "const": "passed" } } },
+      "then": { "properties": { "steps": { "contains": { "const": "mark-good" } } } },
+      "else": { "properties": { "steps": { "contains": { "const": "roll-back" } } } }
+    },
+    "health_check": {
+      "$ref": "#/$defs/versioned_component",
+      "required": ["probe", "result"],
+      "properties": {
+        "probe": { "type": "string" },
+        "result": { "$ref": "#/$defs/health_result" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "kernel" } } },
+          "then": { "properties": { "probe": { "const": "self-check" } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "skills" } } },
+          "then": { "properties": { "probe": { "const": "lock-verify" } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "driver" } } },
+          "then": { "properties": { "probe": { "const": "driver-check" } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "market-item" } } },
+          "then": { "properties": { "probe": { "const": "listing-check" } } }
+        }
+      ]
+    },
+    "rollback": {
+      "$ref": "#/$defs/component",
+      "required": ["trigger", "from", "to"],
+      "properties": {
+        "trigger": { "enum": ["health-failed", "pulled"] },
+        "from": { "$ref": "#/$defs/version" },
+        "to": { "$ref": "#/$defs/version" }
+      }
+    },
+    "release_record": {
+      "required": ["latest", "pulled"],
+      "properties": {
+        "latest": { "$ref": "#/$defs/version" },
+        "pulled": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["version", "last_good", "reason"],
+            "properties": {
+              "version": { "$ref": "#/$defs/version" },
+              "last_good": { "$ref": "#/$defs/version" },
+              "reason": { "enum": ["live-check-failed", "regression-threshold"] }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    "launch_pins": {
+      "required": ["resolution", "components"],
+      "properties": {
+        "resolution": { "const": "at-start" },
+        "components": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/versioned_component", "unevaluatedProperties": false }
+        }
+      }
+    },
+    "update_decision": {
+      "required": ["change", "confirmation"],
+      "properties": {
+        "updates": { "enum": ["ask", "auto-patches"], "default": "ask" },
+        "change": { "enum": ["patch", "minor", "major", "pulled-rollback"] },
+        "confirmation": { "enum": ["required", "automatic"] }
+      },
+      "if": {
+        "required": ["updates"],
+        "properties": {
+          "updates": { "const": "auto-patches" },
+          "change": { "enum": ["patch", "pulled-rollback"] }
+        }
+      },
+      "then": { "properties": { "confirmation": { "const": "automatic" } } },
+      "else": { "properties": { "confirmation": { "const": "required" } } }
+    }
+  }
+}

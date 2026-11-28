@@ -13,6 +13,7 @@ EFFORTS = {'fake-harness': ('--effort', ('low', 'medium', 'high', 'xhigh', 'max'
 CANT_SET_EFFORT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster to "
                    "run it at the host's default")
 GRACE = 10
+KILL_GRACE = 2
 LSOF_COULD_NOT_CHECK = []
 NO_LSOF = ('driver: lsof could not run or failed, so the driver could not check which processes hold this '
            "run's output files open; it ended only the turns' process groups and the processes their "
@@ -294,11 +295,196 @@ def running(turn, run):
     return bool(turn) and turn['since'] is not None and since(turn['pid']) == turn['since']
 
 
+def legacy_turns(turns):
+    return isinstance(turns, list) and bool(turns) and all(type(t) is int for t in turns)
+
+
+def format_pids(pids):
+    ordered = sorted(pids)
+    shown = ', '.join(str(p) for p in ordered[:10])
+    return shown + (' (and %d more)' % (len(ordered) - 10) if len(ordered) > 10 else '')
+
+
+def proc_table(run):
+    try:
+        entries = os.listdir('/proc')
+    except OSError:
+        raise Refused('run %s could not be checked because /proc is not readable' % run,
+                      'check and end processes carrying OPENWIZ_RUN=%s by hand' % run)
+    table, children = {}, {}
+    for name in entries:
+        if not name.isdigit():
+            continue
+        pid = int(name)
+        try:
+            with open('/proc/%d/stat' % pid) as f:
+                fields = f.read().rpartition(')')[2].split()
+        except OSError:
+            continue
+        if len(fields) < 20 or fields[0] == 'Z':
+            continue
+        ppid, pgid, sid, started = int(fields[1]), int(fields[2]), int(fields[3]), int(fields[19])
+        table[pid] = (ppid, pgid, sid, started)
+        children.setdefault(ppid, []).append(pid)
+    return table, children
+
+
+def cap_prm(pid):
+    try:
+        with open('/proc/%s/status' % pid) as f:
+            for line in f:
+                if line.startswith('CapPrm:'):
+                    return int(line.split()[1], 16)
+    except (OSError, ValueError, IndexError):
+        pass
+    return 0
+
+
+def same_creds(pid, uid, gid, my_cap):
+    try:
+        with open('/proc/%d/status' % pid) as f:
+            uids = gids = None
+            caps = 0
+            for line in f:
+                if line.startswith('Uid:'):
+                    uids = [int(x) for x in line.split()[1:5]]
+                elif line.startswith('Gid:'):
+                    gids = [int(x) for x in line.split()[1:5]]
+                elif line.startswith('CapPrm:'):
+                    caps = int(line.split()[1], 16)
+    except (OSError, ValueError, IndexError):
+        return False
+    return uids == [uid, uid, uid, uid] and gids == [gid, gid, gid, gid] and (caps & ~my_cap) == 0
+
+
+# PRIVACY: legacy pre-#1590 records store only turn pids, so detached workers can outlive their turn
+# in a new session; inspect own-UID /proc/<pid>/environ solely for OPENWIZ_RUN=<run>, never retaining it.
+def scan_legacy(turn_ids, run, mark, tracked, checked_unmarked):
+    table, children = proc_table(run)
+    self_chain, cur = set(), os.getpid()
+    while cur in table and cur not in self_chain:
+        self_chain.add(cur)
+        cur = table[cur][0]
+    for p in [p for p, st in tracked.items() if p not in table or table[p][3] != st]:
+        del tracked[p]
+    uid, gid, my_cap = os.geteuid(), os.getegid(), cap_prm('self')
+    unreadable = set()
+    for p, (_, pgid, sid, st) in table.items():
+        if p in self_chain or p in tracked or (p, st) in checked_unmarked:
+            continue
+        tied = p in turn_ids or pgid in turn_ids or sid in turn_ids
+        if not same_creds(p, uid, gid, my_cap):
+            checked_unmarked.add((p, st))
+            continue
+        try:
+            with open('/proc/%d/environ' % p, 'rb') as f:
+                matched = mark in f.read().split(b'\0')
+        except (FileNotFoundError, ProcessLookupError):
+            continue
+        except PermissionError:
+            if tied:
+                unreadable.add(p)
+            else:
+                try:
+                    if os.stat('/proc/%d/environ' % p).st_uid != uid:
+                        checked_unmarked.add((p, st))
+                    else:
+                        unreadable.add(p)
+                except OSError:
+                    pass
+            continue
+        except OSError:
+            if since(p) == st:
+                unreadable.add(p)
+            continue
+        if since(p) != st:
+            continue
+        if matched:
+            tracked[p] = st
+        else:
+            checked_unmarked.add((p, st))
+    self_groups = {table[p][1] for p in self_chain if p in table}
+    self_sessions = {table[p][2] for p in self_chain if p in table}
+    while True:
+        witnessed = [p for p, st in tracked.items() if p in table and since(p) == st]
+        groups = {table[p][1] for p in witnessed
+                  if (table[p][1] in turn_ids or table[p][1] in tracked) and table[p][1] not in self_groups}
+        sessions = {table[p][2] for p in witnessed
+                    if (table[p][2] in turn_ids or table[p][2] in tracked) and table[p][2] not in self_sessions}
+        added = False
+        for p, (_, pgid, sid, st) in table.items():
+            if p not in tracked and p not in self_chain and (pgid in groups or sid in sessions):
+                tracked[p] = st
+                added = True
+        for p in witnessed:
+            for c in children.get(p, ()):
+                if c not in tracked and c not in self_chain and c in table:
+                    tracked[c] = table[c][3]
+                    added = True
+        if not added:
+            break
+    return unreadable - set(tracked)
+
+
+def signal_pinned(targets, sig, sent):
+    pinned = {}
+    for p, st in targets.items():
+        if (p, st) in sent:
+            continue
+        try:
+            pinned[p] = (os.pidfd_open(p), st)
+        except OSError:
+            pass
+    for p, (fd, st) in pinned.items():
+        try:
+            if since(p) == st:
+                signal.pidfd_send_signal(fd, sig)
+                sent.add((p, st))
+        except OSError:
+            pass
+        finally:
+            os.close(fd)
+
+
+def end_legacy(turns, run, verified_stopped=False):
+    if not all(type(pid) is int and pid > 0 for pid in turns):
+        raise Refused('run %s was saved by an older template and a turn is not a pid, so it was not stopped' % run,
+                      'end its processes by hand')
+    if not LINUX:
+        if verified_stopped:
+            return
+        raise Refused('run %s was saved by an older template and this host cannot confirm its processes ended' % run,
+                      'stop it on Linux, or end processes carrying OPENWIZ_RUN=%s by hand' % run)
+    turn_ids, mark = set(turns), ('OPENWIZ_RUN=' + run).encode()
+    tracked, checked_unmarked = {}, set()
+    for sig, wait in ((signal.SIGTERM, GRACE), (signal.SIGKILL, KILL_GRACE)):
+        sent, deadline = set(), time.monotonic() + wait
+        while True:
+            unreadable = scan_legacy(turn_ids, run, mark, tracked, checked_unmarked)
+            if not tracked:
+                if unreadable:
+                    raise Refused('run %s has processes the driver cannot inspect to confirm it stopped' % run,
+                                  'check and end these processes by hand: %s' % format_pids(unreadable))
+                return
+            signal_pinned(tracked, sig, sent)
+            if time.monotonic() >= deadline:
+                break
+            time.sleep(min(0.1, max(0, deadline - time.monotonic())))
+    unreadable = scan_legacy(turn_ids, run, mark, tracked, checked_unmarked)
+    if not tracked and not unreadable:
+        return
+    if not tracked:
+        raise Refused('run %s has processes the driver cannot inspect to confirm it stopped' % run,
+                      'check and end these processes by hand: %s' % format_pids(unreadable))
+    raise Refused('run %s still has processes after stop' % run,
+                  'stop it again, or end these processes by hand: %s' % format_pids(tracked))
+
+
 def end(turns, run):
     kept = [(t['supervisor'], t['supervisor_since']) for t in turns if t and t['supervisor_since'] is not None]
     if lsof_failed_in(run, kept):
         LSOF_COULD_NOT_CHECK.append(run)
-    for sig, wait in ((signal.SIGTERM, GRACE), (signal.SIGKILL, 2)):
+    for sig, wait in ((signal.SIGTERM, GRACE), (signal.SIGKILL, KILL_GRACE)):
         sent, deadline = set(), time.monotonic() + wait
         while time.monotonic() < deadline:
             kept = [(p, t) for p, t in kept if since(p) == t]
@@ -407,6 +593,16 @@ def answer(cmd):
         lock(run)
         state = saved(run)
         if cmd == 'stop':
+            if legacy_turns(state['turns']):
+                verified = state.get('stopped') is True and state.get('legacy_stop_verified') is True
+                end_legacy(state['turns'], run, verified)
+                try:
+                    saved(run, dict(state, stopped=True, legacy_stop_verified=True))
+                except OSError:
+                    raise Refused('run %s has ended, but the driver could not save that it is stopped' % run,
+                                  'make OPENWIZ_TEMPLATE_STATE (or ~/.local/state/openwiz-template) a folder you can '
+                                  'write, then stop it again')
+                return {'run': run, 'stopped': True}
             try:
                 saved(run, dict(state, stopped=True))
                 kept = True
@@ -426,6 +622,9 @@ def answer(cmd):
             return {'run': run, 'stopped': True}
         if state['stopped']:
             raise Refused('run %s is stopped' % run, 'start a new run')
+        if legacy_turns(state['turns']):
+            raise Refused('run %s was saved by an older template, so it was not woken' % run,
+                          'stop it, then start a new run')
         if state.get('starting'):
             raise Refused('run %s never finished starting' % run, 'stop it, then start a new run')
         if state['turns'] and running(state['turns'][-1], run):

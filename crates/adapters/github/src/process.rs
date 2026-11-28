@@ -31,15 +31,6 @@ impl Executor {
     pub fn program(program: impl Into<std::path::PathBuf>) -> Self {
         Self(Execution::Program(program.into(), READ_TIMEOUT))
     }
-    pub fn program_for_fixtures(
-        program: impl Into<std::path::PathBuf>,
-        read_timeout: Duration,
-    ) -> Self {
-        Self(Execution::Program(
-            program.into(),
-            read_timeout.min(READ_TIMEOUT),
-        ))
-    }
 
     pub fn supplied(execute: std::sync::Arc<Execute>) -> Self {
         Self(Execution::Supplied(execute))

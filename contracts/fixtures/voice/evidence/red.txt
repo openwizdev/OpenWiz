@@ -1,0 +1,4 @@
+Command: python3 -I contracts/fixtures/voice/test_fixtures.py
+AssertionError: False is not true : voice.v1.schema.json is missing
+Ran 5 tests in 0.001s
+FAILED (failures=5)

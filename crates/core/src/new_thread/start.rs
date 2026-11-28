@@ -1,21 +1,11 @@
-use std::time::Duration;
-
 use serde::Serialize;
 
 use crate::limits::cap_field;
 use crate::messaging::send::read_failure;
 use crate::model::{Fact, Timestamp};
-use crate::ops::Clock;
 use crate::source::SourceError;
 
-use super::operation::NewThreadClient;
 use super::outcome::Gap;
-
-pub const FOLLOW_MAX_READS: u32 = 10;
-
-pub const FOLLOW_WINDOW: Duration = Duration::from_secs(60);
-
-pub const FOLLOW_INTERVAL: Duration = Duration::from_secs(6);
 
 pub const REPORTED_LABEL: &str =
     "reported configuration: what CloudRoom reports, never the serving model";
@@ -90,13 +80,6 @@ impl StartStage {
             reason: reason.to_owned(),
             text: format!("unknown ({reason})"),
         }
-    }
-
-    pub fn is_settled(&self) -> bool {
-        matches!(
-            self,
-            Self::Started { .. } | Self::IdleAsReported { .. } | Self::StartFailed { .. }
-        )
     }
 }
 
@@ -181,43 +164,6 @@ pub fn start_view(
                     detail: why,
                 }],
             }
-        }
-    }
-}
-
-pub fn follow_next(reads: u32, elapsed: Duration, stage: &StartStage) -> Option<Duration> {
-    if stage.is_settled() || reads >= FOLLOW_MAX_READS || elapsed + FOLLOW_INTERVAL > FOLLOW_WINDOW
-    {
-        return None;
-    }
-    Some(FOLLOW_INTERVAL)
-}
-
-pub fn follow_start(
-    client: &dyn NewThreadClient,
-    clock: &dyn Clock,
-    thread_id: &str,
-    requested: (&str, &str, &str),
-    wait: &dyn Fn(Duration),
-) -> (StartView, u32) {
-    let started = clock.monotonic();
-    let deadline = started + FOLLOW_WINDOW;
-    let mut waited = Duration::ZERO;
-    let mut reads = 0;
-    loop {
-        let read = client.show_thread(thread_id, deadline);
-        reads += 1;
-        let view = start_view(thread_id, requested, read, clock.now());
-        let elapsed = clock
-            .monotonic()
-            .saturating_duration_since(started)
-            .max(waited);
-        match follow_next(reads, elapsed, &view.stage) {
-            Some(pause) => {
-                wait(pause);
-                waited += pause;
-            }
-            None => return (view, reads),
         }
     }
 }

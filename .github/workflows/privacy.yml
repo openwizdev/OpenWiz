@@ -3,7 +3,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review, edited]
   push:
-    branches: [main]
+    branches: [main, 'release-*']
   merge_group:
     types: [checks_requested]
 permissions:

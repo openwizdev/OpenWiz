@@ -1,0 +1,209 @@
+{
+  "schema": "openwiz.ghost.v1",
+  "kind": "recall_fixtures",
+  "context_fixture": "context-pack.json",
+  "cases": [
+    {
+      "name": "grill_code_j1",
+      "steps": [
+        {
+          "action": "type",
+          "input": "J1",
+          "expected_text": "J1",
+          "expected_ghost": " all recs",
+          "expected_request": true,
+          "expected_events": ["shown"]
+        }
+      ]
+    },
+    {
+      "name": "ticket_approve_42",
+      "steps": [
+        {
+          "action": "type",
+          "input": "approve #4",
+          "expected_text": "approve #4",
+          "expected_ghost": "2 and merge",
+          "expected_request": true,
+          "expected_events": ["shown"]
+        }
+      ]
+    },
+    {
+      "name": "ship_magic_link",
+      "steps": [
+        {
+          "action": "type",
+          "input": "ship magic",
+          "expected_text": "ship magic",
+          "expected_ghost": "-link sign-in",
+          "expected_request": true,
+          "expected_events": ["shown"]
+        }
+      ]
+    },
+    {
+      "name": "phrase_all_recs",
+      "steps": [
+        {
+          "action": "type",
+          "input": "all r",
+          "expected_text": "all r",
+          "expected_ghost": "ecs",
+          "expected_request": true,
+          "expected_events": ["shown"]
+        }
+      ]
+    },
+    {
+      "name": "spec_seat_billing",
+      "steps": [
+        {
+          "action": "type",
+          "input": "the seat bil",
+          "expected_text": "the seat bil",
+          "expected_ghost": "ling spec",
+          "expected_request": true,
+          "expected_events": ["shown"]
+        }
+      ]
+    },
+    {
+      "name": "unknown_zzq",
+      "steps": [
+        {
+          "action": "type",
+          "input": "zzq",
+          "expected_text": "zzq",
+          "expected_ghost": null,
+          "expected_request": true,
+          "expected_events": []
+        }
+      ]
+    },
+    {
+      "name": "typed_through",
+      "steps": [
+        {
+          "action": "type",
+          "input": "all r",
+          "expected_text": "all r",
+          "expected_ghost": "ecs",
+          "expected_request": true,
+          "expected_events": ["shown"]
+        },
+        {
+          "action": "type",
+          "input": "e",
+          "expected_text": "all re",
+          "expected_ghost": "cs",
+          "expected_request": false,
+          "expected_events": ["typed_through"]
+        },
+        {
+          "action": "type",
+          "input": "c",
+          "expected_text": "all rec",
+          "expected_ghost": "s",
+          "expected_request": false,
+          "expected_events": ["typed_through"]
+        }
+      ]
+    },
+    {
+      "name": "word_accept_and_accept_all",
+      "steps": [
+        {
+          "action": "type",
+          "input": "approve #4",
+          "expected_text": "approve #4",
+          "expected_ghost": "2 and merge",
+          "expected_request": true,
+          "expected_events": ["shown"]
+        },
+        {
+          "action": "accept_word",
+          "input": "",
+          "expected_text": "approve #42 ",
+          "expected_ghost": "and merge",
+          "expected_request": false,
+          "expected_events": ["accepted_word"]
+        },
+        {
+          "action": "accept_word",
+          "input": "",
+          "expected_text": "approve #42 and ",
+          "expected_ghost": "merge",
+          "expected_request": false,
+          "expected_events": ["accepted_word"]
+        },
+        {
+          "action": "accept_all",
+          "input": "",
+          "expected_text": "approve #42 and merge",
+          "expected_ghost": null,
+          "expected_request": false,
+          "expected_events": ["accepted_all"]
+        }
+      ]
+    },
+    {
+      "name": "dismiss_esc_until_next_word",
+      "steps": [
+        {
+          "action": "type",
+          "input": "J1",
+          "expected_text": "J1",
+          "expected_ghost": " all recs",
+          "expected_request": true,
+          "expected_events": ["shown"]
+        },
+        {
+          "action": "dismiss",
+          "input": "",
+          "expected_text": "J1",
+          "expected_ghost": null,
+          "expected_request": false,
+          "expected_events": ["dismissed"]
+        },
+        {
+          "action": "type",
+          "input": " ",
+          "expected_text": "J1 ",
+          "expected_ghost": null,
+          "expected_request": false,
+          "expected_events": []
+        },
+        {
+          "action": "type",
+          "input": "ok",
+          "expected_text": "J1 ok",
+          "expected_ghost": null,
+          "expected_request": true,
+          "expected_events": []
+        }
+      ]
+    },
+    {
+      "name": "typed_over_contradicts_ghost",
+      "steps": [
+        {
+          "action": "type",
+          "input": "approve #4",
+          "expected_text": "approve #4",
+          "expected_ghost": "2 and merge",
+          "expected_request": true,
+          "expected_events": ["shown"]
+        },
+        {
+          "action": "type",
+          "input": "9",
+          "expected_text": "approve #49",
+          "expected_ghost": null,
+          "expected_request": true,
+          "expected_events": ["typed_over"]
+        }
+      ]
+    }
+  ]
+}

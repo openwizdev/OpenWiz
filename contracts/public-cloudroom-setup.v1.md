@@ -27,6 +27,7 @@ Each interface below was read on 2026-11-13 (CloudRoom `gui-v152`, source
 | The release's `SHA256SUMS.txt` asset | `<sha256>  <file>` per installer | The release notes: "SHA-256 checksums are in `SHA256SUMS.txt`" |
 | `room-cli cloud status --json` | `CloudroomStatus`: `account` (`{id, email}` or `null`), `signedOut` ("True only when the saved connection confirms no signed-in Cloudroom account"), `signingIn`, `selfHosted` | CloudRoom's room-cli command index (`gui/plugins/cloudroom-guide/skills/room-cli/references/command-index.md`), `gui/apps/cli/src/commands/cloudroom.ts`, `gui/packages/sdk/src/areas/cloudroom.ts` |
 | `room-cli cloud sign-in --json` | `{url}`: the browser link to CloudRoom's own sign-in | Same files |
+| `room-cli status --json` (cloud thread) | `{"thread": {"id", "projectId", "archived", ...}}`: confirms the host is an active CloudRoom cloud thread (`/usr/local/bin/room-cli`, where the desktop `cloud` subcommand does not exist) | CloudRoom cloud thread CLI (`room-cli --help`, `room-cli status --json`) |
 | `https://www.cloudroom.dev/download` | CloudRoom's own download page (it asks the visitor to sign in first) | `https://www.cloudroom.dev/docs/get-started.md` |
 | `codesign --verify --deep --strict -R <requirement>` (macOS) | Apple's signature check of the installed app, with a designated requirement: a Developer ID Application certificate whose leaf `subject.OU` is CloudRoom's team `4AJ9HF33Z5`; any other team's valid signature fails | The release notes: "Signed and notarized by Apple"; the team from the Developer ID certificate in release `gui-v153`'s `Cloudroom-v153-arm64.zip`, matching its `SHA256SUMS.txt` |
 
@@ -42,6 +43,18 @@ CloudRoom publishes no installer for macOS on Intel or for Linux on ARM.
 OpenWiz does not run on Windows. On a host without a target, the tool installs
 nothing and says so (`cloudroom_unsupported`). Asked to install, it opens
 CloudRoom's download page once instead.
+
+**CloudRoom cloud thread host:** When running on Linux inside a CloudRoom cloud
+thread (no desktop `~/.local/bin/room-cli`, `/usr/local/bin/room-cli` exists,
+and `/usr/local/bin/room-cli status --json` returns an active `thread` object
+with valid `id` and `projectId` and `archived` not true), the host is accepted
+as an already-authenticated CloudRoom host on any architecture (`aarch64` or
+`x86_64`). `status`, `install` and `sign-in` return `cloudroom_login_verified`
+without downloading, installing, running desktop `room-cli cloud` checks,
+checking FUSE or display variables, or opening a browser. The returned `id` and
+`projectId` values are never printed, saved or shown. If `status --json` fails,
+times out, is invalid or archived, detection fails closed and falls back to the
+normal target check (`cloudroom_not_installed` or `cloudroom_unsupported`).
 
 ## Installer source and integrity check
 
@@ -195,9 +208,10 @@ The tool has no option for one and reads nothing from standard input.
 ## States, codes and reasons
 
 Setup's check (`tools/install/setup/setup.py check`) stores the tool's one code
-as the `cloudroom` observation. The server maps it through its fixed `CODES`
-table (`crates/server/src/setup.rs`). A code is current for an hour and for the
-current selection, as for every component; old evidence is unknown.
+as the `cloudroom` observation and maps it to its next step in
+`tools/install/setup/setup.py` (the local server that previously mapped it left
+in #1264). A code is current for an hour and for the current selection, as for
+every component; old evidence is unknown.
 
 | Code | State | Meaning |
 | --- | --- | --- |
@@ -226,17 +240,15 @@ step are fixed public text.
 
 ## The sign-in screen and the powered-by line
 
-The setup page's CloudRoom step (`apps/web/src/components/CloudRoomSetup.tsx`,
-mounted only by `Setup.tsx`'s `cloudroom` component) is the one sign-in screen.
-It is display only: its state, reason and next step come from
-`GET /api/v1/setup`. It says that sign-in happens once, in CloudRoom's own
-window, and that OpenWiz never asks for, sees or stores a CloudRoom password or
-token. It says signed in only when the state is verified. It has no password
-field, no link and no request of its own. The main flow stays in OpenWiz.
+The local setup web page left in #1264; `tools/install/setup/setup.py check`
+reports `results.cloudroom` and `next.cloudroom` under `openwiz.setup-check.v1`.
+Sign-in still happens once, in CloudRoom's own window (`tools/install/cloudroom/cloudroom.py sign-in`),
+and OpenWiz never asks for, sees or stores a CloudRoom password or token. It
+reports signed in only for `cloudroom_login_verified`.
 
-**Powered-by line:** exactly `Powered by CloudRoom`, plain text, no logo or
-link. It is the last line of the CloudRoom step, in the caption style
-(`.meta`). It appears on the CloudRoom step only, once.
+**Powered-by line:** when a surface displays the CloudRoom step, its powered-by
+line is exactly `Powered by CloudRoom`, plain text, no logo or link, once on the
+CloudRoom step only.
 
 ## The tool's command line (seam for #1109 and #2207)
 

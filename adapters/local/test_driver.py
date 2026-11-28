@@ -58,6 +58,44 @@ t.main()
 CPU = ('OMP_NUM_THREADS', 'PYTHON_CPU_COUNT', 'CARGO_BUILD_JOBS')
 
 
+TIMED_DRIVER = '''import fcntl, importlib.machinery, importlib.util, json, os, sys, time
+sys.dont_write_bytecode = True
+spec = importlib.util.spec_from_loader('local', importlib.machinery.SourceFileLoader('local', %r))
+t = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(t)
+t.SELF = os.path.abspath(__file__)
+t.limit_now = lambda: float(os.environ['FAKE_NOW'])
+t.limit_jitter = lambda: float(os.environ.get('FAKE_JITTER', '5'))
+def fake_sleep(seconds, run):
+    with open(os.environ['FAKE_WAITS'], 'a') as f:
+        f.write('%%.1f\\n' %% seconds)
+    hold = os.environ.get('FAKE_HOLD_WAIT')
+    while hold and os.path.exists(hold):
+        if t.limit_stop_requested(run):
+            return False
+        time.sleep(0.05)
+    return not t.limit_stop_requested(run)
+t.limit_sleep = fake_sleep
+if os.environ.get('FAKE_RESUME_LOCK'):
+    popen = t.subprocess.Popen
+    def check_resume_lock(*args, **kwargs):
+        if args[0][1:2] == ['-p'] and args[0][2].startswith('You were woken'):
+            run = os.environ['OPENWIZ_RUN']
+            with open(os.path.join(t.STATE, run + '.lock'), 'rb') as lock_file:
+                try:
+                    fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    locked = False
+                except BlockingIOError:
+                    locked = True
+                info = t.read_limit_state(run) or {}
+                with open(os.environ['FAKE_RESUME_LOCK'], 'w') as f:
+                    json.dump([locked, info.get('waiting')], f)
+        return popen(*args, **kwargs)
+    t.subprocess.Popen = check_resume_lock
+t.main()
+'''
+
+
 def alive(pid):
     try:
         with open('/proc/%d/stat' % pid) as f:
@@ -697,6 +735,29 @@ class Local(unittest.TestCase):
         self.assertEqual({k: probe[k] for k in CPU}, {'OMP_NUM_THREADS': '7', 'PYTHON_CPU_COUNT': '2',
                                                        'CARGO_BUILD_JOBS': '2'})
 
+    def test_automatic_resume_protects_the_harness_from_its_shells(self):
+        if sys.platform != 'linux':
+            self.skipTest('Linux process environment')
+        env, _, _ = self.limit_env([
+            {'exit': 1, 'post_note': True, 'line': 'Claude AI usage limit reached. Try again in 5 minutes'},
+            {'exit': 0},
+        ])
+        probe = os.path.join(self.folder, 'resume-probe.json')
+        env['FAKE_PROBE'] = probe
+        program = self.timed_driver()
+        code, run = self.start('claude', env=env, program=program)
+        self.assertEqual(code, 0, run)
+        self.until(lambda: len(self.logged()) == 2)
+        self.assertEqual(self.logged()[-1][2], 'woken')
+        result = json.loads(read(probe))
+        default = read('/proc/self/oom_score_adj').strip()
+        shell_score = str(max(500, int(default)))
+        self.assertEqual(result['harness'], default)
+        self.assertEqual(result['BASH_ENV'], os.path.join(env['OPENWIZ_LOCAL_STATE'], run['run'] + '.bash-env'))
+        self.assertEqual(result['bash'], shell_score)
+        self.assertEqual(result['claude'], shell_score)
+        self.assertEqual(self.driver('stop', run, env, program)[0], 0)
+
     def test_with_no_cpu_quota_or_without_proc_as_on_macos_the_turn_environment_is_unchanged(self):
         for name, proc, files in (('max', '0::/agents\n', {'agents/cpu.max': 'max 100000\n'}),
                                   ('none', '0::/agents\n', {}),
@@ -712,6 +773,199 @@ class Local(unittest.TestCase):
         self.assertEqual({k: probe[k] for k in CPU + ('BASH_ENV', 'CLAUDE_ENV_FILE')}, dict.fromkeys(CPU + ('BASH_ENV', 'CLAUDE_ENV_FILE')))
         with open('/proc/self/oom_score_adj') as f:
             self.assertEqual(probe['bash'], f.read().strip())
+
+    def timed_driver(self):
+        path = os.path.join(self.folder, 'timed-driver')
+        with open(path, 'w') as f:
+            f.write('#!%s\n' % sys.executable + TIMED_DRIVER % DRIVER)
+        os.chmod(path, 0o700)
+        return path
+
+    def limit_env(self, steps, now=1795460000, hold_wait=None, jitter='5'):
+        queue = os.path.join(self.folder, 'limit-queue.json')
+        waits = os.path.join(self.folder, 'waits')
+        models = os.path.join(self.folder, 'models')
+        with open(queue, 'w') as f:
+            json.dump(steps, f)
+        env = dict(self.env, FAKE_LIMIT_QUEUE=queue, FAKE_NOW=str(now), FAKE_WAITS=waits,
+                   FAKE_MODELS=models, FAKE_JITTER=jitter)
+        if hold_wait:
+            env['FAKE_HOLD_WAIT'] = hold_wait
+        return env, waits, models
+
+    def test_usage_limit_waits_and_resumes_once_on_same_model(self):
+        reset_iso = '2026-11-23T18:55:20Z'
+        env, waits, models = self.limit_env([
+            {'exit': 1, 'post_note': True,
+             'line': 'Claude AI usage limit reached. Resets at %s (%s)' % (reset_iso, OPAQUE)},
+            {'exit': 0},
+        ])
+        lock_probe = os.path.join(self.folder, 'resume-lock')
+        env['FAKE_RESUME_LOCK'] = lock_probe
+        prog = self.timed_driver()
+        code, out = self.start('claude', env=env, program=prog)
+        self.assertEqual(code, 0, out)
+        self.until(lambda: len(self.logged()) == 2)
+        self.assertEqual(json.loads(read(lock_probe)), [True, True])
+        self.until(lambda: 'woke and read the ticket again' in read(self.tracker))
+        comments = json.loads(read(self.tracker))['comments']
+        self.assertEqual(len(comments), 1, 'status note was duplicated instead of edited')
+        self.assertIn('model: synthetic-1', comments[0]['body'])
+        self.assertEqual(read(models).splitlines(), ['claude synthetic-1 first', 'claude synthetic-1 woken'])
+        self.assertEqual(read(waits).splitlines(), ['140.0'])
+        self.assertEqual(self.driver('stop', out, env, prog), (0, dict(out, stopped=True)))
+
+        self.tearDown()
+        self.setUp()
+        env, waits, models = self.limit_env([
+            {'exit': 1, 'post_note': True, 'line': 'Claude AI usage limit reached. Resets at %s' % reset_iso},
+            {'exit': 1, 'line': 'Claude AI usage limit reached. Resets at %s' % reset_iso},
+            {'exit': 0},
+        ])
+        prog = self.timed_driver()
+        code, out = self.start('codex', env=env, program=prog)
+        self.assertEqual(code, 0, out)
+        self.until(lambda: len(self.logged()) == 2)
+        with open(os.path.join(env['OPENWIZ_LOCAL_STATE'], out['run'] + '.json')) as f:
+            sup = json.load(f)['turns'][0]['supervisor']
+        self.until(lambda: not alive(sup))
+        self.assertEqual(len(self.logged()), 2)
+        self.assertEqual(read(models).splitlines(), ['codex synthetic-1 first', 'codex synthetic-1 woken'])
+        self.assertEqual(read(waits).splitlines(), ['140.0'])
+
+    def test_wake_during_limit_wait_refuses_with_reset_time_and_stop_ends_wait(self):
+        reset_iso = '2026-11-23T18:55:20Z'
+        hold = os.path.join(self.folder, 'hold-wait')
+        open(hold, 'w').close()
+        env, waits, _ = self.limit_env([
+            {'exit': 1, 'post_note': True,
+             'line': 'You have hit your usage limit. Try again at %s (%s)' % (reset_iso, OPAQUE)},
+            {'exit': 0},
+        ], hold_wait=hold)
+        prog = self.timed_driver()
+        code, out = self.start('codex', env=env, program=prog)
+        self.assertEqual(code, 0, out)
+        self.until(lambda: os.path.exists(waits) and len(read(waits).splitlines()) == 1)
+        wcode, err = self.driver('wake', out, env, prog)
+        self.assertEqual(wcode, 1, err)
+        self.assertIsNone(kit.invalid(err, kit.load_schema()['error']), err)
+        self.assertIn('usage limit', err['error'])
+        self.assertIn(reset_iso, err['error'])
+        self.assertIn('resumes on its own', err['next'])
+        self.assertNotIn(OPAQUE, json.dumps(err))
+        self.assertEqual(len(self.logged()), 1)
+        state_path = os.path.join(env['OPENWIZ_LOCAL_STATE'], out['run'] + '.json')
+        state = json.loads(read(state_path))
+        with open(state_path, 'w') as f:
+            json.dump(dict(state, row={'session': {'pattern': '^session: (.+)$'}}, session=None), f)
+        self.assertEqual(self.driver('wake', out, env, prog), (wcode, err))
+        self.assertEqual(self.driver('stop', out, env, prog), (0, dict(out, stopped=True)))
+        self.no_new_turn(1)
+
+    def test_overload_without_reset_time_backs_off_60_120_then_stops(self):
+        env, waits, models = self.limit_env([
+            {'exit': 1, 'post_note': True, 'line': 'time: 2026-11-23T18:52:00Z\nAPI Error: 529 Overloaded (overloaded_error)'},
+            {'exit': 1, 'line': 'API Error: 529 Overloaded (overloaded_error)'},
+            {'exit': 1, 'line': 'API Error: 529 Overloaded (overloaded_error)'},
+            {'exit': 0},
+        ])
+        prog = self.timed_driver()
+        code, out = self.start('claude', env=env, program=prog)
+        self.assertEqual(code, 0, out)
+        self.until(lambda: len(self.logged()) == 3)
+        with open(os.path.join(env['OPENWIZ_LOCAL_STATE'], out['run'] + '.json')) as f:
+            sup = json.load(f)['turns'][0]['supervisor']
+        self.until(lambda: not alive(sup))
+        self.assertEqual(read(waits).splitlines(), ['60.0', '120.0'])
+        self.assertEqual(read(models).splitlines(), [
+            'claude synthetic-1 first', 'claude synthetic-1 woken', 'claude synthetic-1 woken'])
+
+    def test_limit_beyond_six_hours_does_not_wait_and_first_turn_reports_limit(self):
+        far_iso = '2026-12-02T17:00:00Z'
+        env, waits, _ = self.limit_env([
+            {'exit': 1, 'post_note': True,
+             'line': 'Claude AI usage limit reached. Resets Dec 2, 5pm UTC'},
+            {'exit': 0},
+        ])
+        prog = self.timed_driver()
+        code, out = self.start('claude', env=env, program=prog)
+        self.assertEqual(code, 0, out)
+        with open(os.path.join(env['OPENWIZ_LOCAL_STATE'], out['run'] + '.json')) as f:
+            sup = json.load(f)['turns'][0]['supervisor']
+        self.until(lambda: not alive(sup))
+        self.assertFalse(os.path.exists(waits), 'supervisor waited for a reset more than 6 hours away')
+        self.assertEqual(len(self.logged()), 1)
+        wcode, err = self.driver('wake', out, env, prog)
+        self.assertEqual(wcode, 1, err)
+        self.assertIsNone(kit.invalid(err, kit.load_schema()['error']), err)
+        self.assertIn(far_iso, err['error'])
+        self.assertIn(far_iso, err['next'])
+        self.assertNotIn(OPAQUE, json.dumps(err))
+
+        start_env, _, _ = self.limit_env([
+            {'exit': 1, 'immediate': True, 'line': 'Usage limit reached. Resets at 2026-12-02T17:00:00Z'},
+        ])
+        code, err = self.start('claude', env=start_env, program=prog)
+        self.assertEqual(code, 1, err)
+        self.assertIn('2026-12-02T17:00:00Z', err['error'])
+        self.assertEqual(err['next'], 'reset is more than 6 hours away; start again after 2026-12-02T17:00:00Z')
+
+        near_iso = '2026-11-23T18:55:20Z'
+        env2, _, _ = self.limit_env([
+            {'exit': 1, 'immediate': True,
+             'line': 'Claude AI usage limit reached. Resets at %s (%s)' % (near_iso, OPAQUE)},
+        ])
+        code, err = self.start('claude', env=env2, program=prog)
+        self.assertEqual(code, 1, err)
+        self.assertIsNone(kit.invalid(err, kit.load_schema()['error']), err)
+        self.assertIn('usage limit', err['error'])
+        self.assertIn(near_iso, err['error'])
+        self.assertNotIn(OPAQUE, json.dumps(err))
+
+        code, err = self.start('claude', repository='example/broken')
+        self.assertEqual(code, 1, err)
+        self.assertIn('the harness failed (exit 3)', err['error'])
+
+    def test_row_limit_pattern_and_reset_time_formats(self):
+        import importlib.machinery, importlib.util
+        spec = importlib.util.spec_from_loader('local', importlib.machinery.SourceFileLoader('local', DRIVER))
+        drv = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(drv)
+        now = 1795460000.0
+        self.assertTrue(hasattr(drv, 'detect_limit'), 'driver has no detect_limit')
+        for text, expected_kind, expected_reset in (
+            ('Claude AI usage limit reached|1795460120', 'limit', 1795460120.0),
+            ('Rate limit exceeded. Try again in 2 minutes.', 'limit', now + 120.0),
+            ('Rate limit exceeded. Try again in 2m30s.', 'limit', now + 150.0),
+            ('You hit your usage limit; resets at 6:55pm UTC', 'limit', 1795460100.0),
+            ('API Error: 529 Overloaded', 'overload', None),
+            ('API Error: 529 Overloaded\n{"time":"2026-12-02T17:00:00Z"}', 'overload', None),
+            ('API Error: 529 Overloaded\nRetry at 2026-11-23T19:00:00Z', 'overload', now + 400.0),
+            ('API Error: 529 Overloaded. Retry at 2026-11-23T20:00:00+0100', 'overload', now + 400.0),
+            ('Usage limit reached. Resets Dec 2, 5pm UTC', 'limit', 1796230800.0),
+            ('Usage limit reached. Resets at 7pm (America/New_York)', 'limit', 1795478400.0),
+            ('Usage limit reached. Resets at 7pm (Unknown/Zone)', 'limit', None),
+            ('A test for the rate limit failed', None, None),
+            ('Usage limit documentation is missing', None, None),
+            ('Ordinary syntax error on line 4', None, None),
+        ):
+            with self.subTest(text=text):
+                info = drv.detect_limit(text.splitlines(), now=now)
+                if expected_kind is None:
+                    self.assertIsNone(info)
+                else:
+                    self.assertIsNotNone(info)
+                    self.assertEqual(info['kind'], expected_kind)
+                    self.assertEqual(info['reset_at'], expected_reset)
+        row = {'harness': 'custom', 'program': 'custom', 'start': ['run', '{prompt}', '{model}', '{mode}'],
+               'wake': ['run', '{prompt}', '{mode}', '{session}'], 'session': {'pattern': 's=(.*)'},
+               'modes': {'auto': []}, 'env': {}, 'effort': 'none: fixture', 'login': 'fixture', 'daemon': 'none',
+               'limit': r'quota\s+exhausted'}
+        self.assertEqual(drv.check_row(dict(row), 'custom')['limit'], r'quota\s+exhausted')
+        info = drv.detect_limit(['quota exhausted; try again in 5 minutes'], row=row, now=now)
+        self.assertEqual((info['kind'], info['reset_at']), ('limit', now + 300.0))
+        with self.assertRaises(drv.Broken):
+            drv.check_row(dict(row, limit='.*'), 'custom')
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

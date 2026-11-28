@@ -1,0 +1,94 @@
+{
+  "schema": "openwiz.settings-cli.v1",
+  "kind": "history",
+  "entries": [
+    {
+      "version": 11,
+      "changed_at": "2001-01-03T04:05:06Z",
+      "changed_by": "Wiz chat",
+      "paths": [
+        "telemetry"
+      ]
+    },
+    {
+      "version": 10,
+      "changed_at": "2001-01-03T04:05:06Z",
+      "changed_by": "Wiz chat",
+      "paths": [
+        "telemetry"
+      ]
+    },
+    {
+      "version": 9,
+      "changed_at": "2001-01-03T04:05:06Z",
+      "changed_by": "Wiz chat",
+      "paths": [
+        "telemetry"
+      ]
+    },
+    {
+      "version": 8,
+      "changed_at": "2001-01-03T04:05:06Z",
+      "changed_by": "Wiz chat",
+      "paths": [
+        "telemetry"
+      ]
+    },
+    {
+      "version": 7,
+      "changed_at": "2001-01-03T04:05:06Z",
+      "changed_by": "Wiz chat",
+      "paths": [
+        "telemetry"
+      ]
+    },
+    {
+      "version": 6,
+      "changed_at": "2001-01-03T04:05:06Z",
+      "changed_by": "Wiz chat",
+      "paths": [
+        "telemetry"
+      ]
+    },
+    {
+      "version": 5,
+      "changed_at": "2001-01-03T04:05:06Z",
+      "changed_by": "Wiz chat",
+      "paths": [
+        "telemetry"
+      ]
+    },
+    {
+      "version": 4,
+      "changed_at": "2001-01-03T04:05:06Z",
+      "changed_by": "Wiz chat",
+      "paths": [
+        "telemetry"
+      ]
+    },
+    {
+      "version": 3,
+      "changed_at": "2001-01-03T04:05:06Z",
+      "changed_by": "Wiz chat",
+      "paths": [
+        "telemetry"
+      ]
+    },
+    {
+      "version": 2,
+      "changed_at": "2001-01-03T04:05:06Z",
+      "changed_by": "Wiz chat",
+      "paths": [
+        "telemetry"
+      ]
+    },
+    {
+      "version": 1,
+      "changed_at": "2001-01-03T04:05:06Z",
+      "changed_by": "Wiz chat",
+      "paths": [
+        "telemetry"
+      ]
+    }
+  ]
+}

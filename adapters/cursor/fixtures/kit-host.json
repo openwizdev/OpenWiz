@@ -1,0 +1,25 @@
+{
+  "answers": [
+    {"method": "GET", "path": "/v1/models", "status": 200,
+     "body": {"items": [
+       {"id": "synthetic-model-1", "displayName": "Synthetic Model 1", "parameters": [
+         {"id": "effort", "values": [{"value": "low"}, {"value": "medium"}, {"value": "high"}]}]},
+       {"id": "synthetic-model-2", "displayName": "Synthetic Model 2", "aliases": ["synthetic-alias"],
+        "parameters": [{"id": "reasoning_effort", "values": [{"value": "high"}]}]},
+       {"id": "synthetic-model-3", "displayName": "Synthetic Model 3",
+        "parameters": [{"id": "reasoning", "values": [{"value": "low"}]}]},
+       {"id": "synthetic-no-effort", "displayName": "Synthetic Model Without Effort",
+        "parameters": [{"id": "unrelated", "values": [{"value": "medium"}]}]}
+     ]}},
+    {"method": "POST", "path": "/v1/agents", "status": 201,
+     "body": {"agent": {"id": "bc-00000000-0000-4000-8000-00000000c0de", "status": "ACTIVE", "latestRunId": "run-00000001"},
+              "run": {"id": "run-00000001", "status": "CREATING"}}},
+    {"method": "GET", "path": "/v1/agents/bc-[0-9a-f-]{36}", "status": 200,
+     "body": {"status": "IDLE", "latestRunId": "run-00000001"}},
+    {"method": "POST", "path": "/v1/agents/bc-[0-9a-f-]{36}/runs", "status": 201,
+     "body": {"run": {"id": "run-00000002", "status": "CREATING"}}},
+    {"method": "POST", "path": "/v1/agents/bc-[0-9a-f-]{36}/runs/[A-Za-z0-9_-]+/cancel", "status": 409,
+     "body": {"error": {"code": "run_not_cancellable", "message": "not active"}}},
+    {"method": "POST", "path": "/v1/agents/bc-[0-9a-f-]{36}/archive", "status": 200, "body": {"id": "archived"}}
+  ]
+}

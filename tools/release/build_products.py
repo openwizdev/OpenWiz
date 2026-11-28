@@ -4,6 +4,7 @@ skills, or (#555) the WizSkills install its lock pins."""
 import argparse
 import json
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -15,12 +16,65 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from product_identity import PROGRAMS as COMPILED, WIZSKILLS, architecture, canonical, expected, git, \
     locked_skills, mode, payload, release_version, verify_programs, verify_runtime
 
-# #1699: the drivers 0.1.0 launches with (KN3 to KN5), each carried when the source tracks it,
-# and the driver kit's files (kit.py reads its schema, ../records.v1.md and ../records-kit/check.py).
-DRIVERS = ('boat', 'cloudroom', 'devin', 'factory', 'hermes', 'local', 'openclaw')
-KEY_CHECK_FILES = {'devin': ('README.md', 'fixtures/kit-host.json')}
 KIT = ['kernel/driver-kit/kit.py', 'kernel/driver-kit/schema.json', 'kernel/records-kit/check.py',
        'kernel/records.v1.md', 'kernel/driver-kit/hostkey.py', 'kernel/driver-kit/hosts.json']
+RUNTIME_NAMES = (
+    ('tools/install/install.py', 'runtime/install.py'),
+    ('tools/install/pull.py', 'runtime/pull.py'),
+    ('wizskills.lock', 'runtime/wizskills.lock'),
+    ('tools/install/setup/setup.py', 'runtime/setup/setup.py'),
+    ('tools/install/setup/store.py', 'runtime/setup/store.py'),
+    ('tools/github-app/setup.py', 'runtime/github-app/setup.py'),
+    ('tools/github-app/app.py', 'runtime/github-app/app.py'),
+    ('tools/github-app/manifest.json', 'runtime/github-app/manifest.json'),
+    ('tools/install/access/access.py', 'runtime/access/access.py'),
+    ('tools/install/cloudroom/cloudroom.py', 'runtime/cloudroom/cloudroom.py'),
+    ('tools/install/setup/init.py', 'runtime/setup/init.py'),
+    ('tools/install/setup/github_login.py', 'runtime/setup/github_login.py'),
+)
+INSTALLER_RUNNABLE_FOLDER = re.compile(r'[a-z0-9-]+')
+
+
+class BadRelease(Refused):
+    pass
+
+
+def pairs(items):
+    require(len({key for key, _ in items}) == len(items), 'repeated key')
+    return dict(items)
+
+
+def drivers(root, source):
+    tree = {}
+    for row in git(root, 'ls-tree', '-r', '-z', '--full-tree', '--end-of-options', source,
+                   '--', 'adapters').decode('utf-8').split('\0')[:-1]:
+        entry, path = row.split('\t', 1)
+        tree[path] = entry.split(' ')
+    regular = lambda path: tree.get(path, [''])[0] in ('100644', '100755')
+    selected = []
+    for path in sorted(tree):
+        parts = path.split('/')
+        if len(parts) != 3 or parts[2] != 'release.json':
+            continue
+        folder = path[:-len('release.json')]
+        try:
+            if not INSTALLER_RUNNABLE_FOLDER.fullmatch(parts[1]):
+                raise BadRelease(f'{path}: its folder name is not lowercase letters, digits and hyphens')
+            if not all(regular(folder + name) for name in ('driver', 'schema.json')):
+                raise BadRelease(f'{path}: its folder does not track a regular driver and schema.json')
+            require(regular(path), 'not a regular file')
+            value = json.loads(git(root, 'cat-file', 'blob', tree[path][2]).decode('utf-8'), object_pairs_hook=pairs)
+            require(type(value) is dict and value.keys() == {'extra_files'} and type(value['extra_files']) is list,
+                    'wrong shape')
+            extra = value['extra_files']
+            require(all(type(name) is str and name not in ('driver', 'schema.json') and regular(folder + name)
+                        for name in extra) and len(set(extra)) == len(extra), 'wrong files')
+        except BadRelease:
+            raise
+        except (Refused, ValueError, RecursionError):
+            raise BadRelease(f'{path}: not {{"extra_files": [...]}} naming tracked regular files in its folder') from None
+        selected += [folder + name for name in ('driver', 'schema.json', *extra)]
+    return selected
 
 
 def collect(root, binaries, output, version, source, target, program_receipt):
@@ -42,25 +96,24 @@ def collect(root, binaries, output, version, source, target, program_receipt):
     for relative, actual in skills:
         require(actual.is_file() and not actual.is_symlink(), 'unsafe tracked skill runtime')
         files['runtime/' + relative] = actual
-    files['runtime/install.py'] = root / 'tools/install/install.py'
-    files['runtime/pull.py'] = root / 'tools/install/pull.py'
+    names = dict(RUNTIME_NAMES)
+    files[names['tools/install/install.py']] = root / 'tools/install/install.py'
+    files[names['tools/install/pull.py']] = root / 'tools/install/pull.py'
     if installed is not None:
-        files['runtime/wizskills.lock'] = root / 'wizskills.lock'
+        files[names['wizskills.lock']] = root / 'wizskills.lock'
     # #1105: the setup and App connection tools an installed consumer runs.
-    for name, tool in (('setup/setup.py', 'tools/install/setup/setup.py'),
-                       ('setup/store.py', 'tools/install/setup/store.py'),
-                       ('github-app/setup.py', 'tools/github-app/setup.py'),
-                       ('github-app/app.py', 'tools/github-app/app.py'),
-                       ('github-app/manifest.json', 'tools/github-app/manifest.json')):
+    for tool in ('tools/install/setup/setup.py', 'tools/install/setup/store.py',
+                 'tools/github-app/setup.py', 'tools/github-app/app.py',
+                 'tools/github-app/manifest.json'):
         path = root / tool
         require(path.is_file() and not path.is_symlink(), 'unsafe or missing setup tool')
-        files['runtime/' + name] = path
+        files[names[tool]] = path
     # #1107: explicit production files only; never fixture providers or tests.
     access = root / 'tools/install/access/access.py'
     require(access.is_file() and access.stat().st_nlink == 1
             and not any(path.is_symlink() for path in (access, *list(access.parents)[:3])),
             'unsafe or missing access tool')
-    files['runtime/access/access.py'] = access
+    files[names['tools/install/access/access.py']] = access
     # #2201: setup's CloudRoom tool ships from its exact tracked file when the
     # requested commit tracks it; the installer requires it.
     if git(root, 'ls-tree', '-z', '--name-only', '--end-of-options', source,
@@ -69,7 +122,7 @@ def collect(root, binaries, output, version, source, target, program_receipt):
         require(tool.is_file() and tool.stat().st_nlink == 1
                 and not any(p.is_symlink() for p in (tool, *list(tool.parents)[:3])),
                 'unsafe or missing CloudRoom setup tool')
-        files['runtime/cloudroom/cloudroom.py'] = tool
+        files[names['tools/install/cloudroom/cloudroom.py']] = tool
     # #635: installed `openwiz init`'s runtime, the same way: from its exact
     # tracked file when the requested commit tracks it; the installer requires it.
     if git(root, 'ls-tree', '-z', '--name-only', '--end-of-options', source,
@@ -78,7 +131,7 @@ def collect(root, binaries, output, version, source, target, program_receipt):
         require(tool.is_file() and tool.stat().st_nlink == 1
                 and not any(p.is_symlink() for p in (tool, *list(tool.parents)[:3])),
                 'unsafe or missing init runtime')
-        files['runtime/setup/init.py'] = tool
+        files[names['tools/install/setup/init.py']] = tool
     # #633: setup's GitHub sign-in helper, likewise from its exact tracked file
     # when the requested commit tracks it; the installer requires it.
     if git(root, 'ls-tree', '-z', '--name-only', '--end-of-options', source,
@@ -87,22 +140,16 @@ def collect(root, binaries, output, version, source, target, program_receipt):
         require(tool.is_file() and tool.stat().st_nlink == 1
                 and not any(p.is_symlink() for p in (tool, *list(tool.parents)[:3])),
                 'unsafe or missing GitHub sign-in helper')
-        files['runtime/setup/github_login.py'] = tool
-    # #1699: the host drivers 0.1.0 launches with, where KN6's caller (launch-fleet's
-    # host.py) runs them, `$OPENWIZ_ADAPTERS/<host>/driver` with OPENWIZ_ADAPTERS the
-    # installed runtime/adapters, and the kernel files the driver kit's checks read. Each
-    # keeps its tracked path under runtime/, so the tracked-tree receipt maps it back.
-    # Only these files: never the template, tests, fixtures, evidence or an untracked file.
+        files[names['tools/install/setup/github_login.py']] = tool
     tracked = set(git(root, 'ls-tree', '-r', '-z', '--name-only', '--end-of-options', source,
                       '--', 'adapters', 'kernel').decode('utf-8').split('\0'))
-    selected = [f'adapters/{host}/{name}' for host in DRIVERS if f'adapters/{host}/driver' in tracked
-                for name in ('driver', 'schema.json') + KEY_CHECK_FILES.get(host, ())]
+    selected = drivers(root, source)
     if 'kernel/driver-kit/kit.py' in tracked:
         selected += KIT
     for path in selected:
         tool = root / path
         require(path in tracked and tool.is_file() and tool.stat().st_nlink == 1
-                and not any(p.is_symlink() for p in (tool, *list(tool.parents)[:3])),
+                and not any(p.is_symlink() for p in (tool, *list(tool.parents)[:path.count('/') + 1])),
                 'unsafe or missing driver runtime')
         files['runtime/' + path] = tool
     # #555: a runtime file's repository path, as the receipt records it and the
@@ -176,6 +223,9 @@ def main():
         identity.write_text(json.dumps(products, sort_keys=True, indent=2) + '\n')
         record.write_bytes(canonical(rows) + b'\n')
         return 0
+    except BadRelease as bad:
+        print(f'build-products: refused {bad}', file=sys.stderr)
+        return 1
     except (Refused, OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError):
         print('build-products: refused incomplete or non-native products', file=sys.stderr)
         return 1

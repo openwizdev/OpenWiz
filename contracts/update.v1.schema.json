@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OpenWiz update v1 check report",
+  "type": "object",
+  "required": ["current", "latest", "verified", "reason", "changelog_line"],
+  "additionalProperties": false,
+  "properties": {
+    "current": { "$ref": "#/$defs/version" },
+    "latest": { "oneOf": [{ "$ref": "#/$defs/version" }, { "type": "null" }] },
+    "verified": { "type": "boolean" },
+    "reason": { "type": ["string", "null"] },
+    "changelog_line": {
+      "type": ["string", "null"],
+      "pattern": "^(?=\\s*\\S)[^\\r\\n\\u0085\\u2028\\u2029]+(?![\\s\\S])"
+    }
+  },
+  "if": {
+    "required": ["verified"],
+    "properties": { "verified": { "const": true } }
+  },
+  "then": {
+    "properties": {
+      "latest": { "$ref": "#/$defs/version" },
+      "reason": { "enum": [null, "not-newer"] },
+      "changelog_line": { "type": "string" }
+    }
+  },
+  "else": {
+    "properties": {
+      "reason": {
+        "enum": [
+          "release-record-missing",
+          "release-record-invalid",
+          "manifest-invalid",
+          "checksum-invalid",
+          "release-unavailable"
+        ]
+      },
+      "changelog_line": { "type": "null" }
+    }
+  },
+  "$defs": {
+    "version": {
+      "type": "string",
+      "pattern": "^0\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?![\\s\\S])"
+    }
+  }
+}

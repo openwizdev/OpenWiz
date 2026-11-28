@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -52,7 +53,7 @@ PRIVATE = 'jparker2006/ClosedWiz'
 OWNER = 'jparker2006'
 SCHEMA = 'openwiz.release-candidate.v1'
 ATTEMPT = re.compile(r'[1-9][0-9]*\.json')
-TARGETS = ('aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-unknown-linux-gnu')
+TARGETS = ('aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-unknown-linux-gnu', 'aarch64-unknown-linux-gnu')
 PRODUCTS = ('cli', 'runtime')
 METHODS = {'cli': {'embedded-record', 'native-query'}, 'runtime': {'tracked-tree'}}
 RELEASED = ('skills/', 'contracts/')
@@ -70,6 +71,9 @@ DECISION = re.compile(r'Release decision: (ship|changelog) ([0-9a-f]{64})')
 REVOKED = re.compile(r'Release decision revoked: ([1-9][0-9]*)')
 WAIVABLE = {('app_permissions', '0.0.12')}
 PUBLIC_NAMES = {'0.1.0': 'OpenWiz 0.01'}
+EARLY_REPOSITORY = None
+EARLY_LEAD_SECONDS = 72 * 3600
+EARLY_REPO = re.compile(r'[A-Za-z0-9-]+/[A-Za-z0-9_.-]+')
 WAIVER = re.compile(r'Release waiver: ([a-z_]+) v(0\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*))')
 WAIVER_REVOKED = re.compile(r'Release waiver revoked: ([1-9][0-9]*)')
 VERSION = re.compile(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)')
@@ -150,6 +154,28 @@ def gh(*args, cwd=None):
 
 def gh_json(path, cwd=None):
     return strict(gh('api', path, cwd=cwd))
+
+
+def gh_probe(path, cwd=None):
+    try:
+        result = subprocess.run(['gh', 'api', path], cwd=cwd or os.getcwd(), env=env(),
+                                stdin=subprocess.DEVNULL, capture_output=True, timeout=300)
+    except (OSError, subprocess.TimeoutExpired):
+        return 'error', None
+    if result.returncode == 0:
+        try:
+            return 'found', strict(result.stdout)
+        except (ValueError, Refused):
+            return 'error', None
+    if b'HTTP 404' in result.stderr:
+        return 'missing', None
+    try:
+        data = strict(result.stdout)
+        if isinstance(data, dict) and (str(data.get('status')) == '404' or data.get('message') == 'Not Found'):
+            return 'missing', None
+    except (ValueError, Refused):
+        pass
+    return 'error', None
 
 
 def local_git(repo, *args):
@@ -883,6 +909,12 @@ def verify_products(record, inputs, ctx):
                         or any(name != 'runtime/' + repo for repo, name in selection
                                if repo.startswith(RELEASED) or name.startswith(tuple('runtime/' + r for r in RELEASED)))):
                     return ['unverified']
+                import build_products
+                names = dict(build_products.RUNTIME_NAMES)
+                by_name = {name: repo for repo, name in names.items()}
+                if any(names.get(repo, 'runtime/' + repo) != name or by_name.get(name, repo) != repo
+                       for repo, name in selection):
+                    return ['unverified']
                 if 'install' not in installed:
                     installed['install'] = rl4.install_locked(ctx['work'], source, tempfile.mkdtemp(dir=scratch))
                 rl4.verify_runtime(ctx['work'], source, {repo: (build / name).read_bytes() for repo, name in selection},
@@ -1381,10 +1413,219 @@ def reasons_for(record, state, repo, own=None, artifacts=None, literals=None, ma
     return reasons
 
 
+def valid_early_repo(value):
+    if (not isinstance(value, str) or EARLY_REPO.fullmatch(value) is None
+            or any(part in {'.', '..'} for part in value.split('/'))
+            or same_name(value, PUBLIC) or same_name(value, PRIVATE)):
+        block('early_repo_invalid')
+    return value
+
+
+def early_tag(version, rc):
+    return f'v{version}-rc.{rc}'
+
+
+def early_title(version, rc):
+    return f'{public_name(version)} rc.{rc}'
+
+
+def early_readback(record, scratch, repo_name, tag, title):
+    body = record['candidate']
+    data = gh_json(f'repos/{repo_name}/releases/tags/{tag}')
+    notes_text = body['changelog']['utf8']
+    problems = []
+    if not isinstance(data, dict) or data.get('tag_name') != tag or data.get('name') != title:
+        problems.append('release_identity')
+        data = data if isinstance(data, dict) else {}
+    remote_body = data.get('body')
+    if not isinstance(remote_body, str) or \
+            remote_body.encode('utf-8', 'surrogatepass') != notes_text.encode('utf-8'):
+        problems.append('notes')
+    if data.get('draft') is not False or data.get('prerelease') is not True:
+        problems.append('prerelease')
+    assets = data.get('assets') if isinstance(data.get('assets'), list) else []
+    wanted = {a['name']: a for a in body['artifacts']}
+    if sorted(a.get('name') for a in assets if isinstance(a, dict)) != sorted(wanted) \
+            or any(a.get('size') != wanted[a['name']]['bytes'] for a in assets if a.get('name') in wanted):
+        problems.append('assets')
+    folder = Path(tempfile.mkdtemp(prefix='early-downloaded-', dir=scratch))
+    gh('release', 'download', tag, '--repo', repo_name, '--dir', str(folder), cwd=scratch)
+    got = {p.name: p.read_bytes() for p in folder.iterdir()}
+    if sorted(got) != sorted(wanted) or any(sha(got[n]) != wanted[n]['sha256'] for n in got if n in wanted):
+        problems.append('asset_bytes')
+    return problems, data
+
+
+def early_tag_ref_exists(repo_name, tag):
+    try:
+        found = gh_json(f'repos/{repo_name}/git/matching-refs/tags/{tag}')
+    except (Refused, ValueError):
+        block('early_unreadable')
+    if not isinstance(found, list):
+        block('early_unreadable')
+    return any(isinstance(row, dict) and row.get('ref') == f'refs/tags/{tag}' for row in found)
+
+
+def early_publish_candidate(record, state, artifacts, early_repo, rc):
+    repo_name = valid_early_repo(early_repo)
+    if type(rc) is not int or rc < 1:
+        block('early_rc_invalid')
+    body = record['candidate']
+    version = body['release_version']
+    tag = early_tag(version, rc)
+    title = early_title(version, rc)
+    artifacts_sha = canonical(body['artifacts'])
+    notes_sha = body['changelog']['sha256']
+
+    saved = state.read('evidence/early-publish.json') if state.exists('evidence/early-publish.json') else None
+    if isinstance(saved, dict) and saved.get('candidate_sha256') == record['candidate_sha256'] \
+            and same_name(saved.get('repository'), repo_name) and saved.get('tag') == tag:
+        if saved.get('status') == 'complete' and saved.get('notes_sha256') == notes_sha \
+                and saved.get('artifacts_sha256') == artifacts_sha:
+            return {'status': 'published', 'repository': saved['repository'], 'tag': tag,
+                    'published_at': saved['published_at'], 'idempotent': True}
+        raise Blocked(['early_publication_incomplete'], status='incomplete')
+
+    started = now()
+    with tempfile.TemporaryDirectory(prefix='release-early-') as scratch:
+        attempt = state.read('early-attempt.json') if state.exists('early-attempt.json') else None
+        same_attempt = (isinstance(attempt, dict)
+                        and attempt.get('candidate_sha256') == record['candidate_sha256']
+                        and same_name(attempt.get('repository'), repo_name)
+                        and attempt.get('tag') == tag)
+        if same_attempt and attempt.get('step') == 'started':
+            try:
+                problems, remote = early_readback(record, scratch, repo_name, tag, title)
+            except (Refused, ValueError, OSError):
+                raise Blocked(['early_uncertain_release'], status='uncertain') from None
+            if problems:
+                raise Blocked(['early_uncertain_release'], status='uncertain')
+            attempt['step'] = 'done'
+            state.write('early-attempt.json', attempt)
+            verified = now()
+            evidence = {
+                'status': 'complete', 'attempt_id': attempt['attempt_id'],
+                'candidate_sha256': record['candidate_sha256'], 'version': version,
+                'repository': repo_name, 'tag': tag, 'rc': rc,
+                'commit': body['source']['commit'], 'notes_sha256': notes_sha,
+                'artifacts_sha256': artifacts_sha, 'prerelease': True, 'latest': False,
+                'published_at': attempt['started_at'], 'verified_at': verified,
+                'problems': [], 'release': remote,
+            }
+            state.write('evidence/early-publish.json', evidence)
+            return {'status': 'published', 'repository': repo_name, 'tag': tag,
+                    'published_at': evidence['published_at'], 'idempotent': False}
+
+        if not same_attempt or attempt.get('step') != 'done':
+            kind, _ = gh_probe(f'repos/{repo_name}/releases/tags/{tag}', cwd=scratch)
+            if kind == 'error':
+                block('early_unreadable')
+            if kind == 'found':
+                try:
+                    problems, remote = early_readback(record, scratch, repo_name, tag, title)
+                except (Refused, ValueError, OSError):
+                    block('early_unreadable')
+                if problems:
+                    block('early_tag_exists')
+                verified = now()
+                published_at = verified
+                if isinstance(remote, dict) and isinstance(remote.get('published_at'), str):
+                    try:
+                        published_at = epoch(remote['published_at'])
+                    except Blocked:
+                        published_at = verified
+                evidence = {
+                    'status': 'complete', 'attempt_id': f"{record['candidate_sha256'][:16]}-{published_at}",
+                    'candidate_sha256': record['candidate_sha256'], 'version': version,
+                    'repository': repo_name, 'tag': tag, 'rc': rc,
+                    'commit': body['source']['commit'], 'notes_sha256': notes_sha,
+                    'artifacts_sha256': artifacts_sha, 'prerelease': True, 'latest': False,
+                    'published_at': published_at, 'verified_at': verified,
+                    'problems': [], 'release': remote,
+                }
+                state.write('evidence/early-publish.json', evidence)
+                return {'status': 'published', 'repository': repo_name, 'tag': tag,
+                        'published_at': published_at, 'idempotent': True}
+            if early_tag_ref_exists(repo_name, tag):
+                block('early_tag_exists')
+
+            data = check_artifacts(body, artifacts)
+            notes_file = Path(scratch) / 'notes.md'
+            notes_file.write_bytes(body['changelog']['utf8'].encode('utf-8'))
+            files = []
+            for row in body['artifacts']:
+                path = Path(scratch) / 'assets' / row['name']
+                path.parent.mkdir(exist_ok=True)
+                path.write_bytes(data[row['name']])
+                files.append(str(path))
+            attempt = {
+                'attempt_id': f"{record['candidate_sha256'][:16]}-{started}",
+                'candidate_sha256': record['candidate_sha256'], 'repository': repo_name,
+                'tag': tag, 'rc': rc, 'started_at': started, 'step': 'started',
+            }
+            state.write('early-attempt.json', attempt)
+            gh('release', 'create', tag, '--repo', repo_name, '--prerelease', '--latest=false',
+               '--title', title, '--notes-file', str(notes_file), *files, cwd=scratch)
+            attempt['step'] = 'done'
+            state.write('early-attempt.json', attempt)
+
+        try:
+            problems, remote = early_readback(record, scratch, repo_name, tag, title)
+        except (Refused, ValueError, OSError):
+            problems, remote = ['unreadable'], None
+        verified = now()
+        evidence = {
+            'status': 'incomplete' if problems else 'complete', 'attempt_id': attempt['attempt_id'],
+            'candidate_sha256': record['candidate_sha256'], 'version': version,
+            'repository': repo_name, 'tag': tag, 'rc': rc,
+            'commit': body['source']['commit'], 'notes_sha256': notes_sha,
+            'artifacts_sha256': artifacts_sha,
+            'prerelease': not {'unreadable', 'prerelease'} & set(problems),
+            'latest': False,
+            'published_at': attempt['started_at'], 'verified_at': verified,
+            'problems': problems, 'release': remote,
+        }
+        state.write('evidence/early-publish.json', evidence)
+        if problems:
+            raise Blocked([f'early_readback_{p}' for p in problems], status='incomplete')
+        return {'status': 'published', 'repository': repo_name, 'tag': tag,
+                'published_at': evidence['published_at'], 'idempotent': False}
+
+
+def early_lead_time(state, version, public_at):
+    if not state.exists('evidence/early-publish.json'):
+        return None
+    saved = state.read('evidence/early-publish.json')
+    if (not isinstance(saved, dict) or saved.get('status') != 'complete'
+            or saved.get('version') != version
+            or type(saved.get('published_at')) is not int):
+        return None
+    lead = public_at - saved['published_at']
+    met = lead >= EARLY_LEAD_SECONDS
+    hours = round(lead / 3600, 2)
+    note = (f"Early release {saved['tag']} on {saved['repository']} preceded public publish by "
+            f"{lead}s ({hours}h), meeting the 72h target."
+            if met else
+            f"Early release {saved['tag']} on {saved['repository']} preceded public publish by "
+            f"{lead}s ({hours}h), which is under the 72h ({EARLY_LEAD_SECONDS}s) target.")
+    return {
+        'repository': saved['repository'], 'tag': saved['tag'],
+        'early_published_at': saved['published_at'], 'public_published_at': public_at,
+        'lead_seconds': lead, 'target_seconds': EARLY_LEAD_SECONDS,
+        'target_met': met, 'note': note,
+    }
+
+
 def evaluate(args):
     repo = Path(args.repo).resolve(strict=True)
     state = State(args.state)
     record = state.read()
+    early_repo = args.early_repo if getattr(args, 'early_repo', None) is not None else EARLY_REPOSITORY
+    rc = getattr(args, 'rc', 1)
+    if early_repo is not None:
+        valid_early_repo(early_repo)
+        if type(rc) is not int or rc < 1:
+            block('early_rc_invalid')
     started = now()
     made = {}
     reasons = reasons_for(record, state, repo, artifacts=Path(args.artifacts), literals=args.literals, made=made)
@@ -1402,8 +1643,11 @@ def evaluate(args):
     if unreadable is not None:
         raise unreadable
     waived = sorted(g for g, r in made.items() if r and r.get('status') == 'waived')
-    return dict({'status': 'ready', 'candidate_sha256': record['candidate_sha256']},
-                **({'waived': waived} if waived else {}))
+    result = dict({'status': 'ready', 'candidate_sha256': record['candidate_sha256']},
+                  **({'waived': waived} if waived else {}))
+    if early_repo is not None:
+        result['early_publication'] = early_publish_candidate(record, state, Path(args.artifacts), early_repo, rc)
+    return result
 
 
 def tagger(work, commit):
@@ -1551,7 +1795,11 @@ def publish(args):
     state = State(args.state)
     record = state.read()
     if record['publication'] and record['publication']['status'] == 'complete':
-        return {'status': 'published', 'tag': record['publication']['tag']}
+        result = {'status': 'published', 'tag': record['publication']['tag']}
+        lead = early_lead_time(state, record['candidate']['release_version'], record['publication']['verified_at'])
+        if lead is not None:
+            result['early_lead_time'] = lead
+        return result
     body = record['candidate']
     tag = 'v' + body['release_version']
     started = now()
@@ -1616,7 +1864,11 @@ def publish(args):
             problems, tag_object, remote = ['unreadable'], None, None
         verified = now()
         evidence = json.dumps(remote, sort_keys=True).encode('utf-8')
-        state.write('evidence/readback.json', {'release': remote, 'problems': problems})
+        readback_doc = {'release': remote, 'problems': problems}
+        lead = early_lead_time(state, body['release_version'], verified)
+        if lead is not None:
+            readback_doc['early_lead_time'] = lead
+        state.write('evidence/readback.json', readback_doc)
         record['publication'] = {
             'status': 'incomplete' if problems else 'complete', 'attempt_id': attempt['attempt_id'], 'tag': tag,
             'tag_object': tag_object or attempt.get('tag_object'), 'commit': body['source']['commit'],
@@ -1629,7 +1881,10 @@ def publish(args):
         state.write('record.json', record)
         if problems:
             raise Blocked([f'readback_{p}' for p in problems], status='incomplete')
-    return {'status': 'published', 'tag': tag, 'tag_object': record['publication']['tag_object']}
+    result = {'status': 'published', 'tag': tag, 'tag_object': record['publication']['tag_object']}
+    if lead is not None:
+        result['early_lead_time'] = lead
+    return result
 
 
 def fetch_release(url, limit):
@@ -1818,6 +2073,11 @@ def main(argv=None):
         made.add_argument('--repo', required=True)
         made.add_argument('--artifacts', required=True)
         made.add_argument('--literals', required=True, help='the private O3 named-terms file (D2)')
+        if name == 'evaluate':
+            made.add_argument('--early-repo', default=None,
+                              help='optional owner/name repository for early prerelease publication (default: off)')
+            made.add_argument('--rc', type=int, default=1,
+                              help='release candidate sequence number for v<version>-rc.<n> (default: 1)')
     made = sub.add_parser('install')
     made.add_argument('--state', required=True)
     made.add_argument('--target', required=True, choices=TARGETS)

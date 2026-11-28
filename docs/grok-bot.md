@@ -37,11 +37,11 @@ Every sign-in and connection below is your own click. OpenWiz never touches a lo
 
 ## Run a first fleet
 
-Today a fleet starts from your computer, not from Grok Bot. In Claude Code or Codex, paste:
+Today a fleet starts from your computer, not from Grok Bot. In Claude Code, Codex or Cursor, say:
 
-> Install OpenWiz from github.com/openwizdev/OpenWiz
+> Install OpenWiz
 
-Then follow [Install OpenWiz](install.md) and [Your first hour](first-hour.md). The fleet runs on CloudRoom. Your Bot may be able to follow it through the same GitHub issues and pull requests, for example "Use where-are-we on my repository". Untested.
+That phrase is the whole install instruction. The agent follows [Install OpenWiz](../AGENTS.md#install-openwiz). Today's commands are the [0.1.0 steps](install.md#openwiz-010), then [Your first hour](first-hour.md). The fleet runs on CloudRoom. Your Bot may be able to follow it through the same GitHub issues and pull requests, for example "Use where-are-we on my repository". Untested.
 
 ## What works today, in 0.1.1 and later
 
