@@ -10,6 +10,10 @@ publish.workspace = true
 name = "openwiz"
 path = "src/main.rs"
 
+[[bench]]
+name = "fleet_tick_bench"
+harness = false
+
 [dependencies]
 openwiz-core = { path = "../core" }
 openwiz-adapter-cloudroom = { path = "../adapters/cloudroom" }

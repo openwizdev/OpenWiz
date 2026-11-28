@@ -63,7 +63,7 @@ pub fn run(
     }
 }
 
-fn parse(args: &[OsString]) -> Option<(bool, String, bool)> {
+pub(crate) fn parse(args: &[OsString]) -> Option<(bool, String, bool)> {
     let strings: Option<Vec<_>> = args.iter().map(|arg| arg.to_str()).collect();
     let strings = strings?;
     let (enabled, target, json) = match strings.as_slice() {

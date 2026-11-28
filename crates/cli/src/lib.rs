@@ -1,6 +1,8 @@
 pub mod agent_help;
 pub mod fleet;
 pub mod fleets;
+#[cfg(test)]
+mod fuzz_area1;
 pub mod ghost;
 pub mod github_token;
 pub mod init;

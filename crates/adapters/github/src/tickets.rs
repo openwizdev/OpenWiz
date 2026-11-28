@@ -535,6 +535,14 @@ pub fn pull_request(stdout: &[u8]) -> Result<PrAnswer, SourceError> {
         ],
         what,
     )?;
+    pull_request_object(o, true)
+}
+
+pub(crate) fn pull_request_object(
+    o: &Map<String, Value>,
+    include_closes: bool,
+) -> Result<PrAnswer, SourceError> {
+    let what = "pull request";
     let merge = match (&o["mergeCommit"], &o["mergedAt"]) {
         (Value::Null, Value::Null) => None,
         (Value::Null, _) | (_, Value::Null) => {
@@ -569,16 +577,18 @@ pub fn pull_request(stdout: &[u8]) -> Result<PrAnswer, SourceError> {
         _ => return Err(malformed(what, "a state other than OPEN, CLOSED or MERGED")),
     };
     let mut closes = Vec::new();
-    for reference in array(&o["closingIssuesReferences"], what)? {
-        let r = object(reference, &["id", "number", "repository", "url"], what)?;
-        text(&r["id"], what)?;
-        if !r["repository"].is_object() {
-            return Err(malformed(
-                what,
-                "a closed issue's repository is not an object",
-            ));
+    if include_closes {
+        for reference in array(&o["closingIssuesReferences"], what)? {
+            let r = object(reference, &["id", "number", "repository", "url"], what)?;
+            text(&r["id"], what)?;
+            if !r["repository"].is_object() {
+                return Err(malformed(
+                    what,
+                    "a closed issue's repository is not an object",
+                ));
+            }
+            closes.push(link(&r["number"], &r["url"], what)?);
         }
-        closes.push(link(&r["number"], &r["url"], what)?);
     }
     Ok(PrAnswer {
         number: number(&o["number"], what)?,

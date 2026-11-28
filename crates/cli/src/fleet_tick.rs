@@ -12,7 +12,7 @@ use std::path::Path;
 mod graph;
 pub use graph::{Inventory, World};
 #[path = "fleet_tick_records.rs"]
-mod records;
+pub(crate) mod records;
 
 pub const USAGE: &str =
     "  openwiz fleet tick --dry-run [--json]\n  openwiz fleet due --github-only [--json]\n";

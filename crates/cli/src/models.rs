@@ -121,7 +121,7 @@ fn usage(stderr: &mut dyn Write, why: &str) -> i32 {
     EXIT_USAGE
 }
 
-fn valid_host(name: &str) -> bool {
+pub(crate) fn valid_host(name: &str) -> bool {
     name.len() <= 40
         && name != "cloudroom"
         && name.split('-').all(|part| {
@@ -928,7 +928,7 @@ fn access_acl(fd: impl AsFd) -> std::io::Result<Option<Vec<u8>>> {
     Ok(Some(acl))
 }
 
-fn extended_acl(listing: &str) -> Option<bool> {
+pub(crate) fn extended_acl(listing: &str) -> Option<bool> {
     let mut lines = listing.lines();
     let mode = lines.next()?.split(' ').next()?;
     if !mode.starts_with('-') || !(10..=11).contains(&mode.len()) {
