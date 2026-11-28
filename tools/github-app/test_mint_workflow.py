@@ -193,6 +193,7 @@ class MintWorkflowExecution(unittest.TestCase):
                     "OPENWIZ_GITHUB_APP_ID": "1001",
                     "OPENWIZ_GITHUB_APP_MODE": "user",
                     "OPENWIZ_GITHUB_API_BASE": url,
+                    "OPENWIZ_SYNTHETIC_GITHUB": "1",
                 }
                 bad = subprocess.run(["sh", "-eu", "-c", script], cwd=work, env=base_env,
                                      capture_output=True, text=True, timeout=30)

@@ -222,7 +222,8 @@ class MintBoundary(unittest.TestCase):
             [sys.executable, '-B', str(MINT), '--installation-id', '3003', '--repository', f'{OWNER}/{NAME}',
              '--state-dir', str(self.state), '--api-base', f'http://127.0.0.1:{self.server.server_port}'],
             capture_output=True, text=True, timeout=60, cwd=self.root,
-            env={'PATH': '/usr/bin:/bin', 'HOME': str(self.root), 'GH_TOKEN': PLANTED_PERSONAL})
+            env={'PATH': '/usr/bin:/bin', 'HOME': str(self.root), 'GH_TOKEN': PLANTED_PERSONAL,
+                 'OPENWIZ_SYNTHETIC_GITHUB': '1'})
         return run
 
     def minted(self, **change):
