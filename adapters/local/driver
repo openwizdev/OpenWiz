@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import ctypes, fcntl, importlib.machinery, importlib.util, io, json, os, re, secrets, shutil, signal, subprocess, sys, time, uuid
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import tempfile
 
 sys.dont_write_bytecode = True
@@ -57,9 +58,8 @@ LIMIT_JITTER_SECONDS = 30
 LIMIT_MAX_WAIT_SECONDS = 6 * 3600
 OVERLOAD_WAITS = (60, 120)
 USAGE_LIMIT = re.compile(r'(?i)(?:' + '|'.join((
-    r'\b(?:claude(?:\s+ai)?\s+)?usage\s+limit\b',
     r"\byou(?:'ve|\s+have)?\s+hit\s+your\s+(?:usage\s+|plan\s+)?limit\b",
-    r'\b(?:rate|usage)[_\s-]+limit(?:[_\s-]+(?:reached|exceeded))?\b',
+    r'\b(?:rate|usage)[_\s-]+limit[_\s-]+(?:(?:has\s+been|was)\s+)?(?:reached|exceeded)\b',
     r'\btoo\s+many\s+requests\b',
     r'\b(?:http\s+|status(?:\s+code)?\s+|api\s+error:?\s*)429\b',
 )) + r')')
@@ -69,6 +69,15 @@ OVERLOAD = re.compile(r'(?i)(?:' + '|'.join((
     r'\b(?:server|service|api|provider|model|anthropic|openai)\b[^.\n]{0,40}\boverloaded\b',
     r'^[ \t]*(?:[\w .()\[\]-]{0,40}:[ \t]*){0,2}(?:529\s+)?overloaded\b',
 )) + r')', re.M)
+RESET_CUE = re.compile(r'\b(?:resets?|try\s+again|retry|available|wait)(?:\s+at)?\s+', re.I)
+RESET_ISO = re.compile(r'\b\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})\b')
+RESET_UTC = re.compile(r'\b(\d{4}-\d{2}-\d{2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?\s*(?:UTC|GMT)\b', re.I)
+RESET_CLOCK = re.compile(
+    r'(?:(?P<month>[a-z]{3})\s+(?P<day>\d{1,2}),?\s+)?'
+    r'(?P<hour>\d{1,2})(?::(?P<minute>\d{2}))?\s*(?P<ampm>am|pm)?(?![\w:-])'
+    r'(?:\s*(?:\((?P<parenthesized>[^)]*)\)|(?P<zone>UTC\b|GMT\b|[\w+-]+/[\w/+-]+|(?-i:[A-Z]{2,5})\b)))?',
+    re.I)
+RESET_MONTHS = 'jan feb mar apr may jun jul aug sep oct nov dec'.split()
 STOP_SIGNALED = False
 
 
@@ -881,82 +890,112 @@ def turn_tail_lines(run, output_from):
     return lines[-LIMIT_TAIL_LINES:]
 
 
-def parse_reset_time(lines, now):
-    for text in reversed(lines):
-        m = re.search(r'\b(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:?\d{2}))\b', text)
-        if m:
-            raw = m.group(1).replace('Z', '+00:00')
-            if re.search(r'[+-]\d{4}$', raw):
-                raw = raw[:-2] + ':' + raw[-2:]
-            try:
-                return datetime.fromisoformat(raw).timestamp()
-            except ValueError:
-                pass
-        m = re.search(r'\b(\d{4}-\d{2}-\d{2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?\s*(?:UTC|GMT)\b', text, re.I)
-        if m:
-            try:
-                dt = datetime(int(m.group(1)[:4]), int(m.group(1)[5:7]), int(m.group(1)[8:10]),
-                              int(m.group(2)), int(m.group(3)), int(m.group(4) or 0), tzinfo=timezone.utc)
-                return dt.timestamp()
-            except ValueError:
-                pass
-        m = re.search(r'(?:\||resets?(?:\s+at)?\s+|try\s+again\s+at\s+)(\d{10})\b', text, re.I)
-        if m and int(m.group(1)) >= 1700000000:
-            return float(int(m.group(1)))
-        m = re.search(
-            r'(?:resets?|try\s+again|retry|wait)\s+(?:in|after)\s+'
-            r'((?:\d+\s*(?:hours?|hrs?|h|minutes?|mins?|m|seconds?|secs?|s)(?:\s*(?:,|and)?\s*)?)+)',
-            text, re.I)
-        if m:
-            total = 0
-            for amount, unit in re.findall(r'(\d+)\s*(hours?|hrs?|h|minutes?|mins?|m|seconds?|secs?|s)', m.group(1), re.I):
-                u = unit.lower()[0]
-                total += int(amount) * (3600 if u == 'h' else 60 if u == 'm' else 1)
-            if total > 0:
-                return now + float(total)
-        m = re.search(
-            r'(?:resets?|try\s+again|available)(?:\s+at)?\s+(?:[A-Z][a-z]{2}\s+\d{1,2},?\s+)?'
-            r'(\d{1,2})(?::(\d{2}))?\s*(am|pm)?(?:\s*\(?\s*(UTC|GMT)\s*\)?)?\b',
-            text, re.I)
-        if m and (m.group(2) is not None or m.group(3) is not None or m.group(4) is not None):
-            hour, minute, ampm = int(m.group(1)), int(m.group(2) or 0), (m.group(3) or '').lower()
-            if ampm == 'pm' and hour < 12:
-                hour += 12
-            elif ampm == 'am' and hour == 12:
-                hour = 0
-            if 0 <= hour <= 23 and 0 <= minute <= 59:
-                base = datetime.fromtimestamp(now, tz=timezone.utc)
-                cand = base.replace(hour=hour, minute=minute, second=0, microsecond=0)
-                if cand.timestamp() <= now:
-                    cand = cand + timedelta(days=1)
-                return cand.timestamp()
+def parse_reset_clock(text, now):
+    match = RESET_CLOCK.match(text)
+    if not match:
+        return None
+    zone = (match['parenthesized'] or match['zone'] or '').strip()
+    if match['minute'] is None and match['ampm'] is None and not zone:
+        return None
+    hour, minute = int(match['hour']), int(match['minute'] or 0)
+    if match['ampm']:
+        if not 1 <= hour <= 12:
+            return None
+        hour = hour % 12 + (12 if match['ampm'].lower() == 'pm' else 0)
+    if hour > 23 or minute > 59:
+        return None
+    tz = timezone.utc
+    if zone and zone.upper() not in ('UTC', 'GMT'):
+        if '/' not in zone:
+            return None
+        try:
+            tz = ZoneInfo(zone)
+        except (ValueError, ZoneInfoNotFoundError):
+            return None
+    base = datetime.fromtimestamp(now, tz=tz)
+    if match['month'] is None:
+        candidate = base.replace(hour=hour, minute=minute, second=0, microsecond=0, fold=0)
+        if candidate.timestamp() <= now:
+            candidate += timedelta(days=1)
+        return candidate.timestamp()
+    month = match['month'].lower()
+    if month not in RESET_MONTHS:
+        return None
+    month, day = RESET_MONTHS.index(month) + 1, int(match['day'])
+    # A date without a year refers to the next occurrence in the reset's timezone.
+    for year in (base.year, base.year + 1):
+        try:
+            candidate = datetime(year, month, day, hour, minute, tzinfo=tz)
+        except ValueError:
+            continue
+        if candidate.timestamp() > now:
+            return candidate.timestamp()
     return None
 
 
-def detect_limit(lines, row=None, now=None):
-    if not lines:
+def parse_reset_time(text, now, cue=None):
+    if cue:
+        text = text[cue.end():]
+    match = (RESET_ISO.match if cue else RESET_ISO.search)(text)
+    if match:
+        raw = match[0].replace('Z', '+00:00')
+        if re.search(r'[+-]\d{4}$', raw):
+            raw = raw[:-2] + ':' + raw[-2:]
+        try:
+            return datetime.fromisoformat(raw).timestamp()
+        except ValueError:
+            return None
+    match = (RESET_UTC.match if cue else RESET_UTC.search)(text)
+    if match:
+        try:
+            return datetime.fromisoformat('%sT%02d:%s:%s+00:00' %
+                                          (match[1], int(match[2]), match[3], match[4] or '00')).timestamp()
+        except ValueError:
+            return None
+    epoch = re.match(r'(\d{10})\b', text) if cue else re.search(r'\|(\d{10})\b', text)
+    if epoch and int(epoch[1]) >= 1700000000:
+        return float(epoch[1])
+    if not cue:
         return None
+    match = re.match(
+        r'(?:in|after)\s+((?:\d+\s*(?:hours?|hrs?|h|minutes?|mins?|m|seconds?|secs?|s)(?![a-z])(?:\s*(?:,|and)?\s*)?)+)',
+        text, re.I)
+    if match:
+        units = {'h': 3600, 'm': 60, 's': 1}
+        seconds = sum(int(amount) * units[unit[0].lower()]
+                      for amount, unit in re.findall(r'(\d+)\s*([hms])', match[1], re.I))
+        return now + seconds if seconds else None
+    return parse_reset_clock(text, now)
+
+
+def detect_limit(lines, row=None, now=None):
     now = limit_now() if now is None else now
-    matched_kind = None
+    custom = None
     if row and row.get('limit'):
         try:
-            pat = re.compile(row['limit'], re.I)
+            custom = re.compile(row['limit'], re.I)
         except re.error:
-            pat = None
-        if pat and any(pat.search(l) for l in lines):
-            matched_kind = 'overload' if any(OVERLOAD.search(l) for l in lines) else 'limit'
-    if matched_kind is None:
-        if any(USAGE_LIMIT.search(l) for l in lines):
-            matched_kind = 'limit'
-        elif any(OVERLOAD.search(l) for l in lines):
-            matched_kind = 'overload'
-    if matched_kind is None:
-        return None
-    reset_at = parse_reset_time(lines, now)
-    if matched_kind == 'overload' and reset_at is not None and any(USAGE_LIMIT.search(l) for l in lines):
-        matched_kind = 'limit'
-    return {'kind': matched_kind, 'reset_at': reset_at,
-            'too_long': reset_at is not None and (reset_at - now) > LIMIT_MAX_WAIT_SECONDS}
+            pass
+    for index in range(len(lines) - 1, -1, -1):
+        text = lines[index]
+        if USAGE_LIMIT.search(text):
+            kind = 'limit'
+        elif OVERLOAD.search(text):
+            kind = 'overload'
+        elif custom and custom.search(text):
+            kind = 'limit'
+        else:
+            continue
+        # A reset belongs to its diagnostic or a reset instruction immediately after it.
+        reset_at = parse_reset_time(text, now, RESET_CUE.search(text))
+        if reset_at is None and index + 1 < len(lines):
+            following = lines[index + 1].lstrip()
+            cue = RESET_CUE.match(following)
+            if cue:
+                reset_at = parse_reset_time(following, now, cue)
+        return {'kind': kind, 'reset_at': reset_at,
+                'too_long': reset_at is not None and (reset_at - now) > LIMIT_MAX_WAIT_SECONDS}
+    return None
 
 
 def limit_refusal(run, info, from_start=False, code=None):
@@ -968,7 +1007,7 @@ def limit_refusal(run, info, from_start=False, code=None):
         if reset_iso:
             err = 'run %s: the first turn hit a %s; resets at %s%s' % (run, what, reset_iso, exit_part)
             if info.get('too_long'):
-                nxt = 'reset is more than 6 hours away; wake or start again after %s' % reset_iso
+                nxt = 'reset is more than 6 hours away; start again after %s' % reset_iso
             else:
                 base = 'wait until after %s, then start again' % reset_iso
                 full = "%s; %s has the turn's output" % (base, log_path(run))
@@ -1025,21 +1064,6 @@ def check_limit_before_wake(run):
         clear_limit_state(run)
 
 
-def record_resumed_turn(run, harness_pid, output_from):
-    try:
-        lock_fd = os.open(os.path.join(STATE, run + '.lock'), os.O_RDONLY | os.O_CREAT, 0o600)
-        try:
-            fcntl.flock(lock_fd, fcntl.LOCK_EX)
-            state = saved(run)
-            turn = {'pid': harness_pid, 'since': since(harness_pid), 'supervisor': os.getpid(),
-                    'supervisor_since': since(os.getpid()), 'output_from': output_from}
-            saved(run, dict(state, turns=state['turns'] + [turn]))
-        finally:
-            os.close(lock_fd)
-    except (OSError, ValueError, Refused):
-        pass
-
-
 def next_resume_after_limit(run, output_from, exit_code, counts):
     if exit_code in (None, 0) or limit_stop_requested(run):
         return None
@@ -1091,24 +1115,47 @@ def next_resume_after_limit(run, output_from, exit_code, counts):
     if not limit_sleep(wait_s, run):
         clear_limit_state(run)
         return None
-    clear_limit_state(run)
     try:
         lock_fd = os.open(os.path.join(STATE, run + '.lock'), os.O_RDONLY | os.O_CREAT, 0o600)
         try:
             fcntl.flock(lock_fd, fcntl.LOCK_EX)
             state = saved(run)
-            if state.get('stopped'):
+            if STOP_SIGNALED or state.get('stopped'):
                 return None
             if state.get('row') and state.get('session') is None:
                 state['session'] = reported_session(run, state['row']['session'], state['turns'][0])
                 if state['session'] is None:
                     return None
-                saved(run, state)
-            return command(state, True)
+            return resume_turn(run, state)
         finally:
+            clear_limit_state(run)
             os.close(lock_fd)
     except (OSError, ValueError, Refused):
         return None
+
+
+def resume_turn(run, state):
+    cmd, overlay = command(state, True)
+    try:
+        log = open_log(run)
+        output_from = os.fstat(log).st_size
+    except OSError:
+        log, output_from = subprocess.DEVNULL, 0
+    try:
+        harness = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=log, stderr=log,
+                                   cwd=work(run), env=dict(os.environ, **overlay))
+    finally:
+        if log != subprocess.DEVNULL:
+            os.close(log)
+    turn = {'pid': harness.pid, 'since': since(harness.pid), 'supervisor': os.getpid(),
+            'supervisor_since': since(os.getpid()), 'output_from': output_from}
+    try:
+        saved(run, dict(state, turns=state['turns'] + [turn]))
+    except OSError:
+        harness.kill()
+        harness.wait()
+        raise
+    return harness, output_from
 
 
 def _on_stop_signal(_sig, _frame):
@@ -1158,21 +1205,7 @@ def supervise(cmd):
         resumed = next_resume_after_limit(run, output_from, exit_code, counts)
         if not resumed:
             return
-        next_cmd, next_overlay = resumed
-        try:
-            log = open_log(run)
-            output_from = os.fstat(log).st_size
-        except OSError:
-            log, output_from = subprocess.DEVNULL, 0
-        try:
-            harness = subprocess.Popen(next_cmd, stdin=subprocess.DEVNULL, stdout=log, stderr=log,
-                                       cwd=work(run), env=dict(os.environ, **next_overlay))
-        except OSError:
-            return
-        finally:
-            if log != subprocess.DEVNULL:
-                os.close(log)
-        record_resumed_turn(run, harness.pid, output_from)
+        harness, output_from = resumed
 
 
 def saved_exit(pid, status, harness):
@@ -1474,13 +1507,13 @@ def answer(cmd):
             raise Refused('run %s is stopped' % run, 'start a new run')
         if state.get('starting'):
             raise Refused('run %s never finished starting' % run, 'stop it, then start a new run')
+        check_limit_before_wake(run)
         found = state.get('row') and state['session'] is None
         if found:
             state['session'] = reported_session(run, state['row']['session'], state['turns'][0])
             if state['session'] is None:
                 raise Refused('run %s has no session id from its first turn yet; nothing was started' % run,
                               'wait until its first turn has printed its session id, then wake again')
-        check_limit_before_wake(run)
         busy = state['turns'] and running(state['turns'][-1])
         if found or not busy:
             try:

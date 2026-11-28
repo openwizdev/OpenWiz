@@ -48,7 +48,7 @@ t.main()
 '''
 
 
-TIMED_DRIVER = '''import importlib.machinery, importlib.util, os, sys, time
+TIMED_DRIVER = '''import fcntl, importlib.machinery, importlib.util, json, os, sys, time
 sys.dont_write_bytecode = True
 spec = importlib.util.spec_from_loader('local', importlib.machinery.SourceFileLoader('local', %r))
 t = importlib.util.module_from_spec(spec)
@@ -66,6 +66,22 @@ def fake_sleep(seconds, run):
         time.sleep(0.05)
     return not t.limit_stop_requested(run)
 t.limit_sleep = fake_sleep
+if os.environ.get('FAKE_RESUME_LOCK'):
+    popen = t.subprocess.Popen
+    def check_resume_lock(*args, **kwargs):
+        if args[0][1:2] == ['-p'] and args[0][2].startswith('You were woken'):
+            run = os.environ['OPENWIZ_RUN']
+            with open(os.path.join(t.STATE, run + '.lock'), 'rb') as lock_file:
+                try:
+                    fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    locked = False
+                except BlockingIOError:
+                    locked = True
+                info = t.read_limit_state(run) or {}
+                with open(os.environ['FAKE_RESUME_LOCK'], 'w') as f:
+                    json.dump([locked, info.get('waiting')], f)
+        return popen(*args, **kwargs)
+    t.subprocess.Popen = check_resume_lock
 t.main()
 '''
 
@@ -664,10 +680,13 @@ class Local(unittest.TestCase):
              'line': 'Claude AI usage limit reached. Resets at %s (%s)' % (reset_iso, OPAQUE)},
             {'exit': 0},
         ])
+        lock_probe = os.path.join(self.folder, 'resume-lock')
+        env['FAKE_RESUME_LOCK'] = lock_probe
         prog = self.timed_driver()
         code, out = self.start('claude', env=env, program=prog)
         self.assertEqual(code, 0, out)
         self.until(lambda: len(self.logged()) == 2)
+        self.assertEqual(json.loads(read(lock_probe)), [True, True])
         self.until(lambda: 'woke and read the ticket again' in read(self.tracker))
         comments = json.loads(read(self.tracker))['comments']
         self.assertEqual(len(comments), 1, 'status note was duplicated instead of edited')
@@ -715,12 +734,17 @@ class Local(unittest.TestCase):
         self.assertIn('resumes on its own', err['next'])
         self.assertNotIn(OPAQUE, json.dumps(err))
         self.assertEqual(len(self.logged()), 1)
+        state_path = os.path.join(env['OPENWIZ_LOCAL_STATE'], out['run'] + '.json')
+        state = json.loads(read(state_path))
+        with open(state_path, 'w') as f:
+            json.dump(dict(state, row={'session': {'pattern': '^session: (.+)$'}}, session=None), f)
+        self.assertEqual(self.driver('wake', out, env, prog), (wcode, err))
         self.assertEqual(self.driver('stop', out, env, prog), (0, dict(out, stopped=True)))
         self.no_new_turn(1)
 
     def test_overload_without_reset_time_backs_off_60_120_then_stops(self):
         env, waits, models = self.limit_env([
-            {'exit': 1, 'post_note': True, 'line': 'API Error: 529 Overloaded (overloaded_error)'},
+            {'exit': 1, 'post_note': True, 'line': 'time: 2026-11-23T18:52:00Z\nAPI Error: 529 Overloaded (overloaded_error)'},
             {'exit': 1, 'line': 'API Error: 529 Overloaded (overloaded_error)'},
             {'exit': 1, 'line': 'API Error: 529 Overloaded (overloaded_error)'},
             {'exit': 0},
@@ -737,10 +761,10 @@ class Local(unittest.TestCase):
             'claude synthetic-1 first', 'claude synthetic-1 woken', 'claude synthetic-1 woken'])
 
     def test_limit_beyond_six_hours_does_not_wait_and_first_turn_reports_limit(self):
-        far_iso = '2026-11-24T01:53:20Z'
+        far_iso = '2026-12-02T17:00:00Z'
         env, waits, _ = self.limit_env([
             {'exit': 1, 'post_note': True,
-             'line': 'Claude AI usage limit reached. Resets at %s (%s)' % (far_iso, OPAQUE)},
+             'line': 'Claude AI usage limit reached. Resets Dec 2, 5pm UTC'},
             {'exit': 0},
         ])
         prog = self.timed_driver()
@@ -757,6 +781,14 @@ class Local(unittest.TestCase):
         self.assertIn(far_iso, err['error'])
         self.assertIn(far_iso, err['next'])
         self.assertNotIn(OPAQUE, json.dumps(err))
+
+        start_env, _, _ = self.limit_env([
+            {'exit': 1, 'immediate': True, 'line': 'Usage limit reached. Resets at 2026-12-02T17:00:00Z'},
+        ])
+        code, err = self.start('claude', env=start_env, program=prog)
+        self.assertEqual(code, 1, err)
+        self.assertIn('2026-12-02T17:00:00Z', err['error'])
+        self.assertEqual(err['next'], 'reset is more than 6 hours away; start again after 2026-12-02T17:00:00Z')
 
         near_iso = '2026-11-23T18:55:20Z'
         env2, _, _ = self.limit_env([
@@ -784,8 +816,17 @@ class Local(unittest.TestCase):
         for text, expected_kind, expected_reset in (
             ('Claude AI usage limit reached|1795460120', 'limit', 1795460120.0),
             ('Rate limit exceeded. Try again in 2 minutes.', 'limit', now + 120.0),
+            ('Rate limit exceeded. Try again in 2m30s.', 'limit', now + 150.0),
             ('You hit your usage limit; resets at 6:55pm UTC', 'limit', 1795460100.0),
             ('API Error: 529 Overloaded', 'overload', None),
+            ('API Error: 529 Overloaded\n{"time":"2026-12-02T17:00:00Z"}', 'overload', None),
+            ('API Error: 529 Overloaded\nRetry at 2026-11-23T19:00:00Z', 'overload', now + 400.0),
+            ('API Error: 529 Overloaded. Retry at 2026-11-23T20:00:00+0100', 'overload', now + 400.0),
+            ('Usage limit reached. Resets Dec 2, 5pm UTC', 'limit', 1796230800.0),
+            ('Usage limit reached. Resets at 7pm (America/New_York)', 'limit', 1795478400.0),
+            ('Usage limit reached. Resets at 7pm (Unknown/Zone)', 'limit', None),
+            ('A test for the rate limit failed', None, None),
+            ('Usage limit documentation is missing', None, None),
             ('Ordinary syntax error on line 4', None, None),
         ):
             with self.subTest(text=text):
