@@ -1,0 +1,8 @@
+{
+  "schema": "openwiz.persona.v1",
+  "id": "syn-quill-relay",
+  "light": {"background": "#F7F8FC", "surface": "#FFFFFF", "text": "#172033", "muted": "#475569", "accent": "#2856AD", "border": "#CBD5E1"},
+  "dark": {"background": "#101827", "surface": "#182337", "text": "#F5F7FC", "muted": "#A9B9D1", "accent": "#9FBFFF", "border": "#40516A"},
+  "sounds": {"needs_you": {"waveform": "sine", "frequency_hz": 440, "duration_ms": 120, "gain": 0.06}},
+  "room": {"palette": ["#101827", "#9FBFFF"], "lighting": "soft ambient", "mood": ["calm", "focused"]}
+}
