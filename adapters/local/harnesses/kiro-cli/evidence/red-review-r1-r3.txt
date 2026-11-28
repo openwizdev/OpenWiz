@@ -1,0 +1,7 @@
+fail: a resume id that is not a full UUID exited 0, not 2
+fail: the resume did not keep the session the start printed
+fail: with the command reference's example before the notice, the row read 'abc123-def456', not the full UUID the CLI printed
+fail: with a backticked full UUID before the notice, the row read 'f2946a26-3735-4b08-8d05-c928010302d5', not the full UUID the CLI printed
+fail: with the placeholder before the notice, the row read 'fake-f82d3417f554', not the full UUID the CLI printed
+test_row.py: 15 refusals checked, 5 failed
+R3 probe, start recorded fake-ffffffffffff, wake and printed fake-0123456789ab: old check flags it: False; all-three check flags it: True

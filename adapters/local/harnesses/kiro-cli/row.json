@@ -1,0 +1,48 @@
+{
+  "harness": "kiro-cli",
+  "program": "kiro-cli",
+  "start": [
+    "chat",
+    "--v3",
+    "--no-interactive",
+    "--output-format",
+    "stream-json",
+    "--model",
+    "{model}",
+    "{mode}",
+    "{prompt}"
+  ],
+  "wake": [
+    "chat",
+    "--v3",
+    "--no-interactive",
+    "--output-format",
+    "stream-json",
+    "--resume-id",
+    "{session}",
+    "--model",
+    "{model}",
+    "{mode}",
+    "{prompt}"
+  ],
+  "session": {
+    "json": [
+      "data",
+      "sessionId"
+    ]
+  },
+  "modes": {
+    "trust-all-tools": [
+      "--trust-all-tools"
+    ]
+  },
+  "env": {},
+  "effort": "none: the Kiro CLI headless reference lists --effort but names no level every model accepts (https://kiro.dev/docs/cli/headless/)",
+  "login": "Kiro CLI's own login: kiro-cli login stores it, or the user sets KIRO_API_KEY; the driver never reads or passes it",
+  "daemon": "none",
+  "signed_out": [
+    "^(?:error:\\s*)?Not logged in(?:\\. Login with kiro-cli login\\.?)?$"
+  ],
+  "login_command": "kiro-cli login",
+  "login_env": "KIRO_API_KEY"
+}

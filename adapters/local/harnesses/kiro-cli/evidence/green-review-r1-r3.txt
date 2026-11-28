@@ -1,0 +1,2 @@
+test_row.py: 15 refusals checked, 0 failed
+pass kiro-cli: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks

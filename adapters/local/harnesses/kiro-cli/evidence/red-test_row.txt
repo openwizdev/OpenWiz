@@ -1,0 +1,9 @@
+fail: a login flag with the value joined exited 0, not 2
+fail: no headless flag exited 0, not 2
+fail: interactive chat exited 0, not 2
+fail: a cloud run exited 0, not 2
+fail: trust-tools in place of trust-all-tools exited 0, not 2
+fail: a start prompt on a wake exited 0, not 2
+fail: a resume of the same session exited 2
+fail: a signed-out start did not print Not logged in and exit 1 before a session
+test_row.py: 14 refusals checked, 8 failed

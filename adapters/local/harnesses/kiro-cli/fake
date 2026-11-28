@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+import json, os, re, sys
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.environ['FAKE_CLI_LIB'])
+import fake_cli
+
+HELP = '''The fake kiro-cli, after the Kiro CLI headless reference
+(https://kiro.dev/docs/cli/headless/). It allows only:
+  kiro-cli chat --v3 --no-interactive --output-format stream-json --model <model> --trust-all-tools <prompt>
+  kiro-cli chat --v3 --no-interactive --output-format stream-json --resume-id <session> --model <model> --trust-all-tools <prompt>
+It emits a stream-json runStarted event carrying data.sessionId as a full UUID:
+00000000-0000-4000-8000-<its 12 hex digits>, which a resume maps back. Signed
+out, it prints the whoami troubleshooting line "Not logged in. Login with
+kiro-cli login.". It passes no --effort level: the headless reference names none
+that every model accepts. A login value on the command line is refused.'''
+SESSION = r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+PRINTED = '00000000-0000-4000-8000-'
+SIGNED_OUT = 'Not logged in. Login with kiro-cli login.'
+
+
+def login_on_the_command_line(argv):
+    for arg in argv:
+        if arg in ('--api-key', '--token', '--password') or arg.startswith('--api-key=') or \
+                arg.startswith('--token=') or arg.startswith('--password=') or arg.startswith('KIRO_API_KEY='):
+            return True
+    return False
+
+
+def parse(argv):
+    if login_on_the_command_line(argv):
+        fake_cli.refuse()
+    if argv[:5] != ['chat', '--v3', '--no-interactive', '--output-format', 'stream-json']:
+        fake_cli.refuse()
+    rest, session = argv[5:], None
+    if rest[:1] == ['--resume-id']:
+        if len(rest) < 2 or not re.fullmatch(SESSION, rest[1]):
+            fake_cli.refuse()
+        session = 'fake-' + rest[1][len(PRINTED):] if rest[1].startswith(PRINTED) else rest[1]
+        rest = rest[2:]
+    if len(rest) != 4 or rest[0] != '--model' or not rest[1] or rest[1].startswith('-') or \
+            rest[2] != '--trust-all-tools' or not rest[3] or rest[3].startswith('-'):
+        fake_cli.refuse()
+    return rest[3], rest[1], session
+
+
+if sys.argv[1:] == ['--help']:
+    print(HELP)
+    sys.exit(0)
+prompt, model, session = parse(sys.argv[1:])
+if prompt.startswith('You were woken') != (session is not None):
+    fake_cli.refuse()
+fake_cli.turn(prompt, model, session,
+              lambda sid: json.dumps({'type': 'runStarted',
+                                      'data': {'engine': 'v3', 'sessionId': PRINTED + sid[len('fake-'):]}}),
+              signed_out=SIGNED_OUT)
