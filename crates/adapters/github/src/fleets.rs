@@ -189,13 +189,51 @@ impl GitHubFleets {
         read_answer: impl FnOnce(&Json) -> Got<T>,
     ) -> Result<T, Failed> {
         let out = self.call(read, argv, deadline)?;
-        let tree = serde_json::from_slice::<StrictJson>(&out).map_err(|_| {
-            failed(
-                GapKind::Malformed,
-                format!("{read} printed something that isn't one JSON value with each key once"),
-            )
-        })?;
-        read_answer(&tree.0).map_err(|bad| bad.failed(read))
+        parse_with_strict_json(&out, read, read_answer)
+    }
+}
+
+fn parse_with_strict_json<T>(
+    out: &[u8],
+    read: &str,
+    read_answer: impl FnOnce(&Json) -> Got<T>,
+) -> Result<T, Failed> {
+    let tree = serde_json::from_slice::<StrictJson>(out).map_err(|_| {
+        failed(
+            GapKind::Malformed,
+            format!("{read} printed something that isn't one JSON value with each key once"),
+        )
+    })?;
+    read_answer(&tree.0).map_err(|bad| bad.failed(read))
+}
+
+fn parse_issues(out: &[u8]) -> Result<Vec<IssueRow>, Failed> {
+    match fast::parse_issues(out) {
+        Ok(rows) => Ok(rows),
+        Err(()) => parse_with_strict_json(out, "gh issue list", |v| list(v, "", issue_row)),
+    }
+}
+
+fn parse_stock_prs(out: &[u8]) -> Result<Vec<StockPr>, Failed> {
+    match fast::parse_stock_prs(out) {
+        Ok(rows) => Ok(rows),
+        Err(()) => parse_with_strict_json(out, "gh pr list", |v| list(v, "", stock_pr_row)),
+    }
+}
+
+fn parse_checks(out: &[u8], read: &str) -> Result<Vec<Check>, Failed> {
+    match fast::parse_checks(out) {
+        Ok(rows) => Ok(rows),
+        Err(()) => parse_with_strict_json(out, read, |v| list(v, "", check)),
+    }
+}
+
+fn parse_comments(out: &[u8], read: &str) -> Result<Vec<String>, Failed> {
+    match serde_json::from_slice::<Vec<String>>(out) {
+        Ok(rows) => Ok(rows),
+        Err(_) => parse_with_strict_json(out, read, |v| {
+            list(v, "", |v, at| string(v, at).map(str::to_owned))
+        }),
     }
 }
 
@@ -236,7 +274,8 @@ impl FleetsSource for GitHubFleets {
             "--json",
             ISSUE_FIELDS,
         ];
-        let rows = self.json("gh issue list", &argv, deadline, |v| list(v, "", issue_row))?;
+        let out = self.call("gh issue list", &argv, deadline)?;
+        let rows = parse_issues(&out)?;
         Ok(listed(rows))
     }
 
@@ -251,7 +290,8 @@ impl FleetsSource for GitHubFleets {
         let argv = [
             "pr", "list", "--state", "all", "--limit", LIMIT, "--json", PR_FIELDS,
         ];
-        let rows = self.json("gh pr list", &argv, deadline, |v| list(v, "", stock_pr_row))?;
+        let out = self.call("gh pr list", &argv, deadline)?;
+        let rows = parse_stock_prs(&out)?;
         Ok(listed(rows))
     }
 
@@ -269,13 +309,7 @@ impl FleetsSource for GitHubFleets {
             .executor
             .checks(&invocation, deadline)
             .map_err(|e| failure(&read, &e))?;
-        let tree = serde_json::from_slice::<StrictJson>(&out).map_err(|_| {
-            failed(
-                GapKind::Malformed,
-                format!("{read} printed something that isn't one JSON value with each key once"),
-            )
-        })?;
-        list(&tree.0, "", check).map_err(|bad| bad.failed(&read))
+        parse_checks(&out, &read)
     }
 
     fn comments(&self, pr: Number, deadline: Instant) -> Result<Vec<String>, Failed> {
@@ -289,12 +323,9 @@ impl FleetsSource for GitHubFleets {
             "--jq",
             COMMENTS_JQ,
         ];
-        self.json(
-            &format!("gh pr view {n}'s comments"),
-            &argv,
-            deadline,
-            |v| list(v, "", |v, at| string(v, at).map(str::to_owned)),
-        )
+        let read = format!("gh pr view {n}'s comments");
+        let out = self.call(&read, &argv, deadline)?;
+        parse_comments(&out, &read)
     }
 
     fn on_base(&self, pr: &MergedPr, deadline: Instant) -> Result<bool, Failed> {
@@ -963,6 +994,9 @@ fn time(s: &str) -> Option<Timestamp> {
     ))
 }
 
+#[path = "fleets_fast.rs"]
+pub(crate) mod fast;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1297,5 +1331,201 @@ mod tests {
         assert!(list(&tree(&extra), "", pr_row).is_err());
         let duplicate = al1_pr_wire(r#", "title":"synthetic-a", "title":"synthetic-b""#);
         assert!(serde_json::from_str::<StrictJson>(&duplicate).is_err());
+    }
+
+    #[test]
+    fn fast_issue_reader_matches_strict_json_oracle_on_valid_and_malformed_inputs() {
+        let valid_full = r#"[
+            {
+                "blockedBy":{"nodes":[{"id":"I_1","number":10,"state":"OPEN","title":"","url":""}],"totalCount":1},
+                "body":"line1\n\"quoted\"",
+                "id":"I_main",
+                "labels":[{"color":"","description":"","id":"","name":"ready-for-agent"}],
+                "milestone":{"description":"","dueOn":"2026-10-30T00:00:00Z","number":1,"title":""},
+                "number":1,
+                "state":"OPEN",
+                "subIssues":{"nodes":[],"totalCount":0},
+                "title":""
+            },
+            {
+                "\u0062lockedBy":{"nodes":[],"totalCount":18446744073709551615},
+                "body":"",
+                "id":"I_closed",
+                "labels":[],
+                "milestone":null,
+                "number":18446744073709551615,
+                "state":"CLOSED",
+                "subIssues":{"nodes":[],"totalCount":0},
+                "title":"escaped \u0074itle"
+            }
+        ]"#;
+        let cases = [
+            "[]".to_owned(),
+            valid_full.to_owned(),
+            valid_full.replace("\"OPEN\"", "\"DRAFT\""),
+            valid_full.replace("\"number\":1,", "\"number\":0,"),
+            valid_full.replace("\"number\":1,", "\"number\":-1,"),
+            valid_full.replace("\"number\":1,", "\"number\":1.0,"),
+            valid_full.replace("\"totalCount\":1", "\"totalCount\":-1"),
+            valid_full.replace("\"id\":\"I_main\",", "\"id\":\"\","),
+            valid_full.replace("\"name\":\"ready-for-agent\"", "\"name\":\"\""),
+            valid_full.replace("\"title\":\"\"", "\"title\":\"\", \"title\":\"dup\""),
+            valid_full.replace("\"title\":\"\"", "\"title\":\"\", \"extra\":1"),
+            valid_full.replace("\"milestone\":null,", ""),
+            format!("{valid_full} trailing"),
+            "{}".to_owned(),
+            "not json".to_owned(),
+        ];
+        for raw in &cases {
+            let bytes = raw.as_bytes();
+            let old = parse_with_strict_json(bytes, "gh issue list", |v| list(v, "", issue_row));
+            let new = parse_issues(bytes);
+            assert_eq!(new, old, "mismatch on {raw}");
+            assert_eq!(
+                fast::parse_issues(bytes).ok(),
+                old.ok(),
+                "fast path diverged on {raw}"
+            );
+        }
+    }
+
+    #[test]
+    fn fast_pr_and_checks_readers_match_strict_json_oracle() {
+        let oid_a = "a".repeat(40);
+        let oid_b = "b".repeat(40);
+        let valid_prs = format!(
+            r#"[
+                {{"baseRefName":"main","closingIssuesReferences":[{{"id":"I_1","number":1,"repository":{{"id":"R","name":"n","owner":{{"id":"O","login":"l"}}}},"url":""}}],"headRefName":"room/a","headRefOid":"{oid_a}","isDraft":true,"mergeCommit":null,"mergedAt":null,"number":1,"state":"OPEN","title":"Open PR"}},
+                {{"baseRefName":"main","closingIssuesReferences":[],"headRefName":"room/b","headRefOid":"{oid_a}","isDraft":false,"mergeCommit":{{"oid":"{oid_b}"}},"mergedAt":"2026-10-30T18:30:00Z","number":2,"state":"MERGED","title":"Merged PR"}},
+                {{"\u0062aseRefName":"","closingIssuesReferences":[],"headRefName":"","headRefOid":"not-a-commit","isDraft":false,"mergeCommit":null,"mergedAt":null,"number":3,"state":"CLOSED","title":"Closed PR"}}
+            ]"#
+        );
+        let pr_cases = [
+            "[]".to_owned(),
+            valid_prs.clone(),
+            valid_prs.replace("\"state\":\"CLOSED\"", "\"state\":\"OPEN\""),
+            valid_prs.replace("\"mergedAt\":null", "\"mergedAt\":\"2026-10-30T18:30:00Z\""),
+            valid_prs.replace(
+                &format!(r#""mergeCommit":{{"oid":"{oid_b}"}}"#),
+                r#""mergeCommit":null"#,
+            ),
+            valid_prs.replace("2026-10-30T18:30:00Z", "1969-12-31T23:59:59Z"),
+            valid_prs.replace("2026-10-30T18:30:00Z", "2025-02-29T00:00:00Z"),
+            valid_prs.replace("\"title\":\"Open PR\"", "\"title\":\"\""),
+            valid_prs.replace(
+                "\"title\":\"Open PR\"",
+                "\"title\":\"Open PR\",\"title\":\"dup\"",
+            ),
+            valid_prs.replace("\"login\":\"l\"", "\"login\":\"l\",\"extra\":true"),
+            valid_prs.replace("\"isDraft\":true", "\"isDraft\":1"),
+            format!("{valid_prs}[]"),
+        ];
+        for raw in &pr_cases {
+            let bytes = raw.as_bytes();
+            let old = parse_with_strict_json(bytes, "gh pr list", |v| list(v, "", stock_pr_row));
+            let new = parse_stock_prs(bytes);
+            assert_eq!(new, old, "PR mismatch on {raw}");
+            assert_eq!(
+                fast::parse_stock_prs(bytes).ok(),
+                old.ok(),
+                "fast PR path diverged on {raw}"
+            );
+        }
+
+        let check_cases = [
+            "[]",
+            r#"[{"bucket":"pass","name":"a"},{"bucket":"fail","name":"b"},{"bucket":"pending","name":"c"},{"bucket":"skipping","name":"d"},{"\u0062ucket":"cancel","name":"e"}]"#,
+            r#"[{"bucket":"PASS","name":"a"}]"#,
+            r#"[{"bucket":"pass","name":""}]"#,
+            r#"[{"bucket":"pass","name":"a","bucket":"pass"}]"#,
+            r#"[{"bucket":"pass","name":"a","extra":1}]"#,
+            r#"[{"bucket":"pass"}]"#,
+            "{}",
+        ];
+        for raw in check_cases {
+            let bytes = raw.as_bytes();
+            let old = parse_with_strict_json(bytes, "gh pr checks 1", |v| list(v, "", check));
+            let new = parse_checks(bytes, "gh pr checks 1");
+            assert_eq!(new, old, "checks mismatch on {raw}");
+            assert_eq!(
+                fast::parse_checks(bytes).ok(),
+                old.ok(),
+                "fast checks path diverged on {raw}"
+            );
+        }
+
+        let comment_cases = [
+            "[]",
+            r#"["", "hello\nworld", "escaped \u0021"]"#,
+            r#"[1]"#,
+            r#"[{"a":1,"a":2}]"#,
+            "not json",
+        ];
+        for raw in comment_cases {
+            let bytes = raw.as_bytes();
+            let old = parse_with_strict_json(bytes, "gh pr view 1's comments", |v| {
+                list(v, "", |v, at| string(v, at).map(str::to_owned))
+            });
+            let new = parse_comments(bytes, "gh pr view 1's comments");
+            assert_eq!(new, old, "comments mismatch on {raw}");
+        }
+    }
+
+    #[test]
+    fn fast_readers_match_oracle_across_deterministic_mutations() {
+        let oid_a = "a".repeat(40);
+        let oid_b = "b".repeat(40);
+        let issue_seed = br#"[{"blockedBy":{"nodes":[{"id":"I_1","number":2,"state":"OPEN","title":"t","url":"u"}],"totalCount":1},"body":"b\n\"q\"","id":"I_0","labels":[{"color":"c","description":"d","id":"L","name":"p1"}],"milestone":{"description":"d","dueOn":null,"number":1,"title":"m"},"number":1,"state":"OPEN","subIssues":{"nodes":[],"totalCount":0},"title":"T"}]"#;
+        let pr_seed = format!(
+            r#"[{{"baseRefName":"main","closingIssuesReferences":[{{"id":"I_1","number":1,"repository":{{"id":"R","name":"n","owner":{{"id":"O","login":"l"}}}},"url":"u"}}],"headRefName":"room/x","headRefOid":"{oid_a}","isDraft":false,"mergeCommit":{{"oid":"{oid_b}"}},"mergedAt":"2026-10-30T18:30:00Z","number":5,"state":"MERGED","title":"PR"}},{{"baseRefName":"","closingIssuesReferences":[],"headRefName":"","headRefOid":"bad","isDraft":true,"mergeCommit":null,"mergedAt":null,"number":6,"state":"CLOSED","title":"C"}}]"#
+        )
+        .into_bytes();
+        let check_seed = br#"[{"bucket":"pass","name":"ci"},{"bucket":"pending","name":"lint"}]"#;
+
+        let mut rng = 0x5eed_cafe_1234_5678u64;
+        let mut next = || {
+            rng ^= rng << 13;
+            rng ^= rng >> 7;
+            rng ^= rng << 17;
+            rng
+        };
+        let alphabet: &[u8] = b"0123456789\"{},:[]\\u0062nulltruefalse-OPENCLOSEDMRG";
+
+        let mutate = |seed: &[u8], next: &mut dyn FnMut() -> u64| -> Vec<u8> {
+            let mut buf = seed.to_vec();
+            let edits = (next() % 4) as usize + 1;
+            for _ in 0..edits {
+                if buf.is_empty() {
+                    break;
+                }
+                let pos = (next() as usize) % buf.len();
+                match next() % 4 {
+                    0 => buf[pos] = alphabet[(next() as usize) % alphabet.len()],
+                    1 => {
+                        buf.remove(pos);
+                    }
+                    2 => buf.insert(pos, alphabet[(next() as usize) % alphabet.len()]),
+                    _ => buf.truncate(pos),
+                }
+            }
+            buf
+        };
+
+        for _ in 0..600 {
+            let bytes = mutate(issue_seed, &mut next);
+            let old = parse_with_strict_json(&bytes, "gh issue list", |v| list(v, "", issue_row));
+            assert_eq!(parse_issues(&bytes), old);
+            assert_eq!(fast::parse_issues(&bytes).ok(), old.ok());
+
+            let bytes = mutate(&pr_seed, &mut next);
+            let old = parse_with_strict_json(&bytes, "gh pr list", |v| list(v, "", stock_pr_row));
+            assert_eq!(parse_stock_prs(&bytes), old);
+            assert_eq!(fast::parse_stock_prs(&bytes).ok(), old.ok());
+
+            let bytes = mutate(check_seed, &mut next);
+            let old = parse_with_strict_json(&bytes, "gh pr checks 1", |v| list(v, "", check));
+            assert_eq!(parse_checks(&bytes, "gh pr checks 1"), old);
+            assert_eq!(fast::parse_checks(&bytes).ok(), old.ok());
+        }
     }
 }

@@ -142,58 +142,7 @@ impl Reader {
         let invocation = Invocation::new(&words).ok_or_else(malformed)?;
         let captured = process::run_plan_graphql(Path::new(&self.program), &invocation, deadline)
             .map_err(source_failure)?;
-        let failed = captured.failure.is_some();
-        let value = strict(&captured.stdout)?;
-        let root = value.as_object().ok_or_else(malformed)?;
-        if !root.contains_key("data") || root.keys().any(|k| k != "data" && k != "errors") {
-            return Err(malformed());
-        }
-        let gaps = if failed || root.contains_key("errors") {
-            vec![failure(
-                GapKind::CommandFailed,
-                "GitHub reported an incomplete plan read",
-            )]
-        } else {
-            vec![]
-        };
-        let mut data = root["data"].clone();
-        if failed || root.contains_key("errors") {
-            mask_errors(&mut data, root.get("errors"));
-        }
-        let data = object(&data, &["repository"])?;
-        let repo = data["repository"]
-            .as_object()
-            .ok_or_else(|| failure(GapKind::NotFound, "GitHub repository was not returned"))?;
-        let (field, subject) = match r {
-            Request::Milestones => ("milestones", None),
-            Request::Issues => ("issues", None),
-            Request::Issue(_) => ("issue", None),
-            Request::Pr(_) => ("pullRequest", None),
-            Request::Relation(_, rel) => (
-                rel.field(),
-                Some(
-                    if matches!(rel, Relation::ClosingIssues | Relation::Comments) {
-                        "pullRequest"
-                    } else {
-                        "issue"
-                    },
-                ),
-            ),
-        };
-        let parent = if let Some(subject) = subject {
-            let o = object(&Value::Object(repo.clone()), &[subject])?;
-            o[subject].as_object().cloned().ok_or_else(malformed)?
-        } else {
-            repo.clone()
-        };
-        let value = object(&Value::Object(parent), &[field])?[field].clone();
-        if value.is_null() {
-            return Err(failure(
-                GapKind::NotFound,
-                "GitHub plan item was not returned",
-            ));
-        }
-        Ok((value, gaps))
+        parse_read_response(r, &captured.stdout, captured.failure.is_some())
     }
     pub fn connection(
         &self,
@@ -220,31 +169,52 @@ impl Reader {
                 }
             };
             list.gaps.extend(gaps);
-            list.had_items |= value
-                .get("totalCount")
-                .and_then(Value::as_u64)
-                .is_some_and(|n| n > 0);
-            if let Some(o) = value.as_object()
-                && o.keys()
-                    .all(|k| ["nodes", "totalCount", "pageInfo"].contains(&k.as_str()))
-                && let Some(nodes) = o.get("nodes").and_then(Value::as_array)
-            {
-                list.had_items |= !nodes.is_empty();
-                list.rows.extend(nodes.iter().cloned());
-            }
-            let parsed = (|| {
-                let o = object(&value, &["nodes", "totalCount", "pageInfo"])?;
-                o["nodes"].as_array().ok_or_else(malformed)?;
-                let count = o["totalCount"].as_u64().ok_or_else(malformed)?;
-                let info = object(&o["pageInfo"], &["hasNextPage", "endCursor"])?;
-                let more = info["hasNextPage"].as_bool().ok_or_else(malformed)?;
-                let next = if info["endCursor"].is_null() {
-                    None
-                } else {
-                    Some(text(&info["endCursor"])?.to_owned())
-                };
-                Ok((count, more, next))
-            })();
+            let parsed = match value {
+                Value::Object(mut o) => {
+                    list.had_items |= o
+                        .get("totalCount")
+                        .and_then(Value::as_u64)
+                        .is_some_and(|n| n > 0);
+                    let keys_ok = o
+                        .keys()
+                        .all(|k| ["nodes", "totalCount", "pageInfo"].contains(&k.as_str()));
+                    let nodes_valid = if keys_ok {
+                        if let Some(Value::Array(nodes)) = o.get_mut("nodes") {
+                            list.had_items |= !nodes.is_empty();
+                            list.rows.append(nodes);
+                            true
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    };
+                    (|| {
+                        if !["nodes", "totalCount", "pageInfo"]
+                            .iter()
+                            .all(|k| o.contains_key(*k))
+                        {
+                            return Err(failure(
+                                GapKind::MissingField,
+                                "GitHub plan field is missing",
+                            ));
+                        }
+                        if o.len() != 3 || !nodes_valid {
+                            return Err(malformed());
+                        }
+                        let count = o["totalCount"].as_u64().ok_or_else(malformed)?;
+                        let info = object_ref(&o["pageInfo"], &["hasNextPage", "endCursor"])?;
+                        let more = info["hasNextPage"].as_bool().ok_or_else(malformed)?;
+                        let next = if info["endCursor"].is_null() {
+                            None
+                        } else {
+                            Some(text(&info["endCursor"])?.to_owned())
+                        };
+                        Ok((count, more, next))
+                    })()
+                }
+                _ => Err(malformed()),
+            };
             let (count, more, next) = match parsed {
                 Ok(v) => v,
                 Err(e) => {
@@ -305,7 +275,9 @@ impl Reader {
         Ok(issue)
     }
     fn issue_value(&self, v: Value, deadline: Instant) -> Answer<Issue> {
-        let o = v.as_object().ok_or_else(malformed)?;
+        let Value::Object(mut o) = v else {
+            return Err(malformed());
+        };
         const FIELDS: &[&str] = &[
             "number",
             "title",
@@ -321,66 +293,76 @@ impl Reader {
         if o.keys().any(|k| !FIELDS.contains(&k.as_str())) {
             return Err(malformed());
         }
-        let get = |field: &str| {
-            o.get(field)
+        let take = |o: &mut Map<String, Value>, field: &str| {
+            o.remove(field)
                 .ok_or_else(|| failure(GapKind::MissingField, "GitHub plan field is missing"))
         };
-        let number = positive(get("number")?)?;
-        let connection = |field: &str, rel| match get(field) {
-            Ok(v) => self.connection(
-                Request::Relation(number.get(), rel),
-                Some(v.clone()),
-                deadline,
-            ),
+        let number = take(&mut o, "number").and_then(|v| positive(&v))?;
+        let title = take(&mut o, "title").and_then(into_string);
+        let url = take(&mut o, "url").and_then(into_string);
+        let state = take(&mut o, "state").and_then(into_string).and_then(|s| {
+            if s == "OPEN" || s == "CLOSED" {
+                Ok(s)
+            } else {
+                Err(malformed())
+            }
+        });
+        let milestone = take(&mut o, "milestone").and_then(|v| {
+            if v.is_null() {
+                Ok(None)
+            } else {
+                milestone(v).map(Some)
+            }
+        });
+        let parent = take(&mut o, "parent").and_then(|v| {
+            if v.is_null() {
+                Ok(None)
+            } else {
+                link(v).map(Some)
+            }
+        });
+        let mut connection = |field: &str, rel| match take(&mut o, field) {
+            Ok(v) => self.connection(Request::Relation(number.get(), rel), Some(v), deadline),
             Err(f) => Listing {
                 had_items: false,
                 rows: vec![],
                 gaps: vec![f],
             },
         };
-        let links = |field, rel| convert(connection(field, rel), link);
+        let labels = convert(connection("labels", Relation::Labels), |v| {
+            let mut o = into_object(v, &["name"])?;
+            into_string(o.remove("name").expect("checked"))
+        });
+        let children = convert(connection("subIssues", Relation::SubIssues), link);
+        let blockers = convert(connection("blockedBy", Relation::BlockedBy), link);
+        let prs = convert(
+            connection("closedByPullRequestsReferences", Relation::ClosingPrs),
+            link,
+        );
         Ok(Issue {
             problems: vec![],
             number,
-            title: get("title").and_then(string),
-            url: get("url").and_then(string),
-            state: get("state").and_then(string).and_then(|s| {
-                if s == "OPEN" || s == "CLOSED" {
-                    Ok(s)
-                } else {
-                    Err(malformed())
-                }
-            }),
-            milestone: get("milestone").and_then(|v| {
-                if v.is_null() {
-                    Ok(None)
-                } else {
-                    milestone(v.clone()).map(Some)
-                }
-            }),
-            parent: get("parent").and_then(|v| {
-                if v.is_null() {
-                    Ok(None)
-                } else {
-                    link(v.clone()).map(Some)
-                }
-            }),
-            labels: convert(connection("labels", Relation::Labels), |v| {
-                let o = object(&v, &["name"])?;
-                string(&o["name"])
-            }),
-            children: links("subIssues", Relation::SubIssues),
-            blockers: links("blockedBy", Relation::BlockedBy),
-            prs: links("closedByPullRequestsReferences", Relation::ClosingPrs),
+            title,
+            url,
+            state,
+            milestone,
+            parent,
+            labels,
+            children,
+            blockers,
+            prs,
         })
     }
     pub fn pr(&self, n: Number, deadline: Instant) -> Answer<Pr> {
-        let (mut v, gaps) = self.read(Request::Pr(n.get()), None, deadline)?;
+        let (v, gaps) = self.read(Request::Pr(n.get()), None, deadline)?;
         if let Some(gap) = gaps.first() {
             return Err(gap.clone());
         }
-        let o = object(
-            &v,
+        self.pr_value(n, v, deadline)
+    }
+    fn pr_value(&self, n: Number, v: Value, deadline: Instant) -> Answer<Pr> {
+        let mut o = into_object(
+            v,
             &[
                 "number",
                 "url",
@@ -394,20 +376,17 @@ impl Reader {
                 "closingIssuesReferences",
             ],
         )?;
-        let url = string(&o["url"])?;
+        let url = into_string(o.remove("url").expect("checked"))?;
+        let closing = o.remove("closingIssuesReferences").expect("checked");
         let links = self
             .connection(
                 Request::Relation(n.get(), Relation::ClosingIssues),
-                Some(o["closingIssuesReferences"].clone()),
+                Some(closing),
                 deadline,
             )
             .complete()?;
-        let o = v.as_object_mut().ok_or_else(malformed)?;
-        o.remove("url");
         o.insert("closingIssuesReferences".to_owned(), Value::Array(links));
-        let answer =
-            crate::tickets::pull_request(&serde_json::to_vec(&v).map_err(|_| malformed())?)
-                .map_err(source_failure)?;
+        let answer = crate::tickets::pull_request_object(&o).map_err(source_failure)?;
         if answer.number != n {
             return Err(malformed());
         }
@@ -421,13 +400,82 @@ impl Reader {
                 deadline,
             ),
             |v| {
-                let o = object(&v, &["body"])?;
-                let s = o["body"].as_str().ok_or_else(malformed)?;
-                Ok(s.to_owned())
+                let mut o = into_object(v, &["body"])?;
+                match o.remove("body") {
+                    Some(Value::String(s)) => Ok(s),
+                    _ => Err(malformed()),
+                }
             },
         )
         .complete()
     }
+}
+
+fn parse_read_response(r: Request, stdout: &[u8], failed: bool) -> Answer<(Value, Vec<Failure>)> {
+    let Value::Object(mut root) = strict(stdout)? else {
+        return Err(malformed());
+    };
+    if !root.contains_key("data") || root.keys().any(|k| k != "data" && k != "errors") {
+        return Err(malformed());
+    }
+    let has_errors = root.contains_key("errors");
+    let gaps = if failed || has_errors {
+        vec![failure(
+            GapKind::CommandFailed,
+            "GitHub reported an incomplete plan read",
+        )]
+    } else {
+        vec![]
+    };
+    let mut data = root.remove("data").expect("checked");
+    if failed || has_errors {
+        mask_errors(&mut data, root.get("errors"));
+    }
+    let mut data = into_object(data, &["repository"])?;
+    let repo = match data.remove("repository") {
+        Some(Value::Object(o)) => o,
+        _ => {
+            return Err(failure(
+                GapKind::NotFound,
+                "GitHub repository was not returned",
+            ));
+        }
+    };
+    let (field, subject) = match r {
+        Request::Milestones => ("milestones", None),
+        Request::Issues => ("issues", None),
+        Request::Issue(_) => ("issue", None),
+        Request::Pr(_) => ("pullRequest", None),
+        Request::Relation(_, rel) => (
+            rel.field(),
+            Some(
+                if matches!(rel, Relation::ClosingIssues | Relation::Comments) {
+                    "pullRequest"
+                } else {
+                    "issue"
+                },
+            ),
+        ),
+    };
+    let parent = if let Some(subject) = subject {
+        let mut o = into_object(Value::Object(repo), &[subject])?;
+        match o.remove(subject) {
+            Some(Value::Object(sub)) => sub,
+            _ => return Err(malformed()),
+        }
+    } else {
+        repo
+    };
+    let value = into_object(Value::Object(parent), &[field])?
+        .remove(field)
+        .expect("checked");
+    if value.is_null() {
+        return Err(failure(
+            GapKind::NotFound,
+            "GitHub plan item was not returned",
+        ));
+    }
+    Ok((value, gaps))
 }
 fn convert<T>(raw: Listing<Value>, parse: impl Fn(Value) -> Answer<T>) -> Listing<T> {
     let mut out = Listing {
@@ -453,6 +501,9 @@ pub fn source_failure(e: SourceError) -> Failure {
     failure(kind, "GitHub plan read failed (detail withheld)")
 }
 pub fn object(v: &Value, keys: &[&str]) -> Answer<Map<String, Value>> {
+    object_ref(v, keys).cloned()
+}
+fn object_ref<'a>(v: &'a Value, keys: &[&str]) -> Answer<&'a Map<String, Value>> {
     let o = v.as_object().ok_or_else(malformed)?;
     if keys.iter().any(|k| !o.contains_key(*k)) {
         return Err(failure(
@@ -463,7 +514,22 @@ pub fn object(v: &Value, keys: &[&str]) -> Answer<Map<String, Value>> {
     if o.len() != keys.len() {
         return Err(malformed());
     }
-    Ok(o.clone())
+    Ok(o)
+}
+fn into_object(v: Value, keys: &[&str]) -> Answer<Map<String, Value>> {
+    let Value::Object(o) = v else {
+        return Err(malformed());
+    };
+    if keys.iter().any(|k| !o.contains_key(*k)) {
+        return Err(failure(
+            GapKind::MissingField,
+            "GitHub plan field is missing",
+        ));
+    }
+    if o.len() != keys.len() {
+        return Err(malformed());
+    }
+    Ok(o)
 }
 pub fn positive(v: &Value) -> Answer<Number> {
     v.as_u64().and_then(Number::new).ok_or_else(malformed)
@@ -471,27 +537,32 @@ pub fn positive(v: &Value) -> Answer<Number> {
 pub fn text(v: &Value) -> Answer<&str> {
     v.as_str().filter(|s| !s.is_empty()).ok_or_else(malformed)
 }
-fn string(v: &Value) -> Answer<String> {
-    text(v).map(str::to_owned)
+fn into_string(v: Value) -> Answer<String> {
+    match v {
+        Value::String(s) if !s.is_empty() => Ok(s),
+        _ => Err(malformed()),
+    }
 }
 fn milestone(v: Value) -> Answer<Milestone> {
-    let o = v.as_object().ok_or_else(malformed)?;
+    let Value::Object(mut o) = v else {
+        return Err(malformed());
+    };
     if o.keys().any(|k| k != "number" && k != "title") {
         return Err(malformed());
     }
     Ok(Milestone {
         number: o.get("number").ok_or_else(malformed).and_then(positive)?,
         title: o
-            .get("title")
+            .remove("title")
             .ok_or_else(|| failure(GapKind::MissingField, "GitHub milestone title is missing"))
-            .and_then(string),
+            .and_then(into_string),
     })
 }
 fn link(v: Value) -> Answer<Link> {
-    let o = object(&v, &["number", "url"])?;
+    let mut o = into_object(v, &["number", "url"])?;
     Ok(Link {
         number: positive(&o["number"])?,
-        url: string(&o["url"])?,
+        url: into_string(o.remove("url").expect("checked"))?,
     })
 }
 
@@ -507,10 +578,14 @@ impl<'de> Deserialize<'de> for Strict {
             fn visit_map<A: serde::de::MapAccess<'de>>(self, mut a: A) -> Result<Strict, A::Error> {
                 let mut m = Map::new();
                 while let Some(k) = a.next_key::<String>()? {
-                    if m.contains_key(&k) {
-                        return Err(serde::de::Error::custom("duplicate key"));
+                    match m.entry(k) {
+                        serde_json::map::Entry::Vacant(slot) => {
+                            slot.insert(a.next_value::<Strict>()?.0);
+                        }
+                        serde_json::map::Entry::Occupied(_) => {
+                            return Err(serde::de::Error::custom("duplicate key"));
+                        }
                     }
-                    m.insert(k, a.next_value::<Strict>()?.0);
                 }
                 Ok(Strict(Value::Object(m)))
             }
@@ -523,6 +598,9 @@ impl<'de> Deserialize<'de> for Strict {
             }
             fn visit_str<E: serde::de::Error>(self, v: &str) -> Result<Strict, E> {
                 Ok(Strict(Value::String(v.to_owned())))
+            }
+            fn visit_string<E: serde::de::Error>(self, v: String) -> Result<Strict, E> {
+                Ok(Strict(Value::String(v)))
             }
             fn visit_bool<E: serde::de::Error>(self, v: bool) -> Result<Strict, E> {
                 Ok(Strict(Value::Bool(v)))
@@ -645,5 +723,324 @@ fn uncertain_absences(data: &mut Value) {
             }
         }
         _ => {}
+    }
+}
+
+#[cfg(test)]
+mod oracle_tests {
+    use super::*;
+
+    mod previous {
+        use super::*;
+
+        fn string(v: &Value) -> Answer<String> {
+            text(v).map(str::to_owned)
+        }
+
+        fn milestone(v: Value) -> Answer<Milestone> {
+            let o = v.as_object().ok_or_else(malformed)?;
+            if o.keys().any(|k| k != "number" && k != "title") {
+                return Err(malformed());
+            }
+            Ok(Milestone {
+                number: o.get("number").ok_or_else(malformed).and_then(positive)?,
+                title: o
+                    .get("title")
+                    .ok_or_else(|| {
+                        failure(GapKind::MissingField, "GitHub milestone title is missing")
+                    })
+                    .and_then(string),
+            })
+        }
+
+        fn link(v: Value) -> Answer<Link> {
+            let o = object(&v, &["number", "url"])?;
+            Ok(Link {
+                number: positive(&o["number"])?,
+                url: string(&o["url"])?,
+            })
+        }
+
+        pub(super) fn parse_read_response(
+            r: Request,
+            stdout: &[u8],
+            failed: bool,
+        ) -> Answer<(Value, Vec<Failure>)> {
+            let value = strict(stdout)?;
+            let root = value.as_object().ok_or_else(malformed)?;
+            if !root.contains_key("data") || root.keys().any(|k| k != "data" && k != "errors") {
+                return Err(malformed());
+            }
+            let gaps = if failed || root.contains_key("errors") {
+                vec![failure(
+                    GapKind::CommandFailed,
+                    "GitHub reported an incomplete plan read",
+                )]
+            } else {
+                vec![]
+            };
+            let mut data = root["data"].clone();
+            if failed || root.contains_key("errors") {
+                mask_errors(&mut data, root.get("errors"));
+            }
+            let data = object(&data, &["repository"])?;
+            let repo = data["repository"]
+                .as_object()
+                .ok_or_else(|| failure(GapKind::NotFound, "GitHub repository was not returned"))?;
+            let (field, subject) = match r {
+                Request::Milestones => ("milestones", None),
+                Request::Issues => ("issues", None),
+                Request::Issue(_) => ("issue", None),
+                Request::Pr(_) => ("pullRequest", None),
+                Request::Relation(_, rel) => (
+                    rel.field(),
+                    Some(
+                        if matches!(rel, Relation::ClosingIssues | Relation::Comments) {
+                            "pullRequest"
+                        } else {
+                            "issue"
+                        },
+                    ),
+                ),
+            };
+            let parent = if let Some(subject) = subject {
+                let o = object(&Value::Object(repo.clone()), &[subject])?;
+                o[subject].as_object().cloned().ok_or_else(malformed)?
+            } else {
+                repo.clone()
+            };
+            let value = object(&Value::Object(parent), &[field])?[field].clone();
+            if value.is_null() {
+                return Err(failure(
+                    GapKind::NotFound,
+                    "GitHub plan item was not returned",
+                ));
+            }
+            Ok((value, gaps))
+        }
+
+        pub(super) fn connection_initial(value: Value) -> Listing<Value> {
+            let mut list = Listing::default();
+            list.had_items |= value
+                .get("totalCount")
+                .and_then(Value::as_u64)
+                .is_some_and(|n| n > 0);
+            if let Some(o) = value.as_object()
+                && o.keys()
+                    .all(|k| ["nodes", "totalCount", "pageInfo"].contains(&k.as_str()))
+                && let Some(nodes) = o.get("nodes").and_then(Value::as_array)
+            {
+                list.had_items |= !nodes.is_empty();
+                list.rows.extend(nodes.iter().cloned());
+            }
+            let parsed = (|| {
+                let o = object(&value, &["nodes", "totalCount", "pageInfo"])?;
+                o["nodes"].as_array().ok_or_else(malformed)?;
+                let count = o["totalCount"].as_u64().ok_or_else(malformed)?;
+                let info = object(&o["pageInfo"], &["hasNextPage", "endCursor"])?;
+                let more = info["hasNextPage"].as_bool().ok_or_else(malformed)?;
+                let next = if info["endCursor"].is_null() {
+                    None
+                } else {
+                    Some(text(&info["endCursor"])?.to_owned())
+                };
+                Ok((count, more, next))
+            })();
+            let (count, more, next) = match parsed {
+                Ok(v) => v,
+                Err(e) => {
+                    list.gaps.push(e);
+                    return list;
+                }
+            };
+            if list.rows.len() as u64 > count {
+                list.gaps.push(malformed());
+                return list;
+            }
+            if !more {
+                if list.rows.len() as u64 != count {
+                    list.gaps.push(failure(
+                        GapKind::Truncated,
+                        "GitHub plan page count does not match its total",
+                    ));
+                }
+                return list;
+            }
+            if next.is_none() || list.rows.len() as u64 >= count {
+                list.gaps.push(malformed());
+            }
+            list
+        }
+
+        pub(super) fn issue_value(v: Value) -> Answer<Issue> {
+            let o = v.as_object().ok_or_else(malformed)?;
+            const FIELDS: &[&str] = &[
+                "number",
+                "title",
+                "url",
+                "state",
+                "milestone",
+                "parent",
+                "labels",
+                "subIssues",
+                "blockedBy",
+                "closedByPullRequestsReferences",
+            ];
+            if o.keys().any(|k| !FIELDS.contains(&k.as_str())) {
+                return Err(malformed());
+            }
+            let get = |field: &str| {
+                o.get(field)
+                    .ok_or_else(|| failure(GapKind::MissingField, "GitHub plan field is missing"))
+            };
+            let number = positive(get("number")?)?;
+            let conn = |field: &str| match get(field) {
+                Ok(v) => connection_initial(v.clone()),
+                Err(f) => Listing {
+                    had_items: false,
+                    rows: vec![],
+                    gaps: vec![f],
+                },
+            };
+            Ok(Issue {
+                problems: vec![],
+                number,
+                title: get("title").and_then(string),
+                url: get("url").and_then(string),
+                state: get("state").and_then(string).and_then(|s| {
+                    if s == "OPEN" || s == "CLOSED" {
+                        Ok(s)
+                    } else {
+                        Err(malformed())
+                    }
+                }),
+                milestone: get("milestone").and_then(|v| {
+                    if v.is_null() {
+                        Ok(None)
+                    } else {
+                        milestone(v.clone()).map(Some)
+                    }
+                }),
+                parent: get("parent").and_then(|v| {
+                    if v.is_null() {
+                        Ok(None)
+                    } else {
+                        link(v.clone()).map(Some)
+                    }
+                }),
+                labels: convert(conn("labels"), |v| {
+                    let o = object(&v, &["name"])?;
+                    string(&o["name"])
+                }),
+                children: convert(conn("subIssues"), link),
+                blockers: convert(conn("blockedBy"), link),
+                prs: convert(conn("closedByPullRequestsReferences"), link),
+            })
+        }
+
+        pub(super) fn pr_value(n: Number, mut v: Value) -> Answer<Pr> {
+            let o = object(
+                &v,
+                &[
+                    "number",
+                    "url",
+                    "baseRefName",
+                    "headRefName",
+                    "headRefOid",
+                    "isDraft",
+                    "mergeCommit",
+                    "mergedAt",
+                    "state",
+                    "closingIssuesReferences",
+                ],
+            )?;
+            let url = string(&o["url"])?;
+            let links = connection_initial(o["closingIssuesReferences"].clone()).complete()?;
+            let o = v.as_object_mut().ok_or_else(malformed)?;
+            o.remove("url");
+            o.insert("closingIssuesReferences".to_owned(), Value::Array(links));
+            let answer =
+                crate::tickets::pull_request(&serde_json::to_vec(&v).map_err(|_| malformed())?)
+                    .map_err(source_failure)?;
+            if answer.number != n {
+                return Err(malformed());
+            }
+            Ok(Pr { answer, url })
+        }
+    }
+
+    #[test]
+    fn move_based_plan_readers_match_previous_clone_oracle() {
+        let reader = Reader::new("/synthetic/unused");
+        let deadline = Instant::now() + std::time::Duration::from_secs(60);
+
+        let issue_node = r#"{"number":7,"title":"Synthetic \"quoted\"","url":"https://github.invalid/o/r/issues/7","state":"OPEN","milestone":{"number":1,"title":"0.2.0"},"parent":{"number":1,"url":"https://github.invalid/o/r/issues/1"},"labels":{"totalCount":1,"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[{"name":"p1"}]},"subIssues":{"totalCount":0,"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[]},"blockedBy":{"totalCount":0,"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[]},"closedByPullRequestsReferences":{"totalCount":1,"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[{"number":8,"url":"https://github.invalid/o/r/pull/8"}]}}"#;
+        let conn_good = format!(
+            r#"{{"nodes":[{issue_node}],"totalCount":1,"pageInfo":{{"hasNextPage":false,"endCursor":null}}}}"#
+        );
+        let resp_good = format!(r#"{{"data":{{"repository":{{"issues":{conn_good}}}}}}}"#);
+        let resp_err = format!(
+            r#"{{"data":{{"repository":{{"issues":{conn_good}}}}},"errors":[{{"path":["repository","issues","nodes",0,"milestone"]}}]}}"#
+        );
+        for (raw, failed) in [
+            (resp_good.as_str(), false),
+            (resp_err.as_str(), true),
+            (r#"{"data":{"repository":null}}"#, false),
+            (r#"{"data":{"repository":{"issues":null}}}"#, false),
+            (r#"{"data":{"repository":{"issues":{"a":1,"a":2}}}}"#, false),
+            (r#"{"data":{},"extra":1}"#, false),
+        ] {
+            let old = previous::parse_read_response(Request::Issues, raw.as_bytes(), failed);
+            let new = parse_read_response(Request::Issues, raw.as_bytes(), failed);
+            assert_eq!(new, old, "parse_read_response mismatch on {raw}");
+        }
+
+        for conn_raw in [
+            conn_good.as_str(),
+            r#"{"nodes":[{"x":1}],"totalCount":1}"#,
+            r#"{"nodes":[{"x":1}],"totalCount":2,"pageInfo":{"hasNextPage":false,"endCursor":null}}"#,
+            r#"{"nodes":[{"x":1}],"totalCount":1,"pageInfo":{"hasNextPage":false,"endCursor":null},"extra":1}"#,
+            r#"{"nodes":"bad","totalCount":0,"pageInfo":{"hasNextPage":false,"endCursor":null}}"#,
+            r#"null"#,
+        ] {
+            let v = strict(conn_raw.as_bytes()).unwrap();
+            let old = previous::connection_initial(v.clone());
+            let new = reader.connection(Request::Issues, Some(v), deadline);
+            assert_eq!(new.had_items, old.had_items, "{conn_raw}");
+            assert_eq!(new.rows, old.rows, "{conn_raw}");
+            assert_eq!(new.gaps, old.gaps, "{conn_raw}");
+        }
+
+        let issue_v = strict(issue_node.as_bytes()).unwrap();
+        let old_i = previous::issue_value(issue_v.clone()).unwrap();
+        let new_i = reader.issue_value(issue_v, deadline).unwrap();
+        assert_eq!(new_i.number, old_i.number);
+        assert_eq!(new_i.title, old_i.title);
+        assert_eq!(new_i.url, old_i.url);
+        assert_eq!(new_i.state, old_i.state);
+        assert_eq!(new_i.labels.rows, old_i.labels.rows);
+        assert_eq!(new_i.prs.rows, old_i.prs.rows);
+        assert_eq!(new_i.parent, old_i.parent);
+
+        let oid = "a".repeat(40);
+        let pr_raw = format!(
+            r#"{{"number":9,"url":"https://github.invalid/o/r/pull/9","baseRefName":"main","headRefName":"room/x","headRefOid":"{oid}","isDraft":false,"mergeCommit":{{"oid":"{oid}"}},"mergedAt":"2026-10-30T18:30:00Z","state":"MERGED","closingIssuesReferences":{{"totalCount":1,"pageInfo":{{"hasNextPage":false,"endCursor":null}},"nodes":[{{"id":"I_7","number":7,"url":"https://github.invalid/o/r/issues/7","repository":{{"nameWithOwner":"o/r"}}}}]}}}}"#
+        );
+        let pr_num = Number::new(9).unwrap();
+        for raw in [
+            pr_raw.clone(),
+            pr_raw.replace("\"number\":9,", "\"number\":10,"),
+            pr_raw.replace("\"state\":\"MERGED\"", "\"state\":\"OPEN\""),
+            pr_raw.replace("\"url\":\"https://github.invalid/o/r/pull/9\",", ""),
+        ] {
+            let v = strict(raw.as_bytes()).unwrap();
+            let old_pr = previous::pr_value(pr_num, v.clone());
+            let new_pr = reader.pr_value(pr_num, v, deadline);
+            assert_eq!(
+                new_pr.as_ref().map(|p| (&p.answer, &p.url)),
+                old_pr.as_ref().map(|p| (&p.answer, &p.url)),
+                "pr_value mismatch on {raw}"
+            );
+        }
     }
 }

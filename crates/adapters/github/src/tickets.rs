@@ -520,21 +520,28 @@ fn link(number_value: &Value, url: &Value, what: &str) -> Result<Link, SourceErr
 pub fn pull_request(stdout: &[u8]) -> Result<PrAnswer, SourceError> {
     let what = "pull request";
     let doc = document(stdout, what)?;
-    let o = object(
-        &doc,
-        &[
-            "baseRefName",
-            "closingIssuesReferences",
-            "headRefName",
-            "headRefOid",
-            "isDraft",
-            "mergeCommit",
-            "mergedAt",
-            "number",
-            "state",
-        ],
-        what,
-    )?;
+    let Value::Object(o) = &doc else {
+        return Err(malformed(what, "an object was expected"));
+    };
+    pull_request_object(o)
+}
+
+pub(crate) fn pull_request_object(o: &Map<String, Value>) -> Result<PrAnswer, SourceError> {
+    let what = "pull request";
+    const KEYS: [&str; 9] = [
+        "baseRefName",
+        "closingIssuesReferences",
+        "headRefName",
+        "headRefOid",
+        "isDraft",
+        "mergeCommit",
+        "mergedAt",
+        "number",
+        "state",
+    ];
+    if o.len() != KEYS.len() || !KEYS.iter().all(|k| o.contains_key(*k)) {
+        return Err(malformed(what, "an object without exactly its keys"));
+    }
     let merge = match (&o["mergeCommit"], &o["mergedAt"]) {
         (Value::Null, Value::Null) => None,
         (Value::Null, _) | (_, Value::Null) => {
@@ -645,7 +652,7 @@ pub fn on_base(stdout: &[u8]) -> Result<bool, SourceError> {
     Ok(ahead == 0)
 }
 
-fn iso_ms(text: &str) -> Option<Timestamp> {
+pub(crate) fn iso_ms(text: &str) -> Option<Timestamp> {
     let b = text.as_bytes();
     let digits = |range: std::ops::Range<usize>| -> Option<i64> {
         let part = b.get(range)?;
