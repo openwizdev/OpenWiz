@@ -1,5 +1,3 @@
-"""T1: validate paired synthetic first-ten records with Draft 2020-12."""
-
 import json
 from pathlib import Path
 import unittest
