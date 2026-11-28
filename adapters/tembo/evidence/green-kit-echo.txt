@@ -1,0 +1,7 @@
+$ env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/tembo/test_driver.py, 49 agent CLIs stubbed first on PATH (kernel/driver-kit/stubs.py)
+fixtures/kit-host.json: the create answer's id is {{request.id}}, the kit's echo from #2921, so the nested key-check start sees its own UUID
+......................
+----------------------------------------------------------------------
+Ran 22 tests in <t>s
+
+OK
