@@ -1,0 +1,13 @@
+test_fleet_contract_has_openwiz_rows_section_and_example (__main__.FleetOpenWizRowsTests.test_fleet_contract_has_openwiz_rows_section_and_example) ... ok
+test_openwiz_rows_parser_refuses_bad_tables (__main__.FleetOpenWizRowsTests.test_openwiz_rows_parser_refuses_bad_tables) ... ok
+test_records_v1_index_table_covers_grill_templates_and_models_offered (__main__.RecordsContractTests.test_records_v1_index_table_covers_grill_templates_and_models_offered) ... ok
+test_records_v1_indexes_every_app_record_form_and_rules (__main__.RecordsContractTests.test_records_v1_indexes_every_app_record_form_and_rules) ... ok
+test_doc_example_validates (__main__.ReleaseManifestSchemaTests.test_doc_example_validates) ... ok
+test_refuses_malformed_manifests (__main__.ReleaseManifestSchemaTests.test_refuses_malformed_manifests) ... ok
+test_schema_declares_id_and_title (__main__.ReleaseManifestSchemaTests.test_schema_declares_id_and_title) ... ok
+test_strict_reader_refuses_duplicate_keys_and_float_integer (__main__.ReleaseManifestSchemaTests.test_strict_reader_refuses_duplicate_keys_and_float_integer) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.010s
+
+OK

@@ -229,6 +229,7 @@ class PrOpenerTests(unittest.TestCase):
             "OPENWIZ_PR_TITLE": "#3194: synthetic PR",
             "OPENWIZ_PR_BODY": "Closes #3194\n",
             "OPENWIZ_PR_DRAFT": "false",
+            "OPENWIZ_SYNTHETIC_GITHUB": "1",
         }
         if summary_path is not None:
             env["GITHUB_STEP_SUMMARY"] = str(summary_path)

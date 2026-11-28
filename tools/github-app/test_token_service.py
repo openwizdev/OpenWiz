@@ -204,6 +204,7 @@ class ServiceFixture(unittest.TestCase):
         text = request if isinstance(request, str) else json.dumps(request)
         self.clock.write_text(str(NOW))
         environment = {k: v for k, v in os.environ.items() if k != "OPENWIZ_GITHUB_APP_MODE"}
+        environment["OPENWIZ_SYNTHETIC_GITHUB"] = "1"
         program = script or (AUDIT if audit else CLOCK)
         prefix = [str(audit)] if audit else []
         return subprocess.run(["python3", "-I", "-c", program, *prefix,

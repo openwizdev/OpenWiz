@@ -4,6 +4,7 @@ pub mod fleets;
 pub mod ghost;
 pub mod github_token;
 pub mod init;
+mod json_once;
 pub mod loop_files;
 pub mod loops;
 pub mod models;

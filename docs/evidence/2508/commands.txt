@@ -1,0 +1,15 @@
+Measured at commit 2b0b0d192d9013f223279d507bc7a809540f66da, from the checkout root.
+OPENWIZ_GITHUB_APP_KEY, GH_TOKEN, GH_ENTERPRISE_TOKEN, GITHUB_TOKEN, OPENWIZ_GITHUB_APP_ID, and RIG_PLANTED_KEY were unset.
+PATH put refusing stubs first, using the same CLI names as the live-rig CI step, then kernel/live-rig/fixtures/rig, then kernel/driver-kit/fixtures.
+The stub, settings, tracker, gh log, template state, and --out directories were outside the checkout, under /tmp/openwiz-2508.
+Settings JSON was {"repo": "example/rig-throwaway", "ticket": 7}.
+RIG_GH_LOGIN=example-rig-login, RIG_GH_REPO=example/rig-throwaway, RIG_GH_TICKET=7, OPENWIZ_TEMPLATE_LIVE=1.
+The tracker file used the earlier-run comment body from kernel/live-rig/test_rig.py.
+
+env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/rig.py --hosts kernel/live-rig/fixtures/hosts --settings /tmp/openwiz-2508/settings.json --out /tmp/openwiz-2508/out
+
+Exit and process wall clock are elapsed.txt. Summary lines are stdout.txt. The kit text the rig printed is stderr.txt. Run records are records/2026-11-26/.
+
+env -u OPENWIZ_GITHUB_APP_KEY python3 -I kernel/live-rig/receipt.py "records/2026-11-26/fixture-template-fake-harness-Synthetic 1.json" --listing fixture-template --run-by example-rig-login -o /tmp/openwiz-2508/receipt-out
+
+The record path above is the copy saved here. The command used the run's own file under /tmp/openwiz-2508/out/2026-11-26/. Exit is receipt-exit.txt. Stdout was empty (receipt-stdout.txt). Stderr is receipt-stderr.txt. The output directory stayed empty.

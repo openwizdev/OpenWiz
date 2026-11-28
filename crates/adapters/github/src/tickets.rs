@@ -1,4 +1,3 @@
-use std::fmt;
 use std::path::PathBuf;
 use std::time::Instant;
 
@@ -11,7 +10,6 @@ use openwiz_core::fleet::tickets::{
 };
 use openwiz_core::model::Timestamp;
 use openwiz_core::source::SourceError;
-use serde::de::{self, Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
 use serde_json::{Map, Value};
 
 use crate::allowlist::{Invocation, Module};
@@ -703,9 +701,8 @@ fn iso_ms(text: &str) -> Option<Timestamp> {
 }
 
 fn document(stdout: &[u8], what: &str) -> Result<Value, SourceError> {
-    serde_json::from_slice::<KeysOnce>(stdout)
-        .map_err(|_| malformed(what, "not JSON, or a key given twice"))?;
-    serde_json::from_slice(stdout).map_err(|_| malformed(what, "not JSON"))
+    crate::json_once::parse(stdout, false)
+        .map_err(|_| malformed(what, "not JSON, or a key given twice"))
 }
 
 fn object<'a>(
@@ -754,67 +751,27 @@ fn number(value: &Value, what: &str) -> Result<Number, SourceError> {
         .ok_or_else(|| malformed(what, "a number that is not a whole number of 1 or more"))
 }
 
-struct KeysOnce;
-
-impl<'de> Deserialize<'de> for KeysOnce {
-    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        d.deserialize_any(KeysOnceVisitor)
-    }
-}
-
-struct KeysOnceVisitor;
-
-impl<'de> Visitor<'de> for KeysOnceVisitor {
-    type Value = KeysOnce;
-
-    fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("JSON with no key given twice")
-    }
-
-    fn visit_bool<E>(self, _: bool) -> Result<KeysOnce, E> {
-        Ok(KeysOnce)
-    }
-
-    fn visit_i64<E>(self, _: i64) -> Result<KeysOnce, E> {
-        Ok(KeysOnce)
-    }
-
-    fn visit_u64<E>(self, _: u64) -> Result<KeysOnce, E> {
-        Ok(KeysOnce)
-    }
-
-    fn visit_f64<E>(self, _: f64) -> Result<KeysOnce, E> {
-        Ok(KeysOnce)
-    }
-
-    fn visit_str<E>(self, _: &str) -> Result<KeysOnce, E> {
-        Ok(KeysOnce)
-    }
-
-    fn visit_unit<E>(self) -> Result<KeysOnce, E> {
-        Ok(KeysOnce)
-    }
-
-    fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<KeysOnce, A::Error> {
-        while seq.next_element::<KeysOnce>()?.is_some() {}
-        Ok(KeysOnce)
-    }
-
-    fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<KeysOnce, A::Error> {
-        let mut seen = std::collections::BTreeSet::new();
-        while let Some(key) = map.next_key::<String>()? {
-            if !seen.insert(key) {
-                return Err(de::Error::custom("a key given twice"));
-            }
-            map.next_value::<KeysOnce>()?;
-        }
-        Ok(KeysOnce)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn document_matches_the_two_pass_oracle() {
+        for bytes in crate::json_once::oracle::samples() {
+            let old = crate::json_once::oracle::two_pass(false, &bytes);
+            let new = document(&bytes, "issue view");
+            match old {
+                Ok(value) => assert_eq!(new.ok(), Some(value)),
+                Err(crate::json_once::oracle::Pass::First) => assert_eq!(
+                    new,
+                    Err(malformed("issue view", "not JSON, or a key given twice"))
+                ),
+                Err(crate::json_once::oracle::Pass::Second) => {
+                    assert_eq!(new, Err(malformed("issue view", "not JSON")))
+                }
+            }
+        }
+    }
 
     const ISSUE: &str = r#"{"blockedBy":{"nodes":[{"id":"n","number":5,"state":"OPEN","title":"t","url":"u/issues/5"}],"totalCount":1},"body":"x\n**Owned paths:** `a.rs`\n**Relies on:** nothing","comments":[],"closedByPullRequestsReferences":[{"id":"p","number":9,"repository":{"id":"r"},"url":"u/pull/9"}],"labels":[{"color":"c","description":"d","id":"l","name":"ready-for-agent"}],"milestone":{"description":"d","dueOn":null,"number":7,"title":"0.9.1"},"state":"OPEN","subIssues":{"nodes":[],"totalCount":0},"title":"Synthetic"}"#;
 

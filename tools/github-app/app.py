@@ -114,7 +114,7 @@ def arguments(description):
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("--state-dir", type=Path, help="absolute PC OpenWiz state directory")
     parser.add_argument("--api-base", default="https://api.github.com",
-                        help="GitHub API; HTTP loopback accepted for synthetic tests only")
+                        help="GitHub API")
     return parser
 
 
@@ -213,6 +213,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 def api_base(value):
     if value != "https://api.github.com":
+        require(os.environ.get("OPENWIZ_SYNTHETIC_GITHUB") == "1")
         parts = urllib.parse.urlsplit(value)
         require(parts.scheme == "http" and parts.hostname == "127.0.0.1")
         require(parts.port is not None and parts.netloc == f"127.0.0.1:{parts.port}")

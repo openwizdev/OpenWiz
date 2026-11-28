@@ -81,13 +81,6 @@ impl StartStage {
             text: format!("unknown ({reason})"),
         }
     }
-
-    pub fn is_settled(&self) -> bool {
-        matches!(
-            self,
-            Self::Started { .. } | Self::IdleAsReported { .. } | Self::StartFailed { .. }
-        )
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]

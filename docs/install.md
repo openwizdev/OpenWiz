@@ -10,6 +10,14 @@ Using Grok Bot? See [Grok Bot + OpenWiz](grok-bot.md).
 
 **Status:** this is the install for OpenWiz 0.1.1 ("OpenWiz 0.02"), which is coming and not released yet; the current release is OpenWiz 0.1.0. CloudRoom is optional: setup is done when GitHub's sign-in is verified, and CloudRoom's sign-in too only if you pick CloudRoom. Installing today? Follow [OpenWiz 0.1.0](#openwiz-010) at the end.
 
+## Platforms
+
+These platform levels apply to OpenWiz 0.2.0.
+
+- **Supported.** macOS on Apple silicon and Intel, and Linux on x86_64 and aarch64 with glibc 2.34 or later. The release bar is a clean-machine install and first fleet on both operating systems.
+- **Community.** Windows through WSL uses the corresponding Linux build and requirements. It works for some users. The project does not test WSL.
+- **Unsupported.** Native Windows. Run the installer from a Linux distribution inside WSL instead.
+
 ## Before you start
 
 - **A supported computer:** macOS on Apple silicon or Intel, or Linux on x86_64 or ARM64 (aarch64) with glibc 2.34 or later (`ldd --version` shows it). **An Intel Mac installs with no CloudRoom,** on 0.1.1 and on 0.1.0 alike: preflight reads it ready. CloudRoom has no Intel Mac build and no ARM64 Linux build, so on an Intel Mac or on ARM64 Linux, agents run on this computer or on boat.dev. On x86_64 Linux older than glibc 2.39, `openwiz` may print a `GLIBC_2.39` warning and still work. On ARM64 Linux the package has to be built for glibc 2.34; a hard `GLIBC_2.39` requirement does not start.
@@ -45,6 +53,17 @@ The agent runs each command itself and reads its JSON. `<root>` is the install f
    `install` prints `"activated": true`, the version, and the `build` and `state_root` folders, written below as `<build>` and `<state>`. `download --version "$tag"` reads `https://github.com/openwizdev/OpenWiz/releases/download/$tag/` (`v0.1.1` once 0.1.1 is out); if it refuses with "could not be completed safely", check the [releases page](https://github.com/openwizdev/OpenWiz/releases). The same three files will be under `https://github.com/openwizdev/OpenWiz/releases/download/v0.1.1/` once 0.1.1 is out: `openwiz-<target>.sha256`, `openwiz-<target>.manifest.json` and `openwiz-0.1.1-<target>.tar.gz`. Put them in a new private folder (mode 700, files 600), verify `openwiz-<target>.manifest.json` names `"version": "0.1.1"` before activation, and run `install install --assets` on it; it checks every hash the same way.
 
    Then it proves the build: `<root>/current/openwiz --build-identity` prints the version (`0.1.1`) and the source commit. The `openwiz` program lives there, not on your `PATH`: typing `openwiz` alone says "command not found".
+
+   **Early builds (OpenWiz Pro, opt-in):** with no extra flag, `install download` reads only public releases from `openwizdev/OpenWiz` and installs on the `packaged` channel. Because step 1's `$openwiz` clone is pinned to `v0.1.1` (which does not accept `--early`), OpenWiz Pro members first clone the current default branch into a separate private temporary folder (or use an installer from `0.2.0` or later once released), then pass `--early` to `install download`:
+
+   ```sh
+   openwiz_early=$(mktemp -d)/OpenWiz
+   git clone --depth 1 https://github.com/openwizdev/OpenWiz "$openwiz_early"
+   python3 -I "$openwiz_early"/tools/install/install download --early --target <target> --dir <new private folder>
+   python3 -I "$openwiz_early"/tools/install/install install --assets <that folder> --target <target> --root <root>
+   ```
+
+   `download --early` uses your existing `gh` login (without storing or logging any token) to check prereleases tagged `v<version>-rc.<n>` in the private `openwizpro/WizPro` repository alongside public releases, picks whichever is newer by semver, and verifies `SHA256SUMS`, the manifest and the archive the same way. Installing writes `{"schema":"openwiz.update-channel.v1","channel":"early"}` to `<root>/channel.json` (switching an existing `packaged` install to `early` only after the new build verifies and activates), and later updates follow the newest early or public release by semver so you are never left behind a public release. If `gh` is missing or not logged in, it refuses and tells you to run `gh auth login`; if your account does not have access to `openwizpro/WizPro` (HTTP 404), it refuses and links to [openwiz.dev/pro](https://openwiz.dev/pro/). `install remove` removes an `early` `channel.json` the same as `packaged`.
 
 3. **Setup and logins.** Nothing opens in a browser by itself: the agent reads each connection with one check, run from the installed build, and reruns it after each change.
 

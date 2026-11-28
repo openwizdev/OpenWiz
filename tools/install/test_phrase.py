@@ -29,6 +29,7 @@ TAG_PATTERN = r'v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)'
 COMMIT_PATTERN = r'[0-9a-f]{40}'
 REPO = 'https://github.com/openwizdev/OpenWiz'
 SAFE_CLONE = 'git clone --depth 1 --branch "$tag" -- ' + REPO + ' "$openwiz"'
+TAGGED_INSTALLER = '"$openwiz"/tools/install/install'
 DOWNLOAD_PIN = '--version "$tag"'
 
 
@@ -139,19 +140,23 @@ def fallback_010_failures(section, guide):
     return failures
 
 
+def tagged_download_commands(guide):
+    return [line.strip() for line in guide.splitlines() if f'{TAGGED_INSTALLER} download ' in line]
+
+
 def download_pin_failures(section, guide):
     failures = []
     if DOWNLOAD_PIN not in section:
         failures.append('the agent section does not pass --version "$tag" to install download')
     if not re.search(r'before[^\n.]*activat', section, re.I):
         failures.append('the agent section does not check the selected version before activation')
-    lines = [line.strip() for line in guide.splitlines() if 'tools/install/install download' in line]
+    lines = tagged_download_commands(guide)
     if not lines or any(DOWNLOAD_PIN not in line for line in lines):
         failures.append('the install guide download command omits --version "$tag"')
     step2 = guide.split('2. **Verified download and install.**', 1)
     body = step2[1].split('\n3. **', 1)[0] if len(step2) == 2 else ''
-    dl_at = body.find('tools/install/install download')
-    install_at = body.find('tools/install/install install --assets')
+    dl_at = body.find(f'{TAGGED_INSTALLER} download ')
+    install_at = body.find(f'{TAGGED_INSTALLER} install --assets')
     between = body[dl_at:install_at] if 0 <= dl_at < install_at else ''
     if 'before activation' not in between.lower() or '"version"' not in between:
         failures.append('the install guide does not check the downloaded version before running install install')
@@ -255,7 +260,7 @@ class InstallPhrase(unittest.TestCase):
     def test_011_fallback_downloads_selected_tag_and_checks_version_before_activation(self):
         section = self.section()
         guide = (ROOT / 'docs/install.md').read_text(encoding='utf-8')
-        lines = [line.strip() for line in guide.splitlines() if 'tools/install/install download' in line]
+        lines = tagged_download_commands(guide)
         self.assertEqual(len(lines), 1, lines)
         sys.path.insert(0, str(HERE))
         import test_install as fixture
