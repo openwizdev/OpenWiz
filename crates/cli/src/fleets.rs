@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::ffi::OsString;
 use std::io::Write;
 use std::time::Duration;
@@ -6,8 +7,8 @@ use openwiz_adapter_github::fleets::GitHubFleets;
 use openwiz_core::envelope::{Completeness, GapKind};
 use openwiz_core::fleet::fleets::{FleetsSource, fleets};
 use openwiz_core::fleet::model::{
-    Envelope, Fleet, FleetsView, Issue, ListOutcome, NeedsYouKind, Outcome, Read, ReadId, ReadKind,
-    SourceName, State, View, WorkedOut,
+    Envelope, Fleet, FleetsView, Issue, ListOutcome, NeedsYouKind, Number, Outcome, Read, ReadId,
+    ReadKind, SourceName, State, TicketCore, View, WorkedOut,
 };
 use openwiz_core::limits::RUN_BUDGET;
 use openwiz_core::ops::Clock;
@@ -140,12 +141,17 @@ pub fn render(envelope: &Envelope) -> String {
         }
         WorkedOut::Unread(ids) => out.push_str(&format!("  unread: {}\n", ids_text(ids))),
     }
+    let mut tickets_by_number: HashMap<Number, &TicketCore> =
+        HashMap::with_capacity(view.tickets.len());
+    for ticket in &view.tickets {
+        tickets_by_number.entry(ticket.number).or_insert(ticket);
+    }
     out.push_str("\nfleets\n");
     if view.fleets.is_empty() {
         out.push_str("  none listed\n");
     }
     for fleet in &view.fleets {
-        push_fleet(&mut out, fleet, view, &reads);
+        push_fleet(&mut out, fleet, &tickets_by_number, &reads);
     }
     let gaps: Vec<&Read> = envelope
         .reads
@@ -204,7 +210,12 @@ fn header(envelope: &Envelope, view: &FleetsView, reads: &Reads) -> String {
     )
 }
 
-fn push_fleet(out: &mut String, fleet: &Fleet, view: &FleetsView, reads: &Reads) {
+fn push_fleet(
+    out: &mut String,
+    fleet: &Fleet,
+    tickets_by_number: &HashMap<Number, &TicketCore>,
+    reads: &Reads,
+) {
     let title = match reads.issue(fleet.issue) {
         Some(issue) => {
             let milestone = issue
@@ -245,15 +256,17 @@ fn push_fleet(out: &mut String, fleet: &Fleet, view: &FleetsView, reads: &Reads)
             ids_text(ids)
         )),
     }
-    let tickets = match reads.kind(fleet.tickets) {
+    let tickets: &[Number] = match reads.kind(fleet.tickets) {
         Some(ReadKind::SubIssues { outcome, .. }) => match outcome {
-            ListOutcome::Complete { value } | ListOutcome::Partial { value, .. } => value.clone(),
-            ListOutcome::Failed(_) => Vec::new(),
+            ListOutcome::Complete { value } | ListOutcome::Partial { value, .. } => {
+                value.as_slice()
+            }
+            ListOutcome::Failed(_) => &[],
         },
-        _ => Vec::new(),
+        _ => &[],
     };
-    for number in tickets {
-        let Some(ticket) = view.tickets.iter().find(|t| t.number == number) else {
+    for &number in tickets {
+        let Some(ticket) = tickets_by_number.get(&number) else {
             continue;
         };
         match &ticket.state {
@@ -273,6 +286,12 @@ struct Reads<'a>(&'a [Read]);
 
 impl Reads<'_> {
     fn kind(&self, id: ReadId) -> Option<&ReadKind> {
+        if let Some(slot) = id.0.checked_sub(1).and_then(|i| usize::try_from(i).ok())
+            && let Some(read) = self.0.get(slot)
+            && read.id == id
+        {
+            return Some(&read.kind);
+        }
         self.0.iter().find(|r| r.id == id).map(|r| &r.kind)
     }
 
@@ -358,4 +377,276 @@ fn ids_text(ids: &[ReadId]) -> String {
         .map(|id| id_text(*id))
         .collect::<Vec<_>>()
         .join(", ")
+}
+
+#[cfg(test)]
+mod render_oracle {
+    use super::*;
+    use openwiz_core::fleet::model::{
+        Counts, Coverage, Freshness, Gh, GitHubSource, IssueState, Milestone, NonEmpty, Repository,
+        SchemaId, Sources, TicketState,
+    };
+    use openwiz_core::model::Timestamp;
+
+    fn old_kind(reads: &[Read], id: ReadId) -> Option<&ReadKind> {
+        reads.iter().find(|r| r.id == id).map(|r| &r.kind)
+    }
+
+    fn old_render(envelope: &Envelope) -> String {
+        let View::Fleets(view) = &envelope.data else {
+            unreachable!("fleets prints the fleets view")
+        };
+        let reads = Reads(&envelope.reads);
+        let mut out = header(envelope, view, &reads);
+        out.push_str("\nneeds you\n");
+        match &view.needs_you {
+            WorkedOut::Known(items) if items.is_empty() => out.push_str("  nothing\n"),
+            WorkedOut::Known(items) => {
+                for item in items {
+                    let kind = match item.kind {
+                        NeedsYouKind::NeedsInfo => "needs-info",
+                        NeedsYouKind::Held => "held",
+                    };
+                    out.push_str(&format!(
+                        "  #{} {kind}, in fleet #{}\n",
+                        item.ticket, item.spec
+                    ));
+                }
+            }
+            WorkedOut::Unread(ids) => out.push_str(&format!("  unread: {}\n", ids_text(ids))),
+        }
+        out.push_str("\nfleets\n");
+        if view.fleets.is_empty() {
+            out.push_str("  none listed\n");
+        }
+        for fleet in &view.fleets {
+            let title = match old_kind(&envelope.reads, fleet.issue) {
+                Some(ReadKind::Issue {
+                    outcome: Outcome::Complete { value: issue },
+                    ..
+                }) => {
+                    let milestone = issue
+                        .milestone
+                        .as_ref()
+                        .map(|m| format!(" ({})", clean(&m.title)))
+                        .unwrap_or_default();
+                    format!("{}{milestone}", clean(&issue.title))
+                }
+                _ => format!("(title unread: {})", id_text(fleet.issue)),
+            };
+            match &fleet.progress {
+                WorkedOut::Known(c) => {
+                    let moving = c.building + c.in_review + c.changes_requested;
+                    out.push_str(&format!(
+                        "  #{} {title}: {} of {} merged, {moving} moving, {} blocked\n",
+                        fleet.spec, c.merged, c.tickets, c.blocked
+                    ));
+                    let parts: Vec<String> = [
+                        ("ready", c.ready),
+                        ("building", c.building),
+                        ("in review", c.in_review),
+                        ("changes requested", c.changes_requested),
+                        ("held", c.held),
+                        ("unknown", c.unknown),
+                    ]
+                    .iter()
+                    .filter(|(_, n)| *n > 0)
+                    .map(|(name, n)| format!("{name} {n}"))
+                    .collect();
+                    if !parts.is_empty() {
+                        out.push_str(&format!("      {}\n", parts.join(", ")));
+                    }
+                }
+                WorkedOut::Unread(ids) => out.push_str(&format!(
+                    "  #{} {title}: progress unread ({})\n",
+                    fleet.spec,
+                    ids_text(ids)
+                )),
+            }
+            let tickets = match old_kind(&envelope.reads, fleet.tickets) {
+                Some(ReadKind::SubIssues { outcome, .. }) => match outcome {
+                    ListOutcome::Complete { value } | ListOutcome::Partial { value, .. } => {
+                        value.clone()
+                    }
+                    ListOutcome::Failed(_) => Vec::new(),
+                },
+                _ => Vec::new(),
+            };
+            for number in tickets {
+                let Some(ticket) = view.tickets.iter().find(|t| t.number == number) else {
+                    continue;
+                };
+                match &ticket.state {
+                    State::Known(_) => {}
+                    State::Unknown(why) => out.push_str(&format!(
+                        "      #{number} unknown: {}\n",
+                        clean(why.as_str())
+                    )),
+                    State::Unread(ids) => {
+                        out.push_str(&format!("      #{number} unread ({})\n", ids_text(ids)));
+                    }
+                }
+            }
+        }
+        let gaps: Vec<&Read> = envelope
+            .reads
+            .iter()
+            .filter(|r| gap(&r.kind).is_some())
+            .collect();
+        if !gaps.is_empty() {
+            out.push_str("\ngaps\n");
+            for read in gaps {
+                let (state, kind, reason) = gap(&read.kind).expect("an incomplete read");
+                out.push_str(&format!(
+                    "  {} {}: {state} ({kind}): {}\n",
+                    id_text(read.id),
+                    subject(&read.kind),
+                    clean(reason)
+                ));
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn indexed_render_matches_linear_scan_oracle_including_out_of_order_and_duplicate_tickets() {
+        let n = |v: u64| Number::new(v).unwrap();
+        let ne = |s: &str| NonEmpty::new(s).unwrap();
+        let mut reads = vec![
+            Read {
+                id: ReadId(9),
+                kind: ReadKind::Version {
+                    source: SourceName::Github,
+                    outcome: Outcome::Complete {
+                        value: ne("2.100.0"),
+                    },
+                },
+            },
+            Read {
+                id: ReadId(2),
+                kind: ReadKind::Repository {
+                    outcome: Outcome::Complete {
+                        value: Repository {
+                            name: ne("example"),
+                        },
+                    },
+                },
+            },
+            Read {
+                id: ReadId(1),
+                kind: ReadKind::Issue {
+                    issue: n(1),
+                    outcome: Outcome::Complete {
+                        value: Issue {
+                            title: "spec: Synthetic".to_owned(),
+                            state: IssueState::Open,
+                            milestone: Some(Milestone {
+                                number: n(1),
+                                title: "0.2.0".to_owned(),
+                            }),
+                            labels: vec![],
+                            owned_paths: None,
+                            relies_on: None,
+                            pending_question: None,
+                        },
+                    },
+                },
+            },
+            Read {
+                id: ReadId(4),
+                kind: ReadKind::SubIssues {
+                    spec: n(1),
+                    outcome: ListOutcome::Complete {
+                        value: vec![n(2), n(3), n(4)],
+                    },
+                },
+            },
+            Read {
+                id: ReadId(5),
+                kind: ReadKind::SpecList {
+                    outcome: ListOutcome::Complete { value: vec![n(1)] },
+                },
+            },
+        ];
+        let tickets = vec![
+            TicketCore {
+                number: n(2),
+                state: State::Unknown(ne("first duplicate wins")),
+                issue: ReadId(1),
+                blocked_by: ReadId(4),
+                pr: ReadId(5),
+                ci: None,
+                review: None,
+                on_base: None,
+            },
+            TicketCore {
+                number: n(2),
+                state: State::Known(TicketState::Merged),
+                issue: ReadId(1),
+                blocked_by: ReadId(4),
+                pr: ReadId(5),
+                ci: None,
+                review: None,
+                on_base: None,
+            },
+            TicketCore {
+                number: n(3),
+                state: State::Unread(vec![ReadId(9), ReadId(2)]),
+                issue: ReadId(1),
+                blocked_by: ReadId(4),
+                pr: ReadId(5),
+                ci: None,
+                review: None,
+                on_base: None,
+            },
+        ];
+        for reverse_reads in [false, true] {
+            if reverse_reads {
+                reads.reverse();
+            }
+            let env = Envelope {
+                schema: SchemaId::V1,
+                sources: Sources {
+                    github: GitHubSource {
+                        name: Gh::Gh,
+                        version: ReadId(9),
+                        tested_version: "2.100.0".to_owned(),
+                        version_tested: true,
+                    },
+                    cloudroom: None,
+                },
+                reads: reads.clone(),
+                coverage: Coverage {
+                    state: Completeness::Complete,
+                },
+                freshness: Freshness {
+                    snapshot_at: Timestamp(1_793_400_000_000),
+                },
+                data: View::Fleets(FleetsView {
+                    repository: ReadId(2),
+                    specs: ReadId(5),
+                    fleets: vec![Fleet {
+                        spec: n(1),
+                        issue: ReadId(1),
+                        tickets: ReadId(4),
+                        progress: WorkedOut::Known(Counts {
+                            tickets: 3,
+                            merged: 0,
+                            ready: 0,
+                            building: 0,
+                            in_review: 0,
+                            changes_requested: 0,
+                            held: 0,
+                            blocked: 0,
+                            unknown: 2,
+                        }),
+                    }],
+                    tickets: tickets.clone(),
+                    blockers: vec![],
+                    needs_you: WorkedOut::Known(vec![]),
+                }),
+            };
+            assert_eq!(render(&env), old_render(&env));
+        }
+    }
 }

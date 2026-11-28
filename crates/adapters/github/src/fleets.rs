@@ -1,4 +1,5 @@
-use std::fmt;
+use std::collections::HashSet;
+use std::fmt::{self, Write as _};
 use std::num::NonZeroU64;
 use std::path::PathBuf;
 use std::time::Instant;
@@ -236,7 +237,9 @@ impl FleetsSource for GitHubFleets {
             "--json",
             ISSUE_FIELDS,
         ];
-        let rows = self.json("gh issue list", &argv, deadline, |v| list(v, "", issue_row))?;
+        let rows = self.json("gh issue list", &argv, deadline, |v| {
+            list(v, At::Root, issue_row)
+        })?;
         Ok(listed(rows))
     }
 
@@ -251,7 +254,9 @@ impl FleetsSource for GitHubFleets {
         let argv = [
             "pr", "list", "--state", "all", "--limit", LIMIT, "--json", PR_FIELDS,
         ];
-        let rows = self.json("gh pr list", &argv, deadline, |v| list(v, "", stock_pr_row))?;
+        let rows = self.json("gh pr list", &argv, deadline, |v| {
+            list(v, At::Root, stock_pr_row)
+        })?;
         Ok(listed(rows))
     }
 
@@ -275,7 +280,7 @@ impl FleetsSource for GitHubFleets {
                 format!("{read} printed something that isn't one JSON value with each key once"),
             )
         })?;
-        list(&tree.0, "", check).map_err(|bad| bad.failed(&read))
+        list(&tree.0, At::Root, check).map_err(|bad| bad.failed(&read))
     }
 
     fn comments(&self, pr: Number, deadline: Instant) -> Result<Vec<String>, Failed> {
@@ -293,7 +298,7 @@ impl FleetsSource for GitHubFleets {
             &format!("gh pr view {n}'s comments"),
             &argv,
             deadline,
-            |v| list(v, "", |v, at| string(v, at).map(str::to_owned)),
+            |v| list(v, At::Root, |v, at| string(v, at).map(str::to_owned)),
         )
     }
 
@@ -484,11 +489,28 @@ impl<'de> Visitor<'de> for JsonVisitor {
 
     fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Json, A::Error> {
         let mut entries: Vec<(String, Json)> = Vec::new();
+        let mut seen: Option<HashSet<String>> = None;
         while let Some(key) = map.next_key::<String>()? {
-            if entries.iter().any(|(k, _)| *k == key) {
+            let duplicate = match &mut seen {
+                Some(set) => set.contains(&key),
+                None if entries.len() >= 16 => {
+                    let mut set = HashSet::with_capacity(entries.len() * 2);
+                    for (existing, _) in &entries {
+                        set.insert(existing.clone());
+                    }
+                    let dup = set.contains(&key);
+                    seen = Some(set);
+                    dup
+                }
+                None => entries.iter().any(|(k, _)| *k == key),
+            };
+            if duplicate {
                 return Err(de::Error::custom("a key given twice"));
             }
             let StrictJson(value) = map.next_value()?;
+            if let Some(set) = &mut seen {
+                set.insert(key.clone());
+            }
             entries.push((key, value));
         }
         Ok(Json::Object(entries))
@@ -498,6 +520,41 @@ impl<'de> Visitor<'de> for JsonVisitor {
 impl<'de> Deserialize<'de> for StrictJson {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         d.deserialize_any(JsonVisitor).map(StrictJson)
+    }
+}
+
+#[derive(Clone, Copy)]
+enum At<'a> {
+    Root,
+    Field(&'a At<'a>, &'static str),
+    Index(&'a At<'a>, usize),
+    Alias(&'a At<'a>, usize),
+}
+
+impl At<'_> {
+    fn write_to(self, out: &mut String) {
+        match self {
+            Self::Root => {}
+            Self::Field(parent, name) => {
+                parent.write_to(out);
+                out.push('.');
+                out.push_str(name);
+            }
+            Self::Index(parent, idx) => {
+                parent.write_to(out);
+                let _ = write!(out, "[{idx}]");
+            }
+            Self::Alias(parent, idx) => {
+                parent.write_to(out);
+                let _ = write!(out, ".r{idx}");
+            }
+        }
+    }
+
+    fn render(self) -> String {
+        let mut out = String::new();
+        self.write_to(&mut out);
+        out
     }
 }
 
@@ -523,76 +580,93 @@ impl Bad {
 
 type Got<T> = Result<T, Bad>;
 
-fn bad<T>(gap: GapKind, at: &str, what: &'static str) -> Got<T> {
+fn bad<T>(gap: GapKind, at: At<'_>, what: &'static str) -> Got<T> {
     Err(Bad {
         gap,
-        at: at.to_owned(),
+        at: at.render(),
         what,
     })
 }
 
-fn object<'j>(v: &'j Json, at: &str, keys: &[&str]) -> Got<Vec<&'j Json>> {
+fn object<'j, const N: usize>(
+    v: &'j Json,
+    at: At<'_>,
+    keys: [&'static str; N],
+) -> Got<[&'j Json; N]> {
     let Json::Object(entries) = v else {
         return bad(GapKind::WrongType, at, "not an object");
     };
-    if entries.iter().any(|(k, _)| !keys.contains(&k.as_str())) {
-        return bad(GapKind::Malformed, at, "a key it shouldn't have");
+    let mut found: [Option<&'j Json>; N] = [None; N];
+    for (k, val) in entries {
+        let mut matched = false;
+        for (i, expected) in keys.iter().enumerate() {
+            if k.as_str() == *expected {
+                found[i] = Some(val);
+                matched = true;
+                break;
+            }
+        }
+        if !matched {
+            return bad(GapKind::Malformed, at, "a key it shouldn't have");
+        }
     }
-    keys.iter()
-        .map(|key| match entries.iter().find(|(k, _)| k == key) {
-            Some((_, value)) => Ok(value),
-            None => bad(GapKind::MissingField, &format!("{at}.{key}"), "missing"),
-        })
-        .collect()
+    let mut out = [&Json::Null; N];
+    for i in 0..N {
+        match found[i] {
+            Some(val) => out[i] = val,
+            None => return bad(GapKind::MissingField, At::Field(&at, keys[i]), "missing"),
+        }
+    }
+    Ok(out)
 }
 
-fn list<T>(v: &Json, at: &str, item: impl Fn(&Json, &str) -> Got<T>) -> Got<Vec<T>> {
+fn list<T>(v: &Json, at: At<'_>, item: impl Fn(&Json, At<'_>) -> Got<T>) -> Got<Vec<T>> {
     let Json::Array(items) = v else {
         return bad(GapKind::WrongType, at, "not a list");
     };
-    items
-        .iter()
-        .enumerate()
-        .map(|(i, v)| item(v, &format!("{at}[{i}]")))
-        .collect()
+    let mut out = Vec::with_capacity(items.len());
+    for (i, v) in items.iter().enumerate() {
+        out.push(item(v, At::Index(&at, i))?);
+    }
+    Ok(out)
 }
 
-fn string<'j>(v: &'j Json, at: &str) -> Got<&'j str> {
+fn string<'j>(v: &'j Json, at: At<'_>) -> Got<&'j str> {
     match v {
         Json::String(s) => Ok(s),
         _ => bad(GapKind::WrongType, at, "not text"),
     }
 }
 
-fn non_empty(v: &Json, at: &str) -> Got<NonEmpty> {
+fn non_empty(v: &Json, at: At<'_>) -> Got<NonEmpty> {
     match NonEmpty::new(string(v, at)?) {
         Some(s) => Ok(s),
         None => bad(GapKind::Malformed, at, "empty"),
     }
 }
 
-fn boolean(v: &Json, at: &str) -> Got<bool> {
+fn boolean(v: &Json, at: At<'_>) -> Got<bool> {
     match v {
         Json::Bool(b) => Ok(*b),
         _ => bad(GapKind::WrongType, at, "not true or false"),
     }
 }
 
-fn count(v: &Json, at: &str) -> Got<u64> {
+fn count(v: &Json, at: At<'_>) -> Got<u64> {
     match v {
         Json::Int(n) => u64::try_from(*n).or_else(|_| bad(GapKind::Malformed, at, "below zero")),
         _ => bad(GapKind::WrongType, at, "not a whole number"),
     }
 }
 
-fn number(v: &Json, at: &str) -> Got<Number> {
+fn number(v: &Json, at: At<'_>) -> Got<Number> {
     match Number::new(count(v, at)?) {
         Some(n) => Ok(n),
         None => bad(GapKind::Malformed, at, "not 1 or more"),
     }
 }
 
-fn commit(v: &Json, at: &str) -> Got<Commit> {
+fn commit(v: &Json, at: At<'_>) -> Got<Commit> {
     match Commit::parse(string(v, at)?) {
         Some(c) => Ok(c),
         None => bad(GapKind::Malformed, at, "not a full commit"),
@@ -601,8 +675,8 @@ fn commit(v: &Json, at: &str) -> Got<Commit> {
 
 fn null_or<'j, T>(
     v: &'j Json,
-    at: &str,
-    read: impl FnOnce(&'j Json, &str) -> Got<T>,
+    at: At<'_>,
+    read: impl FnOnce(&'j Json, At<'_>) -> Got<T>,
 ) -> Got<Option<T>> {
     match v {
         Json::Null => Ok(None),
@@ -611,20 +685,21 @@ fn null_or<'j, T>(
 }
 
 fn repository_of(v: &Json) -> Got<Repository> {
-    let f = object(v, "", &["nameWithOwner"])?;
-    let full = string(f[0], ".nameWithOwner")?;
+    let [full] = object(v, At::Root, ["nameWithOwner"])?;
+    let at = At::Field(&At::Root, "nameWithOwner");
+    let full = string(full, at)?;
     match full.split_once('/') {
         Some((owner, name)) if !owner.is_empty() && !name.is_empty() && !name.contains('/') => {
             Ok(Repository {
                 name: NonEmpty::new(name).expect("not empty"),
             })
         }
-        _ => bad(GapKind::Malformed, ".nameWithOwner", "not <owner>/<name>"),
+        _ => bad(GapKind::Malformed, at, "not <owner>/<name>"),
     }
 }
 
-fn issue_row(v: &Json, at: &str) -> Got<IssueRow> {
-    let keys = [
+fn issue_row(v: &Json, at: At<'_>) -> Got<IssueRow> {
+    const KEYS: [&str; 9] = [
         "blockedBy",
         "body",
         "id",
@@ -635,73 +710,73 @@ fn issue_row(v: &Json, at: &str) -> Got<IssueRow> {
         "subIssues",
         "title",
     ];
-    let f = object(v, at, &keys)?;
-    let state = match string(f[6], &format!("{at}.state"))? {
+    let f = object(v, at, KEYS)?;
+    let state = match string(f[6], At::Field(&at, "state"))? {
         "OPEN" => IssueState::Open,
         "CLOSED" => IssueState::Closed,
         _ => {
             return bad(
                 GapKind::Malformed,
-                &format!("{at}.state"),
+                At::Field(&at, "state"),
                 "not OPEN or CLOSED",
             );
         }
     };
     Ok(IssueRow {
-        number: number(f[5], &format!("{at}.number"))?,
-        id: non_empty(f[2], &format!("{at}.id"))?,
-        title: string(f[8], &format!("{at}.title"))?.to_owned(),
+        number: number(f[5], At::Field(&at, "number"))?,
+        id: non_empty(f[2], At::Field(&at, "id"))?,
+        title: string(f[8], At::Field(&at, "title"))?.to_owned(),
         state,
-        milestone: null_or(f[4], &format!("{at}.milestone"), milestone)?,
-        labels: list(f[3], &format!("{at}.labels"), label)?,
-        body: string(f[1], &format!("{at}.body"))?.to_owned(),
-        sub_issues: links(f[7], &format!("{at}.subIssues"))?,
-        blocked_by: links(f[0], &format!("{at}.blockedBy"))?,
+        milestone: null_or(f[4], At::Field(&at, "milestone"), milestone)?,
+        labels: list(f[3], At::Field(&at, "labels"), label)?,
+        body: string(f[1], At::Field(&at, "body"))?.to_owned(),
+        sub_issues: links(f[7], At::Field(&at, "subIssues"))?,
+        blocked_by: links(f[0], At::Field(&at, "blockedBy"))?,
     })
 }
 
-fn milestone(v: &Json, at: &str) -> Got<Milestone> {
-    let f = object(v, at, &["description", "dueOn", "number", "title"])?;
-    string(f[0], &format!("{at}.description"))?;
-    null_or(f[1], &format!("{at}.dueOn"), string)?;
+fn milestone(v: &Json, at: At<'_>) -> Got<Milestone> {
+    let f = object(v, at, ["description", "dueOn", "number", "title"])?;
+    string(f[0], At::Field(&at, "description"))?;
+    null_or(f[1], At::Field(&at, "dueOn"), string)?;
     Ok(Milestone {
-        number: number(f[2], &format!("{at}.number"))?,
-        title: string(f[3], &format!("{at}.title"))?.to_owned(),
+        number: number(f[2], At::Field(&at, "number"))?,
+        title: string(f[3], At::Field(&at, "title"))?.to_owned(),
     })
 }
 
-fn label(v: &Json, at: &str) -> Got<NonEmpty> {
-    let f = object(v, at, &["color", "description", "id", "name"])?;
+fn label(v: &Json, at: At<'_>) -> Got<NonEmpty> {
+    let f = object(v, at, ["color", "description", "id", "name"])?;
     for (i, key) in [(0, "color"), (1, "description"), (2, "id")] {
-        string(f[i], &format!("{at}.{key}"))?;
+        string(f[i], At::Field(&at, key))?;
     }
-    non_empty(f[3], &format!("{at}.name"))
+    non_empty(f[3], At::Field(&at, "name"))
 }
 
-fn links(v: &Json, at: &str) -> Got<Links> {
-    let f = object(v, at, &["nodes", "totalCount"])?;
-    let nodes = list(f[0], &format!("{at}.nodes"), |v, at| {
-        let n = object(v, at, &["id", "number", "state", "title", "url"])?;
+fn links(v: &Json, at: At<'_>) -> Got<Links> {
+    let f = object(v, at, ["nodes", "totalCount"])?;
+    let nodes = list(f[0], At::Field(&at, "nodes"), |v, at| {
+        let n = object(v, at, ["id", "number", "state", "title", "url"])?;
         for (i, key) in [(2, "state"), (3, "title"), (4, "url")] {
-            string(n[i], &format!("{at}.{key}"))?;
+            string(n[i], At::Field(&at, key))?;
         }
         Ok(Link {
-            number: number(n[1], &format!("{at}.number"))?,
-            id: non_empty(n[0], &format!("{at}.id"))?,
+            number: number(n[1], At::Field(&at, "number"))?,
+            id: non_empty(n[0], At::Field(&at, "id"))?,
         })
     })?;
     Ok(Links {
         nodes,
-        total: count(f[1], &format!("{at}.totalCount"))?,
+        total: count(f[1], At::Field(&at, "totalCount"))?,
     })
 }
 
 #[cfg(test)]
-fn pr_row(v: &Json, at: &str) -> Got<PrRow> {
+fn pr_row(v: &Json, at: At<'_>) -> Got<PrRow> {
     stock_pr_row(v, at).map(|row| row.pr)
 }
-fn stock_pr_row(v: &Json, at: &str) -> Got<StockPr> {
-    let keys = [
+fn stock_pr_row(v: &Json, at: At<'_>) -> Got<StockPr> {
+    const KEYS: [&str; 10] = [
         "baseRefName",
         "closingIssuesReferences",
         "headRefName",
@@ -713,24 +788,27 @@ fn stock_pr_row(v: &Json, at: &str) -> Got<StockPr> {
         "state",
         "title",
     ];
-    let f = object(v, at, &keys)?;
-    let p = |key: &str| format!("{at}.{key}");
-    let title = openwiz_core::model::Fact::Known(non_empty(f[9], &p("title"))?);
-    let number = number(f[7], &p("number"))?;
-    let draft = boolean(f[4], &p("isDraft"))?;
-    let closes = list(f[1], &p("closingIssuesReferences"), closing_reference)?;
-    let merge = null_or(f[5], &p("mergeCommit"), |v, at| {
-        let m = object(v, at, &["oid"])?;
-        Ok(m[0])
+    let f = object(v, at, KEYS)?;
+    let title = openwiz_core::model::Fact::Known(non_empty(f[9], At::Field(&at, "title"))?);
+    let number = number(f[7], At::Field(&at, "number"))?;
+    let draft = boolean(f[4], At::Field(&at, "isDraft"))?;
+    let closes = list(
+        f[1],
+        At::Field(&at, "closingIssuesReferences"),
+        closing_reference,
+    )?;
+    let merge = null_or(f[5], At::Field(&at, "mergeCommit"), |v, at| {
+        let [oid] = object(v, at, ["oid"])?;
+        Ok(oid)
     })?;
-    let merged_at = null_or(f[6], &p("mergedAt"), string)?;
-    let state = string(f[8], &p("state"))?;
+    let merged_at = null_or(f[6], At::Field(&at, "mergedAt"), string)?;
+    let state = string(f[8], At::Field(&at, "state"))?;
     if state == "CLOSED" {
         if merge.is_some() || merged_at.is_some() {
             return bad(GapKind::Malformed, at, "closed, with a merge");
         }
         for (i, key) in [(0, "baseRefName"), (2, "headRefName"), (3, "headRefOid")] {
-            string(f[i], &p(key))?;
+            string(f[i], At::Field(&at, key))?;
         }
         return Ok(StockPr {
             pr: PrRow::Closed { number },
@@ -740,9 +818,9 @@ fn stock_pr_row(v: &Json, at: &str) -> Got<StockPr> {
     let facts = PrFacts {
         number,
         draft,
-        head_branch: non_empty(f[2], &p("headRefName"))?,
-        head_commit: commit(f[3], &p("headRefOid"))?,
-        base_branch: non_empty(f[0], &p("baseRefName"))?,
+        head_branch: non_empty(f[2], At::Field(&at, "headRefName"))?,
+        head_commit: commit(f[3], At::Field(&at, "headRefOid"))?,
+        base_branch: non_empty(f[0], At::Field(&at, "baseRefName"))?,
         closes,
     };
     match (state, merge, merged_at) {
@@ -751,44 +829,55 @@ fn stock_pr_row(v: &Json, at: &str) -> Got<StockPr> {
             title,
         }),
         ("OPEN", ..) => bad(GapKind::Malformed, at, "open, with a merge"),
-        ("MERGED", Some(oid), Some(at_text)) => Ok(StockPr {
-            pr: PrRow::Merged {
-                facts,
-                merge_commit: commit(oid, &p("mergeCommit.oid"))?,
-                merged_at: match time(at_text) {
-                    Some(t) => t,
-                    None => return bad(GapKind::Malformed, &p("mergedAt"), "not a UTC time"),
+        ("MERGED", Some(oid), Some(at_text)) => {
+            let merge_at = At::Field(&at, "mergeCommit");
+            Ok(StockPr {
+                pr: PrRow::Merged {
+                    facts,
+                    merge_commit: commit(oid, At::Field(&merge_at, "oid"))?,
+                    merged_at: match time(at_text) {
+                        Some(t) => t,
+                        None => {
+                            return bad(
+                                GapKind::Malformed,
+                                At::Field(&at, "mergedAt"),
+                                "not a UTC time",
+                            );
+                        }
+                    },
                 },
-            },
-            title,
-        }),
+                title,
+            })
+        }
         ("MERGED", ..) => bad(GapKind::MissingField, at, "merged, without its merge"),
         _ => bad(
             GapKind::Malformed,
-            &p("state"),
+            At::Field(&at, "state"),
             "not OPEN, MERGED or CLOSED",
         ),
     }
 }
 
-fn closing_reference(v: &Json, at: &str) -> Got<Link> {
-    let f = object(v, at, &["id", "number", "repository", "url"])?;
-    let r = object(f[2], &format!("{at}.repository"), &["id", "name", "owner"])?;
-    string(r[0], &format!("{at}.repository.id"))?;
-    string(r[1], &format!("{at}.repository.name"))?;
-    let o = object(r[2], &format!("{at}.repository.owner"), &["id", "login"])?;
-    string(o[0], &format!("{at}.repository.owner.id"))?;
-    string(o[1], &format!("{at}.repository.owner.login"))?;
-    string(f[3], &format!("{at}.url"))?;
+fn closing_reference(v: &Json, at: At<'_>) -> Got<Link> {
+    let f = object(v, at, ["id", "number", "repository", "url"])?;
+    let repo_at = At::Field(&at, "repository");
+    let r = object(f[2], repo_at, ["id", "name", "owner"])?;
+    string(r[0], At::Field(&repo_at, "id"))?;
+    string(r[1], At::Field(&repo_at, "name"))?;
+    let owner_at = At::Field(&repo_at, "owner");
+    let o = object(r[2], owner_at, ["id", "login"])?;
+    string(o[0], At::Field(&owner_at, "id"))?;
+    string(o[1], At::Field(&owner_at, "login"))?;
+    string(f[3], At::Field(&at, "url"))?;
     Ok(Link {
-        number: number(f[1], &format!("{at}.number"))?,
-        id: non_empty(f[0], &format!("{at}.id"))?,
+        number: number(f[1], At::Field(&at, "number"))?,
+        id: non_empty(f[0], At::Field(&at, "id"))?,
     })
 }
 
-fn check(v: &Json, at: &str) -> Got<Check> {
-    let f = object(v, at, &["bucket", "name"])?;
-    let result = match string(f[0], &format!("{at}.bucket"))? {
+fn check(v: &Json, at: At<'_>) -> Got<Check> {
+    let f = object(v, at, ["bucket", "name"])?;
+    let result = match string(f[0], At::Field(&at, "bucket"))? {
         "pass" => CheckResult::Pass,
         "fail" => CheckResult::Fail,
         "pending" => CheckResult::Pending,
@@ -797,92 +886,109 @@ fn check(v: &Json, at: &str) -> Got<Check> {
         _ => {
             return bad(
                 GapKind::Malformed,
-                &format!("{at}.bucket"),
+                At::Field(&at, "bucket"),
                 "not one of gh's buckets",
             );
         }
     };
     Ok(Check {
-        name: non_empty(f[1], &format!("{at}.name"))?,
+        name: non_empty(f[1], At::Field(&at, "name"))?,
         result,
     })
 }
 
 fn on_base_of(v: &Json) -> Got<bool> {
-    let f = object(v, "", &["status", "behind_by"])?;
-    let behind = count(f[1], ".behind_by")?;
-    match (string(f[0], ".status")?, behind) {
+    let f = object(v, At::Root, ["status", "behind_by"])?;
+    let behind = count(f[1], At::Field(&At::Root, "behind_by"))?;
+    match (string(f[0], At::Field(&At::Root, "status"))?, behind) {
         ("ahead" | "identical", 0) => Ok(true),
-        ("ahead" | "identical", _) => bad(GapKind::Malformed, "", "on its base, yet behind it"),
+        ("ahead" | "identical", _) => {
+            bad(GapKind::Malformed, At::Root, "on its base, yet behind it")
+        }
         ("behind" | "diverged", _) => Ok(false),
         _ => bad(
             GapKind::Malformed,
-            ".status",
+            At::Field(&At::Root, "status"),
             "not one of GitHub's compare states",
         ),
     }
 }
 
+fn parse_alias_index(key: &str, len: usize) -> Option<usize> {
+    let rest = key.strip_prefix('r')?;
+    if rest.is_empty()
+        || (rest.len() > 1 && rest.starts_with('0'))
+        || !rest.bytes().all(|b| b.is_ascii_digit())
+    {
+        return None;
+    }
+    rest.parse::<usize>().ok().filter(|&i| i < len)
+}
+
 fn batch_of(v: &Json, prs: &[MergedPr]) -> Got<Vec<Got<bool>>> {
     let Json::Object(root) = v else {
-        return bad(GapKind::WrongType, "", "not an object");
+        return bad(GapKind::WrongType, At::Root, "not an object");
     };
     let has_errors = root.iter().any(|(k, _)| k == "errors");
-    let top = object(
-        v,
-        "",
-        if has_errors {
-            &["data", "errors"]
-        } else {
-            &["data"]
-        },
-    )?;
-    if has_errors && !matches!(top[1], Json::Array(errors) if errors.is_empty()) {
-        return bad(GapKind::Malformed, ".errors", "GraphQL reported errors");
-    }
-    let data = object(top[0], ".data", &["repository"])?;
-    let Json::Object(repo) = data[0] else {
-        return bad(GapKind::WrongType, ".data.repository", "not an object");
+    let data_val = if has_errors {
+        let [data, errors] = object(v, At::Root, ["data", "errors"])?;
+        if !matches!(errors, Json::Array(items) if items.is_empty()) {
+            return bad(
+                GapKind::Malformed,
+                At::Field(&At::Root, "errors"),
+                "GraphQL reported errors",
+            );
+        }
+        data
+    } else {
+        let [data] = object(v, At::Root, ["data"])?;
+        data
     };
-    let aliases: Vec<_> = (0..prs.len()).map(|i| format!("r{i}")).collect();
-    if repo.iter().any(|(k, _)| !aliases.contains(k)) {
-        return bad(
-            GapKind::Malformed,
-            ".data.repository",
-            "an unexpected alias",
-        );
+    let data_at = At::Field(&At::Root, "data");
+    let [repo_val] = object(data_val, data_at, ["repository"])?;
+    let repo_at = At::Field(&data_at, "repository");
+    let Json::Object(repo) = repo_val else {
+        return bad(GapKind::WrongType, repo_at, "not an object");
+    };
+    let mut by_alias: Vec<Option<&Json>> = vec![None; prs.len()];
+    for (k, val) in repo {
+        let Some(idx) = parse_alias_index(k, prs.len()) else {
+            return bad(GapKind::Malformed, repo_at, "an unexpected alias");
+        };
+        by_alias[idx] = Some(val);
     }
     Ok(prs
         .iter()
-        .zip(aliases)
-        .map(|(pr, alias)| {
-            let at = format!(".data.repository.{alias}");
-            match repo.iter().find(|(k, _)| k == &alias) {
-                Some((_, value)) => ancestry_of(value, &at, &pr.merge_commit),
-                None => bad(GapKind::MissingField, &at, "missing"),
+        .enumerate()
+        .map(|(i, pr)| {
+            let at = At::Alias(&repo_at, i);
+            match by_alias[i] {
+                Some(value) => ancestry_of(value, at, &pr.merge_commit),
+                None => bad(GapKind::MissingField, at, "missing"),
             }
         })
         .collect())
 }
 
-fn ancestry_of(v: &Json, at: &str, merge: &Commit) -> Got<bool> {
-    let f = object(v, at, &["target", "comparison"])?;
-    let oid = |v, at: &str| -> Got<Commit> {
-        let f = object(v, at, &["oid"])?;
-        Commit::parse(string(f[0], at)?).ok_or(Bad {
+fn ancestry_of(v: &Json, at: At<'_>, merge: &Commit) -> Got<bool> {
+    let f = object(v, at, ["target", "comparison"])?;
+    let oid = |v, at: At<'_>| -> Got<Commit> {
+        let [oid_val] = object(v, at, ["oid"])?;
+        Commit::parse(string(oid_val, at)?).ok_or_else(|| Bad {
             gap: GapKind::Malformed,
-            at: at.to_owned(),
+            at: at.render(),
             what: "not a full commit OID",
         })
     };
-    let target = oid(f[0], &format!("{at}.target"))?;
+    let target = oid(f[0], At::Field(&at, "target"))?;
+    let comp_at = At::Field(&at, "comparison");
     let c = object(
         f[1],
-        &format!("{at}.comparison"),
-        &["status", "aheadBy", "behindBy", "baseTarget", "headTarget"],
+        comp_at,
+        ["status", "aheadBy", "behindBy", "baseTarget", "headTarget"],
     )?;
-    let base = oid(c[3], &format!("{at}.comparison.baseTarget"))?;
-    let head = oid(c[4], &format!("{at}.comparison.headTarget"))?;
+    let base = oid(c[3], At::Field(&comp_at, "baseTarget"))?;
+    let head = oid(c[4], At::Field(&comp_at, "headTarget"))?;
     if base != target || &head != merge {
         return bad(
             GapKind::Malformed,
@@ -890,8 +996,8 @@ fn ancestry_of(v: &Json, at: &str, merge: &Commit) -> Got<bool> {
             "comparison targets do not match the requested ancestry",
         );
     }
-    let ahead = count(c[1], &format!("{at}.comparison.aheadBy"))?;
-    let behind = count(c[2], &format!("{at}.comparison.behindBy"))?;
+    let ahead = count(c[1], At::Field(&comp_at, "aheadBy"))?;
+    let behind = count(c[2], At::Field(&comp_at, "behindBy"))?;
     if ahead > i32::MAX as u64 || behind > i32::MAX as u64 {
         return bad(
             GapKind::Malformed,
@@ -900,7 +1006,7 @@ fn ancestry_of(v: &Json, at: &str, merge: &Commit) -> Got<bool> {
         );
     }
     match (
-        string(c[0], &format!("{at}.comparison.status"))?,
+        string(c[0], At::Field(&comp_at, "status"))?,
         ahead,
         behind,
         base == head,
@@ -1062,7 +1168,7 @@ mod tests {
             .is_err()
         );
         let good = r#"[{"bucket": "pass", "name": "syn-build"}, {"bucket": "cancel", "name": "syn-test"}]"#;
-        assert_eq!(list(&tree(good), "", check).map(|c| c.len()), Ok(2));
+        assert_eq!(list(&tree(good), At::Root, check).map(|c| c.len()), Ok(2));
         for (text, gap) in [
             (r#"{"bucket": "pass", "name": "x"}"#, GapKind::WrongType),
             (r#"[["pass", "x"]]"#, GapKind::WrongType),
@@ -1080,7 +1186,7 @@ mod tests {
             (r#"[{"bucket": "pass", "name": 1}]"#, GapKind::WrongType),
         ] {
             assert_eq!(
-                list(&tree(text), "", check).map_err(|b| b.gap),
+                list(&tree(text), At::Root, check).map_err(|b| b.gap),
                 Err(gap),
                 "{text}"
             );
@@ -1159,7 +1265,7 @@ mod tests {
 
     #[test]
     fn a_pull_request_row_is_open_merged_or_closed_exactly() {
-        let ok = |t: &str| list(&tree(t), "", pr_row);
+        let ok = |t: &str| list(&tree(t), At::Root, pr_row);
         let merge = format!(r#"{{"oid": "{}"}}"#, "2".repeat(40));
         assert!(matches!(
             ok(&pr(
@@ -1266,9 +1372,9 @@ mod tests {
                     .replace("\"mergedAt\":null", "\"mergedAt\":\"2030-01-15T09:00:00Z\"");
             }
             let valid = missing.replacen('{', r#"{"title":"Synthetic stock work","#, 1);
-            assert!(list(&tree(&valid), "", pr_row).is_ok());
+            assert!(list(&tree(&valid), At::Root, pr_row).is_ok());
             assert_eq!(
-                list(&tree(&missing), "", pr_row).unwrap_err().gap,
+                list(&tree(&missing), At::Root, pr_row).unwrap_err().gap,
                 GapKind::MissingField,
                 "missing title in {state}"
             );
@@ -1278,7 +1384,7 @@ mod tests {
     fn al1_pr_title_shape_is_strict_and_not_a_tagged_value() {
         let valid = al1_pr_wire(r#", "title":"Synthetic stock work""#);
         assert!(
-            list(&tree(&valid), "", pr_row).is_ok(),
+            list(&tree(&valid), At::Root, pr_row).is_ok(),
             "approved title-bearing shape must be accepted"
         );
         for title in [
@@ -1291,11 +1397,403 @@ mod tests {
             r#""""#,
         ] {
             let bad = al1_pr_wire(&format!(r#", "title":{title}"#));
-            assert!(list(&tree(&bad), "", pr_row).is_err(), "accepted {bad}");
+            assert!(
+                list(&tree(&bad), At::Root, pr_row).is_err(),
+                "accepted {bad}"
+            );
         }
         let extra = al1_pr_wire(r#", "title":"synthetic-a", "unexpected":"synthetic""#);
-        assert!(list(&tree(&extra), "", pr_row).is_err());
+        assert!(list(&tree(&extra), At::Root, pr_row).is_err());
         let duplicate = al1_pr_wire(r#", "title":"synthetic-a", "title":"synthetic-b""#);
         assert!(serde_json::from_str::<StrictJson>(&duplicate).is_err());
+    }
+
+    mod oracle {
+        use super::*;
+
+        struct OldStrictJson(Json);
+        struct OldJsonVisitor;
+
+        impl<'de> Visitor<'de> for OldJsonVisitor {
+            type Value = Json;
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str("a JSON value with no key given twice")
+            }
+            fn visit_unit<E: de::Error>(self) -> Result<Json, E> {
+                Ok(Json::Null)
+            }
+            fn visit_bool<E: de::Error>(self, b: bool) -> Result<Json, E> {
+                Ok(Json::Bool(b))
+            }
+            fn visit_i64<E: de::Error>(self, n: i64) -> Result<Json, E> {
+                Ok(Json::Int(n.into()))
+            }
+            fn visit_u64<E: de::Error>(self, n: u64) -> Result<Json, E> {
+                Ok(Json::Int(n.into()))
+            }
+            fn visit_f64<E: de::Error>(self, _: f64) -> Result<Json, E> {
+                Ok(Json::Fraction)
+            }
+            fn visit_str<E: de::Error>(self, s: &str) -> Result<Json, E> {
+                Ok(Json::String(s.to_owned()))
+            }
+            fn visit_string<E: de::Error>(self, s: String) -> Result<Json, E> {
+                Ok(Json::String(s))
+            }
+            fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Json, A::Error> {
+                let mut items = Vec::new();
+                while let Some(OldStrictJson(item)) = seq.next_element()? {
+                    items.push(item);
+                }
+                Ok(Json::Array(items))
+            }
+            fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Json, A::Error> {
+                let mut entries: Vec<(String, Json)> = Vec::new();
+                while let Some(key) = map.next_key::<String>()? {
+                    if entries.iter().any(|(k, _)| *k == key) {
+                        return Err(de::Error::custom("a key given twice"));
+                    }
+                    let OldStrictJson(value) = map.next_value()?;
+                    entries.push((key, value));
+                }
+                Ok(Json::Object(entries))
+            }
+        }
+
+        impl<'de> Deserialize<'de> for OldStrictJson {
+            fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+                d.deserialize_any(OldJsonVisitor).map(OldStrictJson)
+            }
+        }
+
+        fn old_bad<T>(gap: GapKind, at: &str, what: &'static str) -> Got<T> {
+            Err(Bad {
+                gap,
+                at: at.to_owned(),
+                what,
+            })
+        }
+
+        fn old_object<'j>(v: &'j Json, at: &str, keys: &[&str]) -> Got<Vec<&'j Json>> {
+            let Json::Object(entries) = v else {
+                return old_bad(GapKind::WrongType, at, "not an object");
+            };
+            if entries.iter().any(|(k, _)| !keys.contains(&k.as_str())) {
+                return old_bad(GapKind::Malformed, at, "a key it shouldn't have");
+            }
+            keys.iter()
+                .map(|key| match entries.iter().find(|(k, _)| k == key) {
+                    Some((_, value)) => Ok(value),
+                    None => old_bad(GapKind::MissingField, &format!("{at}.{key}"), "missing"),
+                })
+                .collect()
+        }
+
+        fn old_list<T>(v: &Json, at: &str, item: impl Fn(&Json, &str) -> Got<T>) -> Got<Vec<T>> {
+            let Json::Array(items) = v else {
+                return old_bad(GapKind::WrongType, at, "not a list");
+            };
+            items
+                .iter()
+                .enumerate()
+                .map(|(i, v)| item(v, &format!("{at}[{i}]")))
+                .collect()
+        }
+
+        fn old_string<'j>(v: &'j Json, at: &str) -> Got<&'j str> {
+            match v {
+                Json::String(s) => Ok(s),
+                _ => old_bad(GapKind::WrongType, at, "not text"),
+            }
+        }
+
+        fn old_non_empty(v: &Json, at: &str) -> Got<NonEmpty> {
+            match NonEmpty::new(old_string(v, at)?) {
+                Some(s) => Ok(s),
+                None => old_bad(GapKind::Malformed, at, "empty"),
+            }
+        }
+
+        fn old_count(v: &Json, at: &str) -> Got<u64> {
+            match v {
+                Json::Int(n) => {
+                    u64::try_from(*n).or_else(|_| old_bad(GapKind::Malformed, at, "below zero"))
+                }
+                _ => old_bad(GapKind::WrongType, at, "not a whole number"),
+            }
+        }
+
+        fn old_number(v: &Json, at: &str) -> Got<Number> {
+            match Number::new(old_count(v, at)?) {
+                Some(n) => Ok(n),
+                None => old_bad(GapKind::Malformed, at, "not 1 or more"),
+            }
+        }
+
+        fn old_commit(v: &Json, at: &str) -> Got<Commit> {
+            match Commit::parse(old_string(v, at)?) {
+                Some(c) => Ok(c),
+                None => old_bad(GapKind::Malformed, at, "not a full commit"),
+            }
+        }
+
+        fn old_null_or<'j, T>(
+            v: &'j Json,
+            at: &str,
+            read: impl FnOnce(&'j Json, &str) -> Got<T>,
+        ) -> Got<Option<T>> {
+            match v {
+                Json::Null => Ok(None),
+                v => read(v, at).map(Some),
+            }
+        }
+
+        fn old_issue_row(v: &Json, at: &str) -> Got<IssueRow> {
+            let keys = [
+                "blockedBy",
+                "body",
+                "id",
+                "labels",
+                "milestone",
+                "number",
+                "state",
+                "subIssues",
+                "title",
+            ];
+            let f = old_object(v, at, &keys)?;
+            let state = match old_string(f[6], &format!("{at}.state"))? {
+                "OPEN" => IssueState::Open,
+                "CLOSED" => IssueState::Closed,
+                _ => {
+                    return old_bad(
+                        GapKind::Malformed,
+                        &format!("{at}.state"),
+                        "not OPEN or CLOSED",
+                    );
+                }
+            };
+            let old_milestone = |v: &Json, at: &str| -> Got<Milestone> {
+                let f = old_object(v, at, &["description", "dueOn", "number", "title"])?;
+                old_string(f[0], &format!("{at}.description"))?;
+                old_null_or(f[1], &format!("{at}.dueOn"), old_string)?;
+                Ok(Milestone {
+                    number: old_number(f[2], &format!("{at}.number"))?,
+                    title: old_string(f[3], &format!("{at}.title"))?.to_owned(),
+                })
+            };
+            let old_label = |v: &Json, at: &str| -> Got<NonEmpty> {
+                let f = old_object(v, at, &["color", "description", "id", "name"])?;
+                for (i, key) in [(0, "color"), (1, "description"), (2, "id")] {
+                    old_string(f[i], &format!("{at}.{key}"))?;
+                }
+                old_non_empty(f[3], &format!("{at}.name"))
+            };
+            let old_links = |v: &Json, at: &str| -> Got<Links> {
+                let f = old_object(v, at, &["nodes", "totalCount"])?;
+                let nodes = old_list(f[0], &format!("{at}.nodes"), |v, at| {
+                    let n = old_object(v, at, &["id", "number", "state", "title", "url"])?;
+                    for (i, key) in [(2, "state"), (3, "title"), (4, "url")] {
+                        old_string(n[i], &format!("{at}.{key}"))?;
+                    }
+                    Ok(Link {
+                        number: old_number(n[1], &format!("{at}.number"))?,
+                        id: old_non_empty(n[0], &format!("{at}.id"))?,
+                    })
+                })?;
+                Ok(Links {
+                    nodes,
+                    total: old_count(f[1], &format!("{at}.totalCount"))?,
+                })
+            };
+            Ok(IssueRow {
+                number: old_number(f[5], &format!("{at}.number"))?,
+                id: old_non_empty(f[2], &format!("{at}.id"))?,
+                title: old_string(f[8], &format!("{at}.title"))?.to_owned(),
+                state,
+                milestone: old_null_or(f[4], &format!("{at}.milestone"), old_milestone)?,
+                labels: old_list(f[3], &format!("{at}.labels"), old_label)?,
+                body: old_string(f[1], &format!("{at}.body"))?.to_owned(),
+                sub_issues: old_links(f[7], &format!("{at}.subIssues"))?,
+                blocked_by: old_links(f[0], &format!("{at}.blockedBy"))?,
+            })
+        }
+
+        fn old_batch_of(v: &Json, prs: &[MergedPr]) -> Got<Vec<Got<bool>>> {
+            let Json::Object(root) = v else {
+                return old_bad(GapKind::WrongType, "", "not an object");
+            };
+            let has_errors = root.iter().any(|(k, _)| k == "errors");
+            let top = old_object(
+                v,
+                "",
+                if has_errors {
+                    &["data", "errors"]
+                } else {
+                    &["data"]
+                },
+            )?;
+            if has_errors && !matches!(top[1], Json::Array(errors) if errors.is_empty()) {
+                return old_bad(GapKind::Malformed, ".errors", "GraphQL reported errors");
+            }
+            let data = old_object(top[0], ".data", &["repository"])?;
+            let Json::Object(repo) = data[0] else {
+                return old_bad(GapKind::WrongType, ".data.repository", "not an object");
+            };
+            let aliases: Vec<_> = (0..prs.len()).map(|i| format!("r{i}")).collect();
+            if repo.iter().any(|(k, _)| !aliases.contains(k)) {
+                return old_bad(
+                    GapKind::Malformed,
+                    ".data.repository",
+                    "an unexpected alias",
+                );
+            }
+            Ok(prs
+                .iter()
+                .zip(aliases)
+                .map(|(pr, alias)| {
+                    let at = format!(".data.repository.{alias}");
+                    match repo.iter().find(|(k, _)| k == &alias) {
+                        Some((_, value)) => {
+                            let f = old_object(value, &at, &["target", "comparison"])?;
+                            let oid = |v, at: &str| -> Got<Commit> {
+                                let f = old_object(v, at, &["oid"])?;
+                                Commit::parse(old_string(f[0], at)?).ok_or(Bad {
+                                    gap: GapKind::Malformed,
+                                    at: at.to_owned(),
+                                    what: "not a full commit OID",
+                                })
+                            };
+                            let target = oid(f[0], &format!("{at}.target"))?;
+                            let c = old_object(
+                                f[1],
+                                &format!("{at}.comparison"),
+                                &["status", "aheadBy", "behindBy", "baseTarget", "headTarget"],
+                            )?;
+                            let base = oid(c[3], &format!("{at}.comparison.baseTarget"))?;
+                            let head = oid(c[4], &format!("{at}.comparison.headTarget"))?;
+                            if base != target || head != pr.merge_commit {
+                                return old_bad(
+                                    GapKind::Malformed,
+                                    &at,
+                                    "comparison targets do not match the requested ancestry",
+                                );
+                            }
+                            let ahead = old_count(c[1], &format!("{at}.comparison.aheadBy"))?;
+                            let behind = old_count(c[2], &format!("{at}.comparison.behindBy"))?;
+                            if ahead > i32::MAX as u64 || behind > i32::MAX as u64 {
+                                return old_bad(
+                                    GapKind::Malformed,
+                                    &at,
+                                    "comparison count exceeds a GraphQL Int",
+                                );
+                            }
+                            match (
+                                old_string(c[0], &format!("{at}.comparison.status"))?,
+                                ahead,
+                                behind,
+                                base == head,
+                            ) {
+                                ("IDENTICAL", 0, 0, true) | ("BEHIND", 0, 1.., false) => Ok(true),
+                                ("AHEAD", 1.., 0, false) | ("DIVERGED", 1.., 1.., false) => {
+                                    Ok(false)
+                                }
+                                _ => old_bad(
+                                    GapKind::Malformed,
+                                    &at,
+                                    "inconsistent comparison status, counts or targets",
+                                ),
+                            }
+                        }
+                        None => old_bad(GapKind::MissingField, &at, "missing"),
+                    }
+                })
+                .collect())
+        }
+
+        #[test]
+        fn strict_json_and_lazy_paths_match_oracle_exact_results_and_errors() {
+            for width in [0, 1, 15, 16, 17, 64] {
+                let mut obj = String::from("{");
+                for i in 0..width {
+                    if i > 0 {
+                        obj.push(',');
+                    }
+                    obj.push_str(&format!("\"k{i}\":{i}"));
+                }
+                let unique = format!("{obj}}}");
+                assert_eq!(
+                    serde_json::from_str::<StrictJson>(&unique)
+                        .map(|v| v.0)
+                        .map_err(|e| e.to_string()),
+                    serde_json::from_str::<OldStrictJson>(&unique)
+                        .map(|v| v.0)
+                        .map_err(|e| e.to_string()),
+                );
+                if width > 0 {
+                    for dup in [0, width / 2, width - 1] {
+                        let s = format!("{obj},\"k{dup}\":0}}");
+                        assert_eq!(
+                            serde_json::from_str::<StrictJson>(&s)
+                                .map(|v| v.0)
+                                .map_err(|e| e.to_string()),
+                            serde_json::from_str::<OldStrictJson>(&s)
+                                .map(|v| v.0)
+                                .map_err(|e| e.to_string()),
+                        );
+                    }
+                }
+            }
+
+            let issue_cases = [
+                r#"[{"blockedBy":{"nodes":[{"id":"I_1","number":1,"state":"OPEN","title":"T","url":"u"}],"totalCount":1},"body":"b","id":"I_2","labels":[{"color":"c","description":"d","id":"l","name":"ready-for-agent"}],"milestone":{"description":"d","dueOn":null,"number":1,"title":"0.2.0"},"number":2,"state":"OPEN","subIssues":{"nodes":[],"totalCount":0},"title":"T2"}]"#,
+                r#"[{"blockedBy":{"nodes":[{"id":"","number":1,"state":"OPEN","title":"T","url":"u"}],"totalCount":1},"body":"b","id":"I_2","labels":[],"milestone":null,"number":2,"state":"OPEN","subIssues":{"nodes":[],"totalCount":0},"title":"T2"}]"#,
+                r#"[{"blockedBy":{"nodes":[],"totalCount":-1},"body":"b","id":"I_2","labels":[],"milestone":null,"number":2,"state":"OPEN","subIssues":{"nodes":[],"totalCount":0},"title":"T2"}]"#,
+                r#"[{"body":"b","id":"I_2","extra":1}]"#,
+                r#"[{"body":"b","id":"I_2"}]"#,
+                r#"{"not":"list"}"#,
+            ];
+            for case in issue_cases {
+                let j = tree(case);
+                assert_eq!(
+                    list(&j, At::Root, issue_row),
+                    old_list(&j, "", old_issue_row),
+                    "{case}"
+                );
+            }
+
+            let sha = "a".repeat(40);
+            let merged = MergedPr {
+                fields: openwiz_core::fleet::model::PrFields {
+                    number: Number::new(1).unwrap(),
+                    draft: false,
+                    head_branch: NonEmpty::new("room/syn-1").unwrap(),
+                    head_commit: Commit::parse(&sha).unwrap(),
+                    base_branch: NonEmpty::new("main").unwrap(),
+                    closes: vec![],
+                },
+                merge_commit: Commit::parse(&sha).unwrap(),
+                merged_at: Timestamp(0),
+            };
+            let batch_cases = [
+                format!(
+                    r#"{{"data":{{"repository":{{"r0":{{"target":{{"oid":"{sha}"}},"comparison":{{"status":"IDENTICAL","aheadBy":0,"behindBy":0,"baseTarget":{{"oid":"{sha}"}},"headTarget":{{"oid":"{sha}"}}}}}}}}}}}}"#
+                ),
+                r#"{"data":{"repository":{"r00":null}}}"#.to_owned(),
+                r#"{"data":{"repository":{"r1":null}}}"#.to_owned(),
+                r#"{"data":{"repository":{}}}"#.to_owned(),
+                r#"{"data":{"repository":{"r0":{"target":{"oid":"bad"},"comparison":{}}}}}"#
+                    .to_owned(),
+                r#"{"data":{"repository":{}},"errors":[{"message":"x"}]}"#.to_owned(),
+            ];
+            for case in &batch_cases {
+                let j = tree(case);
+                assert_eq!(
+                    batch_of(&j, std::slice::from_ref(&merged)),
+                    old_batch_of(&j, std::slice::from_ref(&merged)),
+                    "{case}"
+                );
+            }
+            let _ = old_commit(&Json::Null, "");
+        }
     }
 }

@@ -1,7 +1,45 @@
 use super::super::model::{CheckResult, IssueState, NonEmpty, Number, Review, Verdict};
-use super::rules::{branch_matches, unique};
+use super::rules::branch_matches;
 use super::*;
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashSet};
+use std::hash::Hash;
+
+fn unique_iter<T: Eq + Hash>(mut iter: impl Iterator<Item = T>) -> bool {
+    let Some(first) = iter.next() else {
+        return true;
+    };
+    let Some(second) = iter.next() else {
+        return true;
+    };
+    if first == second {
+        return false;
+    }
+    let mut seen = HashSet::new();
+    seen.insert(first);
+    seen.insert(second);
+    for item in iter {
+        if !seen.insert(item) {
+            return false;
+        }
+    }
+    true
+}
+
+fn unique_slice<T: Eq + Hash>(values: &[T]) -> bool {
+    match values {
+        [] | [_] => true,
+        [a, b] => a != b,
+        _ if values.len() <= 8 => {
+            for (i, v) in values.iter().enumerate() {
+                if values[i + 1..].contains(v) {
+                    return false;
+                }
+            }
+            true
+        }
+        _ => unique_iter(values.iter()),
+    }
+}
 
 pub fn plan(snapshot: &Snapshot, rules: &Rules, planned_at: u64) -> Result<Plan, PlanError> {
     let Observed::Complete(default) = &snapshot.default_branch else {
@@ -104,12 +142,7 @@ fn fleet(out: &mut Plan, input: &FleetInput) {
         }
         return;
     };
-    if !unique(
-        &f.changes
-            .iter()
-            .map(|c| c.merged.pr.fields.number)
-            .collect::<Vec<_>>(),
-    ) {
+    if !unique_iter(f.changes.iter().map(|c| c.merged.pr.fields.number)) {
         look(
             out,
             spec,
@@ -121,9 +154,10 @@ fn fleet(out: &mut Plan, input: &FleetInput) {
     }
     let approved = f.approval.as_ref();
     if approved.is_some_and(|a| {
-        a.rows
-            .keys()
-            .any(|n| !f.tickets.iter().any(|t| t.number == *n))
+        a.rows.len() > f.tickets.len() || {
+            let present: HashSet<Number> = f.tickets.iter().map(|t| t.number).collect();
+            a.rows.keys().any(|n| !present.contains(n))
+        }
     }) {
         look(
             out,
@@ -309,7 +343,7 @@ fn thread_facts(t: &TicketFacts) -> Vec<ThreadFact> {
     th
 }
 fn start_problems(starts: &[Start], threads: &[&NonEmpty], reasons: &mut Vec<String>) {
-    if !unique(&starts.iter().map(|s| s.id.as_str()).collect::<Vec<_>>()) {
+    if starts.len() > 1 && !unique_iter(starts.iter().map(|s| s.id.as_str())) {
         reasons.push("duplicate start record".into());
     }
     if starts
@@ -361,35 +395,35 @@ fn settled_no_thread(starts: &[Start]) -> bool {
 }
 fn ticket_problems(t: &TicketFacts, now: u64) -> Vec<String> {
     let mut reasons = Vec::new();
-    if !unique(&t.issue.labels) {
+    if !unique_slice(&t.issue.labels) {
         reasons.push("duplicate label".into());
     }
-    if !unique(&t.blockers.iter().map(|b| b.number).collect::<Vec<_>>()) {
+    if t.blockers.len() > 1 && !unique_iter(t.blockers.iter().map(|b| b.number)) {
         reasons.push("duplicate blocker".into());
     }
-    let threads = t
-        .builder
-        .iter()
-        .map(|b| &b.thread)
-        .chain(t.reviewers.iter().map(|r| &r.agent.thread))
-        .collect::<Vec<_>>();
-    if !unique(&threads) {
+    if usize::from(t.builder.is_some()) + t.reviewers.len() > 1
+        && !unique_iter(
+            t.builder
+                .iter()
+                .map(|b| &b.thread)
+                .chain(t.reviewers.iter().map(|r| &r.agent.thread)),
+        )
+    {
         reasons.push("duplicate agent thread".into());
     }
-    start_problems(
-        &t.starts,
-        &t.builder.iter().map(|b| &b.thread).collect::<Vec<_>>(),
-        &mut reasons,
-    );
-    if t.starts
-        .iter()
-        .filter(|s| matches!(s.state, StartState::Started { .. }))
-        .count()
-        > 1
-    {
-        reasons.push("more than one builder start".into());
+    if !t.starts.is_empty() {
+        let builder_threads = t.builder.as_ref().map(|b| &b.thread);
+        start_problems(&t.starts, builder_threads.as_slice(), &mut reasons);
+        if t.starts
+            .iter()
+            .filter(|s| matches!(s.state, StartState::Started { .. }))
+            .count()
+            > 1
+        {
+            reasons.push("more than one builder start".into());
+        }
     }
-    if !unique(&t.holds.iter().map(|h| h.comment).collect::<Vec<_>>()) {
+    if t.holds.len() > 1 && !unique_iter(t.holds.iter().map(|h| h.comment)) {
         reasons.push("duplicate hold record".into());
     }
     if let Some(PrInput::Several(_)) = &t.pr {
@@ -643,25 +677,35 @@ fn path_matches(pattern: &str, path: &str) -> bool {
     if pattern.ends_with('/') {
         return path.starts_with(pattern);
     }
-    let p = pattern.split('/').collect::<Vec<_>>();
-    let f = path.split('/').collect::<Vec<_>>();
-    p.len() == f.len() && p.iter().zip(f).all(|(p, f)| glob_component(p, f))
+    let mut p = pattern.split('/');
+    let mut f = path.split('/');
+    loop {
+        match (p.next(), f.next()) {
+            (Some(pc), Some(fc)) => {
+                if !glob_component(pc, fc) {
+                    return false;
+                }
+            }
+            (None, None) => return true,
+            _ => return false,
+        }
+    }
 }
 fn glob_component(pattern: &str, text: &str) -> bool {
-    let parts = pattern.split('*').collect::<Vec<_>>();
-    if parts.len() == 1 {
+    let Some((first, mut tail)) = pattern.split_once('*') else {
         return pattern == text;
-    }
-    let Some(mut rest) = text.strip_prefix(parts[0]) else {
+    };
+    let Some(mut rest) = text.strip_prefix(first) else {
         return false;
     };
-    for part in &parts[1..parts.len() - 1] {
+    while let Some((part, next)) = tail.split_once('*') {
         let Some(at) = rest.find(part) else {
             return false;
         };
         rest = &rest[at + part.len()..];
+        tail = next;
     }
-    rest.ends_with(parts[parts.len() - 1])
+    rest.ends_with(tail)
 }
 fn contract_hit<'a>(
     f: &'a FleetFacts,
@@ -776,23 +820,25 @@ fn open_problems(p: &OpenPr, t: &TicketFacts, now: u64, reasons: &mut Vec<String
         .iter()
         .filter(|r| r.pr == p.fields.number)
         .collect::<Vec<_>>();
-    start_problems(
-        &p.starts,
-        &reviewers
-            .iter()
-            .map(|r| &r.agent.thread)
-            .collect::<Vec<_>>(),
-        reasons,
-    );
+    if !p.starts.is_empty() {
+        start_problems(
+            &p.starts,
+            &reviewers
+                .iter()
+                .map(|r| &r.agent.thread)
+                .collect::<Vec<_>>(),
+            reasons,
+        );
+    }
     if t.issue.state == IssueState::Closed {
         return;
     }
-    if !unique(&p.reports.iter().map(|r| r.comment).collect::<Vec<_>>()) {
+    if p.reports.len() > 1 && !unique_iter(p.reports.iter().map(|r| r.comment)) {
         reasons.push("duplicate report comment".into());
     }
     if p.ci
         .as_ref()
-        .is_some_and(|c| !unique(&c.checks.iter().map(|c| &c.name).collect::<Vec<_>>()))
+        .is_some_and(|c| c.checks.len() > 1 && !unique_iter(c.checks.iter().map(|c| &c.name)))
     {
         reasons.push("duplicate check name".into());
     }
@@ -1074,6 +1120,84 @@ fn open_actions(
                         },
                     );
                 }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod oracle {
+    use super::*;
+
+    fn old_path_matches(pattern: &str, path: &str) -> bool {
+        if pattern.ends_with('/') {
+            return path.starts_with(pattern);
+        }
+        let p = pattern.split('/').collect::<Vec<_>>();
+        let f = path.split('/').collect::<Vec<_>>();
+        p.len() == f.len() && p.iter().zip(f).all(|(p, f)| old_glob_component(p, f))
+    }
+
+    fn old_glob_component(pattern: &str, text: &str) -> bool {
+        let parts = pattern.split('*').collect::<Vec<_>>();
+        if parts.len() == 1 {
+            return pattern == text;
+        }
+        let Some(mut rest) = text.strip_prefix(parts[0]) else {
+            return false;
+        };
+        for part in &parts[1..parts.len() - 1] {
+            let Some(at) = rest.find(part) else {
+                return false;
+            };
+            rest = &rest[at + part.len()..];
+        }
+        rest.ends_with(parts[parts.len() - 1])
+    }
+
+    #[test]
+    fn zero_alloc_path_matches_matches_vec_oracle() {
+        let patterns = [
+            "",
+            "*",
+            "**",
+            "***",
+            "a",
+            "a*",
+            "*a",
+            "a*a",
+            "*a*a*",
+            "a*b*c",
+            "a/",
+            "crates/core/",
+            "crates/core/src/m*.rs",
+            "crates/*/src/*.*",
+            "a/b/c",
+            "a/b/",
+            "é*漢",
+        ];
+        let paths = [
+            "",
+            "a",
+            "aa",
+            "ab",
+            "abc",
+            "a/b",
+            "a/b/c",
+            "a/b/c/d",
+            "crates/core/src/m1.rs",
+            "crates/core/src/lib.rs",
+            "crates/cli/src/other.rs",
+            "éx漢",
+            "é漢",
+        ];
+        for p in patterns {
+            for f in paths {
+                assert_eq!(
+                    path_matches(p, f),
+                    old_path_matches(p, f),
+                    "pattern={p:?} path={f:?}"
+                );
             }
         }
     }
