@@ -1,54 +1,42 @@
 #!/usr/bin/env python3
+from contextlib import redirect_stderr, redirect_stdout
 import hashlib
 import importlib.util
-from io import StringIO
+from io import BytesIO, StringIO
 import json
 from pathlib import Path
-import shutil
 import socket
 import stat
 import sys
+import tarfile
 import tempfile
 import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from unittest.mock import patch
 
 sys.dont_write_bytecode = True
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 FIXTURES = ROOT / 'contracts' / 'fixtures' / 'driver-package'
 MARKET = '1111111111111111111111111111111111111111'
-COMMIT = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
 KIT = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
 REPO = 'example-publisher/example-driver'
 spec = importlib.util.spec_from_file_location('driver_fetch', HERE / 'fetch.py')
 fetch = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(fetch)
 
-PHRASES = {
-    'wrong-checksum': 'pinned checksum',
-    'extra-file': 'does not name',
-    'missing-file': 'missing a file',
-    'link': 'regular file',
-    'wrong-mode': 'wrong mode',
-    'wrong-driver-name': 'does not match',
-    'changed-schema': 'openwiz update',
-    'off-repository': 'not this repository',
-    'wrong-file-hash': 'manifest hash',
-}
-
-
 def sha(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def receipt(commit, date='2030-01-02'):
+def receipt(package):
     lines = [
-        '# listing: synthetic-host', '# host: local',
-        '# driver: %s@%s' % (REPO, commit),
+        '# listing: ' + package['driver'], '# host: local',
+        '# driver: %s@%s' % (package['repository'], package['commit']),
         '# kit: openwizdev/OpenWiz@%s' % KIT,
         '# harness: synthetic', '# model: synthetic',
-        '# date: %s' % date, '# run by: example-publisher',
+        '# date: 2030-01-02', '# run by: example-publisher',
         'pass version: synthetic',
         'pass start: the run posted builder status note <note>',
         'pass wake: the run edited builder status note <note>',
@@ -66,7 +54,8 @@ def listing(package, status, publisher='example-publisher'):
         'plugs_into': 'OpenWiz driver v1', 'publisher': publisher,
         'stage': 'available', 'status': status, 'package': package}
     if status == 'verified':
-        body['proof'] = {'receipt': 'receipts/synthetic-host/2030-01-02-%s.txt' % package['commit'][:12]}
+        body['proof'] = {'receipt': 'receipts/%s/2030-01-02-%s.txt' % (
+            package['driver'], package['commit'][:12])}
     return json.dumps(body).encode()
 
 
@@ -118,28 +107,28 @@ class FetchTests(unittest.TestCase):
         self.loopback = '127.0.0.1:%d' % self.server.server_port
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
-        self.root = Path(self.tmp.name) / 'install'
+        self.root = Path(self.tmp.name).resolve() / 'install'
         self.root.mkdir(mode=0o700)
-        self.build = Path(self.tmp.name) / 'build'
+        self.build = self.root.with_name('build')
         runtime = self.build / 'runtime'
+        assets = []
         for rel in fetch.KIT_FILES:
-            source = ROOT / rel
             target = runtime / rel
             target.parent.mkdir(parents=True, exist_ok=True)
-            if rel == 'openwiz-build.txt' or not source.is_file():
-                target.write_text('openwiz.package.v1\n0.2.0\n%s\nx86_64-unknown-linux-gnu\n' % ('c' * 40))
-            else:
-                shutil.copyfile(source, target)
+            data = (b'openwiz.package.v1\n0.2.0\n' + b'c' * 40 + b'\nx86_64-unknown-linux-gnu\n'
+                    if rel == 'openwiz-build.txt' else (ROOT / rel).read_bytes())
+            target.write_bytes(data)
             target.chmod(0o600)
-        self.calls = []
-        real_spawn = fetch.spawn
-
-        def spy(program):
-            self.calls.append(str(program))
-            return real_spawn(program)
-
-        fetch.spawn = spy
-        self.addCleanup(setattr, fetch, 'spawn', real_spawn)
+            assets.append({'path': 'runtime/' + rel, 'bytes': len(data), 'mode': '0600',
+                           'sha256': sha(data)})
+        (self.build / 'install-manifest.json').write_text(json.dumps({
+            'schema': 'openwiz.install.v1', 'version': '0.2.0', 'source': 'c' * 40,
+            'target': 'x86_64-unknown-linux-gnu', 'setup_api': 1,
+            'archive': 'openwiz.tar.gz', 'archive_bytes': 1, 'archive_sha256': 'd' * 64,
+            'assets': assets}))
+        spy = patch.object(fetch, 'spawn', wraps=fetch.spawn)
+        self.calls = spy.start().call_args_list
+        self.addCleanup(spy.stop)
 
     def route(self, host, path, body):
         self.server.routes[(host, path)] = body
@@ -161,11 +150,14 @@ class FetchTests(unittest.TestCase):
         self.route('api.github.com', ref, json.dumps({
             'ref': 'refs/tags/v' + package['version'],
             'object': {'type': 'commit', 'sha': package['commit']}}).encode())
-        self.route('api.github.com', '/repos/openwizdev/WizMarket/contents/listings?ref=' + MARKET,
-                   json.dumps([{'name': 'synthetic-host.json', 'type': 'file'},
-                               {'name': 'plain.json', 'type': 'file'}]).encode())
-        self.route('raw.githubusercontent.com',
-                   '/openwizdev/WizMarket/%s/listings/synthetic-host.json' % MARKET,
+        market_path = '/repos/openwizdev/WizMarket/contents/listings?ref=' + MARKET
+        rows = json.loads(self.server.routes.get(('api.github.com', market_path), b'[]'))
+        filename = package['driver'] + '.json'
+        for name in (filename, 'plain.json'):
+            if {'name': name, 'type': 'file'} not in rows:
+                rows.append({'name': name, 'type': 'file'})
+        self.route('api.github.com', market_path, json.dumps(rows).encode())
+        self.route('raw.githubusercontent.com', '/openwizdev/WizMarket/%s/listings/%s' % (MARKET, filename),
                    listing(package, status, publisher))
         self.route('raw.githubusercontent.com',
                    '/openwizdev/WizMarket/%s/listings/plain.json' % MARKET,
@@ -173,213 +165,232 @@ class FetchTests(unittest.TestCase):
                    b'"url":"https://example.com/plain","plugs_into":"OpenWiz","publisher":"example-publisher",'
                    b'"stage":"available","status":"listed"}')
         if status == 'verified':
-            path = '/openwizdev/WizMarket/%s/receipts/synthetic-host/2030-01-02-%s.txt' % (MARKET, package['commit'][:12])
-            self.route('raw.githubusercontent.com', path, receipt(package['commit']))
+            path = '/openwizdev/WizMarket/%s/receipts/%s/2030-01-02-%s.txt' % (
+                MARKET, package['driver'], package['commit'][:12])
+            self.route('raw.githubusercontent.com', path, receipt(package))
 
     def command(self, *args):
-        out, err = StringIO(), StringIO()
-        old = sys.stdout, sys.stderr
-        sys.stdout, sys.stderr = out, err
-        try:
+        with redirect_stdout(StringIO()) as out, redirect_stderr(StringIO()) as err:
             code = fetch.main(list(args))
-        finally:
-            sys.stdout, sys.stderr = old
         return code, out.getvalue(), err.getvalue()
 
-    def add(self, name='synthetic-host', answer=None, market=MARKET):
+    def add(self, name='synthetic-host', answer=None):
         args = ['add', name, '--root', str(self.root), '--build', str(self.build),
-                '--market-commit', market, '--loopback', self.loopback]
+                '--market-commit', MARKET, '--loopback', self.loopback]
         if answer:
             args.extend(['--answer', answer])
         return self.command(*args)
 
+    def update(self, *args, answers=None):
+        stdin = StringIO(answers or '')
+        with patch('sys.stdin', stdin), patch.object(stdin, 'isatty', return_value=answers is not None):
+            return self.command('update', '--root', str(self.root), '--build', str(self.build),
+                                '--market-commit', MARKET, '--loopback', self.loopback, *args)
+
     def package(self, case='good'):
         return json.loads((FIXTURES / case / 'package.json').read_text())
 
-    def test_a_good_package_installs_only_after_yes(self):
-        self.publish(self.package(), FIXTURES / 'good', redirect=True)
-        code, out, err = self.add()
-        self.assertEqual(code, 1)
-        self.assertEqual(self.calls, [])
-        self.assertFalse((self.root / 'drivers').exists())
-        self.assertIn('example-publisher', err)
-        self.assertIn('2030-01-02', err)
-        self.assertIn('no login (fixture only)', err)
-        self.assertIn('start, wake, stop', err)
-        code, out, err = self.add(answer='yes')
-        self.assertEqual(code, 0, out)
-        self.assertEqual(len(self.calls), 1)
-        driver = self.root / 'drivers' / 'synthetic-host' / 'driver'
-        self.assertTrue(driver.is_file())
+    def release(self, name, version, commit):
+        folder = Path(self.tmp.name) / (name + '-' + version)
+        folder.mkdir()
         manifest = json.loads((FIXTURES / 'good' / 'manifest.json').read_text())
-        expected = next(item['sha256'] for item in manifest['files'] if item['path'] == 'driver')
-        self.assertEqual(sha(driver.read_bytes()), expected)
+        manifest.update(driver=name, version=version)
+        with tarfile.open(FIXTURES / 'good' / 'driver.tar.gz', 'r:gz') as fixture:
+            with tarfile.open(folder / 'driver.tar.gz', 'w:gz', format=tarfile.USTAR_FORMAT) as archive:
+                for entry in manifest['files']:
+                    member = fixture.getmember(entry['path'])
+                    data = fixture.extractfile(member).read().replace(b'synthetic-host', name.encode())
+                    entry['sha256'] = sha(data)
+                    member.size = len(data)
+                    archive.addfile(member, BytesIO(data))
+        raw = json.dumps(manifest).encode()
+        (folder / 'manifest.json').write_bytes(raw)
+        archive_sha = sha((folder / 'driver.tar.gz').read_bytes())
+        (folder / 'SHA256SUMS').write_text('%s  driver.tar.gz\n%s  manifest.json\n' % (archive_sha, sha(raw)))
+        repository = REPO if name == 'synthetic-host' else 'example-publisher/' + name
+        package = dict(self.package(), driver=name, version=version, commit=commit,
+                       repository=repository, sha256=archive_sha,
+                       asset_url='https://github.com/%s/releases/download/v%s/driver.tar.gz' % (repository, version))
+        return package, folder
+
+    def pin(self, package):
+        pins = {'contract': 'openwiz.driver-package.v1', 'pins': [{
+            'package': package, 'publisher': 'example-publisher',
+            'evidence': {'bundled_version': '0.1.1'}}]}
+        path = self.build / 'runtime' / 'pins.json'
+        path.write_text(json.dumps(pins))
+        path.chmod(0o600)
+        return path
+
+    def assert_refused(self, result, phrase):
+        code, out, err = result
+        self.assertEqual(code, 1, out)
+        body = json.loads(out)
+        self.assertEqual(set(body), {'error', 'next'})
+        for value in body.values():
+            self.assertTrue(1 <= len(value) <= 300)
+            self.assertNotIn('\n', value)
+        self.assertIn(phrase, out + err)
+        return err
+
+    def assert_ok(self, result):
+        code, out, err = result
+        self.assertEqual(code, 0, out)
+        return json.loads(out), err
+
+    def test_a_good_package_installs_only_after_yes(self):
+        package = self.package()
+        self.publish(package, FIXTURES / 'good', redirect=True)
+        err = self.assert_refused(self.add(), 'after the confirmation')
+        for detail in ('example-publisher', '1.2.3', '2030-01-02', 'no login (fixture only)', 'start, wake, stop'):
+            self.assertIn(detail, err)
+        self.assertEqual(self.calls, [])
+        self.assertEqual(list(self.root.iterdir()), [])
+        self.assert_ok(self.add(answer='yes'))
+        driver = self.root / 'drivers/synthetic-host/driver'
+        manifest = json.loads((FIXTURES / 'good/manifest.json').read_text())
+        self.assertEqual(sha(driver.read_bytes()), manifest['files'][0]['sha256'])
         self.assertEqual(stat.S_IMODE(driver.stat().st_mode), 0o700)
         approval = json.loads((driver.parent / 'approval.json').read_text())
-        self.assertEqual(approval['repository'], REPO)
-        self.assertEqual(approval['publisher'], 'example-publisher')
-        self.assertEqual(approval['version'], '1.2.3')
-        self.assertEqual(approval['sha256'], self.package()['sha256'])
-        code, listed, _ = self.command('list', '--root', str(self.root))
-        self.assertEqual(code, 0)
-        self.assertEqual(json.loads(listed)['drivers'][0]['name'], 'synthetic-host')
-        hosts = [host for host, _ in self.server.seen]
-        self.assertIn('release-assets.githubusercontent.com', hosts)
-        self.assertNotIn('evil.example', hosts)
+        expected = {key: package[key] for key in ('repository', 'version', 'sha256')}
+        self.assertEqual(approval, dict(expected, publisher='example-publisher'))
+        for rel in fetch.KIT_FILES:
+            kit_file = driver.parent / '..' / '..' / rel
+            self.assertEqual(kit_file.read_bytes(), (self.build / 'runtime' / rel).read_bytes())
+            self.assertEqual(stat.S_IMODE(kit_file.stat().st_mode), 0o600)
+        result, _ = self.assert_ok(self.command('list', '--root', str(self.root)))
+        self.assertEqual(result['drivers'], [dict(approval, name='synthetic-host')])
+        self.assertIn('release-assets.githubusercontent.com', [host for host, _ in self.server.seen])
 
     def test_each_broken_fixture_is_refused_and_not_run(self):
         cases = json.loads((FIXTURES / 'cases.json').read_text())
-        for case, phrase in PHRASES.items():
+        for case, reason in cases.items():
+            if reason is None:
+                continue
             with self.subTest(case=case):
-                self.server.routes.clear()
                 self.server.seen.clear()
-                self.calls.clear()
-                shutil.rmtree(self.root / 'drivers', ignore_errors=True)
                 self.publish(self.package(case), FIXTURES / case)
-                code, out, err = self.add(answer='yes')
-                self.assertEqual(code, 1, out)
-                body = json.loads(out)
-                self.assertIn(phrase, body['error'] + body['next'])
-                self.assertTrue(1 <= len(body['error']) <= 300 and 1 <= len(body['next']) <= 300)
-                self.assertNotIn('\n', body['error'])
+                self.assert_refused(self.add(answer='yes'), fetch.REASONS[reason][0])
                 self.assertEqual(self.calls, [])
-                self.assertFalse((self.root / 'drivers').exists())
-                self.assertEqual(cases[case] is not None, True)
+                self.assertEqual(list(self.root.iterdir()), [])
                 if case == 'off-repository':
                     self.assertFalse(any('driver.tar.gz' in path for _, path in self.server.seen))
 
     def test_a_listed_driver_needs_its_own_yes(self):
         self.publish(self.package(), FIXTURES / 'good', status='listed')
-        code, out, err = self.add(answer='yes')
-        self.assertEqual(code, 1)
-        self.assertIn('has not passed the kit', err)
-        self.assertIn('own', json.loads(out)['next'])
-        self.assertEqual(self.calls, [])
-        self.assertFalse((self.root / 'drivers').exists())
-        code, out, _ = self.add(answer='install-unverified')
-        self.assertEqual(code, 0, out)
-        self.assertTrue((self.root / 'drivers' / 'synthetic-host' / 'driver').is_file())
+        self.assert_refused(self.add(answer='yes'), 'has not passed the kit')
+        self.assertEqual(self.add(answer='install-unverified')[0], 0)
         self.assertEqual(len(self.calls), 1)
 
     def test_update_moves_the_same_publisher_and_asks_otherwise(self):
         self.publish(self.package(), FIXTURES / 'good')
         self.assertEqual(self.add(answer='yes')[0], 0)
-        moved = dict(self.package(), version='1.3.0', commit='d' * 40)
-        moved['asset_url'] = moved['asset_url'].replace('v1.2.3', 'v1.3.0')
-        manifest = json.loads((FIXTURES / 'good' / 'manifest.json').read_text())
-        manifest['version'] = '1.3.0'
-        folder = Path(self.tmp.name) / 'moved'
-        folder.mkdir()
-        (folder / 'driver.tar.gz').write_bytes((FIXTURES / 'good' / 'driver.tar.gz').read_bytes())
-        raw = (json.dumps(manifest, indent=2) + '\n').encode()
-        (folder / 'manifest.json').write_bytes(raw)
-        archive = (folder / 'driver.tar.gz').read_bytes()
-        (folder / 'SHA256SUMS').write_bytes(
-            ('%s  driver.tar.gz\n%s  manifest.json\n' % (sha(archive), sha(raw))).encode())
-        before = len(self.calls)
+        moved, folder = self.release('synthetic-host', '1.3.0', 'd' * 40)
         self.publish(moved, folder)
-        code, out, err = self.command(
-            'update', '--root', str(self.root), '--build', str(self.build),
-            '--market-commit', MARKET, '--loopback', self.loopback)
-        self.assertEqual(code, 0, out)
-        self.assertIn('moved from 1.2.3 to 1.3.0', err)
-        self.assertIn('same publisher', err)
-        self.assertGreater(len(self.calls), before)
-        approval = json.loads((self.root / 'drivers' / 'synthetic-host' / 'approval.json').read_text())
-        self.assertEqual(approval['version'], '1.3.0')
-        self.assertEqual(approval['publisher'], 'example-publisher')
-        parked = len(self.calls)
-        again, out, err = self.command(
-            'update', '--root', str(self.root), '--build', str(self.build),
-            '--market-commit', MARKET, '--loopback', self.loopback)
-        self.assertEqual(again, 0, out)
-        self.assertEqual(len(self.calls), parked)
-        self.assertEqual(json.loads(out)['unchanged'][0]['name'], 'synthetic-host')
-        changed = dict(moved, version='1.4.0', commit='e' * 40)
-        changed['asset_url'] = changed['asset_url'].replace('v1.3.0', 'v1.4.0')
-        manifest['version'] = '1.4.0'
-        raw = (json.dumps(manifest, indent=2) + '\n').encode()
-        (folder / 'manifest.json').write_bytes(raw)
-        (folder / 'SHA256SUMS').write_bytes(
-            ('%s  driver.tar.gz\n%s  manifest.json\n' % (sha(archive), sha(raw))).encode())
+        result, err = self.assert_ok(self.update())
+        self.assertIn('moved from 1.2.3 to 1.3.0, same publisher example-publisher', err)
+        result, _ = self.assert_ok(self.update())
+        self.assertEqual(result['unchanged'], [{'name': 'synthetic-host', 'version': '1.3.0'}])
+        changed, folder = self.release('synthetic-host', '1.4.0', 'e' * 40)
         self.publish(changed, folder, publisher='other-publisher')
-        code, out, err = self.command(
-            'update', '--root', str(self.root), '--build', str(self.build),
-            '--market-commit', MARKET, '--loopback', self.loopback)
-        self.assertEqual(code, 1, out)
-        self.assertIn('own yes', err)
+        err = self.assert_refused(self.update(), 'own yes')
         self.assertIn('other-publisher', err)
-        self.assertEqual(len(self.calls), parked)
-        approval = json.loads((self.root / 'drivers' / 'synthetic-host' / 'approval.json').read_text())
-        self.assertEqual(approval['version'], '1.3.0')
-        self.assertEqual(approval['publisher'], 'example-publisher')
-        code, out, _ = self.command(
-            'update', '--root', str(self.root), '--build', str(self.build),
-            '--market-commit', MARKET, '--loopback', self.loopback, '--answer', 'yes')
-        self.assertEqual(code, 0, out)
-        approval = json.loads((self.root / 'drivers' / 'synthetic-host' / 'approval.json').read_text())
-        self.assertEqual((approval['publisher'], approval['version']), ('other-publisher', '1.4.0'))
+        result, _ = self.assert_ok(self.update(answers='yes\n'))
+        self.assertEqual(result['updated'][0]['publisher'], 'other-publisher')
 
-    def test_a_redirect_off_github_is_refused(self):
+    def test_build_and_installed_kit_mismatches_are_refused(self):
         self.publish(self.package(), FIXTURES / 'good')
-        base = '/%s/releases/download/v1.2.3/driver.tar.gz' % REPO
-        self.route('github.com', base, 'https://evil.example/driver.tar.gz')
-        code, out, _ = self.add(answer='yes')
-        self.assertEqual(code, 1)
-        self.assertIn('off GitHub', out)
+        rel = 'kernel/driver-kit/hosts.json'
+        source = self.build / 'runtime' / rel
+        original = source.read_bytes()
+        source.write_bytes(b'{}')
+        self.assert_refused(self.add(answer='yes'), 'does not match the install manifest')
         self.assertEqual(self.calls, [])
-        self.assertFalse((self.root / 'drivers').exists())
-        self.assertNotIn('evil.example', [host for host, _ in self.server.seen])
+        self.assertEqual(list(self.root.iterdir()), [])
+        source.write_bytes(original)
+        self.assertEqual(self.add(answer='yes')[0], 0)
+        installed = self.root / rel
+        installed.write_bytes(b'{}')
+        self.assert_refused(self.add(answer='yes'), 'installed kit')
+        self.assertEqual(len(self.calls), 1)
+        self.assertEqual(installed.read_bytes(), b'{}')
 
-    def test_a_pin_is_the_yes_and_a_core_driver_is_not_fetched(self):
+    def test_update_uses_core_and_pins_before_wizmarket(self):
         package = self.package()
         self.publish(package, FIXTURES / 'good')
-        pins = {'contract': 'openwiz.driver-package.v1', 'pins': [{
-            'package': package, 'publisher': 'example-publisher',
-            'evidence': {'bundled_version': '0.1.1'}}]}
-        pin_path = self.build / 'runtime' / 'pins.json'
-        pin_path.write_text(json.dumps(pins))
-        pin_path.chmod(0o600)
+        self.pin(package)
+        self.assertEqual(self.add()[0], 0)
+        self.assertFalse(any('/listings' in path for _, path in self.server.seen))
+        moved, folder = self.release('synthetic-host', '1.3.0', 'd' * 40)
+        self.publish(moved, folder)
         self.server.seen.clear()
-        code, out, _ = self.add()
-        self.assertEqual(code, 0, out)
-        self.assertTrue((self.root / 'drivers' / 'synthetic-host' / 'driver').is_file())
-        self.assertFalse(any('listings' in path for _, path in self.server.seen))
-        shutil.rmtree(self.root / 'drivers')
-        core = self.build / 'runtime' / 'adapters' / 'synthetic-host'
-        core.mkdir(parents=True)
-        (core / 'driver').write_text('#!/bin/sh\n')
-        (core / 'driver').chmod(0o700)
-        self.server.seen.clear()
-        self.calls.clear()
-        code, out, _ = self.add(answer='yes')
-        self.assertEqual(code, 1)
-        self.assertIn('core driver', out)
+        result, _ = self.assert_ok(self.update())
+        self.assertEqual(result['unchanged'], [{'name': 'synthetic-host', 'version': '1.2.3'}])
         self.assertEqual(self.server.seen, [])
-        self.assertEqual(self.calls, [])
-        self.assertFalse((self.root / 'drivers').exists())
+        pin = self.pin(moved)
+        core = self.build / 'runtime/adapters/synthetic-host/driver'
+        core.parent.mkdir(parents=True)
+        core.write_text('#!/bin/sh\n')
+        core.chmod(0o700)
+        self.assert_refused(self.add(answer='yes'), 'core driver')
+        self.assertEqual(json.loads(self.update()[1])['updated'], [])
+        self.assertEqual(self.server.seen, [])
+        core.unlink()
+        result, err = self.assert_ok(self.update())
+        self.assertEqual(result['updated'][0]['version'], '1.3.0')
+        self.assertNotIn('same publisher', err)
+        self.assertFalse(any('/listings' in path for _, path in self.server.seen))
+        pin.unlink()
+        newer, folder = self.release('synthetic-host', '1.4.0', 'e' * 40)
+        self.publish(newer, folder)
+        self.assert_refused(self.update(), 'own yes')
 
-    def test_a_missing_root_and_a_failed_receipt_are_refused(self):
+    def test_losing_verification_needs_its_own_yes_for_the_same_release(self):
+        package = self.package()
+        self.publish(package, FIXTURES / 'good')
+        self.assertEqual(self.add(answer='yes')[0], 0)
+        self.publish(package, FIXTURES / 'good', status='listed')
+        for answers in (None, 'yes\n'):
+            self.assert_refused(self.update(answers=answers), 'has not passed the kit')
+        self.assertEqual(len(self.calls), 1)
+        self.assertEqual(self.update(answers='install-unverified\n')[0], 0)
+        result, err = self.assert_ok(self.update())
+        self.assertEqual(result['unchanged'], [{'name': 'synthetic-host', 'version': '1.2.3'}])
+        self.assertNotIn('has not passed the kit', err)
+
+    def test_each_changed_driver_needs_a_separate_answer(self):
+        second, folder = self.release('synthetic-other', '2.0.0', 'e' * 40)
+        for package, source in ((self.package(), FIXTURES / 'good'), (second, folder)):
+            self.publish(package, source)
+            self.assertEqual(self.add(package['driver'], answer='yes')[0], 0)
+            self.publish(package, source, status='listed', publisher='other-publisher')
+        self.assert_refused(self.update('--answer', 'install-unverified'), 'not understood')
+        result, err = self.assert_ok(self.update(answers='install-unverified\nno\n'))
+        for detail in ('Name: synthetic-host', 'Name: synthetic-other', second['sha256']):
+            self.assertIn(detail, err)
+        self.assertEqual([item['name'] for item in result['updated']], ['synthetic-host'])
+        self.assertEqual(result['unchanged'], [{'name': 'synthetic-other', 'version': '2.0.0'}])
+        _, out, _ = self.command('list', '--root', str(self.root))
+        self.assertEqual([item['publisher'] for item in json.loads(out)['drivers']],
+                         ['other-publisher', 'example-publisher'])
+        self.assertEqual(len(self.calls), 3)
+
+    def test_off_github_redirect_failed_receipt_and_missing_root_are_refused(self):
         self.publish(self.package(), FIXTURES / 'good')
-        missing = self.root.parent / 'missing'
-        code, out, _ = self.command('list', '--root', str(missing))
-        self.assertEqual(code, 1)
-        self.assertIn('private directory', json.loads(out)['error'])
-        code, out, _ = self.command(
-            'add', 'synthetic-host', '--root', str(missing), '--build', str(self.build),
-            '--market-commit', MARKET, '--loopback', self.loopback, '--answer', 'yes')
-        self.assertEqual(code, 1, out)
-        self.assertIn('private directory', json.loads(out)['error'])
-        self.assertEqual(self.calls, [])
+        self.assert_refused(self.command('list', '--root', str(self.root / 'missing')), 'private directory')
+        self.root.rmdir()
+        self.assert_refused(self.add(answer='yes'), 'private directory')
+        self.root.mkdir(mode=0o700)
+        self.route('github.com', '/%s/releases/download/v1.2.3/driver.tar.gz' % REPO,
+                   'https://evil.example/driver.tar.gz')
+        self.assert_refused(self.add(answer='yes'), 'off GitHub')
+        self.assertNotIn('evil.example', [host for host, _ in self.server.seen])
         path = '/openwizdev/WizMarket/%s/receipts/synthetic-host/2030-01-02-%s.txt' % (
             MARKET, self.package()['commit'][:12])
-        self.server.routes[('raw.githubusercontent.com', path)] = self.server.routes[
-            ('raw.githubusercontent.com', path)].replace(b'pass start:', b'fail start:')
-        code, out, _ = self.add(answer='yes')
-        self.assertEqual(code, 1, out)
-        self.assertIn('receipt', json.loads(out)['error'])
+        self.route('raw.githubusercontent.com', path, receipt(self.package()).replace(b'pass start:', b'fail start:'))
+        self.assert_refused(self.add(answer='yes'), 'receipt')
         self.assertEqual(self.calls, [])
-        self.assertFalse((self.root / 'drivers').exists())
+        self.assertEqual(list(self.root.iterdir()), [])
 
 
 if __name__ == '__main__':

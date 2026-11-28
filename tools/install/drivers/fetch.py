@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import argparse
+from contextlib import ExitStack, contextmanager
 import datetime
+import fcntl
 import gzip
 import hashlib
 import http.client
@@ -25,7 +27,7 @@ DESCRIPTION = """Install a driver that is not in the kernel.
 
 add NAME --root ROOT --build BUILD --market-commit SHA [--answer ANSWER]
 list --root ROOT
-update --root ROOT --build BUILD --market-commit SHA [--answer ANSWER]
+update --root ROOT --build BUILD --market-commit SHA
 """
 
 KIT_FILES = (
@@ -37,6 +39,8 @@ KIT_FILES = (
     'wizskills.lock',
     'openwiz-build.txt',
 )
+APPROVAL_FIELDS = ('repository', 'publisher', 'version', 'sha256')
+TRUST_FILE = 'approval-source'
 ASSET_HOSTS = frozenset({
     'github.com',
     'release-assets.githubusercontent.com',
@@ -191,6 +195,27 @@ def private(path):
     if not stat.S_ISDIR(meta.st_mode) or meta.st_uid != os.getuid() or meta.st_mode & 0o077:
         raise Refused('the install root must be a private directory you own',
                       'set it to mode 0700; nothing was written')
+
+
+@contextmanager
+def locked_root(root, exclusive):
+    guard(root)
+    private(root)
+    flags = fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH
+    try:
+        fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    except OSError:
+        raise Refused('the private install root could not be opened',
+                      'check the install root and try again')
+    try:
+        try:
+            fcntl.flock(fd, flags | fcntl.LOCK_NB)
+        except OSError:
+            raise Refused('the install root could not be locked',
+                          'wait for any running driver command to finish and try again')
+        yield
+    finally:
+        os.close(fd)
 
 
 def read_regular(path, label):
@@ -469,7 +494,7 @@ def prepare(package, publisher, kind, client, kit_schema, receipt_date):
         'name': package['driver'], 'publisher': publisher, 'version': package['version'],
         'repository': package['repository'], 'sha256': package['sha256'],
         'login': login, 'can': can, 'abilities': ability_text,
-        'receipt_date': receipt_date, 'verified': kind == 'verified', 'kind': kind,
+        'receipt_date': receipt_date, 'kind': kind,
         'files': files,
     }
 
@@ -488,6 +513,7 @@ def show(checked, ask):
     if checked['receipt_date']:
         lines.append('Receipt: ' + checked['receipt_date'])
     if ask:
+        lines.extend(['Repository: ' + checked['repository'], 'SHA-256: ' + checked['sha256']])
         lines.append('This change needs its own yes.')
     elif checked['kind'] == 'listed':
         lines.append('This listed driver needs its own yes.')
@@ -496,24 +522,26 @@ def show(checked, ask):
     print('\n'.join(lines), file=sys.stderr)
 
 
-def accepted(kind, answer):
-    if kind in ('pin', 'move'):
-        return True
-    if kind == 'verified':
-        return answer == 'yes'
-    return kind == 'listed' and answer == 'install-unverified'
-
-
 def gate(checked, answer, ask):
     show(checked, ask)
-    if accepted('verified' if ask and checked['verified'] else checked['kind'], answer):
-        return
-    if checked['kind'] == 'listed' or (ask and not checked['verified']):
+    kind = checked['kind']
+    if kind == 'pin':
+        return True
+    yes = 'install-unverified' if kind == 'listed' else 'yes'
+    if ask and sys.stdin.isatty():
+        print('Type %s to install this release or no to skip it.' % yes, file=sys.stderr, flush=True)
+        answer = sys.stdin.readline().strip()
+        if answer == 'no':
+            return False
+    if answer == yes:
+        return True
+    if ask:
+        error = ('this listed driver has not passed the kit' if kind == 'listed'
+                 else 'this change is not covered by the earlier yes')
+        raise Refused(error, 'rerun update in a terminal and type %s for this release after the confirmation' % yes)
+    if kind == 'listed':
         raise Refused('this listed driver has not passed the kit',
                       'say yes to this listed driver on its own, after the warning')
-    if ask:
-        raise Refused('this change is not covered by the earlier yes',
-                      'say yes again after the confirmation; the installed driver was left as it is')
     raise Refused('this verified driver is not installed without a yes',
                   'say yes to install it after the confirmation')
 
@@ -524,33 +552,18 @@ def spawn(program):
         stdin=subprocess.DEVNULL, env={'PATH': '/usr/bin:/bin', 'HOME': '/tmp'})
 
 
-def stage_and_run(build, checked):
+def stage_and_run(kit, checked):
     with tempfile.TemporaryDirectory(prefix='openwiz-driver-') as temporary:
         root = Path(temporary)
-        for rel in KIT_FILES:
-            source = build / 'runtime' / rel
-            data = read_regular(source, rel)
-            target = root / rel
-            target.parent.mkdir(parents=True, exist_ok=True)
-            os.chmod(target.parent, 0o700)
-            fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-            try:
-                os.write(fd, data)
-            finally:
-                os.close(fd)
-            os.chmod(target, 0o600)
+        with ExitStack() as cleanup:
+            write_kit(root, kit, kit, cleanup)
+            cleanup.pop_all()
         folder = root / 'drivers' / checked['name']
         folder.mkdir(parents=True)
         os.chmod(folder.parent, 0o700)
         os.chmod(folder, 0o700)
-        for name, mode in (('driver', 0o700), ('schema.json', 0o600), ('README.md', 0o600)):
-            target = folder / name
-            fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, mode)
-            try:
-                os.write(fd, checked['files'][name])
-            finally:
-                os.close(fd)
-            os.chmod(target, mode)
+        for name, mode in REQUIRED.items():
+            write_file(folder / name, checked['files'][name], int(mode, 8))
         try:
             result = spawn(folder / 'driver')
         except (OSError, subprocess.TimeoutExpired):
@@ -574,16 +587,80 @@ def stage_and_run(build, checked):
 def write_file(path, data, mode):
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, mode)
     try:
-        os.write(fd, data)
-        os.fsync(fd)
-    finally:
-        os.close(fd)
-    os.chmod(path, mode)
+        with os.fdopen(fd, 'wb') as stream:
+            stream.write(data)
+            stream.flush()
+            os.fchmod(stream.fileno(), mode)
+            os.fsync(stream.fileno())
+    except OSError:
+        path.unlink()
+        raise
 
 
-def install(root, checked):
-    guard(root)
-    private(root)
+def build_kit(build):
+    guard(build)
+    try:
+        manifest = load_json(read_regular(build / 'install-manifest.json', 'install-manifest.json'))
+        assets = manifest.get('assets') if isinstance(manifest, dict) else None
+        if not isinstance(assets, list) or manifest.get('schema') != 'openwiz.install.v1':
+            raise ValueError('invalid install manifest')
+    except (OSError, ValueError):
+        raise Refused('the build has an invalid install manifest',
+                      'select a complete verified build; nothing was installed')
+    files = {}
+    for rel in KIT_FILES:
+        path = build / 'runtime' / rel
+        guard(path.parent)
+        entries = [item for item in assets if isinstance(item, dict) and item.get('path') == 'runtime/' + rel]
+        try:
+            data = read_regular(path, rel)
+        except OSError:
+            raise Refused('the build kit file %s could not be read' % rel,
+                          'select a complete verified build; nothing was installed')
+        identity = {'path': 'runtime/' + rel, 'mode': '0600', 'bytes': len(data), 'sha256': digest(data)}
+        if entries != [identity]:
+            raise Refused('the build kit file %s does not match the install manifest' % rel,
+                          'select a complete verified build; nothing was installed')
+        files[rel] = data
+    return files
+
+
+def missing_kit(root, kit):
+    missing = []
+    for rel, data in kit.items():
+        path = root / rel
+        guard(path.parent)
+        for parent in path.parents:
+            if parent == root:
+                break
+            if parent.exists():
+                private(parent)
+        try:
+            meta = path.lstat()
+        except FileNotFoundError:
+            missing.append(rel)
+            continue
+        if (not stat.S_ISREG(meta.st_mode) or stat.S_IMODE(meta.st_mode) != 0o600
+                or meta.st_uid != os.getuid() or meta.st_nlink != 1 or path.read_bytes() != data):
+            raise Refused('the installed kit file %s does not match the selected build' % rel,
+                          'use a fresh private install root for this build; nothing was replaced')
+    return missing
+
+
+def write_kit(root, kit, paths, rollback):
+    for rel in paths:
+        for parent in reversed(Path(rel).parents[:-1]):
+            folder = root / parent
+            if not folder.exists():
+                folder.mkdir(mode=0o700)
+                rollback.callback(folder.rmdir)
+                folder.chmod(0o700)
+        path = root / rel
+        write_file(path, kit[rel], 0o600)
+        rollback.callback(path.unlink)
+
+
+def install(root, kit, checked):
     drivers = root / 'drivers'
     if drivers.is_symlink() or (drivers.exists() and not drivers.is_dir()):
         raise Refused('the drivers folder is a link',
@@ -595,42 +672,35 @@ def install(root, checked):
     if dest.is_symlink() or (dest.exists() and not dest.is_dir()):
         raise Refused('the driver folder is a link',
                       'remove the link and add the driver again; nothing was replaced')
-    stage_and_run(checked.pop('build'), checked)
-    if not drivers.exists():
-        drivers.mkdir(mode=0o700)
-    os.chmod(drivers, 0o700)
-    private(drivers)
     token = secrets.token_hex(8)
     stage = drivers / ('.staging-%s-%s' % (checked['name'], token))
     backup = drivers / ('.backup-%s-%s' % (checked['name'], token))
-    approval = (json.dumps({
-        'repository': checked['repository'], 'publisher': checked['publisher'],
-        'version': checked['version'], 'sha256': checked['sha256']}, indent=2) + '\n').encode()
+    approval = (json.dumps({key: checked[key] for key in APPROVAL_FIELDS}, indent=2) + '\n').encode()
     try:
-        stage.mkdir(mode=0o700)
-        os.chmod(stage, 0o700)
-        for name, mode in (('driver', 0o700), ('schema.json', 0o600), ('README.md', 0o600)):
-            write_file(stage / name, checked['files'][name], mode)
-        write_file(stage / 'approval.json', approval, 0o600)
-        if dest.exists():
-            os.rename(dest, backup)
+        missing = missing_kit(root, kit)
+        stage_and_run(kit, checked)
+        with ExitStack() as rollback:
+            if not drivers.exists():
+                drivers.mkdir(mode=0o700)
+                rollback.callback(drivers.rmdir)
+                drivers.chmod(0o700)
+            stage.mkdir(mode=0o700)
+            rollback.callback(shutil.rmtree, stage, ignore_errors=True)
+            stage.chmod(0o700)
+            for name, mode in REQUIRED.items():
+                write_file(stage / name, checked['files'][name], int(mode, 8))
+            write_file(stage / 'approval.json', approval, 0o600)
+            write_file(stage / TRUST_FILE, (checked['kind'] + '\n').encode(), 0o600)
+            write_kit(root, kit, missing, rollback)
+            if dest.exists():
+                os.rename(dest, backup)
+                rollback.callback(os.rename, backup, dest)
             os.rename(stage, dest)
+            rollback.pop_all()
             shutil.rmtree(backup, ignore_errors=True)
-        else:
-            os.rename(stage, dest)
-        os.chmod(dest, 0o700)
     except OSError:
-        if not dest.exists() and backup.exists():
-            os.rename(backup, dest)
-        if stage.exists():
-            shutil.rmtree(stage, ignore_errors=True)
         raise Refused('the driver could not be written',
                       'check that the drivers folder is yours; the previous driver was left in place')
-
-
-def kit_schema(build):
-    return read_regular(build / 'runtime' / 'kernel' / 'driver-kit' / 'schema.json',
-                        'kernel/driver-kit/schema.json')
 
 
 def core_driver(build, name):
@@ -640,7 +710,7 @@ def core_driver(build, name):
 
 def load_pin(build, name):
     path = build / 'runtime' / 'pins.json'
-    if not path.exists():
+    if not path.exists() and not path.is_symlink():
         return None
     try:
         value = load_json(read_regular(path, 'pins.json'))
@@ -790,22 +860,17 @@ def resolve(name, build, commit, client):
     if not COMMIT.fullmatch(commit):
         raise Refused('the WizMarket commit is not a full commit',
                       'pass the recorded 40-character main commit; nothing was installed')
+    guard(build / 'runtime')
     if core_driver(build, name):
-        raise Refused('this host is a core driver in the selected build',
-                      "use the build's copy; nothing was downloaded")
+        return None, None, 'core', None
     pin = load_pin(build, name)
     if pin is not None:
         return (*pin, 'pin', None)
-    found = market_listing(client, commit, name)
-    if found is None:
-        raise Refused('no WizMarket listing matches this host',
-                      'check the name, or the recorded WizMarket commit; nothing was installed')
-    return found
+    return market_listing(client, commit, name)
 
 
-def place(root, build, checked):
-    checked['build'] = build
-    install(root, checked)
+def place(root, kit, checked):
+    install(root, kit, checked)
     return {
         'name': checked['name'], 'version': checked['version'],
         'publisher': checked['publisher'], 'repository': checked['repository'],
@@ -813,21 +878,28 @@ def place(root, build, checked):
 
 
 def add(name, root, build, commit, answer, client):
-    package, publisher, kind, date = resolve(name, build, commit, client)
-    checked = prepare(package, publisher, kind, client, kit_schema(build), date)
+    found = resolve(name, build, commit, client)
+    if found is None:
+        raise Refused('no WizMarket listing matches this host',
+                      'check the name, or the recorded WizMarket commit; nothing was installed')
+    package, publisher, kind, date = found
+    if kind == 'core':
+        raise Refused('this host is a core driver in the selected build',
+                      "use the build's copy; nothing was downloaded")
+    kit = build_kit(build)
+    checked = prepare(package, publisher, kind, client, kit['kernel/driver-kit/schema.json'], date)
     gate(checked, answer, False)
-    return place(root, build, checked)
+    return place(root, kit, checked)
 
 
 def approvals(root):
-    guard(root)
-    private(root)
     drivers = root / 'drivers'
-    if not drivers.exists():
+    if not drivers.exists() and not drivers.is_symlink():
         return []
     if drivers.is_symlink() or not drivers.is_dir():
         raise Refused('the drivers folder is a link',
                       'use a real drivers directory you own; nothing was changed')
+    private(drivers)
     rows = []
     for child in sorted(drivers.iterdir(), key=lambda item: item.name):
         if child.name.startswith('.') or child.is_symlink() or not child.is_dir():
@@ -840,46 +912,65 @@ def approvals(root):
         except (OSError, UnicodeError, json.JSONDecodeError, ValueError):
             raise Refused('the saved approval for %s is not valid' % child.name,
                           'add that driver again; nothing else was changed')
-        fields = ('repository', 'publisher', 'version', 'sha256')
-        if not isinstance(value, dict) or any(key not in value for key in fields):
+        if not isinstance(value, dict) or any(
+                not isinstance(value.get(key), str) for key in APPROVAL_FIELDS):
             raise Refused('the saved approval for %s is not valid' % child.name,
                           'add that driver again; nothing else was changed')
         rows.append((child.name, value))
     return rows
 
 
-def decide(old, repository, publisher, version, sha256, verified):
-    same = old['repository'] == repository and old['publisher'] == publisher
-    if same and old['version'] == version and old['sha256'] == sha256:
+def approval_source(root, name):
+    path = root / 'drivers' / name / TRUST_FILE
+    try:
+        meta = path.lstat()
+        if (stat.S_ISREG(meta.st_mode) and meta.st_uid == os.getuid()
+                and stat.S_IMODE(meta.st_mode) == 0o600 and meta.st_nlink == 1 and meta.st_size <= 9):
+            return path.read_text(encoding='utf-8').strip()
+    except (OSError, UnicodeError):
+        pass
+    return None
+
+
+def decide(old, old_kind, package, publisher, kind):
+    same = old['repository'] == package['repository'] and old['publisher'] == publisher
+    version = package['version']
+    if same and old_kind == kind and old['version'] == version and old['sha256'] == package['sha256']:
         return 'unchanged'
-    if same and verified and version_key(version) > version_key(old['version']):
+    if kind == 'pin':
+        return 'pin'
+    if (same and old_kind in ('verified', 'listed') and kind == 'verified'
+            and VERSION.fullmatch(old['version']) and version_key(version) > version_key(old['version'])):
         return 'move'
     return 'ask'
 
 
-def update(root, build, commit, answer, client):
-    schema = kit_schema(build)
+def update(root, build, commit, client):
+    kit = None
     updated, unchanged, planned = [], [], []
     for name, old in approvals(root):
-        found = market_listing(client, commit, name)
-        if found is None:
-            unchanged.append({'name': name, 'version': old['version']})
+        previous = {'name': name, 'version': old['version']}
+        found = resolve(name, build, commit, client)
+        if found is None or found[2] == 'core':
+            unchanged.append(previous)
             continue
         package, publisher, kind, date = found
         if not package_shape(package):
             raise Refused('the package block is malformed',
                           'do not install this listing; its package block does not match the contract')
-        choice = decide(old, package['repository'], publisher, package['version'],
-                        package['sha256'], kind == 'verified')
+        choice = decide(old, approval_source(root, name), package, publisher, kind)
         if choice == 'unchanged':
-            unchanged.append({'name': name, 'version': old['version']})
+            unchanged.append(previous)
             continue
-        checked = prepare(package, publisher, kind, client, schema, date)
-        if choice == 'ask':
-            gate(checked, answer, True)
+        if kit is None:
+            kit = build_kit(build)
+        checked = prepare(package, publisher, kind, client, kit['kernel/driver-kit/schema.json'], date)
+        if choice == 'ask' and not gate(checked, None, True):
+            unchanged.append(previous)
+            continue
         planned.append((checked, old['version'], choice))
     for checked, previous, choice in planned:
-        row = place(root, build, checked)
+        row = place(root, kit, checked)
         if choice == 'move':
             notice = 'Notice: %s moved from %s to %s, same publisher %s.' % (
                 row['name'], previous, row['version'], row['publisher'])
@@ -913,9 +1004,9 @@ def parse(argv):
     for name in ('add', 'update'):
         commands[name].add_argument('--build', required=True)
         commands[name].add_argument('--market-commit', required=True)
-        commands[name].add_argument('--answer', choices=('yes', 'install-unverified'))
         commands[name].add_argument('--loopback')
     commands['add'].add_argument('name')
+    commands['add'].add_argument('--answer', choices=('yes', 'install-unverified'))
     args = parser.parse_args(argv)
     if args.command not in commands:
         raise Refused('the command was not understood',
@@ -927,15 +1018,20 @@ def main(argv):
     try:
         args = parse(argv)
         root = Path(args.root)
-        if args.command == 'list':
-            result = list_drivers(root)
-        else:
-            client = Client(args.loopback)
-            build = Path(args.build)
-            if args.command == 'add':
-                result = add(args.name, root, build, args.market_commit, args.answer, client)
+        with locked_root(root, exclusive=args.command != 'list'):
+            if args.command == 'list':
+                result = list_drivers(root)
             else:
-                result = update(root, build, args.market_commit, args.answer, client)
+                client = Client(args.loopback)
+                try:
+                    build = Path(args.build).resolve()
+                except (OSError, RuntimeError):
+                    raise Refused('the selected build path could not be read',
+                                  'pass the directory of a verified build')
+                if args.command == 'add':
+                    result = add(args.name, root, build, args.market_commit, args.answer, client)
+                else:
+                    result = update(root, build, args.market_commit, client)
     except Refused as refused:
         sys.stdout.write(json.dumps({'error': refused.error, 'next': refused.next}) + '\n')
         return 1
