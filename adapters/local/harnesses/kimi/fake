@@ -10,6 +10,7 @@ HELP = '''The fake kimi, after the `kimi` command reference (Kimi Code CLI 2.7.2
 in any order, each option once, with --prompt, --model, --session and --resume as the long forms.
 -p refuses --yolo, --auto and --plan, --output-format needs -p, and the model can't be blank, as kimi's option checks do.
 A stream-json start prints the session.resume_hint meta line that carries session_id.
+Models come from a synthetic catalog. FAKE_CLI_LIMIT emits kimi's provider-overload line on stderr and exits 1.
 Signed out, it prints kimi's missing-login error for the managed:kimi-code provider and exits 1.
 With KIMI_CODE_NO_AUTO_UPDATE=1 a start turn leaves one background Bash task as kimi spawns it on Unix:
 its own session and process group, stdin, stdout and stderr piped back to the turn, on every platform.
@@ -17,6 +18,8 @@ Without it the turn hands work to a process outside it, standing in for kimi's u
 
 LONG = {'-p': 'prompt', '--prompt': 'prompt', '-m': 'model', '--model': 'model', '-S': 'session',
         '--session': 'session', '-r': 'session', '--resume': 'session', '--output-format': 'format'}
+MODELS = {'kimi-code/kimi-for-coding', 'm', 'synthetic-1'}
+OVERLOAD = 'error: failed to run prompt: provider.overloaded: llm request failed'
 
 if sys.argv[1:] == ['--help']:
     print(HELP)
@@ -33,6 +36,12 @@ if not prompt.strip() or fmt not in ('text', 'stream-json') or (session is not N
     fake_cli.refuse()
 if session is None and (fmt != 'stream-json' or 'model' not in got):
     fake_cli.refuse()
+if 'model' in got and got['model'] not in MODELS:
+    print(f'Model "{got["model"]}" is not configured in config.toml.', file=sys.stderr)
+    sys.exit(1)
+if os.environ.get('FAKE_CLI_LIMIT'):
+    print(OVERLOAD, file=sys.stderr, flush=True)
+    sys.exit(1)
 
 TASKS, HUB = [], fake_cli.background_service
 
