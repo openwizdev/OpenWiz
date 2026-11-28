@@ -40,8 +40,7 @@ class Pane(unittest.TestCase):
     def tools(self):
         folder = os.path.join(self.folder, 'tools')
         os.mkdir(folder)
-        for name, found in (('python3', sys.executable), ('sleep', shutil.which('sleep'))):
-            os.symlink(found, os.path.join(folder, name))
+        os.symlink(sys.executable, os.path.join(folder, 'python3'))
         self.git_seen = os.path.join(self.folder, 'git-seen')
         with open(os.path.join(folder, 'git'), 'w') as f:
             f.write('#!%s -I\nimport json, os, sys\nwith open(%r, "a") as f:\n    f.write(json.dumps(sorted(os.environ)) + "\\n")\n'
@@ -56,7 +55,7 @@ class Pane(unittest.TestCase):
             for pid in agents:
                 try:
                     with open('/proc/%d/cmdline' % pid, 'rb') as f:
-                        if f.read().split(b'\0')[:2] == [b'sleep', b'300']:
+                        if f.read().split(b'\0')[1:4] == [b'-I', b'-c', b'import time; time.sleep(300)']:
                             os.kill(pid, signal.SIGKILL)
                 except OSError:
                     pass
