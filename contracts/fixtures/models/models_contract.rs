@@ -418,7 +418,7 @@ fn read(text: &str) -> Result<Value, String> {
         let kept = older_rows(&older_view(&older));
         for (i, (table, now)) in older_rows(&resolved).into_iter().enumerate() {
             let was = &kept[i].1;
-            if &now != was {
+            if spawned(&now) != spawned(was) {
                 let (new, old) = values(&now, was);
                 warnings.push(json!({
                     "kind": "older_table_kept", "table": table, "models_table": new, "older": old,
@@ -486,6 +486,7 @@ fn every_show_fixture_is_its_fleet_files_reading() {
         ("one-table/fleet.md", "one-table/show.json"),
         ("five-tables/fleet.md", "five-tables/show.json"),
         ("both/fleet.md", "both/show.json"),
+        ("display-name/fleet.md", "display-name/show.json"),
         ("overridden/fleet.md", "overridden/show.json"),
         ("same-family/fleet.md", "same-family/show.json"),
         ("set-namespaced/after.md", "set-namespaced/show.json"),
