@@ -471,8 +471,9 @@ def remove_unlocked(root, state, state_root, yes, home, codex_home, made=None):
                 + hand), 0
 
 
-def main(argv=None, fetch=pull.fetch_bytes, host=None, stdout=None):
+def main(argv=None, fetch=pull.fetch_bytes, host=None, stdout=None, stderr=None):
     out = stdout or sys.stdout
+    err = stderr or sys.stderr
     parser = Parser(prog='install', description=DESCRIPTION, formatter_class=argparse.RawDescriptionHelpFormatter)
     commands = parser.add_subparsers(dest='command', required=True, parser_class=Parser)
     commands.add_parser('preflight')
@@ -534,8 +535,11 @@ def main(argv=None, fetch=pull.fetch_bytes, host=None, stdout=None):
                 if installed(getattr(args, 'root', None) or '.') else '; no build was selected or changed')
         print(json.dumps({'schema': 'openwiz.install-error.v1', 'outcome': 'refused', 'command': args.command,
                           'reason': reason + kept}), file=out)
+        print(installer.INSTALL_HELP, file=err)
         return 5
     print(json.dumps(value, separators=(',', ':')), file=out)
+    if code == 5:
+        print(installer.INSTALL_HELP, file=err)
     return code
 
 

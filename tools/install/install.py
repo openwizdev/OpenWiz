@@ -19,6 +19,8 @@ Checksums establish integrity, not a signed publisher identity. No program from
 an archive is run while validating or installing it.
 """
 
+INSTALL_HELP = 'Stuck? Free 15-min setup help: https://openwiz.dev/help/'
+
 TARGETS = ('aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-unknown-linux-gnu', 'aarch64-unknown-linux-gnu')
 PROGRAMS = {'openwiz'}
 REQUIRED = PROGRAMS | {'runtime/openwiz-build.txt', 'runtime/install.py', 'runtime/pull.py',
@@ -385,6 +387,7 @@ def main():
         return 0
     except (Refused, OSError, ValueError, KeyError, TypeError, tarfile.TarError):
         print('openwiz-install: refused; last-good selection and owner settings retained', file=sys.stderr)
+        print(INSTALL_HELP, file=sys.stderr)
         return 1
 
 

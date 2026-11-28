@@ -12,7 +12,7 @@ import urllib.request
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from install import Refused, TARGETS, install, manifest_at, private, require, sha, unique
+from install import INSTALL_HELP, Refused, TARGETS, install, manifest_at, private, require, sha, unique
 
 DESCRIPTION = """Fixed published-release transport. No source checkout, build, push or shell."""
 
@@ -145,6 +145,7 @@ def main():
         return 0
     except (Refused, OSError, ValueError, TypeError, KeyError):
         print('package pull: refused; last-good build retained', file=sys.stderr)
+        print(INSTALL_HELP, file=sys.stderr)
         return 1
 
 
