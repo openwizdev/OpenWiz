@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:openwiz:schema:usage:v1",
+  "title": "openwiz.usage.v1",
+  "oneOf": [
+    {"$ref": "#/$defs/response"},
+    {"$ref": "#/$defs/lane"}
+  ],
+  "$defs": {
+    "response": {
+      "type": "object",
+      "required": ["schema", "lanes"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {"const": "openwiz.usage.v1"},
+        "lanes": {"type": "array", "items": {"$ref": "#/$defs/lane"}}
+      }
+    },
+    "public_text": {
+      "type": "string",
+      "minLength": 1,
+      "not": {
+        "pattern": "[@\\u0000-\\u001f\\u007f]|(?:^|[^A-Za-z0-9])(?:acct|org|usr|mch|prj|proj|thr|auto)_[A-Za-z0-9_-]+|sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{16,}|github_pat_|glpat-|xox[abprs]-|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{20,}|eyJ[A-Za-z0-9_-]{8,}\\.|-----BEGIN|[A-Za-z0-9+=_-]{40,}"
+      }
+    },
+    "lane_id": {
+      "allOf": [{"$ref": "#/$defs/public_text"}],
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*:[A-Za-z0-9._-]+:[A-Za-z0-9_-]{1,32}$",
+      "maxLength": 120
+    },
+    "utc": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 20,
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]Z$"
+    },
+    "percent": {"type": "number", "minimum": 0, "maximum": 100},
+    "amount_unit": {"enum": ["seconds", "credits", "dollars"]},
+    "window": {
+      "type": "object",
+      "required": ["label", "used_percent", "resets_at"],
+      "additionalProperties": false,
+      "properties": {
+        "label": {"$ref": "#/$defs/public_text"},
+        "used_percent": {"$ref": "#/$defs/percent"},
+        "resets_at": {"oneOf": [{"$ref": "#/$defs/utc"}, {"type": "null"}]}
+      }
+    },
+    "left": {
+      "type": "object",
+      "required": ["amount", "unit"],
+      "additionalProperties": false,
+      "properties": {
+        "amount": {"type": "number", "minimum": 0},
+        "unit": {"$ref": "#/$defs/amount_unit"}
+      }
+    },
+    "target": {
+      "type": "object",
+      "required": ["amount", "unit", "by"],
+      "additionalProperties": false,
+      "properties": {
+        "amount": {"type": "number", "exclusiveMinimum": 0},
+        "unit": {"enum": ["percent", "seconds", "credits", "dollars"]},
+        "by": {"$ref": "#/$defs/utc"}
+      },
+      "if": {"properties": {"unit": {"const": "percent"}}},
+      "then": {"properties": {"amount": {"$ref": "#/$defs/percent"}}}
+    },
+    "unavailable": {
+      "required": ["reason"],
+      "allOf": [
+        {
+          "if": {"properties": {"reason": {"const": "no-usage-command"}}},
+          "then": {"properties": {"message": {"const": "the driver has no usage command"}}}
+        },
+        {
+          "if": {"properties": {"reason": {"const": "no-meter"}}},
+          "then": {"properties": {"message": {"const": "this harness has no meter command"}}}
+        },
+        {
+          "if": {"properties": {"reason": {"const": "probe-failed"}}},
+          "then": {"properties": {"message": {"const": "probe failed"}}}
+        },
+        {
+          "if": {"properties": {"reason": {"const": "driver-off"}}},
+          "then": {"properties": {"message": {"const": "driver off"}}}
+        }
+      ]
+    },
+    "lane": {
+      "type": "object",
+      "required": ["lane", "label", "driver", "source", "status", "windows", "checked_at"],
+      "additionalProperties": false,
+      "properties": {
+        "lane": {"$ref": "#/$defs/lane_id"},
+        "label": {"$ref": "#/$defs/public_text"},
+        "driver": {
+          "allOf": [{"$ref": "#/$defs/public_text"}],
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "maxLength": 40
+        },
+        "source": {"$ref": "#/$defs/public_text"},
+        "status": {"enum": ["signed-in", "signed-out", "unavailable"]},
+        "reason": {"enum": ["no-usage-command", "no-meter", "probe-failed", "driver-off"]},
+        "message": {"type": "string"},
+        "windows": {"type": "array", "items": {"$ref": "#/$defs/window"}},
+        "checked_at": {"$ref": "#/$defs/utc"},
+        "left": {"$ref": "#/$defs/left"},
+        "target": {"$ref": "#/$defs/target"},
+        "pace": {"enum": ["on pace", "ahead", "behind"]},
+        "margin": {"type": "number", "minimum": 0}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "signed-in"}}},
+          "then": {"properties": {"windows": {"minItems": 1}}},
+          "else": {
+            "properties": {"windows": {"maxItems": 0}},
+            "allOf": [
+              {"not": {"required": ["left"]}},
+              {"not": {"required": ["pace"]}}
+            ]
+          }
+        },
+        {
+          "if": {"properties": {"status": {"const": "unavailable"}}},
+          "then": {"$ref": "#/$defs/unavailable"},
+          "else": {"allOf": [
+            {"not": {"required": ["reason"]}},
+            {"not": {"required": ["message"]}}
+          ]}
+        },
+        {
+          "if": {"required": ["left"]},
+          "then": {"properties": {"lane": {"pattern": "^[^:]+:plan:"}}}
+        },
+        {
+          "if": {"required": ["target"]},
+          "then": {"required": ["margin"]}
+        },
+        {
+          "if": {"required": ["margin"]},
+          "then": {"required": ["target"]}
+        },
+        {
+          "if": {"required": ["pace"]},
+          "then": {"required": ["target"]}
+        }
+      ]
+    }
+  }
+}

@@ -41,6 +41,26 @@ A start can carry the effort the user set for the role, as it carries the model.
 - **E3. It says so.** Right under its login line ([section 2](#the-login-line)), every driver's README has one `Effort:` line: `Effort: passed as <flag or setting>` or `Effort: the host can't set it (<why>)`. When it differs by harness, a short table of harness, flag or `can't (<why>)` follows. A driver that can't set effort for any harness leaves `effort` out of `can`. It is never sent the field, and refuses it under D1 as today.
 - **E4. Callers never drop it.** When the user set an effort for a role, a caller sends it only to a driver whose `can` lists `effort`. Through any other driver, it starts nothing. A refusal with the refusal text above also starts nothing. A caller never retries without the effort.
 
+### Optional usage
+
+`driver usage` reads one JSON object on stdin with one field, `accounts`, an
+array of the harness accounts assigned to this driver. Each entry has `label`
+and `harness`, and optionally `profile` with the harness config location in the
+`variable` and `folder` form given by
+[settings v1 `accounts`](../contracts/settings.v1.md#fields). Use an empty array
+when there are no harness accounts to read. A driver can report its own plan
+lanes alongside harness lanes. Stdin carries only the listed fields, never a
+credential.
+
+The driver answers with the [usage v1](../contracts/usage.v1.md) response object.
+It only reads meters through the signed-in tools under N1 to N3. The probe starts
+no agent, model turn, run, or sandbox, and writes nothing.
+
+A driver without `usage` answers with its usual D3 unknown-command error. Readers
+report `unavailable: the driver has no usage command`. The optional command adds
+no `can` entry. Its answer is defined by the usage schema, with the input defined
+above. The kit and driver schema files stay unchanged.
+
 ## 2. Logins
 
 OpenWiz never touches a login.

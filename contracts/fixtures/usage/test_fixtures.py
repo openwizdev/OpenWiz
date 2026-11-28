@@ -12,7 +12,7 @@ SETTINGS_PROOF = HERE.parent / "settings" / "test_fixtures.py"
 INVALID = {
     "account-id-field": "$.accountId: unexpected",
     "email-field": "$.email: unexpected",
-    "harness-left": "$: matches a refused form",
+    "harness-left": "$.lane: does not match",
     "nested-account-key-field": "$.windows[0].account_key: unexpected",
     "nested-token-field": "$.target.accessToken: unexpected",
     "organisation-id-field": "$.organisation_id: unexpected",
@@ -43,7 +43,7 @@ class UsageFixtures(TestCase):
         schema = self.schema()
         proof = runpy.run_path(str(SETTINGS_PROOF))
         paths = sorted((HERE / "valid").glob("*.json"))
-        self.assertEqual(len(paths), 15)
+        self.assertEqual(len(paths), 16)
         for path in paths:
             with self.subTest(path=path.name):
                 self.assertEqual(proof["errors"](proof["load"](path), schema, schema), [])
