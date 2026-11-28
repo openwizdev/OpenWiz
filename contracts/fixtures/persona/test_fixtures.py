@@ -31,6 +31,10 @@ class PersonaContract(unittest.TestCase):
         for kind, document in docs.items():
             with self.subTest(valid=kind):
                 self.assertEqual(errors(document, schema, schema), [])
+        for family in ("film-ai", "character", "pro", "fun"):
+            with self.subTest(family=family):
+                self.assertEqual(errors({**docs["persona"], "family": family}, schema, schema), [])
+        self.assertEqual(errors({**docs["theme"], "sounds": {}}, schema, schema), [])
         for case in load(HERE / "broken.json"):
             with self.subTest(broken=case["rule"]):
                 baseline = docs[case["kind"]]
