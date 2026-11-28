@@ -1,0 +1,6 @@
+fail vibe: test_row.py: it failed (exit 1)
+exit 1
+
+real	0m49.769s
+user	0m3.211s
+sys	0m0.808s
