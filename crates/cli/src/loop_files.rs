@@ -31,6 +31,38 @@ pub fn escape_untrusted(text: &str) -> String {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Runner {
+    Cloudroom,
+    T3,
+    Cron,
+    Systemd,
+    GithubActions,
+}
+
+impl Runner {
+    pub fn from_name(name: &str) -> Option<Self> {
+        Some(match name {
+            "cloudroom" => Self::Cloudroom,
+            "t3" => Self::T3,
+            "cron" => Self::Cron,
+            "systemd" => Self::Systemd,
+            "github-actions" => Self::GithubActions,
+            _ => return None,
+        })
+    }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Cloudroom => "cloudroom",
+            Self::T3 => "t3",
+            Self::Cron => "cron",
+            Self::Systemd => "systemd",
+            Self::GithubActions => "github-actions",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Command {
     Validate,
     Export,
@@ -67,6 +99,12 @@ impl Command {
         }
     }
 
+    pub fn runners(self) -> &'static [Runner] {
+        match self {
+            Self::Validate | Self::Export | Self::Plan | Self::Apply => &[],
+        }
+    }
+
     fn options(self) -> &'static [&'static str] {
         match self {
             Self::Validate => &["--catalog"],
@@ -92,6 +130,7 @@ pub struct Args {
 #[derive(Debug, PartialEq, Eq)]
 pub enum Parsed {
     Run(Args),
+    Runner(Runner, Args),
     Help { json: bool },
 }
 
@@ -106,6 +145,38 @@ fn json_selected(args: &[OsString]) -> bool {
 }
 
 pub fn parse(args: &[OsString]) -> Result<Parsed, String> {
+    parse_with(args, Command::runners)
+}
+
+fn select_runner(
+    command: Command,
+    value: Option<&str>,
+    selected: &mut Option<Runner>,
+    available: fn(Command) -> &'static [Runner],
+) -> Result<(), String> {
+    let word = command.word();
+    if command == Command::Validate {
+        return Err(format!("loop {word} has no option --runner"));
+    }
+    let name = value
+        .filter(|v| !v.is_empty() && !v.starts_with('-'))
+        .ok_or("--runner needs a value")?;
+    let runner = Runner::from_name(name).ok_or_else(|| {
+        format!("--runner needs one of cloudroom, t3, cron, systemd or github-actions, not {name}")
+    })?;
+    if selected.replace(runner).is_some() {
+        return Err("--runner appears more than once".into());
+    }
+    if !available(command).contains(&runner) {
+        return Err(format!("loop {word} cannot use --runner {name}"));
+    }
+    Ok(())
+}
+
+pub fn parse_with(
+    args: &[OsString],
+    available: fn(Command) -> &'static [Runner],
+) -> Result<Parsed, String> {
     let strings: Vec<&str> = args
         .iter()
         .map(|a| a.to_str())
@@ -132,6 +203,7 @@ pub fn parse(args: &[OsString]) -> Result<Parsed, String> {
         json,
     };
     let mut seen_json = false;
+    let mut runner = None;
     let mut options = rest[..options_end].iter();
     while let Some(&token) = options.next() {
         if !token.starts_with('-') {
@@ -142,6 +214,10 @@ pub fn parse(args: &[OsString]) -> Result<Parsed, String> {
             if std::mem::replace(&mut seen_json, true) {
                 return Err("--json appears more than once".into());
             }
+            continue;
+        }
+        if token == "--runner" {
+            select_runner(command, options.next().copied(), &mut runner, available)?;
             continue;
         }
         if !command.options().contains(&token) {
@@ -188,10 +264,14 @@ pub fn parse(args: &[OsString]) -> Result<Parsed, String> {
     if !operands_ok {
         return Err(format!("wrong operands for loop {word}"));
     }
-    if command != Command::Validate && parsed.project.is_none() {
+    let cloudroom = matches!(runner, None | Some(Runner::Cloudroom));
+    if command != Command::Validate && cloudroom && parsed.project.is_none() {
         return Err(format!("loop {word} needs --project <project>"));
     }
-    Ok(Parsed::Run(parsed))
+    Ok(match runner {
+        None => Parsed::Run(parsed),
+        Some(runner) => Parsed::Runner(runner, parsed),
+    })
 }
 
 pub fn run(args: &[OsString], stdout: &mut dyn Write, stderr: &mut dyn Write) -> i32 {
@@ -214,6 +294,13 @@ pub fn run(args: &[OsString], stdout: &mut dyn Write, stderr: &mut dyn Write) ->
                     .is_err(),
             )
         }
+        Ok(Parsed::Runner(runner, _)) => usage_error(
+            args,
+            name,
+            &format!("no route for --runner {}", runner.name()),
+            stdout,
+            stderr,
+        ),
         Ok(Parsed::Run(args)) if args.command == Command::Validate => {
             loop_validate::run(&args, stdout, stderr)
         }
@@ -224,28 +311,36 @@ pub fn run(args: &[OsString], stdout: &mut dyn Write, stderr: &mut dyn Write) ->
             loop_plan::run(&args, stdout, stderr)
         }
         Ok(Parsed::Run(args)) => loop_apply::run(&args, stdout, stderr),
-        Err(why) => {
-            let help = match name {
-                "unknown" => "openwiz --help".to_owned(),
-                _ => format!("openwiz {} --help", name.replace('.', " ")),
-            };
-            let text = writeln!(
-                stderr,
-                "openwiz: usage: {}; nothing was read (see {help})",
-                escape_untrusted(&why)
-            );
-            let written = if json_selected(args) {
-                let doc = serde_json::json!({
-                    "schema": "openwiz.cli-error.v1", "command": name, "exit_code": 2,
-                    "error": {"kind": "usage", "message": format!("Invalid loop arguments: {why}.")}
-                });
-                writeln!(stdout, "{doc}")
-            } else {
-                text
-            };
-            if written.is_err() { 1 } else { 2 }
-        }
+        Err(why) => usage_error(args, name, &why, stdout, stderr),
     }
+}
+
+fn usage_error(
+    args: &[OsString],
+    name: &str,
+    why: &str,
+    stdout: &mut dyn Write,
+    stderr: &mut dyn Write,
+) -> i32 {
+    let help = match name {
+        "unknown" => "openwiz --help".to_owned(),
+        _ => format!("openwiz {} --help", name.replace('.', " ")),
+    };
+    let text = writeln!(
+        stderr,
+        "openwiz: usage: {}; nothing was read (see {help})",
+        escape_untrusted(why)
+    );
+    let written = if json_selected(args) {
+        let doc = serde_json::json!({
+            "schema": "openwiz.cli-error.v1", "command": name, "exit_code": 2,
+            "error": {"kind": "usage", "message": format!("Invalid loop arguments: {why}.")}
+        });
+        writeln!(stdout, "{doc}")
+    } else {
+        text
+    };
+    if written.is_err() { 1 } else { 2 }
 }
 
 #[cfg(test)]
@@ -455,6 +550,157 @@ mod tests {
             OsString::from_vec(vec![0xff])
         }];
         assert!(parse(&bad).is_err(), "not UTF-8");
+    }
+
+    fn os(args: &[&str]) -> Vec<OsString> {
+        args.iter().map(OsString::from).collect()
+    }
+
+    const NAMES: [(&str, Runner); 5] = [
+        ("cloudroom", Runner::Cloudroom),
+        ("t3", Runner::T3),
+        ("cron", Runner::Cron),
+        ("systemd", Runner::Systemd),
+        ("github-actions", Runner::GithubActions),
+    ];
+
+    #[test]
+    fn the_runner_names_map_to_distinct_values() {
+        for (i, (name, runner)) in NAMES.iter().enumerate() {
+            assert_eq!(Runner::from_name(name), Some(*runner), "{name}");
+            assert_eq!(runner.name(), *name);
+            for (_, other) in &NAMES[i + 1..] {
+                assert_ne!(runner, other);
+            }
+        }
+        for name in [
+            "",
+            "T3",
+            "Cloudroom",
+            "github_actions",
+            "githubactions",
+            "t3 ",
+            "crontab",
+        ] {
+            assert_eq!(Runner::from_name(name), None, "{name:?}");
+        }
+    }
+
+    #[test]
+    fn no_command_enables_a_runner_yet() {
+        for word in ["validate", "export", "plan", "apply"] {
+            let command = Command::from_word(word).unwrap();
+            assert!(command.runners().is_empty(), "{word}");
+            for (name, _) in NAMES {
+                let (code, out, err) =
+                    run_args(&[word, "a", "--project", "prj_syn_0001", "--runner", name]);
+                assert_eq!((code, out.as_str()), (2, ""), "{word} {name}");
+                assert!(err.starts_with("openwiz: usage: "), "{err}");
+                assert!(err.contains("nothing was read"), "{err}");
+            }
+        }
+    }
+
+    fn everywhere(command: Command) -> &'static [Runner] {
+        match command {
+            Command::Validate | Command::Export => &[Runner::T3, Runner::Cron],
+            Command::Plan => &[Runner::T3, Runner::Cloudroom, Runner::GithubActions],
+            Command::Apply => &[Runner::Systemd],
+        }
+    }
+
+    #[test]
+    fn a_selected_runner_needs_the_command_to_enable_it() {
+        let selected = |args: &[&str]| match parse_with(&os(args), everywhere) {
+            Ok(Parsed::Runner(runner, args)) => Ok((runner, args)),
+            Ok(other) => panic!("{other:?}"),
+            Err(why) => Err(why),
+        };
+        let (runner, args) = selected(&["plan", "a.md", "--runner", "t3", "--json"]).unwrap();
+        assert_eq!(runner, Runner::T3);
+        assert_eq!(
+            (args.operands, args.project, args.json),
+            (vec!["a.md".into()], None, true)
+        );
+        let (runner, _) = selected(&["plan", "a.md", "--runner", "github-actions"]).unwrap();
+        assert_eq!(runner, Runner::GithubActions);
+        let (runner, _) = selected(&["apply", "a", "--runner", "systemd"]).unwrap();
+        assert_eq!(runner, Runner::Systemd);
+        let (runner, args) =
+            selected(&["export", "--project", "prj_syn_0001", "--runner", "cron"]).unwrap();
+        assert_eq!(
+            (runner, args.project.as_deref()),
+            (Runner::Cron, Some("prj_syn_0001"))
+        );
+        assert!(
+            selected(&["plan", "a.md", "--runner", "cloudroom"])
+                .unwrap_err()
+                .contains("--project")
+        );
+        for args in [
+            &["plan", "a.md", "--runner", "cron"][..],
+            &["export", "--runner", "systemd"],
+            &["apply", "a", "--runner", "t3"],
+            &[
+                "apply",
+                "a",
+                "--project",
+                "prj_syn_0001",
+                "--runner",
+                "cloudroom",
+            ],
+            &["validate", "a.md", "--runner", "t3"],
+            &["validate", "a.md", "--runner", "cron"],
+            &["plan", "a.md", "--runner"],
+            &["plan", "a.md", "--runner", ""],
+            &["plan", "a.md", "--runner", "--json"],
+            &["plan", "a.md", "--runner", "T3"],
+            &["plan", "a.md", "--runner", "kubernetes"],
+            &["plan", "a.md", "--runner=t3"],
+            &["plan", "a.md", "--runner", "t3", "--runner", "t3"],
+            &[
+                "plan",
+                "a.md",
+                "--runner",
+                "t3",
+                "--runner",
+                "github-actions",
+            ],
+        ] {
+            assert!(selected(args).is_err(), "{args:?}");
+        }
+    }
+
+    #[test]
+    fn without_a_selector_the_cloudroom_rules_are_unchanged() {
+        for args in [
+            &["export", "--project", "prj_syn_0001"][..],
+            &["plan", "a.md", "--project", "prj_syn_0001"],
+            &["apply", "a", "--project", "prj_syn_0001"],
+            &["validate", "a.md"],
+            &[
+                "plan",
+                "a.md",
+                "--project",
+                "prj_syn_0001",
+                "--",
+                "--runner",
+                "t3",
+            ],
+        ] {
+            let fallback = parse(&os(args));
+            assert!(matches!(fallback, Ok(Parsed::Run(_))), "{args:?}");
+            assert_eq!(parse_with(&os(args), everywhere), fallback, "{args:?}");
+        }
+        for args in [&["export"][..], &["plan", "a.md"], &["apply", "a"]] {
+            for available in [Command::runners, everywhere] {
+                let why = parse_with(&os(args), available).unwrap_err();
+                assert!(
+                    why.ends_with("needs --project <project>"),
+                    "{args:?}: {why}"
+                );
+            }
+        }
     }
 
     #[test]
