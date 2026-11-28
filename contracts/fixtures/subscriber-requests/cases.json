@@ -1,0 +1,392 @@
+[
+  {
+    "rule": "tier-1",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "policy", "monthly_credits": {"1": 1, "10": 10, "100": null}, "bank_while": "active", "business_daily_default": 3, "business_daily_limit": 5, "costs": {"S": 1, "M": 2, "L": 5}, "largest_unquoted": "L", "queue_order": ["100", "10", "1"], "within_tier": "oldest-first", "planned_work_first": true},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "policy", "monthly_credits": {"1": 0, "10": 10, "100": null}, "bank_while": "active", "business_daily_default": 3, "business_daily_limit": 5, "costs": {"S": 1, "M": 2, "L": 5}, "largest_unquoted": "L", "queue_order": ["100", "10", "1"], "within_tier": "oldest-first", "planned_work_first": true},
+    "rejects": "const"
+  },
+  {
+    "rule": "tier-10",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "policy", "monthly_credits": {"1": 1, "10": 10, "100": null}, "bank_while": "active", "business_daily_default": 3, "business_daily_limit": 5, "costs": {"S": 1, "M": 2, "L": 5}, "largest_unquoted": "L", "queue_order": ["100", "10", "1"], "within_tier": "oldest-first", "planned_work_first": true},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "policy", "monthly_credits": {"1": 1, "10": 11, "100": null}, "bank_while": "active", "business_daily_default": 3, "business_daily_limit": 5, "costs": {"S": 1, "M": 2, "L": 5}, "largest_unquoted": "L", "queue_order": ["100", "10", "1"], "within_tier": "oldest-first", "planned_work_first": true},
+    "rejects": "const"
+  },
+  {
+    "rule": "tier-100",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "policy", "monthly_credits": {"1": 1, "10": 10, "100": null}, "bank_while": "active", "business_daily_default": 3, "business_daily_limit": 5, "costs": {"S": 1, "M": 2, "L": 5}, "largest_unquoted": "L", "queue_order": ["100", "10", "1"], "within_tier": "oldest-first", "planned_work_first": true},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "policy", "monthly_credits": {"1": 1, "10": 10, "100": 100}, "bank_while": "active", "business_daily_default": 3, "business_daily_limit": 5, "costs": {"S": 1, "M": 2, "L": 5}, "largest_unquoted": "L", "queue_order": ["100", "10", "1"], "within_tier": "oldest-first", "planned_work_first": true},
+    "rejects": "const"
+  },
+  {
+    "rule": "bank-while-active",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "policy", "monthly_credits": {"1": 1, "10": 10, "100": null}, "bank_while": "active", "business_daily_default": 3, "business_daily_limit": 5, "costs": {"S": 1, "M": 2, "L": 5}, "largest_unquoted": "L", "queue_order": ["100", "10", "1"], "within_tier": "oldest-first", "planned_work_first": true},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "policy", "monthly_credits": {"1": 1, "10": 10, "100": null}, "bank_while": "always", "business_daily_default": 3, "business_daily_limit": 5, "costs": {"S": 1, "M": 2, "L": 5}, "largest_unquoted": "L", "queue_order": ["100", "10", "1"], "within_tier": "oldest-first", "planned_work_first": true},
+    "rejects": "const"
+  },
+  {
+    "rule": "business-default",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "policy", "monthly_credits": {"1": 1, "10": 10, "100": null}, "bank_while": "active", "business_daily_default": 3, "business_daily_limit": 5, "costs": {"S": 1, "M": 2, "L": 5}, "largest_unquoted": "L", "queue_order": ["100", "10", "1"], "within_tier": "oldest-first", "planned_work_first": true},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "policy", "monthly_credits": {"1": 1, "10": 10, "100": null}, "bank_while": "active", "business_daily_default": 4, "business_daily_limit": 5, "costs": {"S": 1, "M": 2, "L": 5}, "largest_unquoted": "L", "queue_order": ["100", "10", "1"], "within_tier": "oldest-first", "planned_work_first": true},
+    "rejects": "const"
+  },
+  {
+    "rule": "business-owner-setting",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "policy", "monthly_credits": {"1": 1, "10": 10, "100": null}, "bank_while": "active", "business_daily_default": 3, "business_daily_limit": 5, "costs": {"S": 1, "M": 2, "L": 5}, "largest_unquoted": "L", "queue_order": ["100", "10", "1"], "within_tier": "oldest-first", "planned_work_first": true},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "policy", "monthly_credits": {"1": 1, "10": 10, "100": null}, "bank_while": "active", "business_daily_default": 3, "business_daily_limit": -1, "costs": {"S": 1, "M": 2, "L": 5}, "largest_unquoted": "L", "queue_order": ["100", "10", "1"], "within_tier": "oldest-first", "planned_work_first": true},
+    "rejects": "minimum"
+  },
+  {
+    "rule": "unquoted-size-cap",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "policy", "monthly_credits": {"1": 1, "10": 10, "100": null}, "bank_while": "active", "business_daily_default": 3, "business_daily_limit": 5, "costs": {"S": 1, "M": 2, "L": 5}, "largest_unquoted": "L", "queue_order": ["100", "10", "1"], "within_tier": "oldest-first", "planned_work_first": true},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "policy", "monthly_credits": {"1": 1, "10": 10, "100": null}, "bank_while": "active", "business_daily_default": 3, "business_daily_limit": 5, "costs": {"S": 1, "M": 2, "L": 5}, "largest_unquoted": "XL", "queue_order": ["100", "10", "1"], "within_tier": "oldest-first", "planned_work_first": true},
+    "rejects": "const"
+  },
+  {
+    "rule": "priority-by-tier",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "policy", "monthly_credits": {"1": 1, "10": 10, "100": null}, "bank_while": "active", "business_daily_default": 3, "business_daily_limit": 5, "costs": {"S": 1, "M": 2, "L": 5}, "largest_unquoted": "L", "queue_order": ["100", "10", "1"], "within_tier": "oldest-first", "planned_work_first": true},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "policy", "monthly_credits": {"1": 1, "10": 10, "100": null}, "bank_while": "active", "business_daily_default": 3, "business_daily_limit": 5, "costs": {"S": 1, "M": 2, "L": 5}, "largest_unquoted": "L", "queue_order": ["1", "10", "100"], "within_tier": "oldest-first", "planned_work_first": true},
+    "rejects": "const"
+  },
+  {
+    "rule": "oldest-within-tier",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "policy", "monthly_credits": {"1": 1, "10": 10, "100": null}, "bank_while": "active", "business_daily_default": 3, "business_daily_limit": 5, "costs": {"S": 1, "M": 2, "L": 5}, "largest_unquoted": "L", "queue_order": ["100", "10", "1"], "within_tier": "oldest-first", "planned_work_first": true},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "policy", "monthly_credits": {"1": 1, "10": 10, "100": null}, "bank_while": "active", "business_daily_default": 3, "business_daily_limit": 5, "costs": {"S": 1, "M": 2, "L": 5}, "largest_unquoted": "L", "queue_order": ["100", "10", "1"], "within_tier": "newest-first", "planned_work_first": true},
+    "rejects": "const"
+  },
+  {
+    "rule": "planned-work-keeps-place",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "policy", "monthly_credits": {"1": 1, "10": 10, "100": null}, "bank_while": "active", "business_daily_default": 3, "business_daily_limit": 5, "costs": {"S": 1, "M": 2, "L": 5}, "largest_unquoted": "L", "queue_order": ["100", "10", "1"], "within_tier": "oldest-first", "planned_work_first": true},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "policy", "monthly_credits": {"1": 1, "10": 10, "100": null}, "bank_while": "active", "business_daily_default": 3, "business_daily_limit": 5, "costs": {"S": 1, "M": 2, "L": 5}, "largest_unquoted": "L", "queue_order": ["100", "10", "1"], "within_tier": "oldest-first", "planned_work_first": false},
+    "rejects": "const"
+  },
+  {
+    "rule": "local-entitlement",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "entitlement", "access": "owner-only", "login": "synthetic-sr-caller", "tier": "1", "bank": 7, "active": true, "banned": false},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "entitlement", "access": "public", "login": "synthetic-sr-caller", "tier": "1", "bank": 7, "active": true, "banned": false},
+    "rejects": "const"
+  },
+  {
+    "rule": "entitlement-bank",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "entitlement", "access": "owner-only", "login": "synthetic-sr-caller", "tier": "1", "bank": 7, "active": true, "banned": false},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "entitlement", "access": "owner-only", "login": "synthetic-sr-caller", "tier": "1", "bank": -1, "active": true, "banned": false},
+    "rejects": "minimum"
+  },
+  {
+    "rule": "business-unlimited-bank",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "entitlement", "access": "owner-only", "login": "synthetic-sr-caller", "tier": "100", "bank": null, "active": true, "banned": false},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "entitlement", "access": "owner-only", "login": "synthetic-sr-caller", "tier": "100", "bank": 7, "active": true, "banned": false},
+    "rejects": "type"
+  },
+  {
+    "rule": "entitlement-ban-state",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "entitlement", "access": "owner-only", "login": "synthetic-sr-caller", "tier": "1", "bank": 7, "active": true, "banned": true},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "entitlement", "access": "owner-only", "login": "synthetic-sr-caller", "tier": "1", "bank": 7, "active": true, "banned": "yes"},
+    "rejects": "type"
+  },
+  {
+    "rule": "ended-bank-frozen",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "entitlement", "access": "owner-only", "login": "synthetic-sr-caller", "tier": "1", "bank": 7, "active": false, "banned": false},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "entitlement", "access": "owner-only", "login": "synthetic-sr-caller", "tier": "1", "bank": 7, "active": "expired", "banned": false},
+    "rejects": "type"
+  },
+  {
+    "rule": "no-payment-record",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "entitlement", "access": "owner-only", "login": "synthetic-sr-caller", "tier": "1", "bank": 7, "active": true, "banned": false},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "entitlement", "access": "owner-only", "login": "synthetic-sr-caller", "tier": "1", "bank": 7, "active": true, "banned": false, "purchase_state": "synthetic-example"},
+    "rejects": "additionalProperties"
+  },
+  {
+    "rule": "kernel-scope",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "openwizdev/openwiz", "author": "synthetic-sr-caller", "intake": "public", "kind": "docs", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001"},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "example/subscriber-work", "author": "synthetic-sr-caller", "intake": "public", "kind": "docs", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001"},
+    "rejects": "enum"
+  },
+  {
+    "rule": "skills-scope",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "openwizdev/wizskills", "author": "synthetic-sr-caller", "intake": "public", "kind": "docs", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001"},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "openwizdev/wizsite", "author": "synthetic-sr-caller", "intake": "public", "kind": "docs", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001"},
+    "rejects": "enum"
+  },
+  {
+    "rule": "driver-scope",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "openwizdev/openwiz", "author": "synthetic-sr-caller", "intake": "public", "kind": "driver", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001"},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "example/synthetic-driver", "author": "synthetic-sr-caller", "intake": "public", "kind": "docs", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001"},
+    "rejects": "enum"
+  },
+  {
+    "rule": "market-scope",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "openwizdev/wizmarket", "author": "synthetic-sr-caller", "intake": "public", "kind": "docs", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001"},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "openwizdev/todo-demo", "author": "synthetic-sr-caller", "intake": "public", "kind": "docs", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001"},
+    "rejects": "enum"
+  },
+  {
+    "rule": "subscriber-author",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "openwizdev/openwiz", "author": "synthetic-sr-caller", "intake": "public", "kind": "docs", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001"},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "openwizdev/openwiz", "author": "https://example.test/synthetic", "intake": "public", "kind": "docs", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001"},
+    "rejects": "pattern"
+  },
+  {
+    "rule": "request-bug",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "openwizdev/openwiz", "author": "synthetic-sr-caller", "intake": "public", "kind": "bug", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001"},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "openwizdev/openwiz", "author": "synthetic-sr-caller", "intake": "public", "kind": "support", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001"},
+    "rejects": "enum"
+  },
+  {
+    "rule": "request-driver",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "openwizdev/openwiz", "author": "synthetic-sr-caller", "intake": "public", "kind": "driver", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001"},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "openwizdev/openwiz", "author": "synthetic-sr-caller", "intake": "public", "kind": "support", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001"},
+    "rejects": "enum"
+  },
+  {
+    "rule": "request-feature",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "openwizdev/openwiz", "author": "synthetic-sr-caller", "intake": "public", "kind": "feature", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001"},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "openwizdev/openwiz", "author": "synthetic-sr-caller", "intake": "public", "kind": "support", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001"},
+    "rejects": "enum"
+  },
+  {
+    "rule": "request-docs",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "openwizdev/openwiz", "author": "synthetic-sr-caller", "intake": "public", "kind": "docs", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001"},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "openwizdev/openwiz", "author": "synthetic-sr-caller", "intake": "public", "kind": "support", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001"},
+    "rejects": "enum"
+  },
+  {
+    "rule": "closing-marker",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "openwizdev/openwiz", "author": "synthetic-sr-caller", "intake": "public", "kind": "docs", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001"},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "openwizdev/openwiz", "author": "synthetic-sr-caller", "intake": "public", "kind": "docs", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001\nExtra words"},
+    "rejects": "pattern"
+  },
+  {
+    "rule": "public-default",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "openwizdev/openwiz", "author": "synthetic-sr-caller", "intake": "public", "kind": "docs", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001"},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "openwizdev/openwiz", "author": "synthetic-sr-caller", "intake": "owner-private", "kind": "docs", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001"},
+    "rejects": "const"
+  },
+  {
+    "rule": "business-private-intake",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "openwizdev/openwiz", "author": "synthetic-sr-caller", "intake": "owner-private", "kind": "docs", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001", "visibility": "private", "business_verified": true},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "openwizdev/openwiz", "author": "synthetic-sr-caller", "intake": "public", "kind": "docs", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001", "visibility": "private", "business_verified": true},
+    "rejects": "const"
+  },
+  {
+    "rule": "private-needs-business",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "openwizdev/openwiz", "author": "synthetic-sr-caller", "intake": "owner-private", "kind": "docs", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001", "visibility": "private", "business_verified": true},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "openwizdev/openwiz", "author": "synthetic-sr-caller", "intake": "owner-private", "kind": "docs", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001", "visibility": "private", "business_verified": false},
+    "rejects": "const"
+  },
+  {
+    "rule": "public-admission-separation",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "openwizdev/openwiz", "author": "synthetic-sr-caller", "intake": "public", "kind": "docs", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001"},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "request", "target": "openwizdev/openwiz", "author": "synthetic-sr-caller", "intake": "public", "kind": "docs", "title": "Add a synthetic example", "text": "Show the sample configuration.", "marker": "OpenWiz subscriber request operation 00000000000000000000000000000001", "business_verified": true},
+    "rejects": "not"
+  },
+  {
+    "rule": "verdict-approved",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "triage", "verdict": "approved", "size": "S", "ticket": {"repo": "openwizdev/openwiz", "number": 71}},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "triage", "verdict": "approved", "size": "S"},
+    "rejects": "required"
+  },
+  {
+    "rule": "verdict-market-item",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "triage", "verdict": "market-item", "size": "M", "ticket": {"repo": "openwizdev/wizskills", "number": 71}, "item": "skill"},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "triage", "verdict": "market-item", "size": "M", "ticket": {"repo": "openwizdev/wizskills", "number": 71}, "item": "core"},
+    "rejects": "enum"
+  },
+  {
+    "rule": "verdict-quote",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "triage", "verdict": "quote", "size": "XL", "quoted_credits": 8},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "triage", "verdict": "quote", "size": "L", "quoted_credits": 8},
+    "rejects": "const"
+  },
+  {
+    "rule": "verdict-needs-owner",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "triage", "verdict": "needs-owner", "reason": "Synthetic roadmap decision."},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "triage", "verdict": "needs-owner"},
+    "rejects": "required"
+  },
+  {
+    "rule": "verdict-refused",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "triage", "verdict": "refused", "reason": "Synthetic request exceeds the bank."},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "triage", "verdict": "refused", "reason": ""},
+    "rejects": "minLength"
+  },
+  {
+    "rule": "verdict-report",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "triage", "verdict": "report"},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "triage", "verdict": "report", "size": "S"},
+    "rejects": "not"
+  },
+  {
+    "rule": "xl-approval-needs-acceptance",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "triage", "verdict": "approved", "size": "XL", "ticket": {"repo": "openwizdev/openwiz", "number": 71}, "quote_acceptance": {"quote_comment": 101, "acceptance_comment": 102}},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "triage", "verdict": "approved", "size": "XL", "ticket": {"repo": "openwizdev/openwiz", "number": 71}},
+    "rejects": "required"
+  },
+  {
+    "rule": "cost-s",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "credit-movement", "access": "owner-only", "request": "00000000000000000000000000000001", "action": "spend", "tier": "10", "size": "S", "credits": 1, "verdict": "approved"},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "credit-movement", "access": "owner-only", "request": "00000000000000000000000000000001", "action": "spend", "tier": "10", "size": "S", "credits": 2, "verdict": "approved"},
+    "rejects": "const"
+  },
+  {
+    "rule": "cost-m",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "credit-movement", "access": "owner-only", "request": "00000000000000000000000000000001", "action": "spend", "tier": "10", "size": "M", "credits": 2, "verdict": "approved"},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "credit-movement", "access": "owner-only", "request": "00000000000000000000000000000001", "action": "spend", "tier": "10", "size": "M", "credits": 3, "verdict": "approved"},
+    "rejects": "const"
+  },
+  {
+    "rule": "cost-l",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "credit-movement", "access": "owner-only", "request": "00000000000000000000000000000001", "action": "spend", "tier": "10", "size": "L", "credits": 5, "verdict": "approved"},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "credit-movement", "access": "owner-only", "request": "00000000000000000000000000000001", "action": "spend", "tier": "10", "size": "L", "credits": 6, "verdict": "approved"},
+    "rejects": "const"
+  },
+  {
+    "rule": "xl-charge-needs-acceptance",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "credit-movement", "access": "owner-only", "request": "00000000000000000000000000000001", "action": "spend", "tier": "10", "size": "XL", "credits": 8, "verdict": "approved", "quote_acceptance": {"quote_comment": 101, "acceptance_comment": 102}},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "credit-movement", "access": "owner-only", "request": "00000000000000000000000000000001", "action": "spend", "tier": "10", "size": "XL", "credits": 8, "verdict": "approved"},
+    "rejects": "required"
+  },
+  {
+    "rule": "business-use-without-bank",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "credit-movement", "access": "owner-only", "request": "00000000000000000000000000000001", "action": "spend", "tier": "100", "size": "M", "credits": null, "verdict": "market-item"},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "credit-movement", "access": "owner-only", "request": "00000000000000000000000000000001", "action": "spend", "tier": "100", "size": "M", "credits": 2, "verdict": "market-item"},
+    "rejects": "type"
+  },
+  {
+    "rule": "approval-only-spend",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "credit-movement", "access": "owner-only", "request": "00000000000000000000000000000001", "action": "spend", "tier": "10", "size": "M", "credits": 2, "verdict": "approved"},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "credit-movement", "access": "owner-only", "request": "00000000000000000000000000000001", "action": "spend", "tier": "10", "size": "M", "credits": 2, "verdict": "quote"},
+    "rejects": "enum"
+  },
+  {
+    "rule": "return-reason",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "credit-movement", "access": "owner-only", "request": "00000000000000000000000000000001", "action": "return", "tier": "10", "size": "M", "credits": 2, "reason": "Synthetic request cannot be built."},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "credit-movement", "access": "owner-only", "request": "00000000000000000000000000000001", "action": "return", "tier": "10", "size": "M", "credits": 2},
+    "rejects": "required"
+  },
+  {
+    "rule": "stage-submitted",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "tracker", "request": {"repo": "openwizdev/openwiz", "number": 71}, "stage": "submitted", "eta": {"kind": "estimate", "position": 3, "merged": 6, "window_days": 4, "days": 2}, "evidence": {"issue": {"repo": "openwizdev/openwiz", "number": 71}}},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "tracker", "request": {"repo": "openwizdev/openwiz", "number": 71}, "stage": "submitted", "eta": {"kind": "estimate", "position": 3, "merged": 6, "window_days": 4, "days": 2}, "evidence": {}},
+    "rejects": "required"
+  },
+  {
+    "rule": "stage-triaged",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "tracker", "request": {"repo": "openwizdev/openwiz", "number": 71}, "stage": "triaged", "eta": {"kind": "estimate", "position": 3, "merged": 6, "window_days": 4, "days": 2}, "evidence": {"verdict": "approved", "verdict_comment": 123}},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "tracker", "request": {"repo": "openwizdev/openwiz", "number": 71}, "stage": "triaged", "eta": {"kind": "estimate", "position": 3, "merged": 6, "window_days": 4, "days": 2}, "evidence": {"verdict": "approved"}},
+    "rejects": "required"
+  },
+  {
+    "rule": "stage-building",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "tracker", "request": {"repo": "openwizdev/openwiz", "number": 71}, "stage": "building", "eta": {"kind": "estimate", "position": 3, "merged": 6, "window_days": 4, "days": 2}, "evidence": {"ticket": {"repo": "openwizdev/openwiz", "number": 71}, "builder_status_comment": 124}},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "tracker", "request": {"repo": "openwizdev/openwiz", "number": 71}, "stage": "building", "eta": {"kind": "estimate", "position": 3, "merged": 6, "window_days": 4, "days": 2}, "evidence": {"ticket": {"repo": "openwizdev/openwiz", "number": 71}}},
+    "rejects": "required"
+  },
+  {
+    "rule": "stage-pull-request",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "tracker", "request": {"repo": "openwizdev/openwiz", "number": 71}, "stage": "pull-request", "eta": {"kind": "estimate", "position": 3, "merged": 6, "window_days": 4, "days": 2}, "evidence": {"pull_request": {"repo": "openwizdev/openwiz", "number": 42}}},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "tracker", "request": {"repo": "openwizdev/openwiz", "number": 71}, "stage": "pull-request", "eta": {"kind": "estimate", "position": 3, "merged": 6, "window_days": 4, "days": 2}, "evidence": {}},
+    "rejects": "required"
+  },
+  {
+    "rule": "stage-reviewed",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "tracker", "request": {"repo": "openwizdev/openwiz", "number": 71}, "stage": "reviewed", "eta": {"kind": "estimate", "position": 3, "merged": 6, "window_days": 4, "days": 2}, "evidence": {"pull_request": {"repo": "openwizdev/openwiz", "number": 42}, "head": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1", "review_comment": 126}},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "tracker", "request": {"repo": "openwizdev/openwiz", "number": 71}, "stage": "reviewed", "eta": {"kind": "estimate", "position": 3, "merged": 6, "window_days": 4, "days": 2}, "evidence": {"pull_request": {"repo": "openwizdev/openwiz", "number": 42}, "head": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"}},
+    "rejects": "required"
+  },
+  {
+    "rule": "stage-merged",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "tracker", "request": {"repo": "openwizdev/openwiz", "number": 71}, "stage": "merged", "eta": {"kind": "estimate", "position": 3, "merged": 6, "window_days": 4, "days": 2}, "evidence": {"pull_request": {"repo": "openwizdev/openwiz", "number": 42}, "merge_commit": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"}},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "tracker", "request": {"repo": "openwizdev/openwiz", "number": 71}, "stage": "merged", "eta": {"kind": "estimate", "position": 3, "merged": 6, "window_days": 4, "days": 2}, "evidence": {"pull_request": {"repo": "openwizdev/openwiz", "number": 42}}},
+    "rejects": "required"
+  },
+  {
+    "rule": "stage-released",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "tracker", "request": {"repo": "openwizdev/openwiz", "number": 71}, "stage": "released", "eta": {"kind": "estimate", "position": 3, "merged": 6, "window_days": 4, "days": 2}, "evidence": {"merge_commit": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1", "version": "0.2.0"}},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "tracker", "request": {"repo": "openwizdev/openwiz", "number": 71}, "stage": "released", "eta": {"kind": "estimate", "position": 3, "merged": 6, "window_days": 4, "days": 2}, "evidence": {"merge_commit": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"}},
+    "rejects": "required"
+  },
+  {
+    "rule": "stage-working-on-install",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "tracker", "request": {"repo": "openwizdev/openwiz", "number": 71}, "stage": "working-on-install", "eta": {"kind": "estimate", "position": 3, "merged": 6, "window_days": 4, "days": 2}, "evidence": {"version": "0.2.0", "installed_version": "0.2.1"}},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "tracker", "request": {"repo": "openwizdev/openwiz", "number": 71}, "stage": "working-on-install", "eta": {"kind": "estimate", "position": 3, "merged": 6, "window_days": 4, "days": 2}, "evidence": {"version": "0.2.0"}},
+    "rejects": "required"
+  },
+  {
+    "rule": "estimate-not-promise",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "tracker", "request": {"repo": "openwizdev/openwiz", "number": 71}, "stage": "submitted", "eta": {"kind": "estimate", "position": 3, "merged": 6, "window_days": 4, "days": 2}, "evidence": {"issue": {"repo": "openwizdev/openwiz", "number": 71}}},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "tracker", "request": {"repo": "openwizdev/openwiz", "number": 71}, "stage": "submitted", "eta": {"kind": "promise", "position": 3, "merged": 6, "window_days": 4, "days": 2}, "evidence": {"issue": {"repo": "openwizdev/openwiz", "number": 71}}},
+    "rejects": "const"
+  },
+  {
+    "rule": "positive-throughput",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "tracker", "request": {"repo": "openwizdev/openwiz", "number": 71}, "stage": "submitted", "eta": {"kind": "estimate", "position": 3, "merged": 6, "window_days": 4, "days": 2}, "evidence": {"issue": {"repo": "openwizdev/openwiz", "number": 71}}},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "tracker", "request": {"repo": "openwizdev/openwiz", "number": 71}, "stage": "submitted", "eta": {"kind": "estimate", "position": 3, "merged": 0, "window_days": 4, "days": 2}, "evidence": {"issue": {"repo": "openwizdev/openwiz", "number": 71}}},
+    "rejects": "minimum"
+  },
+  {
+    "rule": "unavailable-throughput",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "tracker", "request": {"repo": "openwizdev/openwiz", "number": 71}, "stage": "submitted", "eta": {"kind": "unavailable", "reason": "unknown-throughput"}, "evidence": {"issue": {"repo": "openwizdev/openwiz", "number": 71}}},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "tracker", "request": {"repo": "openwizdev/openwiz", "number": 71}, "stage": "submitted", "eta": {"kind": "unavailable", "reason": "unknown-throughput", "days": 0}, "evidence": {"issue": {"repo": "openwizdev/openwiz", "number": 71}}},
+    "rejects": "additionalProperties"
+  },
+  {
+    "rule": "tracker-omits-tier",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "tracker", "request": {"repo": "openwizdev/openwiz", "number": 71}, "stage": "submitted", "eta": {"kind": "estimate", "position": 3, "merged": 6, "window_days": 4, "days": 2}, "evidence": {"issue": {"repo": "openwizdev/openwiz", "number": 71}}},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "tracker", "request": {"repo": "openwizdev/openwiz", "number": 71}, "stage": "submitted", "eta": {"kind": "estimate", "position": 3, "merged": 6, "window_days": 4, "days": 2}, "evidence": {"issue": {"repo": "openwizdev/openwiz", "number": 71}}, "tier": "1"},
+    "rejects": "additionalProperties"
+  },
+  {
+    "rule": "credit-pull-request",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "attribution", "visibility": "public", "surface": "pull-request", "line": "Requested by @synthetic-sr-caller"},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "attribution", "visibility": "public", "surface": "pull-request", "line": "Paid by @synthetic-sr-caller"},
+    "rejects": "pattern"
+  },
+  {
+    "rule": "credit-changelog",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "attribution", "visibility": "public", "surface": "changelog", "line": "Requested by @synthetic-sr-caller"},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "attribution", "visibility": "public", "surface": "changelog", "line": "Paid by @synthetic-sr-caller"},
+    "rejects": "pattern"
+  },
+  {
+    "rule": "credit-listing",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "attribution", "visibility": "public", "surface": "listing", "line": "Requested by @synthetic-sr-caller"},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "attribution", "visibility": "public", "surface": "listing", "line": "Paid by @synthetic-sr-caller"},
+    "rejects": "pattern"
+  },
+  {
+    "rule": "no-private-credit",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "attribution", "visibility": "public", "surface": "pull-request", "line": "Requested by @synthetic-sr-caller"},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "attribution", "visibility": "private", "surface": "pull-request", "line": "Requested by @synthetic-sr-caller"},
+    "rejects": "const"
+  },
+  {
+    "rule": "veto-comment-form",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "veto", "merged": false, "by": "owner", "comment": "OpenWiz subscriber request veto: Synthetic reason."},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "veto", "merged": false, "by": "owner", "comment": "Stop this synthetic request."},
+    "rejects": "pattern"
+  },
+  {
+    "rule": "veto-before-merge",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "veto", "merged": false, "by": "owner", "comment": "OpenWiz subscriber request veto: Synthetic reason."},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "veto", "merged": true, "by": "owner", "comment": "OpenWiz subscriber request veto: Synthetic reason."},
+    "rejects": "const"
+  },
+  {
+    "rule": "veto-owner-only",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "veto", "merged": false, "by": "owner", "comment": "OpenWiz subscriber request veto: Synthetic reason."},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "veto", "merged": false, "by": "subscriber", "comment": "OpenWiz subscriber request veto: Synthetic reason."},
+    "rejects": "const"
+  },
+  {
+    "rule": "ban-and-refund-confirmation",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "ban", "access": "owner-only", "login": "synthetic-sr-caller", "action": "ban-and-refund", "confirmation": 133},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "ban", "access": "owner-only", "login": "synthetic-sr-caller", "action": "ban-and-refund"},
+    "rejects": "required"
+  },
+  {
+    "rule": "ban-remains-local",
+    "valid": {"schema": "openwiz.subscriber-requests.v1", "record": "ban", "access": "owner-only", "login": "synthetic-sr-caller", "action": "ban-and-refund", "confirmation": 133},
+    "broken": {"schema": "openwiz.subscriber-requests.v1", "record": "ban", "access": "public", "login": "synthetic-sr-caller", "action": "ban-and-refund", "confirmation": 133},
+    "rejects": "const"
+  }
+]
