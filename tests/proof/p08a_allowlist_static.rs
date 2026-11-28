@@ -1978,6 +1978,7 @@ fn jev_asker_problems(text: &str) -> Vec<String> {
             ("Command::new(", 1),
             ("process::{", 0),
             ("jev_process", 2),
+            ("run_ask(", 6),
             (".arg(", 2),
             (".args(", 0),
             (".env_clear(", 1),
@@ -1993,14 +1994,32 @@ fn jev_asker_problems(text: &str) -> Vec<String> {
             ("libc", 0),
             ("std::env::current_exe(", 1),
             ("std::env::var_os(", 3),
-            ("letoutput=jev_process(body.to_string().as_bytes())?;", 1),
+            (
+                "letanswer=jev_process(body.to_string().as_bytes(),until)?;",
+                1,
+            ),
+            ("run_ask(&tool,&key,request,until)", 1),
+            (
+                "letuntil=answer_until(std::time::Instant::now(),self.deadline);",
+                1,
+            ),
         ],
     );
     l3_exact_function(
         &mut problems,
         &code,
-        "fn jev_process(request: &[u8]) -> Option<std::process::Output>",
-        r#"fn jev_process(request: &[u8]) -> Option<std::process::Output> {
+        "fn answer_until(now: std::time::Instant, deadline: std::time::Instant) -> std::time::Instant",
+        r#"fn answer_until(now: std::time::Instant, deadline: std::time::Instant) -> std::time::Instant {
+    let left = deadline.saturating_duration_since(now) / 2;
+    now + left.min(std::time::Duration::from_secs(ANSWER_SECONDS))
+}
+"#,
+    );
+    l3_exact_function(
+        &mut problems,
+        &code,
+        "fn jev_process(request: &[u8], until: std::time::Instant) -> Option<Vec<u8>>",
+        r#"fn jev_process(request: &[u8], until: std::time::Instant) -> Option<Vec<u8>> {
     let exe = std::env::current_exe().ok()?.canonicalize().ok()?;
     let target = exe.ancestors().nth(2)?;
     if target.file_name()? != "target" {
@@ -2019,6 +2038,20 @@ fn jev_asker_problems(text: &str) -> Vec<String> {
         return None;
     }
     let key = std::env::var_os("TYPESAFE_API_KEY")?;
+    run_ask(&tool, &key, request, until)
+}
+"#,
+    );
+    l3_exact_function(
+        &mut problems,
+        &code,
+        "fn run_ask(tool: &std::path::Path, key: &std::ffi::OsStr, request: &[u8], until: std::time::Instant,) -> Option<Vec<u8>>",
+        r#"fn run_ask(
+    tool: &std::path::Path,
+    key: &std::ffi::OsStr,
+    request: &[u8],
+    until: std::time::Instant,
+) -> Option<Vec<u8>> {
     let mut child = std::process::Command::new("/usr/bin/python3")
         .arg("-I")
         .arg(tool)
@@ -2030,17 +2063,36 @@ fn jev_asker_problems(text: &str) -> Vec<String> {
         .stderr(std::process::Stdio::null())
         .spawn()
         .ok()?;
-    let sent = std::io::Write::write_all(&mut child.stdin.take()?, request);
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(ANSWER_SECONDS);
-    while child.try_wait().ok()?.is_none() {
-        if sent.is_err() || std::time::Instant::now() > deadline {
-            let _ = child.kill();
-            let _ = child.wait();
-            return None;
+    let stdout = child.stdout.take();
+    let reader = std::thread::spawn(move || {
+        let mut answer = Vec::new();
+        if let Some(out) = stdout {
+            let limit = MAX_ANSWER_BYTES as u64 + 1;
+            let _ = std::io::Read::read_to_end(&mut std::io::Read::take(out, limit), &mut answer);
         }
-        std::thread::sleep(std::time::Duration::from_millis(20));
+        answer
+    });
+    let sent = child
+        .stdin
+        .take()
+        .map(|mut input| std::io::Write::write_all(&mut input, request));
+    let finished = loop {
+        match child.try_wait() {
+            Ok(Some(status)) => break Some(status),
+            Ok(None) if matches!(sent, Some(Ok(()))) && std::time::Instant::now() < until => {
+                std::thread::sleep(std::time::Duration::from_millis(20));
+            }
+            _ => break None,
+        }
+    };
+    if finished.is_none() {
+        let _ = child.kill();
+        let _ = child.wait();
     }
-    child.wait_with_output().ok()
+    let answer = reader.join().ok()?;
+    finished
+        .filter(|status| status.success() && answer.len() <= MAX_ANSWER_BYTES)
+        .map(|_| answer)
 }
 "#,
     );
@@ -2085,6 +2137,16 @@ fn jv1_jev_asker_exception_rejects_planted_widening() {
             ".stderr(std::process::Stdio::inherit())",
         ),
         (".spawn()", ".output()"),
+        ("std::io::Read::take(out, limit)", "out"),
+        (" && std::time::Instant::now() < until", ""),
+        (
+            "run_ask(&tool, &key, request, until)",
+            r#"run_ask(std::path::Path::new("/tmp/ask.py"), &key, request, until)"#,
+        ),
+        (
+            "now + left.min(std::time::Duration::from_secs(ANSWER_SECONDS))",
+            "now + std::time::Duration::from_secs(3600)",
+        ),
     ] {
         let planted = l3_plant(&code, from, to);
         assert!(
@@ -2097,7 +2159,8 @@ fn jv1_jev_asker_exception_rejects_planted_widening() {
         r#"use std::process::Command as C; fn extra() { C::new("/bin/sh").spawn(); }"#,
         r#"type C = std::process::Command; fn extra() { C::new("/bin/sh").spawn(); }"#,
         r#"use std::process::{Command as C}; fn extra() { C::new("/bin/sh"); }"#,
-        r#"fn extra() { let f = jev_process; let _ = f(b""); }"#,
+        r#"fn extra() { let f = jev_process; let _ = f(b"", std::time::Instant::now()); }"#,
+        r#"fn extra() { let _ = run_ask(std::path::Path::new("/bin/sh"), std::ffi::OsStr::new(""), b"", std::time::Instant::now()); }"#,
         r#"fn extra() { let _ = rustix::process::getpid(); }"#,
     ] {
         assert!(
