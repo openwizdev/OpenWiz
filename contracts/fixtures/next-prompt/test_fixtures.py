@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import copy
+from datetime import datetime
 import json
 from pathlib import Path
 import unittest
@@ -15,7 +16,13 @@ class NextPromptFixtures(unittest.TestCase):
     def setUp(self):
         self.schema = json.loads(SCHEMA.read_text(encoding="utf-8")) if SCHEMA.is_file() else {}
         Draft202012Validator.check_schema(self.schema)
-        self.validator = Draft202012Validator(self.schema, format_checker=FormatChecker())
+        formats = FormatChecker()
+
+        @formats.checks("date-time", raises=ValueError)
+        def valid_datetime(value):
+            return isinstance(value, str) and bool(datetime.fromisoformat(value.removesuffix("Z")))
+
+        self.validator = Draft202012Validator(self.schema, format_checker=formats)
 
     def test_each_rule_accepts_its_valid_fixture_and_refuses_its_broken_fixture(self):
         # comment-ok: catches: a schema admitting an unsupported source, fallback, or acceptance record.

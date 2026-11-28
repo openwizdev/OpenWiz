@@ -8,6 +8,7 @@
   {"rule": "nonblank-prompt", "valid": "open-decision", "at": ["prediction", "prompt"], "value": "   "},
   {"rule": "no-placeholder", "valid": "open-decision", "at": ["prediction", "prompt"], "value": "Ask anything"},
   {"rule": "prediction-id-required", "valid": "open-decision", "at": ["prediction", "id"]},
+  {"rule": "prediction-id-only-uses-allowed-characters", "valid": "open-decision", "at": ["prediction", "id"], "value": "syn-decision\n"},
   {"rule": "open-decisions-only", "valid": "open-decision", "at": ["prediction", "source"], "value": "resolved_decision_request"},
   {"rule": "local-feed-only", "valid": "factory-feed", "at": ["prediction", "source"], "value": "remote_feed"},
   {"rule": "factory-state-attribution", "valid": "factory-states", "at": ["prediction", "source"]},
