@@ -11,7 +11,9 @@ this contract.
 **Revised in place by #3085**, before any live use: a request carries
 `answer_key` and an answer `sealed_token` in place of `token`. An older service or
 helper meeting a newer one gives a `usage` refusal, so the agent falls back and no
-token is minted.
+token is minted. **Extended by #3235** with a third route, `actions`, running as a
+main-only workflow in the owner's private repository and returning the same sealed
+answer.
 
 **This contract grants nothing.** It authorizes no installation, credential,
 token mint, live read or write, or permission change. A fixture or test that
@@ -34,13 +36,21 @@ Where they disagree, the contract is wrong and must be fixed.
   "schema": "openwiz.token-service.v1",
   "authority": {"installation": false, "credential": false, "live": false},
   "key": {
-    "lives": "owner's machine only",
+    "lives": "the owner's machine (pairing and local), or the token-service environment secret of the owner's private repository (actions)",
     "path": "<state>/service/app/private-key.pem",
     "file_mode": "0600",
     "directory_mode": "0700",
     "read_by": "the token service only",
     "agents": "never ask for, read, copy or hold it",
-    "leaves_the_machine": false
+    "leaves_the_machine": false,
+    "actions_environment": {
+      "name": "token-service",
+      "secret": "OPENWIZ_GITHUB_APP_KEY",
+      "deployment_branches": "main only",
+      "trigger": "workflow_dispatch only",
+      "ref": "refs/heads/main",
+      "delivery": "pipe or descriptor, never a file"
+    }
   },
   "app_permissions": {
     "metadata": "read",
@@ -55,6 +65,7 @@ Where they disagree, the contract is wrong and must be fixed.
     "request": "stdin",
     "answer": "stdout, one JSON line, read from a pipe",
     "timeout_s": 60,
+    "actions_timeout_s": 120,
     "token_crossing": {
       "never": ["command line", "terminal", "log", "record"],
       "only": "sealed, as piped stdout of one room-cli mac run --stdin call",
@@ -65,11 +76,13 @@ Where they disagree, the contract is wrong and must be fixed.
     "pairing_gate": {"variable": "OPENWIZ_TOKEN_SERVICE_READBACK", "on_only_when": "passed", "otherwise": "pairing-off"},
     "routes": {
       "pairing": ["room-cli", "mac", "run", "--stdin", "python3 -I '<service>' mint"],
-      "local": ["python3", "-I", "<service>", "mint"]
+      "local": ["python3", "-I", "<service>", "mint"],
+      "actions": "workflow_dispatch on main in OPENWIZ_TOKEN_SERVICE_REPOSITORY, sealed answer artifact named by nonce"
     },
     "configuration": {
       "OPENWIZ_TOKEN_SERVICE": "the service's absolute path on the owner's machine",
-      "OPENWIZ_TOKEN_SERVICE_ROUTE": ["pairing", "local"],
+      "OPENWIZ_TOKEN_SERVICE_ROUTE": ["pairing", "local", "actions"],
+      "OPENWIZ_TOKEN_SERVICE_REPOSITORY": "the owner's private repository (<owner/name>) for the actions route",
       "OPENWIZ_TOKEN_SERVICE_READBACK": "passed only after GA5's live read-back succeeded"
     }
   },
@@ -128,12 +141,29 @@ Where they disagree, the contract is wrong and must be fixed.
 
 ## Where the key lives
 
-The App's private key lives **only on the owner's machine** (the owner's PC
-now; the VPS later, J258), in the owner's OpenWiz state directory, at
-`<state>/service/app/private-key.pem`, mode 0600 in 0700 directories, where
-the merged minter (`tools/github-app/`) already keeps it. Only the token
-service reads it. It never leaves that machine: not to a cloud sandbox, a
-Cloudroom secret, a pairing call, a prompt, a log or the repository.
+The App's private key lives in one of two places: **the owner's machine (`pairing`
+and `local`), or the `token-service` environment secret of the owner's private
+repository (`actions`)**.
+
+- On the owner's machine (`pairing` and `local`), it sits in the owner's OpenWiz
+  state directory at `<state>/service/app/private-key.pem`, mode 0600 in 0700
+  directories, where the merged minter (`tools/github-app/`) keeps it. Only the
+  token service reads it. It never leaves that machine: not to a cloud sandbox,
+  a Cloudroom secret, a pairing call, a prompt, a log or the repository.
+- On the `actions` route, it lives as the environment secret `OPENWIZ_GITHUB_APP_KEY`
+  (base64 of the PEM) in the `token-service` environment of the owner's private
+  repository, never as a repository secret. **Main-only rule:** only `main`'s
+  workflow code may ever read the key. The workflow triggers on `workflow_dispatch`
+  only, the `token-service` environment's deployment branches are restricted to
+  `main` only, the job refuses any ref other than `refs/heads/main`, `main` is
+  protected by an owner-only ruleset, the OpenWiz checkout is pinned to a commit
+  SHA (never a branch), untrusted inputs reach the script only through `env:`
+  (never inside `${{ }}` in a `run:`), and the key reaches `token-service.py`
+  through a pipe or descriptor, never a file on disk. **Why a branch-triggered
+  workflow must never read the key:** a `push`, `pull_request` or non-`main`
+  dispatch can run untrusted workflow YAML or unreviewed branch code in the same
+  job and exfiltrate the App's private key, which would let an attacker mint
+  installation tokens for every repository the App is installed on.
 
 **Agents never ask for the key.** No agent, helper, brief or request asks for,
 reads, copies or holds it, and nothing in a request names it. The service
@@ -141,13 +171,23 @@ never sends it, and no answer or refusal carries it or the App's JWT.
 
 ## Reaching the service
 
-The service listens on **no port**, public or local. An agent reaches it the
-way it already reaches the owner's machine:
+The service listens on **no port**, public or local. An agent reaches it on one
+of three routes:
 
-- **A cloud thread** runs the service through the owner's existing machine
-  pairing: `room-cli mac run --stdin 'python3 -I <service> mint'`.
-- **A local thread**, already on the owner's machine, runs
+- **A cloud thread (`pairing`)** runs the service through the owner's existing
+  machine pairing: `room-cli mac run --stdin 'python3 -I <service> mint'`.
+- **A local thread (`local`)**, already on the owner's machine, runs
   `python3 -I <service> mint` itself.
+- **An Actions workflow (`actions`)** dispatches `mint-workflow.yml` on `main`
+  in `OPENWIZ_TOKEN_SERVICE_REPOSITORY` (`<owner/name>`, a public setting) with
+  `OPENWIZ_TOKEN_SERVICE_ROUTE=actions`, passing the request JSON (with its
+  one-time `answer_key`) and a fresh random `nonce`. It finds the run by its
+  `run-name` (`openwiz-mint-<nonce>`), waits up to **120 seconds** (backing off
+  on 403 or 429), downloads the single 1-day artifact named by `nonce`, deletes
+  the artifact immediately after download, and opens and checks the sealed
+  answer as on the other routes. The job summary carries only the mint-log
+  fields; no plaintext token ever appears in dispatch inputs, run logs, job
+  summary, artifact or helper output.
 
 `<service>` is the service's absolute path on the owner's machine, from
 `OPENWIZ_TOKEN_SERVICE`; `OPENWIZ_TOKEN_SERVICE_ROUTE` says `pairing` or

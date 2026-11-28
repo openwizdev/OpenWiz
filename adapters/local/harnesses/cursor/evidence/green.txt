@@ -1,0 +1,59 @@
+# HR5 #2473 green: the cursor row passes the runner, and its test_row.py (31 refusing agent CLI stubs first on PATH)
+$ python3 -I adapters/local/test_harnesses.py
+fail claude: row.json harness: claude is built in, and no row may use a built-in name
+fail credential-env: row.json env: a value looks like a credential; env holds only fixed settings that are not credentials
+fail daemon-survives: daemon: the background process the row declares still runs after stop
+pass effort-crowded: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+fail effort-missing: row.json effort: it has no effort form; give an effort map or "none: <one line why>"
+fail effort-unpassed: row.json effort: it maps effort values to arguments, but start has no {effort} to pass them
+pass example: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+pass example-none: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+fail larger-argument: row.json start: a placeholder sits inside a larger argument; each fills a whole argument
+fail row-missing: row.json is missing
+fail session-differs: session: the wake turn got a different session id from the start turn
+fail signed-out-bad-pattern: row.json signed_out: a pattern does not compile
+pass signed-out-json: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+fail wake-no-session: row.json wake: it has no {session}
+pass driver: a broken row's D3 error names its row file and fits the error schema: a row folder with no row.json, a harness that is not a string, and a 60-character harness with a missing field
+pass driver: a row's session id and signed_out patterns are read from its first turn's output, never the clone's, and the first line that has the session's JSON path decides it
+pass driver: an effort the row can't take is refused before the driver looks for its program, and a row's effort ids are lower-case words of up to 20 characters
+pass driver: a row whose fixed arguments in start, wake, modes or effort look like a credential, joined or as a flag and its value, is refused naming only its field
+pass driver: a row's env and effort setting reach only the harness, never the turn's supervisor
+pass driver: an unknown harness is a D3 error that lists the built-ins and the row folders, and starts nothing
+pass driver: a wake before the reported session id is known is a D3 error that starts nothing, whether the first turn has ended or still runs
+pass driver: a wake while the first turn runs saves its newly reported session id, and once it is saved answers woke with no state write and starts nothing
+rows in adapters/local/harnesses: cursor
+pass cursor: the contract, the folder, the kit's five checks, and the session, env, background process and effort checks
+exit 0
+$ python3 -I adapters/local/harnesses/cursor/test_row.py
+pass an unknown option: exit 2
+pass the hidden --new-session-id: exit 2
+pass a --model with no value: exit 2
+pass an --output-format outside its choices: exit 2
+pass a --sandbox outside its choices: exit 2
+pass a --mode outside its choices: exit 2
+pass a --header without a colon: exit 2
+pass a -H without a colon: exit 2
+pass a --header= without a colon: exit 2
+pass a --header with an empty name: exit 2
+pass a --header with a blank name: exit 2
+pass a --header with whitespace in the name: exit 2
+pass a bad second --header after a valid one: exit 2
+pass a bad first --header before a valid one: exit 2
+pass --stream-partial-output without stream-json: exit 2
+pass --resume with --continue: exit 2
+pass a bare --resume in print mode: exit 2
+pass a wake prompt without --resume: exit 2
+pass a start prompt with --resume: exit 2
+pass the login command: exit 3
+pass a login in argv: exit 3
+pass the json output format: exit 3
+pass a run without --print: exit 3
+pass a run with no --model: exit 3
+pass an untrusted workspace: exit 1
+pass valid --header and -H reach the turn: exit 1
+pass row.json requires explicit force mode: force
+pass driver refuses allowlist approval: refused
+pass the row's start with mode force reaches the turn: exit 1
+pass the row's wake with mode force reaches the turn: exit 1
+exit 0

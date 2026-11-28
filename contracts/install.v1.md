@@ -2,7 +2,8 @@
 
 `openwiz.install.v1` describes exactly one version/source/target bundle. Supported
 targets are `aarch64-apple-darwin`, `x86_64-apple-darwin`,
-`x86_64-unknown-linux-gnu` and `aarch64-unknown-linux-gnu`. A target describes the built programs, not the host
+`x86_64-unknown-linux-gnu` and `aarch64-unknown-linux-gnu` (both Linux targets
+require glibc 2.34 or later). A target describes the built programs, not the host
 running an offline verifier. Native execution on each host needs live evidence.
 The manifest's setup API must be 1. Unknown/duplicate fields, assets and archive
 members fail closed. Version is one `0.<minor>.<patch>` pre-release; source is a

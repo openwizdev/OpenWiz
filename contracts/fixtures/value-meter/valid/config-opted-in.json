@@ -1,0 +1,11 @@
+{
+  "schema": "openwiz.value-meter.v1",
+  "kind": "config",
+  "enabled": true,
+  "repos": [
+    "synthetic-owner/synthetic-repo"
+  ],
+  "hours_per_merged_pr": 2,
+  "hourly_rate_usd": 50,
+  "share_aggregates": false
+}
