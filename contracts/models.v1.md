@@ -16,6 +16,13 @@ fleet tick), MD4 (#1806, launch-fleet's starts), MD5 (#1807, setup and the
 first fleet) and MD6 (#1808, the app's Models page). WizSkills carries a
 byte-identical copy of this file and its schema.
 
+**A home settings file decides first.** When the owner's home settings
+file (`.openwiz/settings.json`, [settings v1](https://github.com/openwizdev/OpenWiz/blob/main/contracts/settings.v1.md), spec #3375) exists,
+every reader takes each role's choice from its `roles` section; a project
+with no home settings file reads the `## Models` table exactly as this
+contract says. The follow, fixer and cross-family rules below are
+unchanged, and settings v1 cites them.
+
 Every example below is synthetic, except the model ids and names of
 OpenWiz's current choices (J255: builders Opus 5.5 Medium, reviewers Codex
 Sol 6.2 Medium; Jake, 2026-11-19, recorded in `docs/agents/fleet.md`).
