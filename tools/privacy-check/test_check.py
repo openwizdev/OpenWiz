@@ -1017,7 +1017,7 @@ class Check(unittest.TestCase):
                                          'jparker2006/ClosedWiz' else 'ubuntu-24.04')
         self.assertEqual(parsed['permissions'], {'contents': 'read'})
         self.assertEqual(set(parsed['on']), {'push', 'pull_request', 'merge_group'})
-        self.assertEqual(parsed['on']['push'], {'branches': ['main']})
+        self.assertEqual(parsed['on']['push'], {'branches': ['main', 'release-*']})
         self.assertFalse({'branches', 'branches-ignore', 'paths', 'paths-ignore'} & set(parsed['on']['pull_request']))
         self.assertEqual(parsed['on']['merge_group'], {'types': ['checks_requested']})
         self.assertEqual(workflow.refused_jobs(path.read_text()), [])
