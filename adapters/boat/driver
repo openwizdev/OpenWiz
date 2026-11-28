@@ -80,13 +80,20 @@ def read(fields, optional=None):
     return req
 
 
+_HOLDS_CREDENTIAL = None
+
+
 def credential_check():
+    global _HOLDS_CREDENTIAL
+    if _HOLDS_CREDENTIAL is not None:
+        return _HOLDS_CREDENTIAL
     try:
         spec = importlib.util.spec_from_loader('openwiz_driver_kit', importlib.machinery.SourceFileLoader(
             'openwiz_driver_kit', KIT))
         kit = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(kit)
-        return kit.holds_credential
+        _HOLDS_CREDENTIAL = kit.holds_credential
+        return _HOLDS_CREDENTIAL
     except Exception:
         raise Refused("the driver kit's credential check is missing, so no start field can be checked; nothing "
                       'was started', 'run the driver from an OpenWiz checkout or release that carries '
@@ -618,21 +625,15 @@ def text_id(value):
     return value if isinstance(value, str) and ID.fullmatch(value) else None
 
 
-def known_credential(value):
-    try:
-        return credential_check()(value)
-    except Refused:
-        return False
-
-
-def usable_sandbox(value):
-    return text_id(value) is not None and not known_credential(value)
+def usable_id(value):
+    return text_id(value) is not None and not credential_check()(value)
 
 
 def conversation(item):
     """The conversation id of a `boat prompt --json` line: under `data`, as boat CLI 1.0.103 prints it."""
     data = item.get('data')
-    return text_id(data.get('conversationId')) if isinstance(data, dict) else None
+    cid = data.get('conversationId') if isinstance(data, dict) else None
+    return cid if usable_id(cid) else None
 
 
 def sandbox_state(sandbox):
@@ -844,11 +845,11 @@ def start(req):
     try:
         ready = [x for x in boat('start again', 'new', '--name', 'openwiz-' + run) if x.get('event') == 'ready']
     except Refused as e:
-        raise Refused(e.args[0], line(e.args[1] + '; if `boat list` shows a sandbox named openwiz-%s, stop it '
+        raise Refused(e.args[0], line(e.args[1] + '; if `boat list --all` shows a sandbox named openwiz-%s, stop it '
                                                   'first' % run))
-    if not ready or not text_id(ready[-1].get('id')) or credential_check()(ready[-1]['id']):
-        raise Refused('boat new gave no sandbox id', 'stop the sandbox named openwiz-%s in `boat list` yourself, '
-                                                     'then start again' % run)
+    if not ready or not usable_id(ready[-1].get('id')):
+        raise Refused('boat new gave no sandbox id', 'stop the sandbox named openwiz-%s in `boat list --all` '
+                                                     'yourself, then start again' % run)
     state['sandbox'] = ready[-1]['id']
     try:  # from here on the sandbox exists: any failure ends its turn and stops it
         try:
@@ -883,6 +884,12 @@ def wake(run):
                       'stop it again; it stays stopped and is never woken')
     if state.get('starting'):
         raise Refused('run %s never finished starting' % run, 'stop it, then start a new run')
+    if not usable_id(state.get('sandbox')):
+        raise Refused('run %s has no usable sandbox id, so it was not woken' % run,
+                      'stop the sandbox named openwiz-%s in `boat list --all` yourself, then start a new run' % run)
+    if (state['turns'] or state.get('conversation') is not None) and not usable_id(state.get('conversation')):
+        raise Refused('run %s has no usable conversation id, so it was not woken' % run,
+                      'stop it, then start a new run')
     # One agent per run: while its last turn runs, that agent is awake and reads the ticket itself.
     if state['turns'] and running(state['turns'][-1]):
         return {'run': run, 'woke': True}
@@ -915,10 +922,13 @@ def wake(run):
 def stop(run):
     lock(run, True)
     state = saved(run)
-    if not usable_sandbox(state.get('sandbox')):
+    if not usable_id(state.get('sandbox')):
+        marked = mark_stopping(run)
         failures = shutdown(run, state['turns'], None, None, False)
+        if not marked:
+            failures.append(Refused('the driver could not mark run %s stopping: do not wake it' % run, UNWRITABLE))
         why = 'run %s has no usable sandbox id, so its sandbox was not stopped' % run
-        manual = 'stop the sandbox named openwiz-%s in `boat list` yourself' % run
+        manual = 'stop the sandbox named openwiz-%s in `boat list --all` yourself' % run
         if failures:
             raise reported(why, failures, manual)
         raise Refused(why, manual)
@@ -928,7 +938,8 @@ def stop(run):
         kept = True
     except OSError:
         kept = False
-    failures = shutdown(run, state['turns'], state['sandbox'], state['conversation'], True)  # whatever the save did
+    convo = state.get('conversation') if usable_id(state.get('conversation')) else None
+    failures = shutdown(run, state['turns'], state['sandbox'], convo, True)
     every_process_ended = not failures
     for name in os.listdir(STATE):
         if name.startswith(run + '.') and (name.endswith('.log') or name.endswith('.sup') and every_process_ended):
