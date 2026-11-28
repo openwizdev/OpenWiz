@@ -230,6 +230,10 @@ def shown(name, *values):
     return 'a variable the kit does not name'
 
 
+def refusal(answer):
+    return '%s; next: %s' % (answer['error'], answer['next'])
+
+
 FLEET = """query($owner: String!, $name: String!) { repository(owner: $owner, name: $name) {
   object(expression: "HEAD:docs/agents/fleet.md") { ... on Blob { text } } } }"""
 
@@ -900,13 +904,13 @@ class Kit:
         records = records_version()
         kind, v = self.call('version')
         if kind != 'ok':
-            return 'fail', v['error'] if kind == 'refused' else v
+            return 'fail', refusal(v) if kind == 'refused' else v
         self.can = v['can']
         if records not in v['records']:
             return 'fail', 'it names no ' + records
         kind, s = self.call('schema')
         if kind != 'ok':
-            return 'fail', s['error'] if kind == 'refused' else s
+            return 'fail', refusal(s) if kind == 'refused' else s
         if s != self.schema:
             return 'fail', 'its schema is not kernel/driver-kit/schema.json'
         return 'pass', '%s, and the schema is driver v1' % records
@@ -945,7 +949,7 @@ class Kit:
             if kind == 'refused':
                 self.setting = None
                 if v['next'] != REFUSAL:
-                    return 'fail', '%s; next: %s' % (v['error'], v['next'])
+                    return 'fail', refusal(v)
                 if not cant and not unlisted:
                     return 'fail', 'effort: start refused %s for %s, but its README says that harness takes %s' % (
                         a.effort, a.harness, a.effort)
@@ -971,14 +975,12 @@ class Kit:
             return 'fail', 'effort: a process the start with effort began still runs'
         before = set(self.ticket.builder_notes())
         answer = self.sampled('start', request)
-        if 'effort' in request and answer[0] == 'refused' and answer[1]['next'] != REFUSAL:
-            return 'fail', '%s; next: %s' % (answer[1]['error'], answer[1]['next'])
         return self.started_run(before, answer, effort)
 
     def started_run(self, before, answer, effort):
         kind, v = answer
         if kind != 'ok':
-            return 'fail', v['error'] if kind == 'refused' else v
+            return 'fail', refusal(v) if kind == 'refused' else v
         self.run = v['run']
         new = self.wait(lambda: sorted(set(self.ticket.builder_notes()) - before))
         if not new:
@@ -1004,7 +1006,7 @@ class Kit:
         notes = self.ticket.builder_notes()
         kind, v = self.sampled('wake', {'run': self.run})
         if kind != 'ok':
-            return 'fail', v['error'] if kind == 'refused' else v
+            return 'fail', refusal(v) if kind == 'refused' else v
         if v['run'] != self.run:
             return 'fail', 'it answered for another run'
         changed = self.wait(lambda: {i: n for i, n in self.ticket.builder_notes().items()
@@ -1021,7 +1023,7 @@ class Kit:
         if self.unverified():
             return 'fail', self.unverified()
         if kind != 'ok':
-            return 'fail', v['error'] if kind == 'refused' else v
+            return 'fail', refusal(v) if kind == 'refused' else v
         if v['run'] != self.run:
             return 'fail', 'it answered for another run'
         kind, v = self.call('wake', {'run': self.run})
