@@ -1,0 +1,92 @@
+{
+  "input": {
+    "version": "openwiz.leaderboard.v1",
+    "period": {
+      "from": "2030-01-01",
+      "to": "2030-01-07"
+    },
+    "pull_requests": [
+      {
+        "repository": "synthetic-owner/synthetic-repo",
+        "number": 1,
+        "merged_at": "2030-01-02T10:00:00Z",
+        "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "builder_family": "openai",
+        "additions": 100,
+        "deletions": 0,
+        "repository_facts": {
+          "owners": 1,
+          "other_contributors": 2,
+          "stars": 0,
+          "forks": 0
+        },
+        "reviews": [
+          {
+            "state": "APPROVED",
+            "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "family": "anthropic"
+          }
+        ]
+      },
+      {
+        "repository": "synthetic-owner/synthetic-repo",
+        "number": 2,
+        "merged_at": "2030-01-02T10:00:00Z",
+        "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "builder_family": "openai",
+        "additions": 101,
+        "deletions": 0,
+        "repository_facts": {
+          "owners": 1,
+          "other_contributors": 2,
+          "stars": 0,
+          "forks": 0
+        },
+        "reviews": [
+          {
+            "state": "APPROVED",
+            "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "family": "anthropic"
+          }
+        ]
+      },
+      {
+        "repository": "synthetic-owner/synthetic-repo",
+        "number": 3,
+        "merged_at": "2030-01-02T10:00:00Z",
+        "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "builder_family": "openai",
+        "additions": 501,
+        "deletions": 0,
+        "repository_facts": {
+          "owners": 1,
+          "other_contributors": 2,
+          "stars": 0,
+          "forks": 0
+        },
+        "reviews": [
+          {
+            "state": "APPROVED",
+            "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "family": "anthropic"
+          }
+        ]
+      }
+    ]
+  },
+  "claimed": {
+    "version": "openwiz.leaderboard.v1",
+    "handle": "synthetic-ada",
+    "period": {
+      "from": "2030-01-01",
+      "to": "2030-01-07"
+    },
+    "pull_requests": 3,
+    "points": 8,
+    "by_size": {
+      "S": 0,
+      "M": 2,
+      "L": 1
+    }
+  }
+}
