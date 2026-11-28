@@ -1,0 +1,17 @@
+F
+======================================================================
+FAIL: test_egress_policy_has_exactly_one_telemetry_row (__main__.TelemetryFixtures.test_egress_policy_has_exactly_one_telemetry_row)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "contracts/fixtures/telemetry/test_fixtures.py", line 59, in test_egress_policy_has_exactly_one_telemetry_row
+    self.assertEqual(
+AssertionError: {'tel[23 chars]y', 'market_receipts': 'user-telemetry', 'chan[69 chars]use'} != {'tel[23 chars]y', 'channels.<channel>': 'owner-notifications[32 chars]use'}
+  {'channels.<channel>': 'owner-notifications',
+   'keys.<key>.on': 'credential-use',
+-  'market_receipts': 'user-telemetry',
+   'telemetry': 'user-telemetry'}
+
+----------------------------------------------------------------------
+Ran 1 test in 0.001s
+
+FAILED (failures=1)
