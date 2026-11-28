@@ -1,0 +1,7 @@
+# Red: the planner's push budget (known blobs skipped, more than 200 files refused, the REST call count of a 10-file push), before the helper takes it
+FAIL: test_a_push_that_changes_more_than_200_files_is_refused_before_any_write (__main__.Push.test_a_push_that_changes_more_than_200_files_is_refused_before_any_write)
+AssertionError: 0 != 1 : openwiz-push: pushed agent/7 to GitHub at 07a160a86926aad55d325182842a240341e4b98d (1 new commits) through the Sprites gateway
+FAIL: test_blobs_github_already_has_are_never_uploaded (__main__.Push.test_blobs_github_already_has_are_never_uploaded)
+AssertionError: 3 != 1
+Ran 9 tests in 4.211s
+FAILED (failures=2)

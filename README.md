@@ -42,11 +42,16 @@ The kernel is small. Three parts:
 
 OpenWiz never touches a login. Your agents use their own signed-in tools, and there is no server of ours.
 
+## Chrome
+
+The [Chrome side panel](extensions/chrome/README.md) chats with a local agent about the page you are on. Load it unpacked, start its loopback bridge, and the agent can read, click, type or navigate only in tabs you allow. You can revoke that while the panel and the page show that the agent is acting. It does not call CloudRoom and it does not add a hosted service.
+
 | Path | What it is |
 | --- | --- |
 | `kernel/` | The records and driver rules, and their test kits |
 | `adapters/` | The drivers, one folder per host |
 | `crates/` | The `openwiz` command (Rust) |
+| `extensions/chrome` | The Chrome side panel and the loopback bridge it talks to |
 | `docs/` | Guides and public decisions |
 
 ## Versions

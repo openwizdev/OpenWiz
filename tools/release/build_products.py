@@ -18,6 +18,20 @@ from product_identity import PROGRAMS as COMPILED, WIZSKILLS, architecture, cano
 
 KIT = ['kernel/driver-kit/kit.py', 'kernel/driver-kit/schema.json', 'kernel/records-kit/check.py',
        'kernel/records.v1.md', 'kernel/driver-kit/hostkey.py', 'kernel/driver-kit/hosts.json']
+RUNTIME_NAMES = (
+    ('tools/install/install.py', 'runtime/install.py'),
+    ('tools/install/pull.py', 'runtime/pull.py'),
+    ('wizskills.lock', 'runtime/wizskills.lock'),
+    ('tools/install/setup/setup.py', 'runtime/setup/setup.py'),
+    ('tools/install/setup/store.py', 'runtime/setup/store.py'),
+    ('tools/github-app/setup.py', 'runtime/github-app/setup.py'),
+    ('tools/github-app/app.py', 'runtime/github-app/app.py'),
+    ('tools/github-app/manifest.json', 'runtime/github-app/manifest.json'),
+    ('tools/install/access/access.py', 'runtime/access/access.py'),
+    ('tools/install/cloudroom/cloudroom.py', 'runtime/cloudroom/cloudroom.py'),
+    ('tools/install/setup/init.py', 'runtime/setup/init.py'),
+    ('tools/install/setup/github_login.py', 'runtime/setup/github_login.py'),
+)
 INSTALLER_RUNNABLE_FOLDER = re.compile(r'[a-z0-9-]+')
 
 
@@ -82,25 +96,24 @@ def collect(root, binaries, output, version, source, target, program_receipt):
     for relative, actual in skills:
         require(actual.is_file() and not actual.is_symlink(), 'unsafe tracked skill runtime')
         files['runtime/' + relative] = actual
-    files['runtime/install.py'] = root / 'tools/install/install.py'
-    files['runtime/pull.py'] = root / 'tools/install/pull.py'
+    names = dict(RUNTIME_NAMES)
+    files[names['tools/install/install.py']] = root / 'tools/install/install.py'
+    files[names['tools/install/pull.py']] = root / 'tools/install/pull.py'
     if installed is not None:
-        files['runtime/wizskills.lock'] = root / 'wizskills.lock'
+        files[names['wizskills.lock']] = root / 'wizskills.lock'
     # #1105: the setup and App connection tools an installed consumer runs.
-    for name, tool in (('setup/setup.py', 'tools/install/setup/setup.py'),
-                       ('setup/store.py', 'tools/install/setup/store.py'),
-                       ('github-app/setup.py', 'tools/github-app/setup.py'),
-                       ('github-app/app.py', 'tools/github-app/app.py'),
-                       ('github-app/manifest.json', 'tools/github-app/manifest.json')):
+    for tool in ('tools/install/setup/setup.py', 'tools/install/setup/store.py',
+                 'tools/github-app/setup.py', 'tools/github-app/app.py',
+                 'tools/github-app/manifest.json'):
         path = root / tool
         require(path.is_file() and not path.is_symlink(), 'unsafe or missing setup tool')
-        files['runtime/' + name] = path
+        files[names[tool]] = path
     # #1107: explicit production files only; never fixture providers or tests.
     access = root / 'tools/install/access/access.py'
     require(access.is_file() and access.stat().st_nlink == 1
             and not any(path.is_symlink() for path in (access, *list(access.parents)[:3])),
             'unsafe or missing access tool')
-    files['runtime/access/access.py'] = access
+    files[names['tools/install/access/access.py']] = access
     # #2201: setup's CloudRoom tool ships from its exact tracked file when the
     # requested commit tracks it; the installer requires it.
     if git(root, 'ls-tree', '-z', '--name-only', '--end-of-options', source,
@@ -109,7 +122,7 @@ def collect(root, binaries, output, version, source, target, program_receipt):
         require(tool.is_file() and tool.stat().st_nlink == 1
                 and not any(p.is_symlink() for p in (tool, *list(tool.parents)[:3])),
                 'unsafe or missing CloudRoom setup tool')
-        files['runtime/cloudroom/cloudroom.py'] = tool
+        files[names['tools/install/cloudroom/cloudroom.py']] = tool
     # #635: installed `openwiz init`'s runtime, the same way: from its exact
     # tracked file when the requested commit tracks it; the installer requires it.
     if git(root, 'ls-tree', '-z', '--name-only', '--end-of-options', source,
@@ -118,7 +131,7 @@ def collect(root, binaries, output, version, source, target, program_receipt):
         require(tool.is_file() and tool.stat().st_nlink == 1
                 and not any(p.is_symlink() for p in (tool, *list(tool.parents)[:3])),
                 'unsafe or missing init runtime')
-        files['runtime/setup/init.py'] = tool
+        files[names['tools/install/setup/init.py']] = tool
     # #633: setup's GitHub sign-in helper, likewise from its exact tracked file
     # when the requested commit tracks it; the installer requires it.
     if git(root, 'ls-tree', '-z', '--name-only', '--end-of-options', source,
@@ -127,7 +140,7 @@ def collect(root, binaries, output, version, source, target, program_receipt):
         require(tool.is_file() and tool.stat().st_nlink == 1
                 and not any(p.is_symlink() for p in (tool, *list(tool.parents)[:3])),
                 'unsafe or missing GitHub sign-in helper')
-        files['runtime/setup/github_login.py'] = tool
+        files[names['tools/install/setup/github_login.py']] = tool
     tracked = set(git(root, 'ls-tree', '-r', '-z', '--name-only', '--end-of-options', source,
                       '--', 'adapters', 'kernel').decode('utf-8').split('\0'))
     selected = drivers(root, source)

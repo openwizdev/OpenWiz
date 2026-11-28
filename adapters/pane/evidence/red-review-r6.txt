@@ -1,0 +1,47 @@
+$ python3 -I adapters/pane/test_driver.py   # R6: git's environment, against the driver at 7a79104 (main merged in at 2567d5d); GH_TOKEN (setUp), GITHUB_TOKEN and EXAMPLE_API_KEY planted, all synthetic
+test_a_later_stop_archives_the_pane_once_its_work_is_gone (__main__.Pane.test_a_later_stop_archives_the_pane_once_its_work_is_gone) ... ok
+test_a_start_whose_agent_never_gets_ready_closes_its_tab_and_archives_its_pane (__main__.Pane.test_a_start_whose_agent_never_gets_ready_closes_its_tab_and_archives_its_pane) ... ok
+test_errors_carry_fixed_reasons_never_pane_text (__main__.Pane.test_errors_carry_fixed_reasons_never_pane_text) ... ok
+test_git_sees_only_non_secret_settings (__main__.Pane.test_git_sees_only_non_secret_settings) ... FAIL
+test_kit_passes_all_five (__main__.Pane.test_kit_passes_all_five) ... ok
+test_no_real_harness_or_host_cli_is_on_the_path (__main__.Pane.test_no_real_harness_or_host_cli_is_on_the_path) ... ok
+test_start_opens_one_agent_tab_with_the_model_and_no_permission_flag (__main__.Pane.test_start_opens_one_agent_tab_with_the_model_and_no_permission_flag) ... ok
+test_start_refuses_a_credential_in_any_field (__main__.Pane.test_start_refuses_a_credential_in_any_field) ... ok
+test_start_refuses_before_creating_anything (__main__.Pane.test_start_refuses_before_creating_anything) ... ok
+test_start_refuses_each_credential_the_kit_recognises_inside_a_field (__main__.Pane.test_start_refuses_each_credential_the_kit_recognises_inside_a_field) ... ok
+test_stop_with_work_ends_the_agent_keeps_the_pane_and_answers_stopped (__main__.Pane.test_stop_with_work_ends_the_agent_keeps_the_pane_and_answers_stopped) ... ok
+test_the_environment_is_built_from_scratch (__main__.Pane.test_the_environment_is_built_from_scratch) ... ok
+
+======================================================================
+FAIL: test_git_sees_only_non_secret_settings (__main__.Pane.test_git_sees_only_non_secret_settings)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/pane/test_driver.py", line 220, in test_git_sees_only_non_secret_settings
+    self.assertEqual(names, ['HOME', 'LANG', 'PATH', 'XDG_CONFIG_HOME'])
+AssertionError: Lists differ: ['EXAMPLE_API_KEY', 'FAKE_PANE_CALLS', 'FAK[117 chars]OME'] != ['HOME', 'LANG', 'PATH', 'XDG_CONFIG_HOME']
+
+First differing element 0:
+'EXAMPLE_API_KEY'
+'HOME'
+
+First list contains 7 additional elements.
+First extra element 4:
+'GITHUB_TOKEN'
+
++ ['HOME', 'LANG', 'PATH', 'XDG_CONFIG_HOME']
+- ['EXAMPLE_API_KEY',
+-  'FAKE_PANE_CALLS',
+-  'FAKE_PANE_STATE',
+-  'GH_TOKEN',
+-  'GITHUB_TOKEN',
+-  'HOME',
+-  'KIT_TRACKER',
+-  'LANG',
+-  'OPENWIZ_PANE_STATE',
+-  'PATH',
+-  'XDG_CONFIG_HOME']
+
+----------------------------------------------------------------------
+Ran 12 tests in <time>s
+
+FAILED (failures=1)

@@ -1,0 +1,8 @@
+Green proof run for #3235 (offline, synthetic keys and loopback fake GitHub only):
+
+- python3 -I tools/github-app/test_mint_workflow.py -v: Ran 3 tests, OK
+- python3 -I contracts/fixtures/token-service/test_fixtures.py -v: Ran 19 tests, OK
+- python3 -I tools/github-app/test_token_service.py: Ran 14 tests, OK
+- python3 -I tools/github-app/test_app_select.py: Ran 5 tests, OK
+- python3 -I tools/github-app/test_agent_token.py ActionsRoute -v: Ran 4 tests, OK
+- python3 -I tools/privacy-check/check.py --tree .: exit 0
