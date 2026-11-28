@@ -91,6 +91,14 @@ def paused(*args):
 t.sandbox_state = paused
 t.main()
 '''
+QUICK_RESUME = '''import importlib.machinery, importlib.util, os, sys
+sys.dont_write_bytecode = True
+spec = importlib.util.spec_from_loader('boat', importlib.machinery.SourceFileLoader('boat', %r))
+t = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(t)
+t.RESUME_WAIT = 1
+t.main()
+'''
 ODD_BOAT = '''import json, os, sys
 if sys.argv[1:2] == ['exec'] and 'openwiz-push-ok' in ' '.join(sys.argv) and os.environ.get('PUSH_ANSWER'):
     ok = os.environ['PUSH_ANSWER'] == 'ok'
@@ -295,11 +303,10 @@ class Boat(unittest.TestCase):
                 self.assertTrue(self.until(lambda: not alive(self.logged()[-1][0])), 'the woken turn never ended')
                 self.assertEqual([t[2:] for t in self.logged()[-2:]], [('c1', 'first'), ('c1', 'woken')])
                 self.assertEqual(self.notes()[-1][1], 'woke and read the ticket again')
-        # A state boat names that no wake may prompt in still refuses, and says which.
-        self.set_state('archived')
+        self.set_state('stopping')
         code, err = self.driver('wake', out)
         self.assertEqual((code, len(self.logged())), (1, 8), err)
-        self.assertIn('is archived, not running', err['error'])
+        self.assertIn('is stopping, not running', err['error'])
 
     def boat_calls(self, log):
         try:
@@ -470,22 +477,141 @@ class Boat(unittest.TestCase):
         with open(self.env['FAKE_BOAT_STATE'], 'w') as f:
             json.dump(boat, f)
 
-    def test_a_wake_never_resumes_a_stopped_sandbox_and_stop_ends_it(self):
-        # catches: a wake that resumes a stopped sandbox (after boat's auto-stop, or a stop whose every local
-        # write failed) and runs the builder again, and a stop that leaves the sandbox running on boat.dev.
-        code, started = self.driver('start', REQUEST)
-        self.assertEqual(code, 0, started)
-        boxes = self.sandboxes()
-        self.assertEqual(list(boxes.values()), ['running'])
-        sid = next(iter(boxes))
-        subprocess.run(['boat', 'stop', sid, '--json'], env=self.env, capture_output=True, check=True)
-        code, err = self.driver('wake', started)
-        self.assertEqual((code, self.sandboxes(), self.notes()), (1, {sid: 'stopped'}, [(1, 'started the throwaway ticket')]))
-        self.assertIn('is stopped, not running', err['error'])  # its reason: boat's state, read where boat puts it
-        self.assertIn('start a new run', err['next'])
-        for _ in range(2):  # stopping a stopped run answers again
-            self.assertEqual(self.driver('stop', started), (0, dict(started, stopped=True)))
-            self.assertEqual(self.sandboxes(), {sid: 'stopped'})
+    def edit_box(self, change):
+        with open(self.env['FAKE_BOAT_STATE']) as f:
+            boat = json.load(f)
+        change(boat['sandboxes'], max(boat['sandboxes']))
+        with open(self.env['FAKE_BOAT_STATE'], 'w') as f:
+            json.dump(boat, f)
+
+    def started_then_stopped_by_boat(self, stopped='stopped'):
+        code, out = self.driver('start', REQUEST)
+        self.assertEqual(code, 0, out)
+        self.assertTrue(self.until(lambda: not alive(self.logged()[-1][0])), 'the first turn never ended')
+        self.set_state(stopped)
+        return out, max(self.sandboxes())
+
+    def lost(self, run):
+        return {'error': "run %s: its sandbox no longer holds the run's agent session, so it was not woken and its "
+                         'sandbox is left stopped' % run,
+                'next': 'start a new run with `start`; the driver never starts a fresh agent for an old run'}
+
+    def test_a_wake_starts_a_stopped_box_and_resumes_the_same_session(self):
+        for stopped in ('stopped', 'archived'):
+            with self.subTest(state=stopped):
+                self.tearDown()
+                self.setUp()
+                calls = os.path.join(self.folder, 'calls')
+                out, sid = self.started_then_stopped_by_boat(stopped)
+                self.assertEqual(self.driver('wake', out, FAKE_BOAT_ARGS=calls), (0, dict(out, woke=True)))
+                self.assertTrue(self.until(lambda: not alive(self.logged()[-1][0])), 'the woken turn never ended')
+                self.assertEqual([t[2:] for t in self.logged()], [('c1', 'first'), ('c1', 'woken')])
+                self.assertEqual(self.notes(), [(1, 'woke and read the ticket again')])
+                made = [c for c in self.boat_calls(calls) if c[:1] != ['info']]
+                self.assertEqual([c[0] for c in made], ['limits', 'resume', 'conversations', 'prompt'])
+                self.assertEqual(made[1], ['resume', sid, '--json'])
+                self.assertEqual(made[3][:8], ['prompt', sid, '--resume', 'c1', '--provider', 'claude', '--model',
+                                               'claude-opus-5-5'])
+                self.assertEqual(self.sandboxes(), {sid: 'running'})
+                self.assertEqual(self.driver('stop', out), (0, dict(out, stopped=True)))
+                self.assertEqual((self.sandboxes(), self.live_descendants_of_this_test()), ({sid: 'stopped'}, []))
+                code, err = self.driver('wake', out, FAKE_BOAT_ARGS=calls)
+                self.assertEqual((code, self.sandboxes(), len(self.logged())), (1, {sid: 'stopped'}, 2), err)
+                self.assertIn('start a new run', err['next'])
+                self.assertEqual([c[0] for c in self.boat_calls(calls)].count('resume'), 1)
+                for _ in range(2):
+                    self.assertEqual(self.driver('stop', out), (0, dict(out, stopped=True)))
+                    self.assertEqual(self.sandboxes(), {sid: 'stopped'})
+
+    def test_a_wake_of_a_deleted_box_refuses_and_starts_nothing(self):
+        calls = os.path.join(self.folder, 'calls')
+        out, sid = self.started_then_stopped_by_boat()
+        self.edit_box(lambda boxes, newest: boxes.pop(newest))
+        before = set(self.live_descendants_of_this_test())
+        code, err = self.driver('wake', out, FAKE_BOAT_ARGS=calls)
+        self.assertEqual((code, err), (1, {
+            'error': 'run %s: its sandbox is gone from boat.dev (deleted), so it was not woken and nothing was '
+                     'started' % out['run'],
+            'next': 'start a new run with `start`; the driver never starts a fresh agent for an old run'}))
+        self.assertEqual([c[0] for c in self.boat_calls(calls)], ['info'])
+        self.assertEqual((self.sandboxes(), len(self.logged())), ({}, 1))
+        self.assertLessEqual(set(self.live_descendants_of_this_test()), before, 'the wake started a process')
+
+    def test_a_wake_whose_session_was_lost_refuses_and_starts_nothing(self):
+        def renamed(boxes, newest):
+            boxes[newest]['name'] = 'someone-else'
+
+        def forgotten(boxes, newest):
+            boxes[newest]['conversations'] = {}
+
+        for how, change, started in (('no mark', renamed, False), ('no session', forgotten, True)):
+            with self.subTest(how=how):
+                calls = os.path.join(self.folder, 'calls-' + how.replace(' ', '-'))
+                out, sid = self.started_then_stopped_by_boat()
+                turns = len(self.logged())
+                self.edit_box(change)
+                before = set(self.live_descendants_of_this_test())
+                code, err = self.driver('wake', out, FAKE_BOAT_ARGS=calls)
+                self.assertEqual((code, err), (1, self.lost(out['run'])))
+                made = [c[0] for c in self.boat_calls(calls)]
+                self.assertNotIn('prompt', made)
+                self.assertEqual(('resume' in made, 'stop' in made), (started, started), made)
+                self.assertEqual((self.sandboxes()[sid], len(self.logged())), ('stopped', turns))
+                self.assertLessEqual(set(self.live_descendants_of_this_test()), before, 'the wake started a process')
+
+    def test_a_wake_past_the_plans_start_limits_refuses_before_starting(self):
+        for period in ('minute', 'hour', 'day'):
+            with self.subTest(period=period):
+                calls = os.path.join(self.folder, 'calls-' + period)
+                out, sid = self.started_then_stopped_by_boat()
+                code, err = self.driver('wake', out, FAKE_BOAT_ARGS=calls, FAKE_BOAT_STARTS=period + '=0')
+                self.assertEqual((code, err), (1, {
+                    'error': "run %s: boat's start limit for this %s is used up, so its stopped sandbox was not "
+                             'started and the run is not woken' % (out['run'], period),
+                    'next': 'wake it again once `boat limits --all` shows a start left this %s' % period}))
+                self.assertEqual([c[0] for c in self.boat_calls(calls)], ['info', 'info', 'limits'])
+                self.assertEqual((self.sandboxes()[sid], [t[3] for t in self.logged()].count('woken')), ('stopped', 0))
+        out, sid = self.started_then_stopped_by_boat()
+        code, err = self.driver('wake', out, FAKE_BOAT_FAIL='limits')
+        self.assertEqual((code, err['error']), (1, "run %s: boat's start limits could not be read, so its stopped "
+                                                   'sandbox was not started and the run is not woken' % out['run']))
+        self.assertEqual(self.sandboxes()[sid], 'stopped')
+
+    def test_a_stop_during_a_wakes_start_leaves_nothing_running(self):
+        out, sid = self.started_then_stopped_by_boat()
+        starting = os.path.join(self.folder, 'resume-hold')
+        open(starting, 'w').close()
+        open(self.hold, 'w').close()
+        env = dict(self.env, FAKE_RESUME_HOLD=starting)
+        wake = subprocess.Popen([DRIVER, 'wake'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=env)
+        wake.stdin.write(json.dumps(out).encode())
+        wake.stdin.close()
+        self.assertTrue(self.until(lambda: self.sandboxes()[sid] == 'provisioning'), 'the wake never began the start')
+        stop = subprocess.Popen([DRIVER, 'stop'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=env)
+        stop.stdin.write(json.dumps(out).encode())
+        stop.stdin.close()
+        time.sleep(1)
+        self.assertIsNone(stop.poll(), 'the stop did not wait for the wake to finish')
+        os.remove(starting)
+        self.assertEqual((wake.wait(60), json.loads(wake.stdout.read())), (0, dict(out, woke=True)))
+        self.assertEqual((stop.wait(60), json.loads(stop.stdout.read())), (0, dict(out, stopped=True)))
+        self.assertEqual([t[3] for t in self.logged()], ['first', 'woken'])
+        self.assertEqual((self.sandboxes(), self.live_descendants_of_this_test()), ({sid: 'stopped'}, []))
+        self.assertFalse(any(alive(t[1]) for t in self.logged()), "a turn's worker still runs")
+        self.assertEqual(self.driver('wake', out)[0], 1)
+        self.assertEqual(self.sandboxes(), {sid: 'stopped'})
+
+    def test_a_box_that_does_not_get_ready_in_time_is_stopped_again(self):
+        out, sid = self.started_then_stopped_by_boat()
+        starting = os.path.join(self.folder, 'resume-hold')
+        open(starting, 'w').close()
+        before = set(self.live_descendants_of_this_test())
+        code, err = self.driver('wake', out, program=self.wrapper('quick', QUICK_RESUME), FAKE_RESUME_HOLD=starting)
+        self.assertEqual((code, err['error']), (1, 'run %s: its sandbox did not get ready within 1 seconds of `boat '
+                                                   'resume`, so it was stopped again and the run is not woken'
+                                                   % out['run']), err)
+        self.assertEqual((self.sandboxes(), len(self.logged())), ({sid: 'stopped'}, 1))
+        self.assertLessEqual(set(self.live_descendants_of_this_test()), before, 'the wake left a process running')
 
     def files_holding(self, marker):
         found = []

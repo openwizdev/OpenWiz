@@ -163,6 +163,23 @@ def prompt(args):
     say(data={'conversationId': cid, 'status': 'finished'}, event='chat', final=True)
 
 
+def resume(sid):
+    def begin(state):
+        sandbox(state, sid)['state'] = 'provisioning'
+    update(begin)
+    while os.environ.get('FAKE_RESUME_HOLD') and os.path.exists(os.environ['FAKE_RESUME_HOLD']):
+        time.sleep(0.05)
+
+    def ready(state):
+        box = sandbox(state, sid)
+        if box['state'] == 'provisioning':
+            box['state'] = 'running'
+        return box['state']
+    if update(ready) != 'running':
+        fail('sandbox_not_ready', 'the sandbox was stopped while it started')
+    say(event='ready', id=sid)
+
+
 def leak(how):
     marker = os.environ['FAKE_MARKER']
     if how == 'json':
@@ -199,16 +216,26 @@ def main():
             say(id=rest[0], state=box['state'])
         else:
             say(sandbox={'id': rest[0], 'name': box['name'], 'state': box['state']})
-    elif cmd in ('resume', 'stop', 'interrupt') and rest[-1] == '--json' and (
+    elif cmd == 'resume' and len(rest) == 2 and rest[1] == '--json':
+        resume(rest[0])
+    elif cmd == 'limits' and rest == ['--json']:
+        left = {'minute': 5, 'hour': 30, 'day': 100}
+        left.update((k, int(v)) for k, _, v in (x.partition('=') for x in os.environ.get(
+            'FAKE_BOAT_STARTS', '').split(',') if x))
+        say(accountStatus='active', canStart=min(left.values()) > 0, starts={k: {'remaining': v} for k, v in left.items()})
+    elif cmd == 'conversations' and len(rest) == 2 and rest[1] == '--json':
+        for cid in update(lambda s: sandbox(s, rest[0]))['conversations']:
+            say(id=cid, running=False)
+    elif cmd in ('stop', 'interrupt') and rest[-1] == '--json' and (
             len(rest) == 2 or cmd == 'interrupt' and len(rest) == 4 and rest[1] == '--convo'):
         def act(state):
             box = sandbox(state, rest[0])
             if cmd == 'interrupt':
                 box['interrupts'] += 1
             else:
-                box['state'] = 'running' if cmd == 'resume' else 'stopped'
+                box['state'] = 'stopped'
         update(act)
-        say(event='ready' if cmd == 'resume' else 'done', id=rest[0])
+        say(event='done', id=rest[0])
     elif cmd == 'exec':
         run_in_sandbox(rest)
     elif cmd == 'prompt' and rest == ['--help', '--no-update']:
