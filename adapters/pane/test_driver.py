@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 
 sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -104,7 +105,7 @@ class Pane(unittest.TestCase):
                            env=self.env, capture_output=True, text=True, timeout=300)
         self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
             'pass version: openwiz:records v1, and the schema is driver v1',
-            'pass start: the run posted builder status note 1; effort: a start with it was refused, as the README\'s Effort: line says',
+            'pass start: the run posted builder status note 1; effort: medium reached a process the run started',
             'pass wake: the run edited builder status note 1',
             'pass stop: the run ended, and a wake after it is refused',
             'pass token: no login or token passed through the driver']), p.stderr)
@@ -225,14 +226,53 @@ class Pane(unittest.TestCase):
         self.assertIn('model is not valid', out['error'])
         self.assertEqual(len([c for c in self.called() if c[:2] == ['panes', 'create']]), 2)
 
-    def test_the_effort_line_is_directly_under_the_login_line(self):
-        with open(os.path.join(HERE, 'README.md')) as f:
-            lines = f.read().splitlines()
+    def test_effort_is_declared_and_schema_matches_the_kit(self):
+        lines = (Path(HERE) / 'README.md').read_text().splitlines()
         login = next(i for i, line in enumerate(lines) if line.startswith('Login:'))
-        self.assertTrue(lines[login + 1].startswith("Effort: the host can't set it"), lines[login:login + 2])
-        code, out = self.driver('start', dict(REQUEST, effort='medium'))
-        self.assertEqual(code, 1, out)
-        self.assertFalse([c for c in self.called() if c[:2] == ['panes', 'create']])
+        self.assertEqual(lines[login + 1], 'Effort: passed as harness options via `runpane panes create --tool-command`.')
+        self.assertEqual([line for line in lines if line.startswith('Effort:')], [lines[login + 1]])
+        code, out = self.driver('version', None)
+        self.assertEqual((code, out['can'].count('effort')), (0, 1))
+        self.assertEqual((Path(HERE) / 'schema.json').read_bytes(), Path(KIT).with_name('schema.json').read_bytes())
+
+    def test_effort_reaches_the_pane_agent_command_and_is_recorded(self):
+        cases = (('claude', 'medium', 'claude --model synthetic-model --effort medium', {}),
+                 ('codex', 'xhigh', 'codex --model synthetic-model -c model_reasoning_effort=xhigh',
+                  {'FAKE_PANE_QUEUE': '1'}))
+        for i, (harness, effort, command, env) in enumerate(cases, 1):
+            with self.subTest(harness=harness):
+                code, run = self.driver('start', dict(REQUEST, harness=harness, model='synthetic-model', effort=effort),
+                                        **env)
+                self.assertEqual(code, 0, run)
+                create = [c for c in self.called() if c[:2] == ['panes', 'create']]
+                self.assertEqual(len(create), i)
+                self.assertEqual(create[-1][create[-1].index('--tool-command') + 1], command)
+                self.assertEqual(self.pane()['panels']['panel-%d' % i]['effort'], effort)
+                self.assertEqual(self.driver('stop', run), (0, dict(run, stopped=True)))
+
+    def test_unsupported_effort_refuses_without_calling_pane_or_saving_a_run(self):
+        next_step = ("this host can't set effort: remove the effort for this harness in your Models table or Roster "
+                     "to run it at the host's default")
+        for harness, effort in (('claude', 'minimal'), ('codex', 'turbo'), ('cursor', 'medium'),
+                                ('opencode', 'medium'), ('pi', 'medium'), ('gemini', 'medium')):
+            with self.subTest(harness=harness, effort=effort):
+                code, out = self.driver('start', dict(REQUEST, harness=harness, effort=effort))
+                self.assertEqual((code, set(out), out['next']), (1, {'error', 'next'}, next_step))
+                self.assertIn(harness, out['error'])
+                self.assertIn(effort, out['error'])
+        self.assertEqual(self.called(), [])
+        self.assertFalse(os.path.exists(self.env['OPENWIZ_PANE_STATE']))
+
+    def test_malformed_or_credential_shaped_effort_is_not_echoed_or_sent(self):
+        for effort in ('MEDIUM', 'a' * 21, None, 'xoxb-synthetic'):
+            with self.subTest(effort=effort):
+                code, out = self.driver('start', dict(REQUEST, effort=effort))
+                self.assertEqual((code, set(out)), (1, {'error', 'next'}))
+                self.assertIn('effort ', out['error'])
+                if isinstance(effort, str):
+                    self.assertNotIn(effort, json.dumps(out))
+        self.assertEqual(self.called(), [])
+        self.assertFalse(os.path.exists(self.env['OPENWIZ_PANE_STATE']))
 
     def runs(self):
         return sorted(name[:-5] for name in os.listdir(self.env['OPENWIZ_PANE_STATE']) if name.endswith('.json'))
