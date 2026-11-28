@@ -1,0 +1,12 @@
+{
+  "schema": "openwiz.settings-cli.v1",
+  "kind": "changed",
+  "version": 2,
+  "changes": [
+    {
+      "path": "telemetry",
+      "old": false,
+      "new": true
+    }
+  ]
+}

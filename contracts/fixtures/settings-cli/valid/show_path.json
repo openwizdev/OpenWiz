@@ -1,0 +1,6 @@
+{
+  "schema": "openwiz.settings-cli.v1",
+  "kind": "show_path",
+  "path": "keys.SYN_OPTIONAL_A.last_used_at",
+  "value": "never"
+}

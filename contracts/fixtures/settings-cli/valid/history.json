@@ -1,0 +1,14 @@
+{
+  "schema": "openwiz.settings-cli.v1",
+  "kind": "history",
+  "entries": [
+    {
+      "version": 2,
+      "changed_at": "2001-01-03T04:05:06Z",
+      "changed_by": "Wiz chat",
+      "paths": [
+        "telemetry"
+      ]
+    }
+  ]
+}
