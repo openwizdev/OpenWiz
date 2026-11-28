@@ -1,0 +1,9 @@
+{
+  "schema": "openwiz.value-meter.v1",
+  "kind": "config",
+  "enabled": "true",
+  "repos": [],
+  "hours_per_merged_pr": null,
+  "hourly_rate_usd": null,
+  "share_aggregates": false
+}

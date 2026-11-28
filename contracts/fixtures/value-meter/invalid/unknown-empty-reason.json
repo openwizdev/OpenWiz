@@ -1,0 +1,140 @@
+{
+  "schema": "openwiz.value-meter.v1",
+  "kind": "report",
+  "opted_in": false,
+  "as_of": "2030-01-15T18:30:00Z",
+  "windows": {
+    "timezone": "fixed-PST",
+    "end": "2030-01-15T08:00:00Z",
+    "this_week": {
+      "start": "2030-01-08T08:00:00Z",
+      "end": "2030-01-15T08:00:00Z"
+    },
+    "last_week": {
+      "start": "2030-01-01T08:00:00Z",
+      "end": "2030-01-08T08:00:00Z"
+    }
+  },
+  "metrics": {
+    "this_week": {
+      "merged_prs": {
+        "state": "unknown",
+        "value": null,
+        "known_count": 0,
+        "total_count": 0,
+        "reason": ""
+      },
+      "hours_saved": {
+        "state": "unknown",
+        "value": null,
+        "known_count": 0,
+        "total_count": 0,
+        "reason": "telemetry is off; no records were read"
+      },
+      "money_saved_usd": {
+        "state": "unknown",
+        "value": null,
+        "known_count": 0,
+        "total_count": 0,
+        "reason": "telemetry is off; no records were read",
+        "net_of_known_cost_usd": null,
+        "net_reason": "telemetry is off; no records were read"
+      },
+      "cost_per_merged_pr_credits": {
+        "state": "unknown",
+        "value": null,
+        "known_count": 0,
+        "total_count": 0,
+        "reason": "telemetry is off; no records were read"
+      },
+      "cost_per_merged_pr_usd": {
+        "state": "unknown",
+        "value": null,
+        "known_count": 0,
+        "total_count": 0,
+        "reason": "telemetry is off; no records were read"
+      }
+    },
+    "last_week": {
+      "merged_prs": {
+        "state": "unknown",
+        "value": null,
+        "known_count": 0,
+        "total_count": 0,
+        "reason": "telemetry is off; no records were read"
+      },
+      "hours_saved": {
+        "state": "unknown",
+        "value": null,
+        "known_count": 0,
+        "total_count": 0,
+        "reason": "telemetry is off; no records were read"
+      },
+      "money_saved_usd": {
+        "state": "unknown",
+        "value": null,
+        "known_count": 0,
+        "total_count": 0,
+        "reason": "telemetry is off; no records were read",
+        "net_of_known_cost_usd": null,
+        "net_reason": "telemetry is off; no records were read"
+      },
+      "cost_per_merged_pr_credits": {
+        "state": "unknown",
+        "value": null,
+        "known_count": 0,
+        "total_count": 0,
+        "reason": "telemetry is off; no records were read"
+      },
+      "cost_per_merged_pr_usd": {
+        "state": "unknown",
+        "value": null,
+        "known_count": 0,
+        "total_count": 0,
+        "reason": "telemetry is off; no records were read"
+      }
+    }
+  },
+  "week_over_week": {
+    "merged_prs": {
+      "state": "unknown",
+      "value": null,
+      "direction": "unknown",
+      "known_count": 0,
+      "total_count": 2,
+      "reason": "telemetry is off; no records were read"
+    },
+    "hours_saved": {
+      "state": "unknown",
+      "value": null,
+      "direction": "unknown",
+      "known_count": 0,
+      "total_count": 2,
+      "reason": "telemetry is off; no records were read"
+    },
+    "money_saved_usd": {
+      "state": "unknown",
+      "value": null,
+      "direction": "unknown",
+      "known_count": 0,
+      "total_count": 2,
+      "reason": "telemetry is off; no records were read"
+    },
+    "cost_per_merged_pr_credits": {
+      "state": "unknown",
+      "value": null,
+      "direction": "unknown",
+      "known_count": 0,
+      "total_count": 2,
+      "reason": "telemetry is off; no records were read"
+    },
+    "cost_per_merged_pr_usd": {
+      "state": "unknown",
+      "value": null,
+      "direction": "unknown",
+      "known_count": 0,
+      "total_count": 2,
+      "reason": "telemetry is off; no records were read"
+    }
+  }
+}
