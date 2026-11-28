@@ -1054,11 +1054,20 @@ impl World {
                     subject: reads.subject,
                     ci: reads.ci,
                     base_now: Some(reads.base_now),
-                    reports: c
-                        .iter()
-                        .filter(|c| records::first(c).starts_with("VERDICT:"))
-                        .map(Comment::report)
-                        .collect(),
+                    reports: {
+                        let mut reports: Vec<_> = c
+                            .iter()
+                            .filter(|c| records::first(c).starts_with("VERDICT:"))
+                            .map(Comment::report)
+                            .collect();
+                        super::typesafe::rewrite_newest_verdict(
+                            &mut reports,
+                            |r| r.comment,
+                            |r| &mut r.text,
+                            super::typesafe::env_decider(deadline).as_ref(),
+                        );
+                        reports
+                    },
                     starts: ps,
                     records: records::pr_records(c, &retired_rechecks[&p.number]),
                 })))
@@ -1287,8 +1296,11 @@ impl World {
                     return Err("review output partial");
                 }
                 match output.output {
-                    Fact::Known(Some(text)) => openwiz_core::fleet::fleets::verdict(&[text])
-                        .map_err(|_| "malformed reviewer output")?,
+                    Fact::Known(Some(text)) => super::typesafe::reviewer_verdict(
+                        text,
+                        super::typesafe::env_decider(deadline).as_ref(),
+                    )
+                    .map_err(|_| "malformed reviewer output")?,
                     Fact::Known(None) => None,
                     _ => return Err("review output unread"),
                 }

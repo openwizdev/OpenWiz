@@ -1,3 +1,4 @@
+use openwiz_core::fleet::model::Commit;
 use serde_json::{Value, json};
 
 const MODEL: &str = "jev-1.14.0";
@@ -5,9 +6,15 @@ const MAX_STATE_CHARS: usize = 24_000;
 const TAIL_CHARS: usize = 4_000;
 const MAX_ANSWER_BYTES: usize = 1_048_576;
 const ANSWER_SECONDS: u64 = 10;
+const MAX_VERDICT_WORD_CHARS: usize = 40;
 
 pub trait Decisions {
     fn ask(&self, state: &str, questions: &Value) -> Option<Value>;
+
+    #[cfg(test)]
+    fn live(&self) -> bool {
+        false
+    }
 }
 
 pub struct Absent;
@@ -33,6 +40,11 @@ struct Http {
 }
 
 impl Decisions for Http {
+    #[cfg(test)]
+    fn live(&self) -> bool {
+        true
+    }
+
     fn ask(&self, state: &str, questions: &Value) -> Option<Value> {
         let body = json!({
             "model": MODEL,
@@ -124,7 +136,11 @@ fn run_ask(
 }
 
 pub fn env_decider(deadline: std::time::Instant) -> Box<dyn Decisions> {
-    if jev_enabled() {
+    decider(jev_enabled(), deadline)
+}
+
+fn decider(enabled: bool, deadline: std::time::Instant) -> Box<dyn Decisions> {
+    if enabled {
         Box::new(Http { deadline })
     } else {
         Box::new(Absent)
@@ -132,9 +148,15 @@ pub fn env_decider(deadline: std::time::Instant) -> Box<dyn Decisions> {
 }
 
 fn jev_enabled() -> bool {
-    let opted_in = std::env::var_os("OPENWIZ_JEV").is_some_and(|value| value == "1");
-    opted_in
-        && std::env::var_os("TYPESAFE_API_KEY").is_some_and(|value| {
+    enabled(
+        std::env::var_os("OPENWIZ_JEV"),
+        std::env::var_os("TYPESAFE_API_KEY"),
+    )
+}
+
+fn enabled(opt_in: Option<std::ffi::OsString>, key: Option<std::ffi::OsString>) -> bool {
+    opt_in.is_some_and(|value| value == "1")
+        && key.is_some_and(|value| {
             std::str::from_utf8(value.as_encoded_bytes())
                 .ok()
                 .is_some_and(|text| !text.trim().is_empty())
@@ -236,6 +258,117 @@ pub fn plan_limit(texts: &[&str], deadline: std::time::Instant) -> bool {
     plan_limit_with(texts, env_decider(deadline).as_ref())
 }
 
+struct Chosen {
+    name: String,
+    confidence: f64,
+}
+
+fn choice(response: &Value, name: &str) -> Option<Chosen> {
+    let answer = response.get("answers")?.get(name)?;
+    if answer.get("type")?.as_str()? != "choice" {
+        return None;
+    }
+    let picked = answer.get("choice")?.as_str()?;
+    let confidence = answer.get("confidence")?.as_f64()?;
+    let probability = answer.get("probabilities")?.get(picked)?.as_f64()?;
+    if !(0.0..=1.0).contains(&confidence) || !(0.0..=1.0).contains(&probability) {
+        return None;
+    }
+    Some(Chosen {
+        name: picked.to_owned(),
+        confidence,
+    })
+}
+
+fn exact_verdict(line: &str) -> Option<&'static str> {
+    let rest = line.strip_prefix("VERDICT: ")?;
+    let (word, commit) = rest.split_once(" at ")?;
+    Commit::parse(commit)?;
+    match word {
+        "APPROVE" => Some("APPROVE"),
+        "CHANGES" => Some("CHANGES"),
+        _ => None,
+    }
+}
+
+pub fn canonical_verdict_line(line: &str, decider: &dyn Decisions) -> Option<String> {
+    if exact_verdict(line).is_some() {
+        return None;
+    }
+    let rest = line.strip_prefix("VERDICT: ")?;
+    let (word, commit) = rest.split_once(" at ")?;
+    let commit = Commit::parse(commit)?;
+    if word.chars().count() > MAX_VERDICT_WORD_CHARS {
+        return None;
+    }
+    let config = config();
+    let site = config.get("sites")?.get("verdict")?;
+    let response = decider.ask(&format!("VERDICT: {word}"), site.get("questions")?)?;
+    let chosen = choice(&response, "kind")?;
+    if chosen.confidence < site.get("confidence")?.as_f64()? {
+        return None;
+    }
+    let companion = noul(&response, "is_verdict")?;
+    let no = config.get("noul")?.get("no")?.as_f64()?;
+    let yes = config.get("noul")?.get("yes")?.as_f64()?;
+    if companion > no && companion < yes {
+        return None;
+    }
+    if companion < site.get("companion_yes")?.as_f64()? {
+        return None;
+    }
+    let word = match chosen.name.as_str() {
+        "approve" => "APPROVE",
+        "changes" => "CHANGES",
+        _ => return None,
+    };
+    Some(format!("VERDICT: {word} at {}", commit.as_str()))
+}
+
+pub fn rewrite_newest_verdict<T, K: Ord>(
+    reports: &mut [T],
+    comment: impl Fn(&T) -> K,
+    text: impl Fn(&mut T) -> &mut String,
+    decider: &dyn Decisions,
+) {
+    if let Some(newest) = reports.iter_mut().max_by_key(|report| comment(report)) {
+        let body = text(newest);
+        *body = verdict_text(body, decider);
+    }
+}
+
+pub fn reviewer_verdict(
+    text: String,
+    decider: &dyn Decisions,
+) -> Result<Option<openwiz_core::fleet::model::Review>, openwiz_core::fleet::fleets::NotAVerdict> {
+    let exact = openwiz_core::fleet::fleets::verdict(std::slice::from_ref(&text));
+    if exact.is_ok() {
+        return exact;
+    }
+    openwiz_core::fleet::fleets::verdict(&[verdict_text(&text, decider)])
+}
+
+pub fn verdict_text(body: &str, decider: &dyn Decisions) -> String {
+    let Some(first) = body.lines().next() else {
+        return body.to_owned();
+    };
+    let Some(line) = canonical_verdict_line(first, decider) else {
+        return body.to_owned();
+    };
+    match body.split_once('\n') {
+        Some((_, rest)) => format!("{line}\n{rest}"),
+        None => line,
+    }
+}
+
+#[cfg(test)]
+fn accepted_verdict(line: &str, decider: &dyn Decisions) -> Option<&'static str> {
+    if let Some(word) = exact_verdict(line) {
+        return Some(word);
+    }
+    exact_verdict(&canonical_verdict_line(line, decider)?)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -334,6 +467,67 @@ mod tests {
         assert!(sent.starts_with('é'));
         assert_eq!(tail("short"), "short");
         assert_eq!(tail(""), "");
+    }
+
+    #[test]
+    fn a_rewritten_verdict_keeps_the_findings() {
+        let sha = "ab".repeat(20);
+        let body = format!("VERDICT: APPROVED at {sha}\n\n- **R1 [low]** synthetic");
+        let text = verdict_text(&body, &Scripted(verdict_body("approve", 0.97, 0.96, 0.95)));
+        assert_eq!(
+            text,
+            format!("VERDICT: APPROVE at {sha}\n\n- **R1 [low]** synthetic")
+        );
+    }
+
+    #[test]
+    fn recorded_verdict_counts() {
+        let raw = include_str!("../../../tools/typesafe/fixtures/verdict.json");
+        let data: Value = serde_json::from_str(raw).unwrap();
+        let cases = data["cases"].as_array().unwrap();
+        let mut old_hit = 0;
+        let mut shaped_hit = 0;
+        for case in cases {
+            let line = case["line"].as_str().unwrap();
+            let expected = case["expected"].as_str();
+            let recorded = &case["recorded"];
+            let old = exact_verdict(line);
+            let shaped = accepted_verdict(line, &Scripted(recorded.clone()));
+            old_hit += usize::from(old == expected);
+            shaped_hit += usize::from(shaped == expected);
+        }
+        assert_eq!((cases.len(), old_hit, shaped_hit), (9, 5, 8));
+    }
+
+    fn verdict_body(name: &str, probability: f64, confidence: f64, noul: f64) -> Value {
+        let mut probabilities = serde_json::Map::new();
+        for key in ["approve", "changes"] {
+            probabilities.insert(
+                key.to_owned(),
+                json!(if key == name { probability } else { 0.0 }),
+            );
+        }
+        json!({
+            "answers": {
+                "kind": {
+                    "type": "choice",
+                    "choice": name,
+                    "confidence": confidence,
+                    "probabilities": probabilities
+                },
+                "is_verdict": {"type": "noul", "noul": noul}
+            }
+        })
+    }
+
+    #[test]
+    fn a_long_verdict_phrase_is_not_sent() {
+        let sha = "ab".repeat(20);
+        let line = format!("VERDICT: I would not approve this until the tests pass at {sha}");
+        assert_eq!(
+            canonical_verdict_line(&line, &Scripted(verdict_body("approve", 0.99, 0.99, 0.99))),
+            None
+        );
     }
 
     fn ask_script(dir: &str, body: &str) -> std::path::PathBuf {
@@ -446,5 +640,116 @@ mod tests {
             now + secs(ANSWER_SECONDS)
         );
         assert_eq!(answer_until(now, now), now);
+    }
+
+    struct Calls(std::cell::RefCell<Vec<String>>, Option<Value>);
+
+    impl Decisions for Calls {
+        fn ask(&self, state: &str, _: &Value) -> Option<Value> {
+            self.0.borrow_mut().push(state.to_owned());
+            self.1.clone()
+        }
+    }
+
+    #[test]
+    fn only_the_verdict_word_is_sent_and_an_exact_line_is_not() {
+        let sha = "ab".repeat(20);
+        let calls = Calls(
+            std::cell::RefCell::new(vec![]),
+            Some(verdict_body("approve", 0.99, 0.99, 0.99)),
+        );
+        assert_eq!(
+            canonical_verdict_line(&format!("VERDICT: APPROVED at {sha}"), &calls),
+            Some(format!("VERDICT: APPROVE at {sha}"))
+        );
+        assert_eq!(
+            canonical_verdict_line(&format!("VERDICT: APPROVE at {sha}"), &calls),
+            None
+        );
+        assert_eq!(*calls.0.borrow(), ["VERDICT: APPROVED"]);
+    }
+
+    #[test]
+    fn a_failed_call_leaves_the_line_unchanged() {
+        let sha = "ab".repeat(20);
+        let body = format!("VERDICT: APPROVED at {sha}\nfindings");
+        let calls = Calls(std::cell::RefCell::new(vec![]), None);
+        assert_eq!(verdict_text(&body, &calls), body);
+        assert_eq!(verdict_text(&body, &Absent), body);
+        assert_eq!(calls.0.borrow().len(), 1);
+    }
+
+    #[test]
+    fn only_the_newest_report_is_asked_about() {
+        let sha = "ab".repeat(20);
+        let mut reports = vec![
+            (3_u64, format!("VERDICT: APPROVED at {sha}")),
+            (9, format!("VERDICT: LGTM at {sha}")),
+            (5, format!("VERDICT: OK at {sha}")),
+        ];
+        let calls = Calls(
+            std::cell::RefCell::new(vec![]),
+            Some(verdict_body("approve", 0.99, 0.99, 0.99)),
+        );
+        rewrite_newest_verdict(&mut reports, |r| r.0, |r| &mut r.1, &calls);
+        assert_eq!(*calls.0.borrow(), ["VERDICT: LGTM"]);
+        assert_eq!(reports[1].1, format!("VERDICT: APPROVE at {sha}"));
+        assert_eq!(reports[0].1, format!("VERDICT: APPROVED at {sha}"));
+    }
+
+    #[test]
+    fn a_near_miss_in_the_reviewer_output_is_renamed_and_an_exact_one_is_not_sent() {
+        let sha = "ab".repeat(20);
+        let calls = Calls(
+            std::cell::RefCell::new(vec![]),
+            Some(verdict_body("approve", 0.99, 0.99, 0.99)),
+        );
+        let near = reviewer_verdict(format!("VERDICT: APPROVED at {sha}\nnotes"), &calls)
+            .unwrap()
+            .unwrap();
+        assert_eq!(near.commit.as_str(), sha);
+        assert!(matches!(
+            near.verdict,
+            openwiz_core::fleet::model::Verdict::Approve
+        ));
+        assert!(
+            reviewer_verdict(format!("VERDICT: CHANGES at {sha}"), &calls)
+                .unwrap()
+                .is_some()
+        );
+        assert_eq!(*calls.0.borrow(), ["VERDICT: APPROVED"]);
+        assert!(reviewer_verdict(format!("VERDICT: APPROVED at {sha}"), &Absent).is_err());
+        assert_eq!(
+            reviewer_verdict("no verdict here".into(), &calls).unwrap(),
+            None
+        );
+    }
+
+    #[test]
+    fn without_the_opt_in_or_a_key_fleet_tick_gets_no_helper() {
+        let some = |text: &str| Some(std::ffi::OsString::from(text));
+        let deadline = soon(1_000);
+        for (opt_in, key) in [
+            (None, some("synthetic")),
+            (some("1"), None),
+            (some("1"), some("")),
+            (some("1"), some("  ")),
+        ] {
+            let chosen = decider(enabled(opt_in, key), deadline);
+            assert!(!chosen.live());
+            assert_eq!(chosen.ask("VERDICT: APPROVED", &json!({})), None);
+        }
+        assert!(decider(enabled(some("1"), some("synthetic")), deadline).live());
+    }
+
+    #[test]
+    fn jev_needs_the_opt_in_and_a_non_blank_key() {
+        let some = |text: &str| Some(std::ffi::OsString::from(text));
+        assert!(enabled(some("1"), some("synthetic")));
+        assert!(!enabled(None, some("synthetic")));
+        assert!(!enabled(some("0"), some("synthetic")));
+        assert!(!enabled(some("true"), some("synthetic")));
+        assert!(!enabled(some("1"), None));
+        assert!(!enabled(some("1"), some("  ")));
     }
 }
