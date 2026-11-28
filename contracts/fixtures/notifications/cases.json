@@ -31,28 +31,28 @@
     "rule": "needs-owner-kinds",
     "valid": {"schema": "openwiz.notifications.v1", "kinds": {"spec-to-approve": "push", "pr-ready-to-merge": "push", "release": "push", "key-needed": "push", "setting-proposal": "push"}, "quiet_hours": null, "digest": "none", "channels": []},
     "broken": {"schema": "openwiz.notifications.v1", "kinds": {"spec-to-approve": "push", "pr-ready-to-merge": "push", "release": "push", "key-needed": "push", "setting-proposal": "push", "synthetic-approval": "feed"}, "quiet_hours": null, "digest": "none", "channels": []},
-    "keyword": "propertyNames",
+    "keyword": "enum",
     "at": ["kinds"]
   },
   {
     "rule": "scroll-only-kinds",
     "valid": {"schema": "openwiz.notifications.v1", "kinds": {"blocker": "feed", "quota-switch": "feed", "driver-suggestion": "feed"}, "quiet_hours": null, "digest": "none", "channels": []},
     "broken": {"schema": "openwiz.notifications.v1", "kinds": {"blocker": "feed", "quota-switch": "feed", "driver-suggestion": "feed", "synthetic-note": "feed"}, "quiet_hours": null, "digest": "none", "channels": []},
-    "keyword": "propertyNames",
+    "keyword": "enum",
     "at": ["kinds"]
   },
   {
     "rule": "request-stages",
     "valid": {"schema": "openwiz.notifications.v1", "kinds": {"request:submitted": "push", "request:triaged": "push", "request:building": "push", "request:pull-request": "push", "request:reviewed": "push", "request:merged": "push", "request:released": "push", "request:working-on-install": "push"}, "quiet_hours": null, "digest": "none", "channels": []},
     "broken": {"schema": "openwiz.notifications.v1", "kinds": {"request:submitted": "push", "request:triaged": "push", "request:building": "push", "request:pull-request": "push", "request:reviewed": "push", "request:merged": "push", "request:released": "push", "request:working-on-install": "push", "request:synthetic-stage": "feed"}, "quiet_hours": null, "digest": "none", "channels": []},
-    "keyword": "propertyNames",
+    "keyword": "enum",
     "at": ["kinds"]
   },
   {
     "rule": "context-items",
     "valid": {"schema": "openwiz.notifications.v1", "kinds": {"context:Done": "feed", "context:Ticketed": "feed", "context:Decide": "feed", "context:Reply": "feed", "context:Drop": "feed"}, "quiet_hours": null, "digest": "none", "channels": []},
     "broken": {"schema": "openwiz.notifications.v1", "kinds": {"context:Done": "feed", "context:Ticketed": "feed", "context:Decide": "feed", "context:Reply": "feed", "context:Drop": "feed", "context:Synthetic": "feed"}, "quiet_hours": null, "digest": "none", "channels": []},
-    "keyword": "propertyNames",
+    "keyword": "enum",
     "at": ["kinds"]
   },
   {
@@ -87,7 +87,7 @@
     "rule": "digest-none",
     "valid": {"schema": "openwiz.notifications.v1", "kinds": {}, "quiet_hours": null, "digest": "none", "channels": []},
     "broken": {"schema": "openwiz.notifications.v1", "kinds": {}, "quiet_hours": null, "digest": false, "channels": []},
-    "keyword": "type",
+    "keyword": "enum",
     "at": ["digest"]
   },
   {

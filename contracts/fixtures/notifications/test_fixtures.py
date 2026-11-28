@@ -21,7 +21,6 @@ def is_time_zone(value):
 
 class NotificationFixtures(unittest.TestCase):
     def test_schema_accepts_and_refuses_each_listed_pair(self):
-        # catches: an incomplete or permissive preference or default schema.
         cases = json.loads((HERE / "cases.json").read_text())
         readme = (HERE / "README.md").read_text()
         names = [case["rule"] for case in cases]
@@ -40,7 +39,6 @@ class NotificationFixtures(unittest.TestCase):
                 self.assertEqual(actual, [(case["keyword"], case["at"])])
 
     def test_contract_example_and_channel_gate(self):
-        # catches: an unusable example or a contract that drops the Settings gate.
         self.assertTrue(CONTRACT.is_file(), f"{CONTRACT.name} is missing")
         schema = json.loads(SCHEMA.read_text())
         contract = CONTRACT.read_text()
