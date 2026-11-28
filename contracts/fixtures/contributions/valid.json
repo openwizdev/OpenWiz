@@ -194,5 +194,16 @@
     "login": "sample-stitcher",
     "merged": true,
     "credits": 3
+  },
+  "perk-key": {
+    "schema": "openwiz.contributions.v1",
+    "kind": "perk",
+    "pull_request": {
+      "repository": "sample-lantern/patchwork",
+      "number": 42
+    },
+    "login": "sample-stitcher",
+    "merged": true,
+    "credits": 3
   }
 }

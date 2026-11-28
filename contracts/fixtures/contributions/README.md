@@ -22,6 +22,7 @@ omits one required field.
 | `changelog-thanks` | The line ends by thanking the contributor by login. | The line omits the thanks. |
 | `perk-on-merge` | The grant identifies a merged pull request as its credit key. | The pull request is unmerged. |
 | `perk-credit-count` | The grant carries the owner-set count of free requests. | The credit count is negative. |
+| `perk-key` | The same repository and pull request identify the grant on retries. | A delivery identifier changes the grant key on retry. |
 
 From the repository root, run with a Python environment that already provides
 `jsonschema` with Draft 2020-12 support.
