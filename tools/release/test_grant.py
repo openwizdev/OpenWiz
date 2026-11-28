@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Exercise the release grant's command and audit its I/O."""
 from pathlib import Path
 import shutil
 import subprocess

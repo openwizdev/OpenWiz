@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Read the standing release grant defined by openwiz.release-grant.v1."""
 import argparse
 from datetime import date
 from pathlib import Path
@@ -105,7 +104,7 @@ def denial(document, action):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description="Check the standing release grant in the fleet's Approval rules.")
     parser.add_argument("command", choices=("check",))
     parser.add_argument("action", choices=("patch", "pull"))
     parser.add_argument("--fleet", type=Path, default=FLEET)
