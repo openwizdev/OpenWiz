@@ -16,12 +16,10 @@ CHECKER = HERE.parent / 'privacy-check/check.py'
 
 REVIEWED_CARRIAGE = (
     'tools/live-smoke/README.md',
-    'tools/live-smoke/browser.mjs',
     'tools/live-smoke/cleanup.py',
     'tools/live-smoke/combined.template.json',
     'tools/live-smoke/http.py',
     'tools/live-smoke/prepare.py',
-    'tools/live-smoke/prove_port.py',
     'tools/live-smoke/smoke.py',
     'tools/live-smoke/test_fixture.py',
     'tools/live-smoke/test_review.py',
@@ -29,17 +27,17 @@ REVIEWED_CARRIAGE = (
 )
 
 CLASSIFIED_2405 = (
-    ('docs/evidence/ci2-pr-cuts.md', 'public', 'docs: CI2 evidence summaries with private-record pointers'),
-    ('docs/security/public-release-review.md', 'public', 'docs: the public release security review'),
-    ('docs/spikes/ops-dispatch.md', 'public', 'docs: the ops dispatch discovery report'),
     ('tools/ci-overload/alarm.py', 'public', 'CS5 queue and API overload guard, not the retiring CI overflow switch'),
-    ('tools/notifications/discovery-kit.md', 'public', 'notification discovery kit, schema and tests'),
 )
 CARRIED = REVIEWED_CARRIAGE + tuple(row[0] for row in CLASSIFIED_2405)
-
+TREE = HERE.parents[1]
 
 
 class Import(unittest.TestCase):
+    def test_reviewed_carriage_names_files_in_this_tree(self):
+        missing = [name for name in CARRIED if not (TREE / name).is_file()]
+        self.assertEqual(missing, [])
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)

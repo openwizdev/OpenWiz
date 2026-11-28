@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-"""One System One request on stdin, the JSON response on stdout.
-
-Rust calls this so the API key stays in the environment and never appears
-on the command line. Any failure exits 1 and prints nothing.
-"""
-
 import json
 import os
 import sys

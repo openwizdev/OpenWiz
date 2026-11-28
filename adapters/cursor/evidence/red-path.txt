@@ -1,0 +1,23 @@
+# Red run: python3 -I adapters/cursor/test_driver.py Cursor.test_runs_reach_only_the_fake_cursor_and_python, before the tests set their own PATH: the inherited PATH reaches real harness CLIs.
+test_runs_reach_only_the_fake_cursor_and_python (__main__.Cursor.test_runs_reach_only_the_fake_cursor_and_python) ... FAIL
+
+======================================================================
+FAIL: test_runs_reach_only_the_fake_cursor_and_python (__main__.Cursor.test_runs_reach_only_the_fake_cursor_and_python)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cursor/test_driver.py", line 103, in test_runs_reach_only_the_fake_cursor_and_python
+    self.assertEqual(found, dict.fromkeys(found, None) | {'curl': os.path.join(HERE, 'fixtures', 'bin', 'curl')})
+AssertionError: {'cur[60 chars]de': '<system bin>/claude', 'codex': '/usr/l[53 chars]/gh'} != {'cur[60 chars]de': None, 'codex': None, 'agent': None, 'gh': None}
+  {'agent': None,
+-  'claude': '<system bin>/claude',
+-  'codex': '<system bin>/codex',
++  'claude': None,
++  'codex': None,
+   'curl': 'adapters/cursor/fixtures/bin/curl',
+-  'gh': '<system bin>/gh'}
++  'gh': None}
+
+----------------------------------------------------------------------
+Ran 1 test in 0.003s
+
+FAILED (failures=1)

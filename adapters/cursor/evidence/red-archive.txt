@@ -1,0 +1,34 @@
+# Red run: a second stop archives an agent Cursor already shows as archived.
+# Command: python3 -I adapters/cursor/test_driver.py Cursor.test_stopping_again_does_not_archive_an_agent_cursor_already_archived
+# Paths in the traceback read <repo>.
+test_stopping_again_does_not_archive_an_agent_cursor_already_archived (__main__.Cursor.test_stopping_again_does_not_archive_an_agent_cursor_already_archived) ... FAIL
+
+======================================================================
+FAIL: test_stopping_again_does_not_archive_an_agent_cursor_already_archived (__main__.Cursor.test_stopping_again_does_not_archive_an_agent_cursor_already_archived)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "<repo>/adapters/cursor/test_driver.py", line 351, in test_stopping_again_does_not_archive_an_agent_cursor_already_archived
+    self.assertEqual(after, before + ['GET /agents/' + agent])
+AssertionError: Lists differ: ['POS[260 chars]6c36', 'POST /agents/bc-a75e3c58-b850-4a02-8ee[19 chars]ive'] != ['POS[260 chars]6c36']
+
+First list contains 1 additional elements.
+First extra element 5:
+'POST /agents/bc-a75e3c58-b850-4a02-8ee6-755d88376c36/archive'
+
+  ['POST /agents',
+   'GET /agents/bc-a75e3c58-b850-4a02-8ee6-755d88376c36',
+   'POST '
+   '/agents/bc-a75e3c58-b850-4a02-8ee6-755d88376c36/runs/run-00000001/cancel',
+   'POST /agents/bc-a75e3c58-b850-4a02-8ee6-755d88376c36/archive',
+-  'GET /agents/bc-a75e3c58-b850-4a02-8ee6-755d88376c36',
+?                                                       ^
+
++  'GET /agents/bc-a75e3c58-b850-4a02-8ee6-755d88376c36']
+?                                                       ^
+
+-  'POST /agents/bc-a75e3c58-b850-4a02-8ee6-755d88376c36/archive']
+
+----------------------------------------------------------------------
+Ran 1 test in 0.352s
+
+FAILED (failures=1)

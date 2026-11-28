@@ -3,10 +3,19 @@ import ctypes, fcntl, json, os, re, secrets, shutil, signal, stat, subprocess, s
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATE = os.path.abspath(os.environ.get('OPENWIZ_FACTORY_STATE') or os.path.expanduser('~/.local/state/openwiz-factory'))
-VERSION = {'driver': 'factory', 'records': ['openwiz:records v1'], 'can': ['start', 'wake', 'stop']}
+VERSION = {'driver': 'factory', 'records': ['openwiz:records v1'],
+           'can': ['start', 'wake', 'stop', 'effort']}
 START = {'repository': r'[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}', 'ticket': None,
          'skill': r'(?=.{1,60}$)[a-z0-9]+(-[a-z0-9]+)*', 'harness': r'[a-z0-9][a-z0-9._-]{0,59}',
-         'model': r'[A-Za-z0-9][A-Za-z0-9 ._:@+-]{0,59}'}
+         'model': r'(?=.{1,100}$)[A-Za-z0-9][A-Za-z0-9 ._:@+-]*(/[A-Za-z0-9][A-Za-z0-9 ._:@+-]*)*'}
+EFFORT = {'effort': r'[a-z][a-z0-9-]{0,19}'}
+EFFORT_WORD = re.compile(EFFORT['effort'])
+AVAILABLE_MODELS = 'Available Models:'
+MODEL_DETAILS = 'Model details:'
+AVAILABLE_ROW = re.compile(r'  (\S+)\s+(.+?)')
+DETAIL_ROW = re.compile(r'  - (.+): supports reasoning: (Yes|No); supported: \[([^\]]*)\]; default: \S+')
+CANT_SET_EFFORT = ("this host can't set effort: remove the effort for this harness in your Models table or Roster to "
+                   "run it at the host's default")
 RUN = {'run': r'run-[0-9a-f]{12}'}
 HARNESS = 'droid'
 SESSION = r'[A-Za-z0-9][A-Za-z0-9-]{0,99}'
@@ -25,24 +34,110 @@ def unique(pairs):
 
 
 def read(fields):
+    need = [k for k in fields if k != 'effort']
     try:
         req = json.loads(sys.stdin.read(), object_pairs_hook=unique)
     except ValueError:
         raise Refused('the input is not JSON', 'send one JSON object on stdin, as `driver schema` shows')
-    if not isinstance(req, dict) or set(req) != set(fields):
-        raise Refused('the input needs exactly ' + ', '.join(fields), 'send only those fields; never a login')
+    if not isinstance(req, dict) or not set(need) <= set(req) <= set(fields):
+        carried = ', and may carry effort' if 'effort' in fields else ''
+        raise Refused('the input needs exactly ' + ', '.join(need) + carried, 'send only those fields; never a login')
     for key, pattern in fields.items():
+        if key not in req:
+            continue
         v = req[key]
         if not (type(v) is int and v > 0 if pattern is None else isinstance(v, str) and re.fullmatch(pattern, v)):
             raise Refused(key + ' is not valid', 'fix ' + key + ' as `driver schema` shows')
     return req
 
 
+def line(text):
+    text = ' '.join(str(text).split()) or 'no detail'
+    return text if len(text) <= 300 else text[:297] + '...'
+
+
+def section(lines, heading):
+    if lines.count(heading) != 1:
+        return None
+    rows = []
+    for row in lines[lines.index(heading) + 1:]:
+        if not row.strip():
+            break
+        if not row.startswith('  '):
+            return None
+        rows.append(row.rstrip())
+    return rows or None
+
+
+def catalog(text):
+    lines = text.splitlines()
+    avail_rows, detail_rows = section(lines, AVAILABLE_MODELS), section(lines, MODEL_DETAILS)
+    if not avail_rows or not detail_rows:
+        return None
+    models = {}
+    for row in avail_rows:
+        m = AVAILABLE_ROW.fullmatch(row)
+        if not m or m.group(1) in models:
+            return None
+        name = m.group(2)
+        if name.endswith(' (default)'):
+            name = name[:-len(' (default)')]
+        models[m.group(1)] = name
+    details = {}
+    for row in detail_rows:
+        m = DETAIL_ROW.fullmatch(row)
+        if not m or m.group(1) in details:
+            return None
+        name, supports, raw = m.groups()
+        if supports == 'No':
+            levels = frozenset()
+        else:
+            words = [w.strip() for w in raw.split(',')] if raw.strip() else []
+            if not words or any(not EFFORT_WORD.fullmatch(w) for w in words):
+                return None
+            levels = frozenset(words)
+        details[name] = levels
+    if any(name not in details for name in models.values()):
+        return None
+    return {model_id: details[name] for model_id, name in models.items()}
+
+
+# External: Factory documents `droid exec --reasoning-effort <level>` as model-dependent and unavailable for
+# `custom:` models, and `droid exec --help` prints each built-in model's levels under `Available Models:` and
+# `Model details:`, https://docs.factory.com/models and https://docs.factory.com/droid-exec/overview.
+def settable(req):
+    if 'effort' not in req:
+        return
+    if req['model'].startswith('custom:'):
+        raise Refused(line('harness %s cannot set effort %s for custom model %s; nothing was saved or started'
+                           % (req['harness'], req['effort'], req['model'])), CANT_SET_EFFORT)
+    droid = shutil.which(HARNESS)
+    if not droid:
+        raise Refused("Factory's droid CLI is not installed here",
+                      'install droid and sign in to Factory yourself, then start again')
+    try:
+        # PRIVACY: droid's stdout and stderr are only parsed for its model table, never repeated in an error:
+        # a diagnostic may hold a credential.
+        p = subprocess.run([droid, 'exec', '--help'], stdin=subprocess.DEVNULL,
+                           capture_output=True, text=True, timeout=60)
+        listed = catalog(p.stdout) if p.returncode == 0 else None
+    except (OSError, subprocess.TimeoutExpired, UnicodeDecodeError):
+        listed = None
+    if listed is None:
+        raise Refused('droid did not list the effort levels of its models, so nothing was saved or started',
+                      'check that `droid exec --help` prints "Available Models:" and "Model details:", then start '
+                      'again')
+    if req['effort'] not in listed.get(req['model'], ()):
+        raise Refused(line('harness %s lists no effort %s for model %s, so nothing was saved or started'
+                           % (req['harness'], req['effort'], req['model'])), CANT_SET_EFFORT)
+
+
 def command(req, session, work):
     what = 'You were woken: read the ticket again and carry on' if session else 'Build the ticket'
     prompt = '%s: %s#%d, with the %s skill.' % (what, req['repository'], req['ticket'], req['skill'])
-    return (['droid', 'exec', '--cwd', work, '-m', req['model'], '--auto', 'medium', '-o', 'json']
-            + (['-s', session] if session else []) + [prompt])
+    level = ['--reasoning-effort', req['effort']] if 'effort' in req else []
+    return (['droid', 'exec', '--cwd', work, '-m', req['model']] + level
+            + ['--auto', 'medium', '-o', 'json'] + (['-s', session] if session else []) + [prompt])
 
 
 def session_file(run, n):
@@ -304,10 +399,14 @@ def answer(cmd):
         with open(os.path.join(HERE, 'schema.json')) as f:
             return json.load(f)
     if cmd == 'start':
-        req, run = read(START), 'run-' + secrets.token_hex(6)
+        req, run = read(dict(START, **EFFORT)), 'run-' + secrets.token_hex(6)
         if req['harness'] != HARNESS:
+            if 'effort' in req:
+                raise Refused(line('Factory runs only harness %s, not %s, so it cannot set effort %s; nothing was '
+                                   'saved or started' % (HARNESS, req['harness'], req['effort'])), CANT_SET_EFFORT)
             raise Refused('Factory runs only its own agent, not %s' % req['harness'],
                           'start again with harness droid, and pick its model with model')
+        settable(req)
         private_state()
         state = {'request': req, 'turns': [], 'stopped': False, 'starting': True}
         try:
