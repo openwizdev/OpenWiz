@@ -9,11 +9,11 @@
   "$defs": {
     "schema": {"const": "openwiz.factory-bench.v1"},
     "text": {"type": "string", "minLength": 1},
-    "commit": {"$ref": "#/$defs/text"},
+    "commit": {"type": "string", "pattern": "^[0-9a-f]{40}(?![\\s\\S])"},
     "hash": {"type": "string", "pattern": "^[0-9a-f]{64}(?![\\s\\S])"},
     "id": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?![\\s\\S])"},
     "url": {"type": "string", "pattern": "^https://[^/\\s@?#]+/[^\\s?#]+(?![\\s\\S])"},
-    "licence": {"$ref": "#/$defs/text"},
+    "licence": {"enum": ["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC"]},
     "task_set": {
       "type": "object",
       "additionalProperties": false,
