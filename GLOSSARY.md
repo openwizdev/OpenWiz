@@ -36,7 +36,7 @@ OpenWiz runs many coding agents at once, organized into fleets, with the user de
 
 **Fleet**: the agents working one spec's plan graph, launched together when the user approves it; there is no artificial cap on their number or size. _Avoid_: swarm, team.
 
-**Agent**: one CloudRoom thread doing one role for one ticket or fleet. _Avoid_: bot, worker.
+**Agent**: one coding-agent run doing one role for one ticket or fleet, started through an OpenWiz driver (this computer or a VPS, boat.dev, or Cloudroom). _Avoid_: bot, worker.
 
 **Builder**: the agent that builds one ticket on its own branch and opens its pull request; it never reviews or merges.
 

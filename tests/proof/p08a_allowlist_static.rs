@@ -530,9 +530,11 @@ const INIT_LAUNCHER: &str = "../crates/cli/src/init.rs";
 /// Private record: https://github.com/jparker2006/ClosedWiz/issues/3065#issuecomment-7077406386
 const MODELS_ACL_LISTER: &str = "../crates/cli/src/models.rs";
 
+const JEV_ASKER: &str = "../crates/cli/src/typesafe.rs";
+
 #[test]
 fn allowlist_source_contracts_preserve_original_cases() {
-    let cases: [(&str, fn()); 13] = [
+    let cases: [(&str, fn()); 14] = [
         (
             "init_interpreter_exception_rejects_planted_widening",
             init_interpreter_exception_rejects_planted_widening,
@@ -540,6 +542,10 @@ fn allowlist_source_contracts_preserve_original_cases() {
         (
             "j306_models_lister_exception_rejects_planted_widening",
             j306_models_lister_exception_rejects_planted_widening,
+        ),
+        (
+            "jv1_jev_asker_exception_rejects_planted_widening",
+            jv1_jev_asker_exception_rejects_planted_widening,
         ),
         (
             "l3_exceptions_reject_aliased_process_starts",
@@ -622,6 +628,11 @@ fn only_the_adapter_can_start_a_process_and_only_from_the_allowlist() {
         .canonicalize()
         .expect("the models writer");
     let mut models_listed = false;
+    let jev_asker = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join(JEV_ASKER)
+        .canonicalize()
+        .expect("the Jev asker");
+    let mut jev_asked = false;
     let canonical_loop = |file| {
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .join(file)
@@ -670,6 +681,15 @@ fn only_the_adapter_can_start_a_process_and_only_from_the_allowlist() {
                 "{MODELS_ACL_LISTER}"
             );
             models_listed = true;
+            continue;
+        }
+        if canonical == jev_asker {
+            assert_eq!(
+                jev_asker_problems(&text),
+                Vec::<String>::new(),
+                "{JEV_ASKER}"
+            );
+            jev_asked = true;
             continue;
         }
         assert!(
@@ -726,6 +746,7 @@ fn only_the_adapter_can_start_a_process_and_only_from_the_allowlist() {
     );
     assert!(init_launched, "{INIT_LAUNCHER} was not checked");
     assert!(models_listed, "{MODELS_ACL_LISTER} was not checked");
+    assert!(jev_asked, "{JEV_ASKER} was not checked");
     assert_eq!(checked_loops, [true; 1], "the canonical L3 gate checked");
 }
 
@@ -1941,6 +1962,146 @@ fn init_interpreter_exception_rejects_planted_widening() {
     ] {
         assert!(
             !init_launcher_problems(&format!("{code}{}", l3_compact(extra))).is_empty(),
+            "missed {extra}"
+        );
+    }
+}
+
+fn jev_asker_problems(text: &str) -> Vec<String> {
+    let code = l3_compact(text);
+    let mut problems = Vec::new();
+    l3_counts(
+        &mut problems,
+        &code,
+        &[
+            ("Command", 1),
+            ("Command::new(", 1),
+            ("process::{", 0),
+            ("jev_process", 2),
+            (".arg(", 2),
+            (".args(", 0),
+            (".env_clear(", 1),
+            (".env(", 2),
+            (".envs(", 0),
+            (".env_remove(", 0),
+            (".current_dir(", 0),
+            (".output(", 0),
+            (".spawn(", 1),
+            (".status(", 0),
+            (".exec(", 0),
+            ("rustix", 0),
+            ("libc", 0),
+            ("std::env::current_exe(", 1),
+            ("std::env::var_os(", 3),
+            ("letoutput=jev_process(body.to_string().as_bytes())?;", 1),
+        ],
+    );
+    l3_exact_function(
+        &mut problems,
+        &code,
+        "fn jev_process(request: &[u8]) -> Option<std::process::Output>",
+        r#"fn jev_process(request: &[u8]) -> Option<std::process::Output> {
+    let exe = std::env::current_exe().ok()?.canonicalize().ok()?;
+    let target = exe.ancestors().nth(2)?;
+    if target.file_name()? != "target" {
+        return None;
+    }
+    let tool = target.parent()?.join("tools/typesafe/ask.py");
+    let meta = std::fs::symlink_metadata(&tool).ok()?;
+    if !meta.is_file() || meta.file_type().is_symlink() {
+        return None;
+    }
+    if tool
+        .ancestors()
+        .skip(1)
+        .any(|p| !std::fs::symlink_metadata(p).is_ok_and(|m| !m.file_type().is_symlink()))
+    {
+        return None;
+    }
+    let key = std::env::var_os("TYPESAFE_API_KEY")?;
+    let mut child = std::process::Command::new("/usr/bin/python3")
+        .arg("-I")
+        .arg(tool)
+        .env_clear()
+        .env("OPENWIZ_JEV", "1")
+        .env("TYPESAFE_API_KEY", key)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .ok()?;
+    let sent = std::io::Write::write_all(&mut child.stdin.take()?, request);
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(ANSWER_SECONDS);
+    while child.try_wait().ok()?.is_none() {
+        if sent.is_err() || std::time::Instant::now() > deadline {
+            let _ = child.kill();
+            let _ = child.wait();
+            return None;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+    child.wait_with_output().ok()
+}
+"#,
+    );
+    problems
+}
+
+fn jv1_jev_asker_exception_rejects_planted_widening() {
+    let code = l3_compact(include_str!("../../crates/cli/src/typesafe.rs"));
+    assert_eq!(jev_asker_problems(&code), Vec::<String>::new());
+    for (from, to) in [
+        (
+            r#"Command::new("/usr/bin/python3")"#,
+            r#"Command::new("python3")"#,
+        ),
+        (
+            r#"Command::new("/usr/bin/python3")"#,
+            r#"Command::new("/bin/sh")"#,
+        ),
+        (r#".arg("-I")"#, r#".arg("-c")"#),
+        (".arg(tool)", r#".arg(tool).arg("--extra")"#),
+        (".arg(tool)", r#".arg(tool).args(["--extra"])"#),
+        (".env_clear()", ""),
+        (
+            ".env_clear()",
+            r#".env_clear().env("PYTHONPATH", "/synthetic")"#,
+        ),
+        (".env_clear()", r#".env_clear().current_dir("/synthetic")"#),
+        ("std::env::current_exe()", "std::env::current_dir()"),
+        (".nth(2)", ".nth(3)"),
+        (r#"if target.file_name()? != "target""#, "if false"),
+        (
+            r#".join("tools/typesafe/ask.py")"#,
+            r#".join(std::env::var_os("JEV_SCRIPT")?)"#,
+        ),
+        (
+            "if !meta.is_file() || meta.file_type().is_symlink()",
+            "if false",
+        ),
+        (".ancestors().skip(1)", ".ancestors().take(0)"),
+        (
+            ".stderr(std::process::Stdio::null())",
+            ".stderr(std::process::Stdio::inherit())",
+        ),
+        (".spawn()", ".output()"),
+    ] {
+        let planted = l3_plant(&code, from, to);
+        assert!(
+            !jev_asker_problems(&planted).is_empty(),
+            "missed {from} -> {to}"
+        );
+    }
+    for extra in [
+        r#"fn extra() { std::process::Command::new("/bin/sh").spawn(); }"#,
+        r#"use std::process::Command as C; fn extra() { C::new("/bin/sh").spawn(); }"#,
+        r#"type C = std::process::Command; fn extra() { C::new("/bin/sh").spawn(); }"#,
+        r#"use std::process::{Command as C}; fn extra() { C::new("/bin/sh"); }"#,
+        r#"fn extra() { let f = jev_process; let _ = f(b""); }"#,
+        r#"fn extra() { let _ = rustix::process::getpid(); }"#,
+    ] {
+        assert!(
+            !jev_asker_problems(&format!("{code}{}", l3_compact(extra))).is_empty(),
             "missed {extra}"
         );
     }

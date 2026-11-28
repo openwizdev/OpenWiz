@@ -17,6 +17,8 @@ DESCRIPTION = """Skills eval command line (contract.md). Standard library only.
   eval.py compare A B                    compare two scored sets with equal settings and cases hashes
   eval.py tokens --out FILE [--rev REV] [--offline]
   eval.py token-diff BEFORE AFTER
+  eval.py mentions --jev [--rev REV]     also ask Jev which docs each SKILL.md names; sends each SKILL.md to
+                                         TypeSafe; needs OPENWIZ_JEV=1 and TYPESAFE_API_KEY
 """
 
 HERE = Path(__file__).resolve().parent
@@ -24,11 +26,13 @@ sys.path.insert(0, str(HERE))
 import cases as C
 import driver
 import score as S
+import jev_mentions
 import tokens as T
 
 REPO = HERE.parent.parent
 CODE = ['contract.md', 'fakeworld.py', 'score.py', 'records.py', 'cases.py', 'driver.py', 'jev_judge.py',
-        'jev_mentions.py', 'tokens.py', 'eval.py']
+        'jev_mentions.py', 'tokens.py', 'eval.py', '../typesafe/client.py', '../typesafe/decide.py',
+        '../typesafe/config.json']
 
 
 def git(*args):
@@ -173,8 +177,14 @@ def _key(a, settings=None):
     return key
 
 
-def cmd_run(a):
+def run_settings():
     settings = json.loads((HERE / 'settings.json').read_text())
+    settings['judge_jev'] = driver.jev_judge.mode()
+    return settings
+
+
+def cmd_run(a):
+    settings = run_settings()
     _key(a, settings)
     snap = snapshot(a.rev)
     errs, all_cases, _ = check(*snap)
@@ -355,6 +365,19 @@ def cmd_tokens(a):
     return 0
 
 
+def cmd_mentions(a):
+    ask = jev_mentions.client.from_env() if a.jev else None
+    if ask is None:
+        sys.exit('eval.py mentions sends each SKILL.md to TypeSafe: pass --jev with OPENWIZ_JEV=1 and TYPESAFE_API_KEY set')
+    read, lst = snapshot(a.rev)
+    errs = T.map_problems(T.load_map(HERE / 'required-text.json'), shipped(read), read, lst,
+                          lambda text: jev_mentions.extra(text, ask))
+    for e in errs:
+        print(e)
+    print(f'mentions: {len(errs)} problem(s) with keyword and Jev mentions')
+    return 1 if errs else 0
+
+
 def cmd_token_diff(a):
     try:
         r = T.diff(*(json.loads(Path(x).read_text()) for x in (a.before, a.after)))
@@ -381,6 +404,9 @@ def main(argv=None):
             q.add_argument('--out', required=True)
             q.add_argument('--offline', action='store_true')
             q.add_argument('--results', help='results folder whose provider usage is reported; makes no API call')
+    q = sub.add_parser('mentions')
+    q.add_argument('--rev', default='HEAD', help='the snapshot commit (default HEAD)')
+    q.add_argument('--jev', action='store_true', help='send each SKILL.md to TypeSafe Jev')
     q = sub.add_parser('compare')
     q.add_argument('a')
     q.add_argument('b')
@@ -389,7 +415,8 @@ def main(argv=None):
     q.add_argument('after')
     a = p.parse_args(argv)
     return {'check': cmd_check, 'coverage': cmd_coverage, 'run': cmd_run, 'score': cmd_score,
-            'compare': cmd_compare, 'tokens': cmd_tokens, 'token-diff': cmd_token_diff}[a.cmd](a)
+            'compare': cmd_compare, 'tokens': cmd_tokens, 'token-diff': cmd_token_diff,
+            'mentions': cmd_mentions}[a.cmd](a)
 
 
 if __name__ == '__main__':
