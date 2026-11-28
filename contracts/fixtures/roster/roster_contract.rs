@@ -620,8 +620,12 @@ fn every_entry_writes_the_same_way() {
                 assert_eq!(e[key], fixed[key], "{case}: ticket {} {key}", p["ticket"]);
             }
             let model = e["note"]["model"].as_str().unwrap();
+            let effort = match p["choice"]["effort"].as_str() {
+                Some(effort) => format!(" {effort} effort"),
+                None => " default effort".to_owned(),
+            };
             assert!(
-                model.ends_with(" default effort")
+                model.ends_with(&effort)
                     && model.chars().count() <= 60
                     && !model.chars().any(char::is_control),
                 "{case}: ticket {} note model {model:?}",
