@@ -34,6 +34,16 @@ with open(here / 'calls.log', 'a') as log:
 def save():
     (here / 'scenario.json').write_text(json.dumps(scenario))
 args = sys.argv[1:]
+if args[:2] == ['auth', 'status']:
+    status_out = scenario.get('auth_status_out')
+    if status_out is not None:
+        print(status_out, file=sys.stderr)
+        sys.exit(1)
+    if scenario.get('account') is None and scenario.get('failure') is None:
+        print('You are not logged into any GitHub hosts. To log in, run: gh auth login', file=sys.stderr)
+        sys.exit(1)
+    print('github.com\n  Logged in', file=sys.stderr)
+    sys.exit(0)
 if args[:2] == ['auth', 'login']:
     mode = scenario['login']
     if mode == 'pending':
@@ -299,6 +309,25 @@ class ForeignHost(Recording):
             with self.subTest(failure=failure):
                 self.update_scenario(account=None, enterprise_account='synthetic-enterprise', failure=failure)
                 self.assertEqual(self.tool('sign-in', '--yes')['code'], 'identity_unreadable')
+        self.assertEqual(self.sign_ins(), [])
+
+    def test_signed_out_rate_limited_ip_still_offers_browser_sign_in(self):
+        self.prepare()
+        rate_limit = 'gh: API rate limit exceeded for 192.0.2.1. (HTTP 403)'
+        self.update_scenario(
+            account=None,
+            failure=rate_limit,
+            auth_status_out='You are not logged into any GitHub hosts. To log in, run: gh auth login',
+        )
+        preview = self.tool('sign-in')
+        self.assertEqual(preview['code'], 'login_needed')
+        self.assertEqual(self.sign_ins(), [])
+        self.update_scenario(
+            account='synthetic-owner',
+            failure=rate_limit,
+            auth_status_out=None,
+        )
+        self.assertEqual(self.tool('sign-in', '--yes')['code'], 'identity_unreadable')
         self.assertEqual(self.sign_ins(), [])
 
 
