@@ -81,6 +81,39 @@ def load_host(path):
     return _valid(read_json(path, name), name)
 
 
+def driver_name(host):
+    return host['driver'].split('/')[1]
+
+
+def driver_path(host, drivers, release):
+    if release is not None:
+        return os.path.join(os.path.realpath(release), 'driver')
+    if drivers is not None:
+        return os.path.join(os.path.realpath(drivers), driver_name(host), 'driver')
+    return os.path.join(ROOT, host['driver'])
+
+
+def installed(host, drivers, release):
+    path = driver_path(host, drivers, release)
+    if drivers is None and release is None:
+        return host['driver']
+    for step in (os.path.dirname(path), path):
+        try:
+            mode = os.lstat(step).st_mode
+        except FileNotFoundError:
+            if release is not None:
+                raise Refused('--release has no driver at its root')
+            return None
+        except OSError as e:
+            raise Refused('cannot look up the driver for %s: %s' % (host['host'], e.strerror))
+        if stat.S_ISLNK(mode):
+            raise Refused('the driver for %s is reached through a symlink, which an installed driver never is'
+                          % host['host'])
+    if not stat.S_ISREG(mode):
+        raise Refused('the driver for %s is not a regular file' % host['host'])
+    return path
+
+
 def record_name(host, entry):
     return '%s-%s-%s.json' % (host['host'], entry['harness'], entry['model'])
 
@@ -233,8 +266,8 @@ def record_stdout(text, settings, login):
     return ''.join(kept)
 
 
-def run_kit(host, entry, settings):
-    command = [sys.executable, '-I', KIT, '--driver', host['driver'], '--repo', settings['repo'],
+def run_kit(host, entry, settings, driver=None):
+    command = [sys.executable, '-I', KIT, '--driver', driver or host['driver'], '--repo', settings['repo'],
                '--ticket', str(settings['ticket']), '--harness', entry['harness'], '--model', entry['model'],
                '--wait', str(host['wait'])]
     p = subprocess.run(command, cwd=ROOT, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)
@@ -254,7 +287,15 @@ def write_record(out, record):
 
 def run(args):
     settings = load_settings(args.settings)
+    if args.release is not None and (args.host is None or args.drivers is not None):
+        raise Refused('--release is one driver, so it needs --host and no --drivers')
+    for flag, folder in (('--drivers', args.drivers), ('--release', args.release)):
+        if folder is not None and not os.path.isdir(folder):
+            raise Refused('%s is not a folder' % flag)
     hosts = load_hosts(args.hosts, args.host)
+    drivers = {}
+    for host in hosts:
+        drivers[host['host']] = installed(host, args.drivers, args.release)
     head = clean_head()
     kit_shapes()
     try:
@@ -272,7 +313,8 @@ def run(args):
     failed, login = False, False
     for host in hosts:
         began = time.monotonic()
-        why = check_host(host)
+        driver = drivers[host['host']]
+        why = check_host(host) or (None if driver else 'not installed: driver ' + driver_name(host))
         for entry in host['runs']:
             day = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d')
             kit_exit = stdout = passed = None
@@ -280,7 +322,7 @@ def run(args):
                 if login is False:
                     login = signed_in_login()
                 began = time.monotonic()
-                kit_exit, full = run_kit(host, entry, settings)
+                kit_exit, full = run_kit(host, entry, settings, driver)
                 passed = sum(1 for line in full.splitlines() if CHECK_LINE.match(line) and line.startswith('pass '))
                 stdout = record_stdout(full, settings, login)
             write_record(args.out, {
@@ -302,6 +344,10 @@ def main(argv):
     ap.add_argument('--settings', required=True, help='a local JSON file {"repo": "<owner>/<name>", "ticket": <n>}')
     ap.add_argument('--out', required=True, help='the folder for run records and the lock')
     ap.add_argument('--host', help="run only the host config with this host name")
+    ap.add_argument('--drivers', help='a drivers folder laid out <name>/driver, such as the install\'s '
+                                      '$OPENWIZ_ADAPTERS, to run each driver from instead of adapters/')
+    ap.add_argument('--release', help='an unpacked driver release (driver, schema.json and README.md at its root) '
+                                      'to run the --host driver from')
     args = ap.parse_args(argv)
     try:
         return run(args)
