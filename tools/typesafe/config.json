@@ -88,6 +88,62 @@
           }
         }
       }
+    },
+    "mentions": {
+      "questions": {
+        "agents_file": {
+          "type": "noul",
+          "instructions": "Does the text tell the reader to read AGENTS.md?",
+          "criteria": {
+            "true": "It points the reader at AGENTS.md.",
+            "false": "It does not point the reader at AGENTS.md."
+          }
+        },
+        "project_instructions": {
+          "type": "noul",
+          "instructions": "Does the text tell the reader to follow the project agent instructions?",
+          "criteria": {
+            "true": "It points the reader at those instructions.",
+            "false": "It does not."
+          }
+        },
+        "glossary": {
+          "type": "noul",
+          "instructions": "Does the text tell the reader to use the glossary?",
+          "criteria": {
+            "true": "It points the reader at the glossary.",
+            "false": "It does not, even if the letters appear inside another word."
+          }
+        },
+        "adr": {
+          "type": "noul",
+          "instructions": "Does the text tell the reader to read an architecture decision record?",
+          "criteria": {
+            "true": "It points the reader at an ADR.",
+            "false": "It does not."
+          }
+        }
+      },
+      "files": {
+        "AGENTS.md": {
+          "combine": "noisy_or",
+          "act": 0.9,
+          "terms": [
+            {"question": "agents_file", "weight": 1},
+            {"question": "project_instructions", "weight": 1}
+          ]
+        },
+        "GLOSSARY.md": {
+          "combine": "weighted_sum",
+          "act": 0.9,
+          "terms": [{"question": "glossary", "weight": 1}]
+        },
+        "docs/adr/": {
+          "combine": "weighted_sum",
+          "act": 0.9,
+          "terms": [{"question": "adr", "weight": 1}]
+        }
+      }
     }
   }
 }

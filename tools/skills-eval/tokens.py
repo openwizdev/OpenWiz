@@ -14,7 +14,7 @@ def load_map(path):
     return m['skills']
 
 
-def mentions(skill, text, exists, lst=lambda p: []):
+def mentions(skill, text, exists, lst=lambda p: [], extra=None):
     found = set()
     folder = f'skills/{skill}'
     for tok in re.findall(r'`([^`\n]+)`', text) + re.findall(r'\]\(([^)#\s]+)', text):
@@ -29,6 +29,14 @@ def mentions(skill, text, exists, lst=lambda p: []):
             elif re.fullmatch(r'[\w.-]+(/[\w.-]+)*/?', tok) and '/' in tok.strip('/') + ('/' if tok.endswith('/') else '') \
                     and tok.strip('./') and lst(cand.rstrip('/') + '/'):
                 found.add(cand.rstrip('/') + '/')
+    found |= named_docs(text)
+    if extra is not None:
+        found |= extra(text, frozenset(found))
+    return found
+
+
+def named_docs(text):
+    found = set()
     low = text.lower()
     if re.search(r"agents\.md|claude\.md|project's instructions|project instructions", low):
         found.add('AGENTS.md')
@@ -75,7 +83,7 @@ def expand(paths, lst):
     return out
 
 
-def map_problems(skills_map, shipped, read, lst):
+def map_problems(skills_map, shipped, read, lst, extra=None):
     errs = []
     if sorted(skills_map) != sorted(shipped):
         errs.append(f'mapped {sorted(skills_map)} != shipped {sorted(shipped)}')
@@ -98,7 +106,7 @@ def map_problems(skills_map, shipped, read, lst):
                     errs.append(f'{s}: {kind} {p} needs its reason')
         text = read(f'skills/{s}/SKILL.md') or ''
         covered = [f for f in flat if f.endswith('/')]
-        for p in sorted(mentions(s, text, lambda q: read(q) is not None, lst) - set(flat)):
+        for p in sorted(mentions(s, text, lambda q: read(q) is not None, lst, extra) - set(flat)):
             if any(p.startswith(f) for f in covered):
                 continue
             errs.append(f'{s}: SKILL.md names {p}, which the map does not classify')
