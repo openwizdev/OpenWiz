@@ -409,14 +409,16 @@ fn driver_takes(harness: &str, model: &str) -> bool {
     harness_ok && model_ok
 }
 
-fn note_model(name: &str) -> String {
-    let shown = if name.chars().count() > 45 {
-        let cut: String = name.chars().take(42).collect();
+fn note_model(name: &str, effort: Option<&str>) -> String {
+    let effort = format!(" {} effort", effort.unwrap_or("default"));
+    let room = 60usize.saturating_sub(effort.chars().count());
+    let shown = if name.chars().count() > room {
+        let cut: String = name.chars().take(room.saturating_sub(3)).collect();
         format!("{}...", cut.trim_end())
     } else {
         name.to_owned()
     };
-    format!("{shown} default effort")
+    format!("{shown}{effort}")
 }
 
 fn pick(entries: &[Entry], repository: &str, ticket: u64, role: &str, choice: &Value) -> Value {
@@ -454,7 +456,10 @@ fn pick(entries: &[Entry], repository: &str, ticket: u64, role: &str, choice: &V
         "start": {"harness": driver_harness(provider), "model": choice["model"]},
         "note": {
             "harness": e.label(),
-            "model": note_model(choice["model_name"].as_str().unwrap()),
+            "model": note_model(
+                choice["model_name"].as_str().unwrap(),
+                choice["effort"].as_str(),
+            ),
         },
         "writes_as": format!("{}'s App", e.person),
         "token": {
@@ -620,8 +625,12 @@ fn every_entry_writes_the_same_way() {
                 assert_eq!(e[key], fixed[key], "{case}: ticket {} {key}", p["ticket"]);
             }
             let model = e["note"]["model"].as_str().unwrap();
+            let effort = match p["choice"]["effort"].as_str() {
+                Some(effort) => format!(" {effort} effort"),
+                None => " default effort".to_owned(),
+            };
             assert!(
-                model.ends_with(" default effort")
+                model.ends_with(&effort)
                     && model.chars().count() <= 60
                     && !model.chars().any(char::is_control),
                 "{case}: ticket {} note model {model:?}",
