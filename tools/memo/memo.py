@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 import argparse
+import http.client
+import ipaddress
 import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import urllib.error
@@ -14,6 +17,7 @@ from pathlib import Path
 SCHEMA = 'openwiz.memo.v1'
 PIN = 'a679d322cf7723185f14603a67595bf0bdf98c69'
 UPSTREAM = 'https://github.com/arunv3rma/MeMo.git'
+API_KEY_ENV = 'OPENWIZ_MEMO_API_KEY'
 SYNTHESIS = (
     'fact extraction',
     'consolidation',
@@ -25,17 +29,22 @@ KEYS = {
     'api_key_env', 'corpus', 'enabled', 'endpoint', 'experimental', 'fallback',
     'include_brain', 'max_passages', 'model', 'schema', 'timeout_seconds',
 }
+MANAGED_ENTRIES = frozenset({
+    'corpus', 'corpus.json', 'memo-build.sh', 'plan.json',
+    'reflection-qa.json', 'MeMo', 'checkpoint',
+})
+STAGED_ENTRIES = ('corpus', 'corpus.json', 'memo-build.sh', 'plan.json')
 SUFFIXES = {'.md', '.txt', '.markdown'}
 STOP = frozenset(
     'a an the of to and or in on for is it be as at by we you our from with that this'.split())
 WORD = re.compile(r'[a-z0-9]{2,}')
 MODEL = re.compile(r'[A-Za-z0-9_.:/+-]{1,100}')
-ENV_NAME = re.compile(r'[A-Z_][A-Z0-9_]{0,63}')
 MAX_FILE = 200_000
 MAX_FILES = 2000
 MAX_ANSWER = 8000
 MAX_QUESTION = 2000
 MAX_BODY = 1_000_000
+PASSAGE_LIMIT = 800
 
 
 class GiveUp(Exception):
@@ -67,7 +76,7 @@ def defaults():
         'schema': SCHEMA,
         'experimental': True,
         'enabled': False,
-        'endpoint': 'http://127.0.0.1:8000/v1',
+        'endpoint': None,
         'model': 'memo',
         'timeout_seconds': 30,
         'api_key_env': None,
@@ -78,14 +87,30 @@ def defaults():
     }
 
 
+def is_loopback(host):
+    if host == 'localhost':
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
 def check_endpoint(value):
     if (not isinstance(value, str) or not 8 <= len(value) <= 200
             or any(c.isspace() or ord(c) < 32 for c in value)):
         raise GiveUp(2, 'usage', 'endpoint must be an http(s) URL')
-    parsed = urllib.parse.urlsplit(value)
+    try:
+        parsed = urllib.parse.urlsplit(value)
+        port = parsed.port
+    except ValueError:
+        raise GiveUp(2, 'usage', 'endpoint must be a valid http(s) URL')
     if (parsed.scheme not in ('http', 'https') or parsed.username or parsed.password
-            or not parsed.hostname or parsed.query or parsed.fragment):
+            or '@' in parsed.netloc or not parsed.hostname or parsed.query or parsed.fragment
+            or (port is not None and not 1 <= port <= 65535)):
         raise GiveUp(2, 'usage', 'endpoint must be an http(s) URL with no userinfo or query')
+    if parsed.scheme == 'http' and not is_loopback(parsed.hostname):
+        raise GiveUp(2, 'usage', 'non-loopback endpoint must use https')
 
 
 def check_corpus(value):
@@ -97,7 +122,7 @@ def check_corpus(value):
 
 def read_settings(path):
     file = Path(path)
-    if not file.is_file() or file.stat().st_size > 100_000:
+    if file.is_symlink() or not file.is_file() or file.stat().st_size > 100_000:
         raise GiveUp(2, 'usage', 'settings file is missing or too large')
     try:
         data = json.loads(file.read_text(encoding='utf-8'), object_pairs_hook=unique)
@@ -113,7 +138,8 @@ def read_settings(path):
         raise GiveUp(2, 'usage', 'enabled and include_brain must be booleans')
     if data['fallback'] != 'retrieval':
         raise GiveUp(2, 'usage', 'fallback must be retrieval')
-    check_endpoint(data['endpoint'])
+    if data['endpoint'] is not None:
+        check_endpoint(data['endpoint'])
     if not isinstance(data['model'], str) or not MODEL.fullmatch(data['model']):
         raise GiveUp(2, 'usage', 'model must be 1 to 100 characters')
     if type(data['timeout_seconds']) is not int or not 1 <= data['timeout_seconds'] <= 120:
@@ -121,51 +147,135 @@ def read_settings(path):
     if type(data['max_passages']) is not int or not 1 <= data['max_passages'] <= 8:
         raise GiveUp(2, 'usage', 'max_passages must be from 1 to 8')
     env_name = data['api_key_env']
-    if env_name is not None and (not isinstance(env_name, str) or not ENV_NAME.fullmatch(env_name)):
-        raise GiveUp(2, 'usage', 'api_key_env must name an environment variable')
+    if env_name is not None and env_name != API_KEY_ENV:
+        raise GiveUp(2, 'usage', f'api_key_env must be null or {API_KEY_ENV}')
     check_corpus(data['corpus'])
     return data
 
 
-def settings_for(root, explicit):
+def resolve_operator(settings, env=None):
+    source = os.environ if env is None else env
+    raw_enabled = source.get('OPENWIZ_MEMO_ENABLED', '')
+    if raw_enabled not in ('', '0', '1'):
+        raise GiveUp(2, 'usage', 'OPENWIZ_MEMO_ENABLED must be 0 or 1')
+    enabled = raw_enabled == '1'
+    raw_endpoint = (source.get('OPENWIZ_MEMO_ENDPOINT') or '').strip()
+    if raw_endpoint:
+        check_endpoint(raw_endpoint)
+    if enabled and not raw_endpoint:
+        raise GiveUp(2, 'usage', 'OPENWIZ_MEMO_ENDPOINT must be set when OPENWIZ_MEMO_ENABLED=1')
+    effective = dict(settings)
+    effective['enabled'] = enabled
+    effective['endpoint'] = raw_endpoint or None
+    raw_model = (source.get('OPENWIZ_MEMO_MODEL') or '').strip()
+    if raw_model:
+        if not MODEL.fullmatch(raw_model):
+            raise GiveUp(2, 'usage', 'OPENWIZ_MEMO_MODEL must be 1 to 100 characters')
+        effective['model'] = raw_model
+    return effective
+
+
+def contained_dir(root_path, rel_path):
+    root_resolved = Path(root_path).resolve()
+    current = Path(root_path)
+    for part in Path(rel_path).parts:
+        if part in ('', '.'):
+            continue
+        if part == '..':
+            return None
+        current = current / part
+        if current.is_symlink():
+            return None
+    if not current.is_dir():
+        return None
+    resolved = current.resolve()
+    if not resolved.is_relative_to(root_resolved):
+        return None
+    return resolved
+
+
+def settings_for(root, explicit, env=None):
     if explicit:
-        return read_settings(explicit)
-    path = Path(root) / 'docs' / 'agents' / 'memo.json'
-    if path.is_file():
-        return read_settings(path)
-    return defaults()
+        loaded = read_settings(explicit)
+    else:
+        path = Path(root) / 'docs' / 'agents' / 'memo.json'
+        if path.exists() or path.is_symlink():
+            agents_dir = contained_dir(root, os.path.join('docs', 'agents'))
+            if (agents_dir is None or path.is_symlink()
+                    or not path.resolve().is_relative_to(agents_dir)):
+                raise GiveUp(2, 'usage', 'settings file must stay inside the project')
+            loaded = read_settings(path)
+        else:
+            loaded = defaults()
+    return resolve_operator(loaded, env=env)
 
 
 def tokens(text):
     return {word for word in WORD.findall(text.lower()) if word not in STOP}
 
 
-def passages_of(text):
+def split_long(para, limit=PASSAGE_LIMIT):
+    parts, start = [], 0
+    while start < len(para):
+        if len(para) - start <= limit:
+            parts.append(para[start:])
+            break
+        cut = para.rfind(' ', start, start + limit + 1)
+        if cut <= start:
+            cut = start + limit
+        piece = para[start:cut].strip()
+        if piece:
+            parts.append(piece)
+        start = cut
+        while start < len(para) and para[start] == ' ':
+            start += 1
+    return parts
+
+
+def passages_of(text, limit=PASSAGE_LIMIT):
     chunks, buf, size = [], [], 0
     for para in re.split(r'\n\s*\n', text):
         para = ' '.join(para.split())
         if not para:
             continue
-        if size >= 800 and buf:
-            chunks.append(' '.join(buf)[:800])
-            buf, size = [], 0
-        buf.append(para[:800])
-        size += len(para)
+        for piece in split_long(para, limit):
+            extra = len(piece) + (1 if buf else 0)
+            if buf and size + extra > limit:
+                chunks.append(' '.join(buf))
+                buf, size = [], 0
+                extra = len(piece)
+            buf.append(piece)
+            size += extra
     if buf:
-        chunks.append(' '.join(buf)[:800])
+        chunks.append(' '.join(buf))
     return chunks
 
 
 def documents(root, settings):
-    bases = [Path(root) / settings['corpus']]
+    root_resolved = Path(root).resolve()
+    rel_bases = [settings['corpus']]
     if settings['include_brain']:
-        bases.append(Path(root) / '.openwiz' / 'brain')
+        rel_bases.append(os.path.join('.openwiz', 'brain'))
     found = []
-    for base in bases:
-        if not base.is_dir():
+    for rel_base in rel_bases:
+        base_resolved = contained_dir(root, rel_base)
+        if base_resolved is None:
             continue
-        for dirpath, dirnames, filenames in os.walk(base):
-            dirnames[:] = sorted(name for name in dirnames if not name.startswith('.'))
+        for dirpath, dirnames, filenames in os.walk(base_resolved, followlinks=False):
+            kept = []
+            for name in sorted(dirnames):
+                if name.startswith('.'):
+                    continue
+                child = Path(dirpath) / name
+                if child.is_symlink():
+                    continue
+                try:
+                    if not child.resolve().is_relative_to(base_resolved):
+                        continue
+                except OSError:
+                    continue
+                kept.append(name)
+            dirnames[:] = kept
             for name in sorted(filenames):
                 if len(found) >= MAX_FILES:
                     return found
@@ -173,12 +283,17 @@ def documents(root, settings):
                 if path.suffix.lower() not in SUFFIXES or path.is_symlink():
                     continue
                 try:
-                    if path.stat().st_size > MAX_FILE:
+                    resolved = path.resolve()
+                    if not (resolved.is_relative_to(base_resolved)
+                            and resolved.is_relative_to(root_resolved)):
+                        continue
+                    st = os.lstat(path)
+                    if not stat.S_ISREG(st.st_mode) or st.st_size > MAX_FILE:
                         continue
                     text = path.read_text(encoding='utf-8', errors='replace')
                 except OSError:
                     continue
-                found.append((path.relative_to(root).as_posix(), text))
+                found.append((resolved.relative_to(root_resolved).as_posix(), text))
     return found
 
 
@@ -219,7 +334,11 @@ def chat_url(endpoint):
     return base + '/chat/completions'
 
 
-def complete(settings, question):
+def complete(settings, question, env=None):
+    check_endpoint(settings['endpoint'])
+    if settings.get('api_key_env') not in (None, API_KEY_ENV):
+        raise GiveUp(2, 'usage', f'api_key_env must be null or {API_KEY_ENV}')
+    source = os.environ if env is None else env
     payload = {
         'model': settings['model'],
         'temperature': 0,
@@ -229,11 +348,11 @@ def complete(settings, question):
         ],
     }
     headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
-    env_name = settings['api_key_env']
-    if env_name:
-        key = os.environ.get(env_name) or ''
-        if key:
-            headers['Authorization'] = 'Bearer ' + key
+    key = source.get(API_KEY_ENV) or ''
+    if key:
+        if any(ord(c) < 32 for c in key):
+            raise GiveUp(2, 'usage', f'{API_KEY_ENV} contains control characters')
+        headers['Authorization'] = 'Bearer ' + key
     request = urllib.request.Request(
         chat_url(settings['endpoint']),
         data=json.dumps(payload).encode('utf-8'),
@@ -247,7 +366,7 @@ def complete(settings, question):
             status = response.status
     except EndpointFailure:
         raise
-    except (urllib.error.URLError, TimeoutError, OSError, ValueError):
+    except (urllib.error.URLError, http.client.HTTPException, TimeoutError, OSError, ValueError):
         raise EndpointFailure('endpoint_error')
     if status != 200 or len(raw) > MAX_BODY:
         raise EndpointFailure('endpoint_error')
@@ -261,16 +380,16 @@ def complete(settings, question):
     return text.strip()[:MAX_ANSWER]
 
 
-def ask(root, settings, question):
+def ask(root, settings, question, env=None):
     if not isinstance(question, str) or not question.strip() or len(question) > MAX_QUESTION or '\x00' in question:
         raise GiveUp(2, 'usage', 'the question must be 1 to 2000 characters')
-    if not settings['enabled']:
-        return retrieval_report(root, settings, question, 'disabled')
+    effective = resolve_operator(settings, env=env)
+    if not effective['enabled']:
+        return retrieval_report(root, effective, question, 'disabled')
     try:
-        text = complete(settings, question)
+        text = complete(effective, question, env=env)
     except EndpointFailure as error:
-        report = retrieval_report(root, settings, question, error.reason)
-        return report
+        return retrieval_report(root, effective, question, error.reason)
     return {
         'schema': 'openwiz.memo.answer.v1',
         'experimental': True,
@@ -298,22 +417,40 @@ def status_report(settings):
 
 
 def corpus_files(corpus):
-    root = Path(corpus)
-    if not root.is_dir():
-        raise GiveUp(2, 'usage', 'the corpus folder is missing')
+    raw = Path(corpus)
+    if raw.is_symlink() or not raw.is_dir():
+        raise GiveUp(2, 'usage', 'the corpus folder is missing or is a symlink')
+    root = raw.resolve()
     found = []
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = sorted(name for name in dirnames if not name.startswith('.'))
+    for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
+        kept = []
+        for name in sorted(dirnames):
+            if name.startswith('.'):
+                continue
+            child = Path(dirpath) / name
+            if child.is_symlink():
+                continue
+            try:
+                if not child.resolve().is_relative_to(root):
+                    continue
+            except OSError:
+                continue
+            kept.append(name)
+        dirnames[:] = kept
         for name in sorted(filenames):
             path = Path(dirpath) / name
             if path.suffix.lower() not in SUFFIXES or path.is_symlink():
                 continue
             try:
-                if path.stat().st_size > MAX_FILE:
+                resolved = path.resolve()
+                if not resolved.is_relative_to(root):
+                    continue
+                st = os.lstat(path)
+                if not stat.S_ISREG(st.st_mode) or st.st_size > MAX_FILE:
                     continue
             except OSError:
                 continue
-            found.append(path)
+            found.append(resolved)
             if len(found) >= MAX_FILES:
                 return found
     if not found:
@@ -339,21 +476,53 @@ def script_text():
     body = r"""#!/bin/sh
 set -eu
 PIN=__PIN__
-ROOT=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
+UPSTREAM=__UPSTREAM__
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES
+ROOT=$(CDPATH= cd -- "$(dirname "$0")" && pwd -P)
 if [ "${OPENWIZ_MEMO_TRAIN:-}" != 1 ]; then
   printf '%s\n' 'MeMo training was not started.'
   exit 0
 fi
 if [ ! -f "$ROOT/reflection-qa.json" ]; then
-  printf '%s\n' 'reflection-qa.json is missing. Run the upstream synthesis steps first.'
+  printf '%s\n' 'reflection-qa.json is missing. Prepare an independently synthesized reflection-qa.json dataset first (see docs/memo.md).'
   exit 2
 fi
-if [ ! -d "$ROOT/MeMo/sft_training" ]; then
-  rm -rf "$ROOT/MeMo"
+verify_checkout() {
+  [ ! -L "$ROOT/MeMo" ] || return 1
+  [ -d "$ROOT/MeMo/.git" ] && [ ! -L "$ROOT/MeMo/.git" ] || return 1
+  top=$(git -C "$ROOT/MeMo" rev-parse --show-toplevel 2>/dev/null) || return 1
+  [ "$top" = "$ROOT/MeMo" ] || return 1
+  head=$(git -C "$ROOT/MeMo" rev-parse --verify HEAD 2>/dev/null) || return 1
+  [ "$head" = "$PIN" ] || return 1
+  origin=$(git -C "$ROOT/MeMo" remote get-url origin 2>/dev/null) || return 1
+  [ "$origin" = "$UPSTREAM" ] || return 1
+  dirty=$(git -C "$ROOT/MeMo" status --porcelain --ignored=matching --untracked-files=all 2>/dev/null) || return 1
+  [ -z "$dirty" ] || return 1
+  [ -f "$ROOT/MeMo/sft_training/sft_lora_pipeline.py" ] && [ ! -L "$ROOT/MeMo/sft_training/sft_lora_pipeline.py" ] || return 1
+  [ -f "$ROOT/MeMo/sft_training/accelerate_config.yaml" ] && [ ! -L "$ROOT/MeMo/sft_training/accelerate_config.yaml" ] || return 1
+}
+if [ -e "$ROOT/MeMo" ] || [ -L "$ROOT/MeMo" ]; then
+  if ! verify_checkout; then
+    printf '%s\n' 'Existing MeMo directory is not a clean pinned checkout.' >&2
+    exit 2
+  fi
+else
   git init "$ROOT/MeMo"
-  git -C "$ROOT/MeMo" remote add origin __UPSTREAM__
+  git -C "$ROOT/MeMo" remote add origin "$UPSTREAM"
   git -C "$ROOT/MeMo" fetch --depth 1 origin "$PIN"
-  git -C "$ROOT/MeMo" checkout --detach FETCH_HEAD
+  git -C "$ROOT/MeMo" checkout --detach "$PIN"
+  if ! verify_checkout; then
+    printf '%s\n' 'Fetched MeMo checkout did not match the pinned commit.' >&2
+    exit 2
+  fi
+fi
+if [ "${OPENWIZ_MEMO_WANDB:-}" = 1 ]; then
+  set -- --report_to wandb --wandb_run_name openwiz-memo
+else
+  export WANDB_MODE=disabled
+  export WANDB_DISABLED=true
+  export WANDB_API_KEY=""
+  set -- --report_to none
 fi
 cd "$ROOT/MeMo"
 exec accelerate launch --config_file sft_training/accelerate_config.yaml sft_training/sft_lora_pipeline.py \
@@ -377,20 +546,65 @@ exec accelerate launch --config_file sft_training/accelerate_config.yaml sft_tra
   --logging_steps 10 \
   --save_only_model \
   --world_size 1 \
-  --wandb_run_name openwiz-memo
+  "$@"
 """
     return body.replace('__PIN__', PIN).replace('__UPSTREAM__', UPSTREAM)
 
 
+def check_output_dir(destination):
+    if not destination.exists() and not destination.is_symlink():
+        return
+    if destination.is_symlink() or not destination.is_dir():
+        raise GiveUp(2, 'usage', 'the output path must be a folder')
+    entries = list(destination.iterdir())
+    if not entries:
+        return
+    if any(entry.name not in MANAGED_ENTRIES for entry in entries):
+        raise GiveUp(2, 'usage', 'the output folder contains unmanaged files')
+    for name in STAGED_ENTRIES:
+        target = destination / name
+        if target.is_symlink():
+            raise GiveUp(2, 'usage', 'the output folder contains a symlinked managed entry')
+    plan_file = destination / 'plan.json'
+    corpus_file = destination / 'corpus.json'
+    if not plan_file.is_file() or not corpus_file.is_file():
+        raise GiveUp(2, 'usage', 'the output folder is not a managed MeMo build folder')
+    try:
+        plan_data = json.loads(plan_file.read_text(encoding='utf-8'))
+        corpus_data = json.loads(corpus_file.read_text(encoding='utf-8'))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        raise GiveUp(2, 'usage', 'the output folder has unreadable build metadata')
+    if (type(plan_data) is not dict or plan_data.get('schema') != 'openwiz.memo.build-plan.v1'
+            or type(corpus_data) is not dict or not isinstance(corpus_data.get('files'), list)
+            or not all(isinstance(item, str) for item in corpus_data['files'])):
+        raise GiveUp(2, 'usage', 'the output folder is not a managed MeMo build folder')
+    staged = destination / 'corpus'
+    if staged.exists():
+        if not staged.is_dir():
+            raise GiveUp(2, 'usage', 'the output corpus path is not a folder')
+        expected = set(corpus_data['files'])
+        for dirpath, dirnames, filenames in os.walk(staged, followlinks=False):
+            for name in dirnames + filenames:
+                child = Path(dirpath) / name
+                if child.is_symlink():
+                    raise GiveUp(2, 'usage', 'the output corpus folder contains a symlink')
+            for name in filenames:
+                rel = (Path(dirpath) / name).relative_to(staged).as_posix()
+                if rel not in expected:
+                    raise GiveUp(2, 'usage', 'the output corpus folder contains unmanaged files')
+
+
 def stage(corpus, out):
     destination = Path(out)
+    corpus_root = Path(corpus).resolve()
     files = corpus_files(corpus)
+    check_output_dir(destination)
     staged = destination / 'corpus'
     if staged.exists():
         shutil.rmtree(staged)
     copied = []
     for path in files:
-        rel = path.relative_to(corpus).as_posix()
+        rel = path.relative_to(corpus_root).as_posix()
         target = staged / rel
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(path, target)
@@ -446,11 +660,16 @@ def command_build(args):
         raise GiveUp(2, 'usage', 'build takes one of --execute or --train')
     if (args.execute or args.train) and not args.out:
         raise GiveUp(2, 'usage', 'build --execute and --train need --out')
+    if args.train and os.environ.get('OPENWIZ_MEMO_TRAIN') != '1':
+        raise GiveUp(2, 'usage', 'training stays off until OPENWIZ_MEMO_TRAIN=1 on a GPU machine')
     if args.out:
+        out_path = Path(args.out)
+        if out_path.is_symlink():
+            raise GiveUp(2, 'usage', 'the output folder must not be a symlink')
         corpus = Path(args.corpus).resolve()
-        out = Path(args.out).resolve()
-        if out == corpus or corpus in out.parents:
-            raise GiveUp(2, 'usage', 'the output folder must sit outside the corpus')
+        out = out_path.resolve()
+        if out == corpus or corpus in out.parents or out in corpus.parents:
+            raise GiveUp(2, 'usage', 'the corpus and output folders must not overlap')
     count = len(corpus_files(args.corpus))
     if not args.execute and not args.train:
         emit(plan_document(count))
