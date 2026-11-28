@@ -922,7 +922,6 @@ def parse_reset_clock(text, now):
     if month not in RESET_MONTHS:
         return None
     month, day = RESET_MONTHS.index(month) + 1, int(match['day'])
-    # A date without a year refers to the next occurrence in the reset's timezone.
     for year in (base.year, base.year + 1):
         try:
             candidate = datetime(year, month, day, hour, minute, tzinfo=tz)
@@ -986,7 +985,6 @@ def detect_limit(lines, row=None, now=None):
             kind = 'limit'
         else:
             continue
-        # A reset belongs to its diagnostic or a reset instruction immediately after it.
         reset_at = parse_reset_time(text, now, RESET_CUE.search(text))
         if reset_at is None and index + 1 < len(lines):
             following = lines[index + 1].lstrip()
