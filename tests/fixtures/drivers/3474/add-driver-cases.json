@@ -1,0 +1,108 @@
+{
+  "cases": [
+    {
+      "id": "non-owner",
+      "sender": "non-owner",
+      "utterance": "Wiz, add a driver for Sample Sandbox",
+      "expected_effects": []
+    },
+    {
+      "id": "missing-stop",
+      "sender": "owner",
+      "utterance": "Wiz, add a driver for Sample Sandbox",
+      "api": "later",
+      "reason": "No documented stop for one run",
+      "expected_effects": ["api-check", "reply-later"]
+    },
+    {
+      "id": "spending-denied",
+      "sender": "owner",
+      "utterance": "Wiz, add a driver for Sample Sandbox",
+      "api": "pass",
+      "spending": "denied",
+      "expected_effects": [
+        "api-check", "copy-template", "run-tests", "ask-before-live-kit", "reply-spending-denied"
+      ]
+    },
+    {
+      "id": "kit-fails",
+      "sender": "owner",
+      "utterance": "Wiz, add a driver for Sample Sandbox",
+      "api": "pass",
+      "spending": "granted",
+      "kit": "fail",
+      "publish_step": true,
+      "expected_effects": [
+        "api-check", "copy-template", "run-tests", "ask-before-live-kit",
+        "run-kit", "stop-started", "reply-kit-failed"
+      ]
+    },
+    {
+      "id": "publish-unavailable",
+      "sender": "owner",
+      "utterance": "Wiz, add a driver for Sample Sandbox",
+      "api": "pass",
+      "spending": "granted",
+      "kit": "pass",
+      "publish_step": false,
+      "expected_effects": [
+        "api-check", "copy-template", "run-tests", "ask-before-live-kit",
+        "run-kit", "stop-started", "reply-publish-unavailable"
+      ]
+    },
+    {
+      "id": "offer-awaits-assent",
+      "sender": "owner",
+      "utterance": "Wiz, add a driver for Sample Sandbox",
+      "api": "pass",
+      "spending": "granted",
+      "kit": "pass",
+      "publish_step": true,
+      "expected_effects": [
+        "api-check", "copy-template", "run-tests", "ask-before-live-kit",
+        "run-kit", "stop-started", "offer-publish"
+      ]
+    },
+    {
+      "id": "owner-assents",
+      "sender": "owner",
+      "utterance": "Wiz, add a driver for Sample Sandbox",
+      "api": "pass",
+      "spending": "granted",
+      "kit": "pass",
+      "publish_step": true,
+      "owner_reply": "yes",
+      "expected_effects": [
+        "api-check", "copy-template", "run-tests", "ask-before-live-kit",
+        "run-kit", "stop-started", "offer-publish", "owner-assents", "publish"
+      ]
+    }
+  ],
+  "failure_controls": [
+    {
+      "case": "offer-awaits-assent",
+      "effects": ["copy-template", "api-check"],
+      "finding": "work-before-api-check"
+    },
+    {
+      "case": "kit-fails",
+      "effects": ["api-check", "copy-template", "run-tests", "ask-before-live-kit", "run-kit", "stop-started", "offer-publish"],
+      "finding": "offer-without-passing-kit-or-publish-step"
+    },
+    {
+      "case": "offer-awaits-assent",
+      "effects": ["api-check", "copy-template", "run-tests", "ask-before-live-kit", "run-kit", "stop-started", "offer-publish", "offer-publish"],
+      "finding": "repeated-offer"
+    },
+    {
+      "case": "offer-awaits-assent",
+      "effects": ["api-check", "copy-template", "run-tests", "ask-before-live-kit", "run-kit", "stop-started", "offer-publish", "publish"],
+      "finding": "publish-without-assent"
+    },
+    {
+      "case": "offer-awaits-assent",
+      "effects": ["api-check", "copy-template", "run-tests", "ask-before-live-kit", "run-kit", "stop-started", "offer-publish", "owner-assents", "publish"],
+      "finding": "publish-without-assent"
+    }
+  ]
+}

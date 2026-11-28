@@ -8,7 +8,7 @@ CASES = ROOT / "tests/fixtures/drivers/3474/add-driver-cases.json"
 def finding(case, effects):
     if case["sender"] == "non-owner" and effects:
         return "non-owner-starts-work"
-    if "copy-template" in effects and effects[:2] != ["api-check", "copy-template"]:
+    if {"copy-template", "run-tests", "run-kit"}.intersection(effects) and effects[:1] != ["api-check"]:
         return "work-before-api-check"
     if case.get("api") == "later" and effects != ["api-check", "reply-later"]:
         return "work-after-later"
@@ -19,10 +19,10 @@ def finding(case, effects):
             return "offer-without-passing-kit-or-publish-step"
         if effects.count("offer-publish") != 1:
             return "repeated-offer"
-        if effects.index("offer-publish") < effects.index("stop-started"):
+        if "stop-started" not in effects or effects.index("offer-publish") < effects.index("stop-started"):
             return "offer-before-cleanup"
     if "publish" in effects and (
-        "owner-assents" not in effects
+        case.get("owner_reply") != "yes" or "owner-assents" not in effects
         or effects.index("publish") < effects.index("owner-assents")
     ):
         return "publish-without-assent"
@@ -60,14 +60,14 @@ def main():
     for case in cases.values():
         assert finding(case, case["expected_effects"]) is None, case["id"]
     controls = data["failure_controls"]
-    assert len(controls) == 4
+    assert len(controls) == 5
     assert {c["finding"] for c in controls} == {
         "work-before-api-check", "offer-without-passing-kit-or-publish-step",
         "repeated-offer", "publish-without-assent",
     }
     for control in controls:
         assert finding(cases[control["case"]], control["effects"]) == control["finding"]
-    print("V5: 7 synthetic cases and 4 failing controls passed")
+    print("V5: 7 synthetic cases and 5 failing controls passed")
 
 
 if __name__ == "__main__":
