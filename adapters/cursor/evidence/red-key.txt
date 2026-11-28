@@ -1,0 +1,116 @@
+# Redacted at the N4 port (#1994): the key's variable name reads <KEY-VARIABLE>, since the kit's key check scans every file of this folder. The original log is at e7ec8100.
+# Red run: python3 -I adapters/cursor/test_driver.py, with the tests and fake curl for the planner's key ruling (curl reads <KEY-VARIABLE> itself through --variable and --expand-oauth2-bearer, curl 8.3 or later), against the driver that still used ~/.netrc. Synthetic Cursor and a synthetic key only.
+test_a_failed_archive_is_reported_with_the_agent_to_archive (__main__.Cursor.test_a_failed_archive_is_reported_with_the_agent_to_archive) ... FAIL
+test_a_refused_login_says_where_the_key_lives_and_shows_no_answer (__main__.Cursor.test_a_refused_login_says_where_the_key_lives_and_shows_no_answer) ... FAIL
+test_a_start_whose_answer_is_lost_archives_its_agent (__main__.Cursor.test_a_start_whose_answer_is_lost_archives_its_agent) ... ERROR
+test_a_stop_that_cannot_save_still_archives_and_no_wake_reopens_it (__main__.Cursor.test_a_stop_that_cannot_save_still_archives_and_no_wake_reopens_it) ... FAIL
+test_a_wake_during_a_run_starts_no_second_run_and_one_after_it_follows_up (__main__.Cursor.test_a_wake_during_a_run_starts_no_second_run_and_one_after_it_follows_up) ... FAIL
+test_an_old_curl_or_a_missing_key_is_a_clear_error_and_sends_nothing (__main__.Cursor.test_an_old_curl_or_a_missing_key_is_a_clear_error_and_sends_nothing) ... FAIL
+test_kit_passes_all_five (__main__.Cursor.test_kit_passes_all_five) ... FAIL
+test_runs_reach_only_the_fake_cursor_and_python (__main__.Cursor.test_runs_reach_only_the_fake_cursor_and_python) ... ok
+test_start_creates_one_agent_under_an_id_it_saved_first_with_no_login (__main__.Cursor.test_start_creates_one_agent_under_an_id_it_saved_first_with_no_login) ... FAIL
+test_start_refuses_any_harness_but_cursor_and_creates_nothing (__main__.Cursor.test_start_refuses_any_harness_but_cursor_and_creates_nothing) ... ok
+test_stop_cancels_the_active_run_then_archives_and_never_deletes (__main__.Cursor.test_stop_cancels_the_active_run_then_archives_and_never_deletes) ... FAIL
+test_the_key_never_passes_through_the_driver (__main__.Cursor.test_the_key_never_passes_through_the_driver) ... FAIL
+
+======================================================================
+ERROR: test_a_start_whose_answer_is_lost_archives_its_agent (__main__.Cursor.test_a_start_whose_answer_is_lost_archives_its_agent)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cursor/test_driver.py", line 188, in test_a_start_whose_answer_is_lost_archives_its_agent
+    [agent] = self.agents().values()
+    ^^^^^^^
+ValueError: not enough values to unpack (expected 1, got 0)
+
+======================================================================
+FAIL: test_a_failed_archive_is_reported_with_the_agent_to_archive (__main__.Cursor.test_a_failed_archive_is_reported_with_the_agent_to_archive)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cursor/test_driver.py", line 242, in test_a_failed_archive_is_reported_with_the_agent_to_archive
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'Cursor gave no answer to the start of run run-<id>, and did not confirm ending its agent, so its outcome is unknown', 'next': 'archive agent bc-<agent> at cursor.com/agents, and read the ticket for what it did, before you start again'}
+
+======================================================================
+FAIL: test_a_refused_login_says_where_the_key_lives_and_shows_no_answer (__main__.Cursor.test_a_refused_login_says_where_the_key_lives_and_shows_no_answer)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cursor/test_driver.py", line 252, in test_a_refused_login_says_where_the_key_lives_and_shows_no_answer
+    self.assertIn('<KEY-VARIABLE>', err['next'])
+AssertionError: '<KEY-VARIABLE>' not found in 'archive agent bc-<agent> at cursor.com/agents, and read the ticket for what it did, before you start again'
+
+======================================================================
+FAIL: test_a_stop_that_cannot_save_still_archives_and_no_wake_reopens_it (__main__.Cursor.test_a_stop_that_cannot_save_still_archives_and_no_wake_reopens_it)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cursor/test_driver.py", line 227, in test_a_stop_that_cannot_save_still_archives_and_no_wake_reopens_it
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'Cursor gave no answer to the start of run run-<id>, and did not confirm ending its agent, so its outcome is unknown', 'next': 'archive agent bc-<agent> at cursor.com/agents, and read the ticket for what it did, before you start again'}
+
+======================================================================
+FAIL: test_a_wake_during_a_run_starts_no_second_run_and_one_after_it_follows_up (__main__.Cursor.test_a_wake_during_a_run_starts_no_second_run_and_one_after_it_follows_up)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cursor/test_driver.py", line 196, in test_a_wake_during_a_run_starts_no_second_run_and_one_after_it_follows_up
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'Cursor gave no answer to the start of run run-<id>, and did not confirm ending its agent, so its outcome is unknown', 'next': 'archive agent bc-<agent> at cursor.com/agents, and read the ticket for what it did, before you start again'}
+
+======================================================================
+FAIL: test_an_old_curl_or_a_missing_key_is_a_clear_error_and_sends_nothing (__main__.Cursor.test_an_old_curl_or_a_missing_key_is_a_clear_error_and_sends_nothing)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cursor/test_driver.py", line 164, in test_an_old_curl_or_a_missing_key_is_a_clear_error_and_sends_nothing
+    self.assertIn('8.3', err['error'] + err['next'])
+AssertionError: '8.3' not found in 'Cursor gave no answer to the start of run run-<id>, and did not confirm ending its agent, so its outcome is unknownarchive agent bc-<agent> at cursor.com/agents, and read the ticket for what it did, before you start again'
+
+======================================================================
+FAIL: test_kit_passes_all_five (__main__.Cursor.test_kit_passes_all_five)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cursor/test_driver.py", line 115, in test_kit_passes_all_five
+    self.assertEqual((p.returncode, p.stdout.splitlines()), (0, [
+AssertionError: Tuples differ: (1, ['pass version: openwiz:records v1, an[293 chars]er']) != (0, ['pass version: openwiz:records v1, an[245 chars]er'])
+
+First differing element 0:
+1
+0
+
+- (1,
++ (0,
+   ['pass version: openwiz:records v1, and the schema is driver v1',
++   'pass start: the run posted builder status note 1',
++   'pass wake: the run edited builder status note 1',
++   'pass stop: the run ended, and a wake after it is refused',
+-   'fail start: Cursor gave no answer to the start of run run-<id>, and '
+-   'did not confirm ending its agent, so its outcome is unknown',
+-   'fail wake: not run: start failed',
+-   'fail stop: not run: start failed',
+    'pass token: no login or token passed through the driver']) : 
+
+======================================================================
+FAIL: test_start_creates_one_agent_under_an_id_it_saved_first_with_no_login (__main__.Cursor.test_start_creates_one_agent_under_an_id_it_saved_first_with_no_login)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cursor/test_driver.py", line 124, in test_start_creates_one_agent_under_an_id_it_saved_first_with_no_login
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'Cursor gave no answer to the start of run run-<id>, and did not confirm ending its agent, so its outcome is unknown', 'next': 'archive agent bc-<agent> at cursor.com/agents, and read the ticket for what it did, before you start again'}
+
+======================================================================
+FAIL: test_stop_cancels_the_active_run_then_archives_and_never_deletes (__main__.Cursor.test_stop_cancels_the_active_run_then_archives_and_never_deletes)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cursor/test_driver.py", line 211, in test_stop_cancels_the_active_run_then_archives_and_never_deletes
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'Cursor gave no answer to the start of run run-<id>, and did not confirm ending its agent, so its outcome is unknown', 'next': 'archive agent bc-<agent> at cursor.com/agents, and read the ticket for what it did, before you start again'}
+
+======================================================================
+FAIL: test_the_key_never_passes_through_the_driver (__main__.Cursor.test_the_key_never_passes_through_the_driver)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/cursor/test_driver.py", line 144, in test_the_key_never_passes_through_the_driver
+    self.assertEqual(code, 0, out)
+AssertionError: 1 != 0 : {'error': 'Cursor gave no answer to the start of run run-<id>, and did not confirm ending its agent, so its outcome is unknown', 'next': 'archive agent bc-<agent> at cursor.com/agents, and read the ticket for what it did, before you start again'}
+
+----------------------------------------------------------------------
+Ran 12 tests in 1.092s
+
+FAILED (failures=9, errors=1)

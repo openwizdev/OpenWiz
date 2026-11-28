@@ -1,0 +1,24 @@
+$ python3 -I adapters/pane/test_driver.py Pane.test_no_real_harness_or_host_cli_is_on_the_path   # at 44ba64bf plus this test; machine paths kept as printed
+test_no_real_harness_or_host_cli_is_on_the_path (__main__.Pane.test_no_real_harness_or_host_cli_is_on_the_path) ... FAIL
+
+======================================================================
+FAIL: test_no_real_harness_or_host_cli_is_on_the_path (__main__.Pane.test_no_real_harness_or_host_cli_is_on_the_path)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "adapters/pane/test_driver.py", line 63, in test_no_real_harness_or_host_cli_is_on_the_path
+    self.assertEqual({k: v for k, v in found.items() if v}, {})
+AssertionError: {'claude': '/usr/local/bin/claude', 'codex[223 chars]ode'} != {}
++ {}
+- {'claude': '/usr/local/bin/claude',
+-  'codex': '/usr/local/bin/codex',
+-  'cursor-agent': '/usr/local/bin/cursor-agent',
+-  'gh': '/usr/local/bin/gh',
+-  'git': '/usr/local/bin/git',
+-  'node': '/usr/local/bin/node',
+-  'npm': '/usr/local/bin/npm',
+-  'opencode': '/usr/local/bin/opencode'}
+
+----------------------------------------------------------------------
+Ran 1 test in 0.002s
+
+FAILED (failures=1)

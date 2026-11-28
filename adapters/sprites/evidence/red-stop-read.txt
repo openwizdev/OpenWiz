@@ -1,0 +1,12 @@
+# Red (lead's stop-confirm finding): the new one-Sprite-read tests against the list-based stop, at 5c98629a plus the fixture and test edits
+# env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/sprites/test_driver.py <the 4 tests>; 43 refusing agent-CLI stubs first on PATH
+FAIL: test_stop_runs_sprite_destroy_and_confirms_the_sprite_is_gone (__main__.Sprites.test_stop_runs_sprite_destroy_and_confirms_the_sprite_is_gone)
+AssertionError: Lists differ: [] != [['api', '/sprites/openwiz-sp-ee3aca33cf39[117 chars]e}']]
+FAIL: test_a_stop_trusts_only_the_one_sprite_read_never_a_truncated_list (__main__.Sprites.test_a_stop_trusts_only_the_one_sprite_read_never_a_truncated_list)
+AssertionError: Tuples differ: (0, ['openwiz-sp-cbe4e56241ec']) != (1, ['openwiz-sp-cbe4e56241ec'])
+FAIL: test_a_404_counts_as_gone_only_after_the_read_has_shown_this_sprite (__main__.Sprites.test_a_404_counts_as_gone_only_after_the_read_has_shown_this_sprite)
+AssertionError: 0 != 1 : {'run': 'sp-e7d056a9ed46'}
+FAIL: test_a_stop_whose_destroy_did_not_take_says_so_and_a_later_stop_finishes (__main__.Sprites.test_a_stop_whose_destroy_did_not_take_says_so_and_a_later_stop_finishes) (env={'FAKE_SPRITE_FAIL': 'api'})
+AssertionError: Tuples differ: (0, []) != (1, [])
+Ran 4 tests in 6.339s
+FAILED (failures=4)

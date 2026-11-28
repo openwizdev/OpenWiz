@@ -1,0 +1,39 @@
+# Green, after the lead's stop-confirm finding (stop reads the one Sprite with sprite api, never sprite list): env -u OPENWIZ_GITHUB_APP_KEY python3 -I adapters/sprites/test_driver.py -v (43 refusing agent-CLI stubs first on the outer PATH; each test builds its own PATH of fixtures and system tools)
+test_a_branch_whose_remote_head_is_unknown_here_is_refused (__main__.Push.test_a_branch_whose_remote_head_is_unknown_here_is_refused) ... ok
+test_a_commit_github_would_write_with_another_sha_is_refused_before_the_ref_moves (__main__.Push.test_a_commit_github_would_write_with_another_sha_is_refused_before_the_ref_moves) ... ok
+test_a_commit_github_writes_with_another_sha_leaves_the_branch_unmoved (__main__.Push.test_a_commit_github_writes_with_another_sha_leaves_the_branch_unmoved) ... ok
+test_a_fast_forward_moves_the_branch_and_uploads_only_the_new_commits (__main__.Push.test_a_fast_forward_moves_the_branch_and_uploads_only_the_new_commits) ... ok
+test_a_new_branch_is_published_with_the_same_commits_and_trees (__main__.Push.test_a_new_branch_is_published_with_the_same_commits_and_trees) ... ok
+test_a_push_that_changes_more_than_200_files_is_refused_before_any_write (__main__.Push.test_a_push_that_changes_more_than_200_files_is_refused_before_any_write) ... ok
+test_a_typical_push_of_ten_files_makes_a_fixed_number_of_rest_calls (__main__.Push.test_a_typical_push_of_ten_files_makes_a_fixed_number_of_rest_calls) ... ok
+test_anything_but_a_fast_forward_is_refused_before_any_write (__main__.Push.test_anything_but_a_fast_forward_is_refused_before_any_write) ... ok
+test_blobs_github_already_has_are_never_uploaded (__main__.Push.test_blobs_github_already_has_are_never_uploaded) ... ok
+test_it_refuses_without_a_gateway_or_a_github_origin_or_a_branch (__main__.Push.test_it_refuses_without_a_gateway_or_a_github_origin_or_a_branch) ... ok
+test_a_404_counts_as_gone_only_after_the_read_has_shown_this_sprite (__main__.Sprites.test_a_404_counts_as_gone_only_after_the_read_has_shown_this_sprite) ... ok
+test_a_given_effort_reaches_the_harness_by_its_documented_flag (__main__.Sprites.test_a_given_effort_reaches_the_harness_by_its_documented_flag) ... ok
+test_a_start_whose_cleanup_destroy_fails_names_the_run_to_stop (__main__.Sprites.test_a_start_whose_cleanup_destroy_fails_names_the_run_to_stop) ... ok
+test_a_start_whose_harness_refuses_after_it_began_fails_and_destroys_the_sprite (__main__.Sprites.test_a_start_whose_harness_refuses_after_it_began_fails_and_destroys_the_sprite) ... ok
+test_a_stop_trusts_only_the_one_sprite_read_never_a_truncated_list (__main__.Sprites.test_a_stop_trusts_only_the_one_sprite_read_never_a_truncated_list) ... ok
+test_a_stop_whose_destroy_did_not_take_says_so_and_a_later_stop_finishes (__main__.Sprites.test_a_stop_whose_destroy_did_not_take_says_so_and_a_later_stop_finishes) ... ok
+test_a_turn_inherits_the_environment_natively_and_reads_no_ambient_value (__main__.Sprites.test_a_turn_inherits_the_environment_natively_and_reads_no_ambient_value) ... ok
+test_a_wake_after_stop_or_for_an_unknown_run_is_refused (__main__.Sprites.test_a_wake_after_stop_or_for_an_unknown_run_is_refused) ... ok
+test_a_wake_of_a_sprite_that_lost_its_run_is_refused (__main__.Sprites.test_a_wake_of_a_sprite_that_lost_its_run_is_refused) ... ok
+test_a_wake_resumes_the_same_session (__main__.Sprites.test_a_wake_resumes_the_same_session) ... ok
+test_a_wake_while_the_turn_runs_starts_nothing (__main__.Sprites.test_a_wake_while_the_turn_runs_starts_nothing) ... ok
+test_a_wake_whose_harness_refuses_to_resume_fails (__main__.Sprites.test_a_wake_whose_harness_refuses_to_resume_fails) ... ok
+test_an_effort_the_harness_cannot_take_is_refused_before_anything_is_created (__main__.Sprites.test_an_effort_the_harness_cannot_take_is_refused_before_anything_is_created) ... ok
+test_kit_passes_all_five_for_each_harness (__main__.Sprites.test_kit_passes_all_five_for_each_harness) ... ok
+test_kit_passes_all_five_without_proc_as_on_macos (__main__.Sprites.test_kit_passes_all_five_without_proc_as_on_macos) ... ok
+test_no_real_key_or_github_token_reaches_the_sprite (__main__.Sprites.test_no_real_key_or_github_token_reaches_the_sprite) ... ok
+test_sprite_text_never_reaches_an_answer_and_a_failed_start_step_destroys_the_sprite (__main__.Sprites.test_sprite_text_never_reaches_an_answer_and_a_failed_start_step_destroys_the_sprite) ... ok
+test_start_creates_one_labelled_sprite_named_for_the_run (__main__.Sprites.test_start_creates_one_labelled_sprite_named_for_the_run) ... ok
+test_start_refuses_a_credential_by_its_shape_and_never_imports_the_kit (__main__.Sprites.test_start_refuses_a_credential_by_its_shape_and_never_imports_the_kit) ... ok
+test_start_refuses_before_any_create_without_its_connection_ids (__main__.Sprites.test_start_refuses_before_any_create_without_its_connection_ids) ... ok
+test_stop_runs_sprite_destroy_and_confirms_the_sprite_is_gone (__main__.Sprites.test_stop_runs_sprite_destroy_and_confirms_the_sprite_is_gone) ... ok
+test_the_only_connector_values_passed_are_gateway_urls (__main__.Sprites.test_the_only_connector_values_passed_are_gateway_urls) ... ok
+test_the_prompt_sends_the_push_and_github_calls_through_the_gateway (__main__.Sprites.test_the_prompt_sends_the_push_and_github_calls_through_the_gateway) ... ok
+test_the_state_folder_and_every_file_in_it_are_owner_only (__main__.Sprites.test_the_state_folder_and_every_file_in_it_are_owner_only) ... ok
+test_version_lists_many_at_once_own_sandbox_and_effort (__main__.Sprites.test_version_lists_many_at_once_own_sandbox_and_effort) ... ok
+----------------------------------------------------------------------
+Ran 35 tests in 48.348s
+OK

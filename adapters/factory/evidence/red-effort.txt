@@ -1,0 +1,23 @@
+# Red (openwizdev/OpenWiz#2609): the kit's start check on adapters/factory/driver before
+# it declares effort. No README Effort: line. PATH is the synthetic droid in
+# adapters/factory/fixtures/bin, then a folder holding only python3. No Factory host.
+# Run: python3 -I kernel/driver-kit/kit.py --driver adapters/factory/driver \
+#   --repo example/site --ticket 7 --harness droid --model synthetic-model-1 \
+#   --tracker <temporary> --wait 8
+
+pass version: openwiz:records v1, and the schema is driver v1
+pass start: the run posted builder status note 1
+pass wake: the run edited builder status note 1
+pass stop: the run ended, and a wake after it is refused
+pass token: no login or token passed through the driver
+exit: 0
+
+# stderr:
+note start: effort: not declared yet; required from EF14
+
+# schema copy at 2b0b0d192d9013f223279d507bc7a809540f66da:
+# cmp adapters/factory/schema.json kernel/driver-kit/schema.json
+# The copy already matches. #1998 updated it when that driver merged main
+# (3b5937ea). This ticket's red expected a difference; this head has none.
+schema: identical
+exit: 0
