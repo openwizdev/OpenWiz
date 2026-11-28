@@ -191,6 +191,32 @@ class Identity(unittest.TestCase):
             E.compare(base, dict(base, settings_hash=E.sha(on)))
 
 
+class Resume(unittest.TestCase):
+    def refusal(self, recorded_env, resume_env):
+        import tempfile
+        import parallel
+        with tempfile.TemporaryDirectory() as folder:
+            with mock.patch.dict(os.environ, recorded_env):
+                for name in ON:
+                    if name not in recorded_env:
+                        os.environ.pop(name, None)
+                settings = E.run_settings()
+            Path(folder, 'manifest.json').write_text(json.dumps({'settings': settings, 'settings_hash': E.sha(settings)}))
+            with mock.patch.dict(os.environ, resume_env):
+                for name in ON:
+                    if name not in resume_env:
+                        os.environ.pop(name, None)
+                with self.assertRaises(ValueError) as refused:
+                    parallel.resume(folder, None)
+            return str(refused.exception)
+
+    def test_a_parallel_resume_refuses_another_judge_mode(self):
+        self.assertNotIn('settings changed', self.refusal({}, {}))
+        self.assertNotIn('settings changed', self.refusal(ON, ON))
+        self.assertIn('settings changed', self.refusal({}, ON))
+        self.assertIn('settings changed', self.refusal(ON, {}))
+
+
 class Box(unittest.TestCase):
     def test_a_box_with_no_confidence_abstains(self):
         boxed = {'answers': {'bird': {'type': 'box', 'confidence': None,
