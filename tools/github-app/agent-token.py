@@ -25,6 +25,7 @@ REFUSALS = {"usage": 2, "one-owner": 2, "not-installed": 3, "permission": 5,
             "github": 5, "expiry": 5, "unavailable": 1}
 REFRESH_AT_S, MAX_LIFETIME_S, TIMEOUT_S = 300, 3900, 60
 ACTIONS_TIMEOUT_S, ACTIONS_POLL_S, ACTIONS_ARTIFACT_LIMIT = 120, 2.0, 64 * 1024
+ACTIONS_RUNS_PER_PAGE, ACTIONS_RUN_PAGES, ACTIONS_RUN_LOOKBACK_S = 10, 3, 300
 WORKFLOW_FILE = re.compile(r"[A-Za-z0-9._-]+\.ya?ml")
 NOTE = "openwiz: no openwiz[bot] token ({}); using the owner's GitHub account\n"
 WITHHELD = "openwiz: openwiz[bot] token withheld from git ({}); git stops rather than use another account\n"
@@ -190,6 +191,7 @@ def _actions_auth(env):
 
 
 def _actions_http(method, url, auth, base, deadline, body=None, follow_redirect=False, limit=1024 * 1024):
+    import http.client
     import urllib.error
     import urllib.request
 
@@ -235,19 +237,38 @@ def _actions_http(method, url, auth, base, deadline, body=None, follow_redirect=
                 time.sleep(min(wait, left))
                 continue
             return err.code, b""
-        except (OSError, ValueError):
+        except (http.client.HTTPException, OSError, ValueError):
             return None, b""
+
+
+def _find_actions_run(runs_url, run_title, auth, base, deadline):
+    for page in range(1, ACTIONS_RUN_PAGES + 1):
+        status, raw = _actions_http("GET", f"{runs_url}&page={page}", auth, base, deadline)
+        payload = _parse(raw) if status == 200 else None
+        runs = payload.get("workflow_runs") if isinstance(payload, dict) else None
+        if not isinstance(runs, list):
+            return None
+        for run in runs:
+            if (isinstance(run, dict) and run.get("display_title") == run_title
+                    and run.get("head_branch") == "main" and run.get("event") == "workflow_dispatch"
+                    and type(run.get("id")) is int and run["id"] > 0):
+                return run
+        if len(runs) < ACTIONS_RUNS_PER_PAGE:
+            break
+    return None
 
 
 def ask_actions(repo, workflow, request, env):
     import io
     import zipfile
+    import zlib
 
     base = revoke_base(env)
     auth = _actions_auth(env) if base else ""
     if not base or not auth:
         return "unreachable", None
     deadline = time.monotonic() + ACTIONS_TIMEOUT_S
+    since = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - ACTIONS_RUN_LOOKBACK_S))
     nonce = secrets.token_hex(16)
     run_title = f"openwiz-mint-{nonce}"
     dispatch_url = f"{base}/repos/{repo}/actions/workflows/{workflow}/dispatches"
@@ -257,20 +278,14 @@ def ask_actions(repo, workflow, request, env):
     if status not in (200, 204):
         return "unreachable", None
 
-    runs_url = f"{base}/repos/{repo}/actions/workflows/{workflow}/runs?event=workflow_dispatch&branch=main&per_page=10"
+    query = urllib.parse.urlencode({
+        "event": "workflow_dispatch", "branch": "main", "per_page": ACTIONS_RUNS_PER_PAGE, "created": f">={since}",
+    })
+    runs_url = f"{base}/repos/{repo}/actions/workflows/{workflow}/runs?{query}"
     found = None
     poll = ACTIONS_POLL_S
     while time.monotonic() < deadline:
-        status, raw = _actions_http("GET", runs_url, auth, base, deadline)
-        payload = _parse(raw) if status == 200 else None
-        if isinstance(payload, dict) and isinstance(payload.get("workflow_runs"), list):
-            for item in payload["workflow_runs"]:
-                if (isinstance(item, dict) and item.get("display_title") == run_title
-                        and item.get("head_branch") == "main"
-                        and item.get("event") == "workflow_dispatch"
-                        and type(item.get("id")) is int and item["id"] > 0):
-                    found = item
-                    break
+        found = _find_actions_run(runs_url, run_title, auth, base, deadline)
         if found is not None:
             break
         left = deadline - time.monotonic()
@@ -319,7 +334,7 @@ def ask_actions(repo, workflow, request, env):
             if len(infos) != 1 or infos[0].filename != "answer.json" or infos[0].file_size > ACTIONS_ARTIFACT_LIMIT:
                 return "bad-answer", None
             content = zf.read(infos[0])
-    except (zipfile.BadZipFile, OSError, ValueError):
+    except (zipfile.BadZipFile, zlib.error, OSError, ValueError):
         return "bad-answer", None
     if len(content) > ACTIONS_ARTIFACT_LIMIT:
         return "bad-answer", None
