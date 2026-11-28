@@ -371,6 +371,43 @@ class SshDriver(unittest.TestCase):
         self.assertIn('kill -TERM', json.dumps(self.lines(2)))
         self.assertFalse(self.running(pid))
 
+    def unreachable(self):
+        down = os.path.join(self.folder, 'down')
+        os.makedirs(down, exist_ok=True)
+        stub = os.path.join(down, 'ssh')
+        with open(stub, 'w') as handle:
+            handle.write('#!/bin/sh\necho "Connection refused" >&2\nexit 255\n')
+        os.chmod(stub, 0o700)
+        return {'PATH': down + os.pathsep + self.env['PATH']}
+
+    def test_a_repeated_stop_answers_again_while_the_vps_is_unreachable(self):
+        run = self.start_held(stop=False)
+        stopped = (0, {'run': run, 'stopped': True})
+        self.assertEqual(self.call('stop', {'run': run}), stopped)
+        self.assertEqual(self.call('stop', {'run': run}, **self.unreachable()), stopped)
+        self.assertEqual(self.call('wake', {'run': run})[1]['error'], 'run %s is stopped' % run)
+
+    def test_a_failed_stop_is_retried_until_the_vps_confirms(self):
+        run = self.start_held(stop=False)
+        pid = self.read_state(run)['pids'][0]['pid']
+        self.addCleanup(self.reap, pid)
+        code, out = self.call('stop', {'run': run}, **self.unreachable())
+        self.assertEqual((code, out['error']), (1, 'the VPS did not end run %s (connection refused)' % run))
+        self.assertEqual(self.call('wake', {'run': run})[1]['error'], 'run %s is stopped' % run)
+        code, out = self.call('stop', {'run': run}, **self.unreachable())
+        self.assertEqual((code, out['error']), (1, 'the VPS did not end run %s (connection refused)' % run))
+        self.assertEqual(self.call('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
+        self.assertIn('kill -TERM', json.dumps(self.lines(2)))
+        self.assertEqual(self.call('stop', {'run': run}, **self.unreachable()), (0, {'run': run, 'stopped': True}))
+
+    def test_an_older_stopped_record_without_confirmation_still_retries_the_vps(self):
+        run = self.start_held(stop=False)
+        state = self.read_state(run)
+        self.write_state(run, dict(state, stopped=True))
+        code, out = self.call('stop', {'run': run}, **self.unreachable())
+        self.assertEqual((code, out['error']), (1, 'the VPS did not end run %s (connection refused)' % run))
+        self.assertEqual(self.call('stop', {'run': run}), (0, {'run': run, 'stopped': True}))
+
     def test_kit_passes_all_five(self):
         process = subprocess.run([sys.executable, '-I', os.path.join(KIT, 'kit.py'), '--driver', DRIVER,
                                   '--repo', 'example/site', '--ticket', '7', '--harness', 'fake-harness',
