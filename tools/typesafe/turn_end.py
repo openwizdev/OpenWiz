@@ -12,6 +12,7 @@ import decide
 
 TAIL_CHARS = 4000
 SIGNED_OUT = re.compile(r'sign|login|auth|401|unauthori[sz]ed|expired', re.I)
+URL_CREDENTIAL = re.compile(r'[a-z][a-z0-9+.-]*://[^\s/@]*:[^\s/@]*@', re.I)
 KIT = HERE.parents[1] / 'kernel' / 'driver-kit' / 'kit.py'
 
 
@@ -46,7 +47,7 @@ def state(raw, holds_credential=None):
     if not text or SIGNED_OUT.search(text):
         return None
     check = kit_check() if holds_credential is None else holds_credential
-    if check is None or check(text):
+    if check is None or check(text) or URL_CREDENTIAL.search(text):
         return None
     return text[-TAIL_CHARS:]
 

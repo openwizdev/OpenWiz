@@ -105,6 +105,12 @@ class TurnEnd(unittest.TestCase):
         self.assertTrue(turn_end.usage_limit(log, fake))
         self.assertEqual(seen, ['Claude usage limit reached, please wait'])
 
+    def test_a_url_with_a_password_is_never_sent(self):
+        for leak in ('proxy http://user:secret@proxy.example:8080 refused', 'socks5://:secret@host failed'):
+            with self.subTest(leak=leak):
+                self.assertIsNone(turn_end.state('Claude usage limit reached\n' + leak, lambda text: False))
+        self.assertIsNotNone(turn_end.state('see https://example.com/limits for when it resets', lambda text: False))
+
     def test_a_sign_in_line_is_not_sent(self):
         self.assertIsNone(turn_end.state('not signed in: run login', lambda text: False))
 

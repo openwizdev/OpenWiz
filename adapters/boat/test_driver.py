@@ -15,6 +15,7 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest import mock
 
 sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -1170,6 +1171,59 @@ class Boat(unittest.TestCase):
         turns = self.start_and_wake(request, calls, prompts)[0]
         self.assertEqual(turns[0][turns[0].index('--model') + 1], 'kimi-code/kimi-for-coding')
 
+
+
+class FirstTurnJev(unittest.TestCase):
+    def setUp(self):
+        import importlib.machinery
+        import importlib.util
+        spec = importlib.util.spec_from_loader('boat_first_turn', importlib.machinery.SourceFileLoader(
+            'boat_first_turn', DRIVER))
+        self.boat = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.boat)
+        sys.path.insert(0, os.path.join(HERE, '..', '..', 'tools', 'typesafe'))
+        import client
+        self.client = client
+        self.calls = []
+        calls = self.calls
+
+        class Yes(client.SystemOne):
+            def system_one(self, state, questions, model=client.MODEL):
+                calls.append(state)
+                return {'model': model, 'answers': {
+                    'plan_limit': {'type': 'noul', 'noul': 0.96}, 'rate_limit': {'type': 'noul', 'noul': 0.05}}}
+        patcher = mock.patch.object(client, 'from_env', lambda: Yes())
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def reason(self, *lines, ended=True):
+        return self.boat.first_turn_reason('\n'.join(lines) + '\n', ended)
+
+    def test_a_prose_usage_limit_is_refused_with_its_reason_after_one_request(self):
+        state, why = self.reason('Claude usage limit reached, please wait')
+        self.assertEqual((state, why), ('refuse', 'hit a usage limit (text)'))
+        self.assertEqual(self.calls, ['Claude usage limit reached, please wait'])
+
+    def test_a_structured_usage_limit_and_a_working_turn_make_no_request(self):
+        limited = json.dumps({'event': 'usage_limit', 'data': {'limitType': 'rate_limit'}})
+        self.assertEqual(self.reason(limited, 'some prose'), ('refuse', 'hit a usage limit (rate_limit)'))
+        working = json.dumps({'event': 'turn_end', 'data': {'tools': ['shell']}})
+        self.assertEqual(self.reason(working, 'Claude usage limit reached'), ('working', None))
+        self.assertEqual(self.reason('Claude usage limit reached', ended=False), ('wait', None))
+        self.assertEqual(self.calls, [])
+
+    def test_a_structured_sign_in_error_is_never_sent(self):
+        error = json.dumps({'event': 'error', 'error': 'unauthorized', 'code': 'auth_failed'})
+        self.assertEqual(self.reason(error, 'the run stopped early'), ('refuse', 'finished with no tool call'))
+        self.assertEqual(self.calls, [])
+
+    def test_credentials_in_the_log_are_never_sent(self):
+        for leak in ('proxy http://synthetic-user:synthetic-pass@proxy.example:8080 failed',
+                     'GH_TOKEN=' + TOKEN):
+            with self.subTest(leak=leak[:12]):
+                state, why = self.reason('Claude usage limit reached, please wait', leak)
+                self.assertEqual((state, why), ('refuse', 'finished with no tool call'))
+        self.assertEqual(self.calls, [])
 
 if __name__ == '__main__':
     unittest.main()

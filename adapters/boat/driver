@@ -591,8 +591,8 @@ def settle_seconds():
     return seconds
 
 
-def unstructured_limit(text):
-    if not isinstance(text, str):
+def unstructured_limit(text, lines=()):
+    if not isinstance(text, str) or host_said(list(lines), '')[0] == 'boat is not signed in':
         return False
     try:
         holds_credential = credential_check()
@@ -607,6 +607,21 @@ def unstructured_limit(text):
         return False
 
 
+def first_turn_reason(raw, ended):
+    lines = parse(raw)
+    limits = [x.get('data') if isinstance(x.get('data'), dict) else x
+              for x in lines if x.get('event') == 'usage_limit']
+    if limits:
+        kind = limits[0].get('limitType')
+        return 'refuse', 'hit a usage limit (%s)' % (
+            SHOWN_LIMIT_TYPES.get(kind, 'unknown') if isinstance(kind, str) else 'unknown')
+    if not ended:
+        return 'wait', None
+    if any(isinstance(x.get('data'), dict) and x['data'].get('tools') for x in lines):
+        return 'working', None
+    return 'refuse', 'hit a usage limit (text)' if unstructured_limit(raw, lines) else 'finished with no tool call'
+
+
 def refuse_a_dead_first_turn(run, turn, settle):
     log, deadline = path(run, '0.log'), time.monotonic() + settle
     while True:
@@ -616,18 +631,11 @@ def refuse_a_dead_first_turn(run, turn, settle):
                 raw = f.read()
         except OSError:
             raw = ''
-        lines = parse(raw)
-        limits = [x.get('data') if isinstance(x.get('data'), dict) else x
-                  for x in lines if x.get('event') == 'usage_limit']
-        if limits:
-            kind = limits[0].get('limitType')
-            why = 'hit a usage limit (%s)' % (SHOWN_LIMIT_TYPES.get(kind, 'unknown') if isinstance(kind, str) else 'unknown')
+        state, why = first_turn_reason(raw, ended_before_this_read)
+        if state == 'refuse':
             break
-        if ended_before_this_read:
-            if any(isinstance(x.get('data'), dict) and x['data'].get('tools') for x in lines):
-                return
-            why = 'hit a usage limit (text)' if unstructured_limit(raw) else 'finished with no tool call'
-            break
+        if state == 'working':
+            return
         if time.monotonic() > deadline:
             return
         time.sleep(0.1)
