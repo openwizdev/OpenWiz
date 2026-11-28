@@ -10,8 +10,14 @@ MANIFEST_SCHEMA_PATH = ROOT / "contracts" / "release-manifest.v1.schema.json"
 MANIFEST_DOC_PATH = ROOT / "contracts" / "release-manifest.v1.md"
 RECORDS_DOC_PATH = ROOT / "contracts" / "records.v1.md"
 FLEET_DOC_PATH = ROOT / "contracts" / "fleet.v1.md"
+WIZSKILLS_DOC_PATH = ROOT / "contracts" / "wizskills.v1.md"
 
 SEMVER_RE = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
+WIZSKILLS_VERSION_RE = re.compile(
+    r"^(?:0\.[1-9][0-9]*|[1-9][0-9]*\.(?:0|[1-9][0-9]*))\.(?:0|[1-9][0-9]*)"
+    r"(?:-(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?"
+    r"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$"
+)
 RECORDS_VERSION_RE = re.compile(r"^v[1-9][0-9]*$")
 
 
@@ -94,9 +100,12 @@ def parse_openwiz_table(markdown: str) -> dict[str, str]:
             val = raw_val[1:-1]
         else:
             val = raw_val
-        if name in ("OpenWiz", "WizSkills"):
+        if name == "OpenWiz":
             if not SEMVER_RE.fullmatch(val):
                 raise ValueError(f"invalid semver for {name}: {val!r}")
+        elif name == "WizSkills":
+            if not WIZSKILLS_VERSION_RE.fullmatch(val):
+                raise ValueError(f"invalid WizSkills version: {val!r}")
         else:
             if not RECORDS_VERSION_RE.fullmatch(val):
                 raise ValueError(f"invalid records contract version: {val!r}")
@@ -175,6 +184,26 @@ class ReleaseManifestSchemaTests(unittest.TestCase):
         bad_commit["wizskills"]["commit"] = "0123456789ABCDEF0123456789abcdef01234567"
         cases.append(("uppercase hex commit", bad_commit))
 
+        nl_commit = valid_manifest()
+        nl_commit["wizskills"]["commit"] = "0123456789abcdef0123456789abcdef01234567\n"
+        cases.append(("commit with trailing newline", nl_commit))
+
+        nl_tree = valid_manifest()
+        nl_tree["wizskills"]["tree"] = "89abcdef0123456789abcdef0123456789abcdef\n"
+        cases.append(("tree with trailing newline", nl_tree))
+
+        nl_kernel = valid_manifest()
+        nl_kernel["kernel_version"] = "0.1.2\n"
+        cases.append(("kernel_version with trailing newline", nl_kernel))
+
+        nl_ws_ver = valid_manifest()
+        nl_ws_ver["wizskills"]["version"] = "0.5.0\n"
+        cases.append(("wizskills.version with trailing newline", nl_ws_ver))
+
+        zero_minor_ws = valid_manifest()
+        zero_minor_ws["wizskills"]["version"] = "0.0.1"
+        cases.append(("wizskills.version 0.0.1", zero_minor_ws))
+
         short_tree = valid_manifest()
         short_tree["wizskills"]["tree"] = "89abcdef"
         cases.append(("short tree hash", short_tree))
@@ -218,6 +247,24 @@ class ReleaseManifestSchemaTests(unittest.TestCase):
         )
         with self.assertRaises(ValueError):
             load_strict_json(float_raw)
+
+    def test_wizskills_version_matches_lock_pattern_and_accepts_prerelease(self):
+        wiz_doc = WIZSKILLS_DOC_PATH.read_text(encoding="utf-8")
+        match = re.search(r"```wizskills-v1\n(.*?)```", wiz_doc, re.DOTALL)
+        self.assertIsNotNone(match, "wizskills-v1 block missing")
+        vocab = load_strict_json(match.group(1))
+        self.assertEqual(
+            self.schema["$defs"].get("wizskills_version", {}).get("pattern"),
+            f"^{vocab['version_pattern']}$",
+        )
+        prerelease = valid_manifest()
+        prerelease["wizskills"]["version"] = "0.6.0-rc.1"
+        self.assertEqual(list(self.validator.iter_errors(prerelease)), [])
+        table = (
+            "## OpenWiz\n\n| Setting | Value |\n| --- | --- |\n"
+            "| OpenWiz | `0.1.2` |\n| WizSkills | `0.6.0-rc.1` |\n| Records contract | `v1` |\n"
+        )
+        self.assertEqual(parse_openwiz_table(table)["WizSkills"], "0.6.0-rc.1")
 
 
 class RecordsContractTests(unittest.TestCase):
@@ -264,6 +311,13 @@ class RecordsContractTests(unittest.TestCase):
             "Grill file": ("# Grill: ", "## Round", "docs/grills/"),
             "Spec and ticket templates": ("## Changelog headline", "kernel/records.v1.md"),
             "Models-offered snapshot": ("openwiz.models-offered.v1", "models-offered.json"),
+            "Narrated-spec video comment": (
+                "[Watch the narrated spec]",
+                "to-spec/SKILL.md",
+                "animatic.mjs",
+                "queue.js",
+                "Steering by comment is off for now",
+            ),
         }
         for name, markers in expected.items():
             with self.subTest(row=name):
