@@ -592,16 +592,17 @@ def settle_seconds():
 
 
 def unstructured_limit(text):
-    if not isinstance(text, str) or SIGNED_OUT.search(text):
+    if not isinstance(text, str):
         return False
     try:
+        holds_credential = credential_check()
         file = os.path.abspath(os.path.join(HERE, '..', '..', 'tools', 'typesafe', 'turn_end.py'))
         spec = importlib.util.spec_from_file_location('openwiz_turn_end', file)
         if spec is None or spec.loader is None:
             return False
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
-        return bool(mod.usage_limit(text))
+        return bool(mod.usage_limit(text, holds_credential=holds_credential))
     except Exception:
         return False
 
