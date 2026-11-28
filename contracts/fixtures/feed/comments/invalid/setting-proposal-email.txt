@@ -1,0 +1,6 @@
+openwiz:setting-proposal v1
+path: roles.builder.effort
+current: medium
+proposed: high
+reason: Email alice@example.com for approval.
+role: orchestrator

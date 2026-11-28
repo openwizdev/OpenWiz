@@ -1,0 +1,6 @@
+openwiz:setting-proposal v1
+path: roles.builder.effort
+current: medium
+proposed: medium
+reason: Same value should not open a card.
+role: builder

@@ -1,0 +1,39 @@
+{
+  "schema": "openwiz.feed.v1",
+  "read_at": "2026-11-28T10:30:00Z",
+  "budget": {
+    "used": 4,
+    "allowed": 60
+  },
+  "cards": [
+    {
+      "id": "blocker:syn-owner/syn-app#70:2005",
+      "kind": "blocker",
+      "needs_owner": true,
+      "title": "Waiting on alice@example.com for retry ceiling",
+      "link": "https://github.com/syn-owner/syn-app/issues/70#issuecomment-2005",
+      "record": {
+        "repository": "syn-owner/syn-app",
+        "number": 70,
+        "comment_id": 2005
+      },
+      "since": "2026-11-28T09:35:00Z",
+      "resolved_at": null
+    },
+    {
+      "id": "blocker:syn-owner/syn-app#71",
+      "kind": "blocker",
+      "needs_owner": true,
+      "title": "Owner sign-off ticket for synthetic fixture",
+      "link": "https://github.com/syn-owner/syn-app/issues/71",
+      "record": {
+        "repository": "syn-owner/syn-app",
+        "number": 71,
+        "comment_id": null
+      },
+      "since": "2026-11-28T09:40:00Z",
+      "resolved_at": null
+    }
+  ],
+  "unavailable": []
+}

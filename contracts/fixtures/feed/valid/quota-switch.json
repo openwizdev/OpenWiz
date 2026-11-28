@@ -1,0 +1,25 @@
+{
+  "schema": "openwiz.feed.v1",
+  "read_at": "2026-11-28T10:30:00Z",
+  "budget": {
+    "used": 4,
+    "allowed": 60
+  },
+  "cards": [
+    {
+      "id": "quota:syn-owner/syn-app#80:2006",
+      "kind": "quota-switch",
+      "needs_owner": false,
+      "title": "Reviewer fallback after usage limit",
+      "link": "https://github.com/syn-owner/syn-app/issues/80#issuecomment-2006",
+      "record": {
+        "repository": "syn-owner/syn-app",
+        "number": 80,
+        "comment_id": 2006
+      },
+      "since": "2026-11-28T09:50:00Z",
+      "resolved_at": null
+    }
+  ],
+  "unavailable": []
+}

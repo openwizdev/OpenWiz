@@ -1,0 +1,2 @@
+openwiz:key-needed v1
+key: sk-syn-0000000000000000

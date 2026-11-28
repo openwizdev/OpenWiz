@@ -1,0 +1,4 @@
+openwiz:driver-suggestion v1
+driver: boat
+reason: quota out
+listing: http://openwiz.dev/market/drivers/boat

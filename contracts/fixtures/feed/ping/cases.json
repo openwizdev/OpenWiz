@@ -1,0 +1,237 @@
+{
+  "initial_ledger": {
+    "schema": "openwiz.feed-pinged.v1",
+    "pinged": {}
+  },
+  "runs": [
+    {
+      "name": "first-sighting-needs-owner-pings-once",
+      "at": "2026-11-28T10:00:00Z",
+      "cards": [
+        {
+          "id": "pr:syn-owner/syn-app#42@1111111111111111111111111111111111111111",
+          "kind": "pr-ready-to-merge",
+          "needs_owner": true,
+          "title": "#41: add synthetic widget queue",
+          "link": "https://github.com/syn-owner/syn-app/pull/42",
+          "record": {
+            "repository": "syn-owner/syn-app",
+            "number": 42,
+            "comment_id": null
+          },
+          "since": "2026-11-28T09:15:00Z",
+          "resolved_at": null
+        },
+        {
+          "id": "blocker:syn-owner/syn-app#70:2005",
+          "kind": "blocker",
+          "needs_owner": true,
+          "title": "Choose synthetic retry ceiling",
+          "link": "https://github.com/syn-owner/syn-app/issues/70#issuecomment-2005",
+          "record": {
+            "repository": "syn-owner/syn-app",
+            "number": 70,
+            "comment_id": 2005
+          },
+          "since": "2026-11-28T09:35:00Z",
+          "resolved_at": null
+        },
+        {
+          "id": "blocker:syn-owner/syn-app#72",
+          "kind": "blocker",
+          "needs_owner": false,
+          "title": "Wire queue consumer after schema ticket",
+          "link": "https://github.com/syn-owner/syn-app/issues/72",
+          "record": {
+            "repository": "syn-owner/syn-app",
+            "number": 72,
+            "comment_id": null
+          },
+          "since": "2026-11-28T09:45:00Z",
+          "resolved_at": null
+        },
+        {
+          "id": "quota:syn-owner/syn-app#80:2006",
+          "kind": "quota-switch",
+          "needs_owner": false,
+          "title": "Reviewer fallback after usage limit",
+          "link": "https://github.com/syn-owner/syn-app/issues/80#issuecomment-2006",
+          "record": {
+            "repository": "syn-owner/syn-app",
+            "number": 80,
+            "comment_id": 2006
+          },
+          "since": "2026-11-28T09:50:00Z",
+          "resolved_at": null
+        },
+        {
+          "id": "driver:syn-owner/syn-app#81:2007",
+          "kind": "driver-suggestion",
+          "needs_owner": false,
+          "title": "Overflow driver suggested while home is full",
+          "link": "https://github.com/syn-owner/syn-app/issues/81#issuecomment-2007",
+          "record": {
+            "repository": "syn-owner/syn-app",
+            "number": 81,
+            "comment_id": 2007
+          },
+          "since": "2026-11-28T09:55:00Z",
+          "resolved_at": null
+        }
+      ],
+      "expect_pings": [
+        "pr:syn-owner/syn-app#42@1111111111111111111111111111111111111111",
+        "blocker:syn-owner/syn-app#70:2005"
+      ]
+    },
+    {
+      "name": "second-sighting-same-ids-produces-no-ping",
+      "at": "2026-11-28T10:05:00Z",
+      "cards": [
+        {
+          "id": "pr:syn-owner/syn-app#42@1111111111111111111111111111111111111111",
+          "kind": "pr-ready-to-merge",
+          "needs_owner": true,
+          "title": "#41: add synthetic widget queue",
+          "link": "https://github.com/syn-owner/syn-app/pull/42",
+          "record": {
+            "repository": "syn-owner/syn-app",
+            "number": 42,
+            "comment_id": null
+          },
+          "since": "2026-11-28T09:15:00Z",
+          "resolved_at": null
+        },
+        {
+          "id": "blocker:syn-owner/syn-app#70:2005",
+          "kind": "blocker",
+          "needs_owner": true,
+          "title": "Choose synthetic retry ceiling",
+          "link": "https://github.com/syn-owner/syn-app/issues/70#issuecomment-2005",
+          "record": {
+            "repository": "syn-owner/syn-app",
+            "number": 70,
+            "comment_id": 2005
+          },
+          "since": "2026-11-28T09:35:00Z",
+          "resolved_at": null
+        },
+        {
+          "id": "blocker:syn-owner/syn-app#72",
+          "kind": "blocker",
+          "needs_owner": false,
+          "title": "Wire queue consumer after schema ticket",
+          "link": "https://github.com/syn-owner/syn-app/issues/72",
+          "record": {
+            "repository": "syn-owner/syn-app",
+            "number": 72,
+            "comment_id": null
+          },
+          "since": "2026-11-28T09:45:00Z",
+          "resolved_at": null
+        },
+        {
+          "id": "quota:syn-owner/syn-app#80:2006",
+          "kind": "quota-switch",
+          "needs_owner": false,
+          "title": "Reviewer fallback after usage limit",
+          "link": "https://github.com/syn-owner/syn-app/issues/80#issuecomment-2006",
+          "record": {
+            "repository": "syn-owner/syn-app",
+            "number": 80,
+            "comment_id": 2006
+          },
+          "since": "2026-11-28T09:50:00Z",
+          "resolved_at": null
+        },
+        {
+          "id": "driver:syn-owner/syn-app#81:2007",
+          "kind": "driver-suggestion",
+          "needs_owner": false,
+          "title": "Overflow driver suggested while home is full",
+          "link": "https://github.com/syn-owner/syn-app/issues/81#issuecomment-2007",
+          "record": {
+            "repository": "syn-owner/syn-app",
+            "number": 81,
+            "comment_id": 2007
+          },
+          "since": "2026-11-28T09:55:00Z",
+          "resolved_at": null
+        }
+      ],
+      "expect_pings": []
+    },
+    {
+      "name": "resolved-card-never-pings-and-new-needs-owner-pings-once",
+      "at": "2026-11-28T10:10:00Z",
+      "cards": [
+        {
+          "id": "spec:syn-owner/syn-app#10:2001",
+          "kind": "spec-to-approve",
+          "needs_owner": false,
+          "title": "0.2.0 spec: synthetic widget queue",
+          "link": "https://github.com/syn-owner/syn-app/issues/10#issuecomment-2001",
+          "record": {
+            "repository": "syn-owner/syn-app",
+            "number": 10,
+            "comment_id": 2001
+          },
+          "since": "2026-11-28T09:00:00Z",
+          "resolved_at": "2026-11-28T10:08:00Z"
+        },
+        {
+          "id": "key:syn-owner/syn-app#61:2003",
+          "kind": "key-needed",
+          "needs_owner": true,
+          "title": "Enable synthetic review integration",
+          "link": "https://github.com/syn-owner/syn-app/issues/61#issuecomment-2003",
+          "record": {
+            "repository": "syn-owner/syn-app",
+            "number": 61,
+            "comment_id": 2003
+          },
+          "since": "2026-11-28T09:25:00Z",
+          "resolved_at": null
+        }
+      ],
+      "expect_pings": [
+        "key:syn-owner/syn-app#61:2003"
+      ]
+    },
+    {
+      "name": "re-sighting-after-prior-ping-never-repeats",
+      "at": "2026-11-28T10:15:00Z",
+      "cards": [
+        {
+          "id": "pr:syn-owner/syn-app#42@1111111111111111111111111111111111111111",
+          "kind": "pr-ready-to-merge",
+          "needs_owner": true,
+          "title": "#41: add synthetic widget queue",
+          "link": "https://github.com/syn-owner/syn-app/pull/42",
+          "record": {
+            "repository": "syn-owner/syn-app",
+            "number": 42,
+            "comment_id": null
+          },
+          "since": "2026-11-28T09:15:00Z",
+          "resolved_at": null
+        },
+        {
+          "id": "key:syn-owner/syn-app#61:2003",
+          "kind": "key-needed",
+          "needs_owner": true,
+          "title": "Enable synthetic review integration",
+          "link": "https://github.com/syn-owner/syn-app/issues/61#issuecomment-2003",
+          "record": {
+            "repository": "syn-owner/syn-app",
+            "number": 61,
+            "comment_id": 2003
+          },
+          "since": "2026-11-28T09:25:00Z",
+          "resolved_at": null
+        }
+      ],
+      "expect_pings": []
+    }
+  ]
+}

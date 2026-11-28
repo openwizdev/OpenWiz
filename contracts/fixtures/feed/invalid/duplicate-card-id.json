@@ -1,0 +1,39 @@
+{
+  "schema": "openwiz.feed.v1",
+  "read_at": "2026-11-28T10:30:00Z",
+  "budget": {
+    "used": 4,
+    "allowed": 60
+  },
+  "cards": [
+    {
+      "id": "spec:syn-owner/syn-app#10:2001",
+      "kind": "spec-to-approve",
+      "needs_owner": true,
+      "title": "0.2.0 spec: synthetic widget queue",
+      "link": "https://github.com/syn-owner/syn-app/issues/10#issuecomment-2001",
+      "record": {
+        "repository": "syn-owner/syn-app",
+        "number": 10,
+        "comment_id": 2001
+      },
+      "since": "2026-11-28T09:00:00Z",
+      "resolved_at": null
+    },
+    {
+      "id": "spec:syn-owner/syn-app#10:2001",
+      "kind": "spec-to-approve",
+      "needs_owner": true,
+      "title": "0.2.0 spec: synthetic widget queue",
+      "link": "https://github.com/syn-owner/syn-app/issues/10#issuecomment-2001",
+      "record": {
+        "repository": "syn-owner/syn-app",
+        "number": 10,
+        "comment_id": 2001
+      },
+      "since": "2026-11-28T09:00:00Z",
+      "resolved_at": null
+    }
+  ],
+  "unavailable": []
+}

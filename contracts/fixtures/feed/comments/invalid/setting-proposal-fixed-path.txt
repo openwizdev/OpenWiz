@@ -1,0 +1,6 @@
+openwiz:setting-proposal v1
+path: channels.t3
+current: true
+proposed: false
+reason: Fixed v1 cockpit channel cannot be toggled.
+role: orchestrator

@@ -1,0 +1,25 @@
+{
+  "schema": "openwiz.feed.v1",
+  "read_at": "2026-11-28T10:30:00Z",
+  "budget": {
+    "used": 4,
+    "allowed": 60
+  },
+  "cards": [
+    {
+      "id": "pr:syn-owner/syn-app#42@1111111111111111111111111111111111111111",
+      "kind": "pr-ready-to-merge",
+      "needs_owner": true,
+      "title": "#41: add synthetic widget queue",
+      "link": "https://github.com/syn-owner/syn-app/pull/42",
+      "record": {
+        "repository": "syn-owner/syn-app",
+        "number": 42,
+        "comment_id": null
+      },
+      "since": "2026-11-28T09:15:00Z",
+      "resolved_at": null
+    }
+  ],
+  "unavailable": []
+}
