@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>OpenWiz</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <header>
+    <img src="icons/mark.svg" alt="" width="40" height="40">
+    <div class="titles">
+      <h1>OpenWiz <span aria-hidden="true">🧙‍♂️🪄</span></h1>
+      <p id="status">Not connected</p>
+    </div>
+    <button type="button" id="disconnect" hidden>Disconnect</button>
+  </header>
+  <p id="acting" role="status" hidden>Agent is acting in this tab</p>
+  <section id="connect">
+    <form id="connect-form">
+      <p class="hint">Start <code>python3 -I extensions/chrome/bridge/bridge.py serve</code> and paste the token it prints. The chat stays on this computer.</p>
+      <label for="bridge">Bridge</label>
+      <input id="bridge" value="http://127.0.0.1:17418" autocomplete="off" spellcheck="false" required>
+      <label for="token">Pairing token</label>
+      <input id="token" type="password" autocomplete="off" spellcheck="false" required>
+      <button type="submit">Connect</button>
+      <p id="connect-error" role="alert"></p>
+    </form>
+  </section>
+  <section id="app" hidden>
+    <div id="log" role="log" aria-live="polite"></div>
+    <section id="grants">
+      <div class="grant-head">
+        <h2>Tab permission</h2>
+        <p id="current-tab">No active tab.</p>
+      </div>
+      <div class="grant-actions">
+        <button type="button" id="grant-tab">Allow this tab</button>
+        <button type="button" id="grant-session" class="secondary">Allow this session</button>
+      </div>
+      <p class="hint">The agent can read, click, type and navigate only after you allow this tab, or every tab for this browser session. Revoke stops the next action.</p>
+      <ul id="grant-list"></ul>
+    </section>
+    <form id="composer">
+      <div class="composer-row">
+        <label>Agent <select id="agent"></select></label>
+        <label class="check"><input id="include-page" type="checkbox" checked> Include this page</label>
+      </div>
+      <textarea id="text" rows="3" maxlength="16000" placeholder="Ask about this page" required></textarea>
+      <div class="composer-row end">
+        <p id="notice" role="status"></p>
+        <button type="submit" id="send">Send</button>
+      </div>
+    </form>
+  </section>
+  <script type="module" src="sidepanel.js"></script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+{
+ "answers": [
+  {
+   "method": "POST",
+   "path": "/api/v1/threads",
+   "status": 200,
+   "body": {
+    "id": "jam_01KITTHREAD0000000000000",
+    "projectId": "{{request.projectId}}",
+    "authorId": null,
+    "previousAuthorId": null,
+    "title": "OpenWiz: kit",
+    "titleCustom": true,
+    "status": "working",
+    "archived": false,
+    "lastModelId": null,
+    "queuedAt": null,
+    "linearIssue": null,
+    "pullRequestAuthor": null,
+    "usage": {
+     "llmCredits": 0,
+     "imageCredits": 0,
+     "vmCredits": 0,
+     "totalCredits": 0
+    },
+    "createdAt": "2030-01-01T00:00:00Z",
+    "updatedAt": "2030-01-01T00:00:00Z",
+    "lastActivityAt": null,
+    "hasUnreads": false,
+    "mentionCount": 0,
+    "owed": false,
+    "member": true
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/threads/[A-Za-z0-9_-]+",
+   "status": 200,
+   "body": {
+    "id": "jam_01KITTHREAD0000000000000",
+    "projectId": null,
+    "authorId": null,
+    "previousAuthorId": null,
+    "title": "OpenWiz: kit",
+    "titleCustom": true,
+    "status": "idle",
+    "archived": false,
+    "lastModelId": null,
+    "queuedAt": null,
+    "linearIssue": null,
+    "pullRequestAuthor": null,
+    "usage": {
+     "llmCredits": 0,
+     "imageCredits": 0,
+     "vmCredits": 0,
+     "totalCredits": 0
+    },
+    "createdAt": "2030-01-01T00:00:00Z",
+    "updatedAt": "2030-01-01T00:00:00Z",
+    "lastActivityAt": null,
+    "hasUnreads": false,
+    "mentionCount": 0,
+    "owed": false,
+    "member": true
+   }
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/threads/[A-Za-z0-9_-]+/(message|interrupt)",
+   "status": 200,
+   "body": {
+    "id": "01KITEVENT0000000000000000",
+    "deduped": false
+   }
+  },
+  {
+   "method": "POST",
+   "path": "/api/v1/threads/[A-Za-z0-9_-]+/archive",
+   "status": 200,
+   "body": {
+    "id": "jam_01KITTHREAD0000000000000",
+    "projectId": null,
+    "authorId": null,
+    "previousAuthorId": null,
+    "title": "OpenWiz: kit",
+    "titleCustom": true,
+    "status": "archived",
+    "archived": true,
+    "lastModelId": null,
+    "queuedAt": null,
+    "linearIssue": null,
+    "pullRequestAuthor": null,
+    "usage": {
+     "llmCredits": 0,
+     "imageCredits": 0,
+     "vmCredits": 0,
+     "totalCredits": 0
+    },
+    "createdAt": "2030-01-01T00:00:00Z",
+    "updatedAt": "2030-01-01T00:00:00Z",
+    "lastActivityAt": null,
+    "hasUnreads": false,
+    "mentionCount": 0,
+    "owed": false,
+    "member": true,
+    "automation": null
+   }
+  }
+ ]
+}

@@ -1,8 +1,20 @@
 {
+  "cursor-cloud": {
+    "origin": "https://api.cursor.com",
+    "variable": "CURSOR_API_KEY",
+    "keychain": "openwiz-cursor-cloud",
+    "header": "authorization-bearer"
+  },
   "devin": {
     "origin": "https://api.devin.ai",
     "variable": "DEVIN_API_KEY",
     "keychain": "openwiz-devin",
+    "header": "authorization-bearer"
+  },
+  "capy": {
+    "origin": "https://api.capy.ai",
+    "variable": "CAPY_API_KEY",
+    "keychain": "openwiz-capy",
     "header": "authorization-bearer"
   },
   "tembo": {

@@ -1,0 +1,13 @@
+$ python3 -I adapters/pane/test_driver.py Pane.test_the_environment_is_built_from_scratch   # at 601e1531 plus this test
+test_the_environment_is_built_from_scratch (__main__.Pane.test_the_environment_is_built_from_scratch) ... FAIL
+
+======================================================================
+FAIL: test_the_environment_is_built_from_scratch (__main__.Pane.test_the_environment_is_built_from_scratch)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+AssertionError: Lists differ: [the shell's own variable names, BASH_ENV among them; withheld] != [the 8 the test sets]
+
+----------------------------------------------------------------------
+Ran 1 test in 0.001s
+
+FAILED (failures=1)

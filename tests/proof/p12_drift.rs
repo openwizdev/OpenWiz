@@ -130,6 +130,25 @@ fn missing_fields_are_reported_by_session_and_field() {
             env.gaps
         );
     }
+    let missing_status = &session(&env, "thr_syn_0002").status;
+    assert!(
+        matches!(missing_status, Fact::Unknown(reason) if !reason.trim().is_empty()),
+        "catches a missing-status row that is known, or unknown with a blank or whitespace-only reason: {missing_status:?}"
+    );
+    unknown_reason(missing_status);
+    let missing_timestamp = session(&env, "thr_syn_0004");
+    let updated_at = &missing_timestamp.updated_at;
+    assert!(
+        matches!(updated_at, Fact::Unknown(reason) if !reason.trim().is_empty()),
+        "catches a missing timestamp whose updated_at is known, or unknown with a blank or whitespace-only reason: {updated_at:?}"
+    );
+    unknown_reason(updated_at);
+    let age_ms = &missing_timestamp.age_ms;
+    assert!(
+        matches!(age_ms, Fact::Unknown(reason) if !reason.trim().is_empty()),
+        "catches a missing timestamp whose age_ms is known, or unknown with a blank or whitespace-only reason: {age_ms:?}"
+    );
+    unknown_reason(age_ms);
 }
 
 #[test]

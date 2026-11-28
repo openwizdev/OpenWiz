@@ -1,0 +1,171 @@
+#!/usr/bin/env python3
+ABOUT = """A synthetic `sprite` CLI for the Fly Sprites driver's tests. Its argument shapes follow Fly's CLI reference
+(https://docs.fly.io/sprites/cli/commands: `sprite create`, `exec`, `list`, `destroy` and `api`); its answers are synthetic.
+`sprite api /sprites/<name> -- -sS -w '\n%{http_code}'` answers as Fly's documented GET /v1/sprites/{name}
+(https://docs.fly.io/sprites/api/sprites/get-a-sprite): the Sprite's JSON and 200, or 404 when it is not found.
+
+It keeps its Sprites in the JSON file FAKE_SPRITE_STATE, by organization, each with its own id and a home folder of
+its own beside it. Each command takes `-o <org>` right after its name, as Fly's reference shows; without it, the
+command uses the default organization, FAKE_SPRITE_DEFAULT_ORG (else example-org), as the real CLI uses the one
+`sprite org set-default` chose. It knows only the exact calls the driver makes, and exits 2 on any other. Settings,
+each optional:
+FAKE_SPRITE_FAIL     comma-separated commands (create, exec, list, destroy, api) that fail; `destroy*1` fails only the
+                     first destroy, `exec@2` only the second exec
+FAKE_SPRITE_CREATE_LOST  create creates the Sprite and then exits 1, as a lost CLI response after Fly created it
+FAKE_SPRITE_DESTROY_NOOP  a destroy that answers 0 and leaves the Sprite there
+FAKE_SPRITE_LIST_TRUNCATED  a list whose first page holds none of the Sprites, with has_more set, as a paginated list
+FAKE_SPRITE_API_404  every `sprite api` read answers 404, as a read on a path the API does not route
+FAKE_SPRITE_ORG_ANSWER  the organization every `sprite api` read names, in place of the one it read in
+FAKE_SPRITE_CALLS    a file each call is appended to, one JSON object per line: its arguments, and for an exec with
+                     --stdin the text it forwarded
+FAKE_MARKER          a word every failure prints on stderr, so a test can see that sprite's text never reaches an answer
+`sprite exec` runs its command words as they are (no shell joins them) in the Sprite's home, in a session and
+environment of its own, as on a remote host: HOME, a PATH whose first folder is fixtures/sprite-bin and then the
+boat driver's synthetic `git`, and only KIT_TRACKER, FAKE_TURNS, FAKE_ENVS, FAKE_HOLD, FAKE_HARNESS_401 and the
+synthetic git's FAKE_WIZ_* settings from the caller. With --stdin it forwards the caller's stdin. A destroy ends every
+command running in the Sprite and removes its home."""
+import fcntl, json, os, re, shutil, signal, subprocess, sys, time, uuid
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+STATE, ARGS = os.environ['FAKE_SPRITE_STATE'], sys.argv[1:]
+PICKED = ARGS[1:3] if ARGS[1:2] == ['-o'] and len(ARGS) > 2 else []
+ORG = PICKED[1] if PICKED else os.environ.get('FAKE_SPRITE_DEFAULT_ORG', 'example-org')
+NAME = re.compile(r'[a-z0-9][a-z0-9-]{0,62}')
+PASSED = ('KIT_TRACKER', 'FAKE_TURNS', 'FAKE_ENVS', 'FAKE_HOLD', 'FAKE_HARNESS_401', 'FAKE_WIZ_COMMIT',
+          'FAKE_WIZ_SAME_TREE')
+
+
+def update(change):
+    with open(STATE + '.lock', 'w') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            with open(STATE) as f:
+                state = json.load(f)
+        except FileNotFoundError:
+            state = {'orgs': {}}
+        out = change(state['orgs'].setdefault(ORG, {}))
+        with open(STATE + '.new', 'w') as f:
+            json.dump(state, f)
+        os.replace(STATE + '.new', STATE)
+        return out
+
+
+def fail(why, code=1):
+    sys.stderr.write('Error: %s (synthetic diagnostic %s)\n' % (why, os.environ.get('FAKE_MARKER', '')))
+    sys.exit(code)
+
+
+def failing(name):
+    def count(state):
+        state[name] = state.get(name, 0) + 1
+        return state[name]
+    with open(STATE + '.calls', 'a+') as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        f.seek(0)
+        calls = json.loads(f.read() or '{}')
+        call = count(calls)
+        f.seek(0)
+        f.truncate()
+        json.dump(calls, f)
+    for entry in os.environ.get('FAKE_SPRITE_FAIL', '').split(','):
+        planted, at, nth = entry.partition('@')
+        planted, _, times = planted.partition('*')
+        if planted == name and (not times or call <= int(times)) and (not at or call == int(nth)):
+            fail('planted failure of %s' % name)
+
+
+def home(name):
+    return '%s.homes/%s/%s' % (STATE, ORG, name)
+
+
+def record(call):
+    if os.environ.get('FAKE_SPRITE_CALLS'):
+        with open(os.environ['FAKE_SPRITE_CALLS'], 'a') as f:
+            f.write(json.dumps(call) + '\n')
+
+
+def execute(name, forward, words):
+    failing('exec')
+    if not update(lambda s: name in s):
+        fail('sprite %s not found' % name)
+    text = sys.stdin.read() if forward else None
+    record({'args': ARGS, 'stdin': text})
+    env = {'HOME': home(name), 'PATH': os.pathsep.join([os.path.join(HERE, '..', 'sprite-bin'),
+                                                        os.path.join(HERE, '..', '..', '..', 'boat', 'fixtures',
+                                                                     'sandbox-bin'), os.environ['PATH']])}
+    env.update({k: os.environ[k] for k in PASSED if k in os.environ})
+    os.makedirs(home(name), exist_ok=True)
+    remote = subprocess.Popen(words, cwd=home(name), env=env, start_new_session=True,
+                              stdin=subprocess.PIPE if forward else subprocess.DEVNULL)
+    if forward:
+        remote.stdin.write(text.encode())
+        remote.stdin.close()
+    while remote.poll() is None:
+        if not update(lambda s: name in s):
+            os.killpg(remote.pid, signal.SIGKILL)
+            fail('connection to the sprite closed', 1)
+        time.sleep(0.05)
+    sys.exit(remote.returncode)
+
+
+def main():
+    a = ARGS[:1] + ARGS[3:] if PICKED else ARGS
+    if a[:1] != ['exec']:
+        record({'args': ARGS, 'stdin': None})
+    if len(a) == 5 and a[:4] == ['create', '--skip-console', '--label', a[3]] and NAME.fullmatch(a[4]):
+        failing('create')
+
+        def create(state):
+            if a[4] in state:
+                return False
+            state[a[4]] = {'labels': [a[3]], 'status': 'running', 'id': 'sprite-%s' % uuid.uuid4()}
+            return True
+        if not update(create):
+            fail('sprite %s already exists' % a[4])
+        os.makedirs(home(a[4]))
+        if os.environ.get('FAKE_SPRITE_CREATE_LOST'):
+            fail('lost response after creating %s' % a[4])
+        sys.stderr.write('  synthetic progress: creating your sprite\n')
+        print('Created sprite %s' % a[4])
+    elif len(a) >= 6 and a[:2] == ['exec', '-s'] and a[3] in ('--stdin', '--no-stdin') and a[4] == '--':
+        execute(a[2], a[3] == '--stdin', a[5:])
+    elif len(a) == 4 and a[:3] == ['list', '--json', '--prefix']:
+        failing('list')
+        found = update(lambda s: dict(s))
+        if os.environ.get('FAKE_SPRITE_LIST_TRUNCATED'):
+            print(json.dumps({'sprites': [], 'has_more': True, 'next_continuation_token': 'synthetic-page-2'}))
+        else:
+            print(json.dumps({'sprites': [{'name': n, 'status': b['status']} for n, b in sorted(found.items())
+                                          if n.startswith(a[3])]}))
+    elif (len(a) == 6 and a[0] == 'api' and a[1].startswith('/sprites/') and NAME.fullmatch(a[1][9:])
+          and a[2:] == ['--', '-sS', '-w', '\n%{http_code}']):
+        failing('api')
+        found = update(lambda s: s.get(a[1][9:]))
+        if found is None or os.environ.get('FAKE_SPRITE_API_404'):
+            print('{"error": "not_found", "message": "Sprite not found"}\n404')
+        else:
+            print(json.dumps({'id': found['id'], 'name': a[1][9:],
+                              'organization': os.environ.get('FAKE_SPRITE_ORG_ANSWER', ORG),
+                              'url': 'https://example.invalid', 'labels': found['labels'], 'status': found['status'], 'created_at': '2026-01-01T00:00:00Z',
+                              'updated_at': '2026-01-01T00:00:00Z'}) + '\n200')
+    elif len(a) == 3 and a[:2] == ['destroy', '--force']:
+        failing('destroy')
+
+        def destroy(state):
+            if a[2] not in state:
+                return False
+            if not os.environ.get('FAKE_SPRITE_DESTROY_NOOP'):
+                del state[a[2]]
+            return True
+        if not update(destroy):
+            fail('sprite %s not found' % a[2])
+        if not os.environ.get('FAKE_SPRITE_DESTROY_NOOP'):
+            shutil.rmtree(home(a[2]), ignore_errors=True)
+        print('Destroyed sprite %s' % a[2])
+    else:
+        sys.stderr.write(ABOUT + '\n')
+        fail('unexpected arguments', 2)
+
+
+if __name__ == '__main__':
+    main()

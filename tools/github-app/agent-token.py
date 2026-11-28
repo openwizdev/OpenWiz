@@ -24,6 +24,9 @@ READ = {name: "read" for name in WRITE}
 REFUSALS = {"usage": 2, "one-owner": 2, "not-installed": 3, "permission": 5,
             "github": 5, "expiry": 5, "unavailable": 1}
 REFRESH_AT_S, MAX_LIFETIME_S, TIMEOUT_S = 300, 3900, 60
+ACTIONS_TIMEOUT_S, ACTIONS_POLL_S, ACTIONS_ARTIFACT_LIMIT = 120, 2.0, 64 * 1024
+ACTIONS_RUNS_PER_PAGE, ACTIONS_RUN_PAGES, ACTIONS_RUN_LOOKBACK_S = 10, 3, 300
+WORKFLOW_FILE = re.compile(r"[A-Za-z0-9._-]+\.ya?ml")
 NOTE = "openwiz: no openwiz[bot] token ({}); using the owner's GitHub account\n"
 WITHHELD = "openwiz: openwiz[bot] token withheld from git ({}); git stops rather than use another account\n"
 REQUESTER = re.compile(r"[a-z][a-z0-9-]{0,63}")
@@ -154,6 +157,13 @@ def check_answer(message, wanted, private):
 
 
 def route(env):
+    if env.get("OPENWIZ_TOKEN_SERVICE_ROUTE") == "actions":
+        repo = env.get("OPENWIZ_TOKEN_SERVICE_REPOSITORY", "")
+        workflow = env.get("OPENWIZ_TOKEN_SERVICE_WORKFLOW") or "mint-workflow.yml"
+        if (not REPOSITORY.fullmatch(repo) or repo.split("/")[1] in (".", "..")
+                or not WORKFLOW_FILE.fullmatch(workflow) or workflow in (".", "..")):
+            return "unreachable", None
+        return None, ("actions", repo, workflow)
     service = env.get("OPENWIZ_TOKEN_SERVICE", "")
     if not service.startswith("/") or any(c in service for c in "'\n\r\0"):
         return "unreachable", None
@@ -166,13 +176,189 @@ def route(env):
     return "unreachable", None
 
 
+def _actions_auth(env):
+    clean = without_inherited(env)
+    clean.pop(LEGACY_APP_KEY, None)
+    token = clean.get("GH_TOKEN") or clean.get("GITHUB_TOKEN") or ""
+    if token:
+        return token.strip()
+    try:
+        done = subprocess.run(["gh", "auth", "token", "--hostname", "github.com"], stdout=subprocess.PIPE,
+                              stderr=subprocess.DEVNULL, env=clean, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return done.stdout.decode("utf-8", "replace").strip() if done.returncode == 0 else ""
+
+
+def _actions_http(method, url, auth, base, deadline, body=None, follow_redirect=False, limit=1024 * 1024):
+    import http.client
+    import urllib.error
+    import urllib.request
+
+    class _NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, *_args, **_kwargs):
+            return None
+
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
+    backoff = ACTIONS_POLL_S
+    data = json.dumps(body).encode("utf-8") if body is not None else None
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return None, b""
+        headers = {"Accept": "application/vnd.github+json", "User-Agent": "OpenWiz-agent-token",
+                   "X-GitHub-Api-Version": "2022-11-28"}
+        if auth:
+            headers["Authorization"] = "Bearer " + auth
+        if data is not None:
+            headers["Content-Type"] = "application/json"
+        req = urllib.request.Request(url, data=data, headers=headers, method=method)
+        try:
+            with opener.open(req, timeout=min(15.0, max(0.5, remaining))) as resp:
+                raw = resp.read(limit + 1)
+                return (resp.status, raw) if len(raw) <= limit else (None, b"")
+        except urllib.error.HTTPError as err:
+            if follow_redirect and err.code in (301, 302, 303, 307, 308):
+                loc = err.headers.get("Location", "")
+                parts = urllib.parse.urlsplit(loc)
+                base_parts = urllib.parse.urlsplit(base)
+                safe = (parts.scheme == "https" if base == API_BASE
+                        else parts.scheme == "http" and parts.netloc == base_parts.netloc)
+                if not safe:
+                    return None, b""
+                return _actions_http("GET", loc, None, base, deadline, follow_redirect=False, limit=limit)
+            if err.code in (403, 429):
+                retry = err.headers.get("Retry-After", "")
+                wait = float(retry) if retry.isdigit() else backoff
+                backoff = min(backoff * 2, 30.0)
+                left = deadline - time.monotonic()
+                if left <= 0:
+                    return None, b""
+                time.sleep(min(wait, left))
+                continue
+            return err.code, b""
+        except (http.client.HTTPException, OSError, ValueError):
+            return None, b""
+
+
+def _find_actions_run(runs_url, run_title, auth, base, deadline):
+    for page in range(1, ACTIONS_RUN_PAGES + 1):
+        status, raw = _actions_http("GET", f"{runs_url}&page={page}", auth, base, deadline)
+        payload = _parse(raw) if status == 200 else None
+        runs = payload.get("workflow_runs") if isinstance(payload, dict) else None
+        if not isinstance(runs, list):
+            return None
+        for run in runs:
+            if (isinstance(run, dict) and run.get("display_title") == run_title
+                    and run.get("head_branch") == "main" and run.get("event") == "workflow_dispatch"
+                    and type(run.get("id")) is int and run["id"] > 0):
+                return run
+        if len(runs) < ACTIONS_RUNS_PER_PAGE:
+            break
+    return None
+
+
+def ask_actions(repo, workflow, request, env):
+    import io
+    import zipfile
+    import zlib
+
+    base = revoke_base(env)
+    auth = _actions_auth(env) if base else ""
+    if not base or not auth:
+        return "unreachable", None
+    deadline = time.monotonic() + ACTIONS_TIMEOUT_S
+    since = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - ACTIONS_RUN_LOOKBACK_S))
+    nonce = secrets.token_hex(16)
+    run_title = f"openwiz-mint-{nonce}"
+    dispatch_url = f"{base}/repos/{repo}/actions/workflows/{workflow}/dispatches"
+    status, _ = _actions_http("POST", dispatch_url, auth, base, deadline,
+                              body={"ref": "main", "inputs": {"request": request.decode("utf-8").strip(),
+                                                              "nonce": nonce}})
+    if status not in (200, 204):
+        return "unreachable", None
+
+    query = urllib.parse.urlencode({
+        "event": "workflow_dispatch", "branch": "main", "per_page": ACTIONS_RUNS_PER_PAGE, "created": f">={since}",
+    })
+    runs_url = f"{base}/repos/{repo}/actions/workflows/{workflow}/runs?{query}"
+    found = None
+    poll = ACTIONS_POLL_S
+    while time.monotonic() < deadline:
+        found = _find_actions_run(runs_url, run_title, auth, base, deadline)
+        if found is not None:
+            break
+        left = deadline - time.monotonic()
+        if left <= 0:
+            break
+        time.sleep(min(poll, left))
+        poll = min(poll * 1.5, 5.0)
+    if found is None:
+        return "unreachable", None
+
+    run_id = found["id"]
+    run_url = f"{base}/repos/{repo}/actions/runs/{run_id}"
+    while found.get("status") != "completed":
+        left = deadline - time.monotonic()
+        if left <= 0:
+            return "unreachable", None
+        time.sleep(min(poll, left))
+        poll = min(poll * 1.5, 5.0)
+        status, raw = _actions_http("GET", run_url, auth, base, deadline)
+        item = _parse(raw) if status == 200 else None
+        if not isinstance(item, dict):
+            return "unreachable", None
+        found = item
+    if found.get("conclusion") != "success":
+        return "unreachable", None
+
+    status, raw = _actions_http("GET", f"{base}/repos/{repo}/actions/runs/{run_id}/artifacts", auth, base, deadline)
+    payload = _parse(raw) if status == 200 else None
+    matches = [a for a in (payload.get("artifacts") if isinstance(payload, dict) else [])
+               if isinstance(a, dict) and a.get("name") == nonce and not a.get("expired")
+               and type(a.get("id")) is int and a["id"] > 0]
+    if len(matches) != 1:
+        return "unreachable", None
+    artifact_url = f"{base}/repos/{repo}/actions/artifacts/{matches[0]['id']}"
+    try:
+        dl_status, zip_bytes = _actions_http(
+            "GET", f"{artifact_url}/zip", auth, base, deadline,
+            follow_redirect=True, limit=ACTIONS_ARTIFACT_LIMIT)
+    finally:
+        delete_status, _ = _actions_http("DELETE", artifact_url, auth, base, time.monotonic() + 15.0)
+    if dl_status != 200 or delete_status != 204:
+        return "unreachable", None
+    try:
+        with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
+            infos = zf.infolist()
+            if len(infos) != 1 or infos[0].filename != "answer.json" or infos[0].file_size > ACTIONS_ARTIFACT_LIMIT:
+                return "bad-answer", None
+            content = zf.read(infos[0])
+    except (zipfile.BadZipFile, zlib.error, OSError, ValueError):
+        return "bad-answer", None
+    if len(content) > ACTIONS_ARTIFACT_LIMIT:
+        return "bad-answer", None
+    message = _parse(content)
+    if not isinstance(message, dict):
+        return "bad-answer", None
+    if (set(message) == {"schema", "kind", "refusal", "message"}
+            and message["schema"] == SCHEMA and message["kind"] == "refusal"
+            and isinstance(message["refusal"], str) and message["refusal"] in REFUSALS
+            and isinstance(message["message"], str) and REFUSAL_MESSAGE.fullmatch(message["message"])):
+        return message["refusal"], None
+    return None, message
+
+
 def mint(argv, wanted, env):
     private, answer_key = one_time_key()
     if not private:
         return "unreachable", None, None
     request = json.dumps({"schema": SCHEMA, "kind": "request", "answer_key": answer_key, **wanted}).encode() + b"\n"
-    call_env = {k: v for k, v in env.items() if k not in ("GH_TOKEN", LEGACY_APP_KEY)}
-    reason, message = ask(argv, request, call_env)
+    if isinstance(argv, tuple) and argv and argv[0] == "actions":
+        reason, message = ask_actions(argv[1], argv[2], request, env)
+    else:
+        call_env = {k: v for k, v in env.items() if k not in ("GH_TOKEN", LEGACY_APP_KEY)}
+        reason, message = ask(argv, request, call_env)
     if reason:
         return reason, None, None
     got = check_answer(message, wanted, private)
@@ -364,7 +550,7 @@ def token_for(private, wanted, env, snapshot=None):
 
 
 def configured(env):
-    return bool(env.get("OPENWIZ_TOKEN_SERVICE"))
+    return bool(env.get("OPENWIZ_TOKEN_SERVICE")) or env.get("OPENWIZ_TOKEN_SERVICE_ROUTE") == "actions"
 
 
 def parse_request(args):
@@ -1239,7 +1425,9 @@ def main(argv):
             raise Refused(f"usage: {USAGE}")
         environ = os.environ
         names = set(environ)
-        if LEGACY_APP_KEY in names and "OPENWIZ_TOKEN_SERVICE" in names and environ["OPENWIZ_TOKEN_SERVICE"]:
+        if LEGACY_APP_KEY in names and (
+                ("OPENWIZ_TOKEN_SERVICE" in names and environ["OPENWIZ_TOKEN_SERVICE"])
+                or ("OPENWIZ_TOKEN_SERVICE_ROUTE" in names and environ["OPENWIZ_TOKEN_SERVICE_ROUTE"] == "actions")):
             no_legacy_app_key(names)
         return commands[argv[0]](list(argv[1:]), dict(environ))
     except Refused as error:

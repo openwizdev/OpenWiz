@@ -406,5 +406,120 @@ class InstalledCommand(Bundles):
         self.assertFalse((self.base / 'build-tools.log').exists())
 
 
+class LinuxArm(Bundles):
+    ARM = 'aarch64-unknown-linux-gnu'
+
+    def _entry(self):
+        from importlib.machinery import SourceFileLoader
+        spec = importlib.util.spec_from_loader('install_entry_arm', SourceFileLoader('install_entry_arm', str(HERE / 'install')))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def _preflight(self, host, ldd_line='ldd (Debian GLIBC 2.36-9) 2.36'):
+        from contextlib import redirect_stdout
+        entry = self._entry()
+        tools = self.base / ('tools-' + host[0] + '-' + host[1] + '-' + str(self.counter))
+        self.counter += 1
+        tools.mkdir()
+        for tool in ('gh', 'git'):
+            (tools / tool).write_text('#!/bin/sh\nexit 0\n')
+            (tools / tool).chmod(0o755)
+        (tools / 'ldd').write_text('#!/bin/sh\necho "%s"\n' % ldd_line)
+        (tools / 'ldd').chmod(0o755)
+        home = self.base / ('home-' + str(self.counter))
+        home.mkdir(mode=0o700)
+        old_path, old_home = os.environ.get('PATH', ''), os.environ.get('HOME', '')
+        os.environ['PATH'] = str(tools)
+        os.environ['HOME'] = str(home)
+        try:
+            out = io.StringIO()
+            with redirect_stdout(out):
+                code = entry.main(['preflight'], host=host)
+            return code, json.loads(out.getvalue())
+        finally:
+            os.environ['PATH'] = old_path
+            os.environ['HOME'] = old_home
+
+    def test_preflight_accepts_linux_aarch64_and_refuses_other_arm(self):
+        code, value = self._preflight(('Linux', 'aarch64'))
+        self.assertEqual((code, value['ready'], value['target']), (0, True, self.ARM), value)
+        checks = {c['id']: c for c in value['checks']}
+        self.assertEqual(checks['target']['state'], 'ok', value)
+        self.assertEqual(checks['glibc']['state'], 'ok', value)
+
+        old_code, old_val = self._preflight(('Linux', 'aarch64'), 'ldd (Ubuntu GLIBC 2.31-0ubuntu9.16) 2.31')
+        self.assertEqual((old_code, old_val['ready'], old_val['target']), (5, False, self.ARM), old_val)
+        self.assertEqual({c['id']: c['state'] for c in old_val['checks']}['glibc'], 'refused', old_val)
+
+        for arch in ('armv7l', 'arm', 'armv6l'):
+            with self.subTest(arch=arch):
+                r_code, r_val = self._preflight(('Linux', arch))
+                self.assertEqual((r_code, r_val['ready'], r_val['target']), (5, False, None), r_val)
+                self.assertEqual({c['id']: c['state'] for c in r_val['checks']}['target'], 'refused', r_val)
+
+    def test_install_assets_accepts_linux_aarch64_and_refuses_target_mismatch(self):
+        archive_name = f'openwiz-0.1.0-{self.ARM}.tar.gz'
+        manifest, archive, files = self.bundle(
+            target=self.ARM, version='0.1.0', mutate=lambda m: m.update(archive=archive_name))
+        raw = manifest.read_bytes()
+        assets = self.base / 'arm-assets'
+        assets.mkdir(mode=0o700)
+        alias = f'openwiz-{self.ARM}'
+        for fname, data in (
+            (f'{alias}.sha256', f'{sha(raw)}  {alias}.manifest.json\n'.encode()),
+            (f'{alias}.manifest.json', raw),
+            (archive_name, archive.read_bytes()),
+        ):
+            (assets / fname).write_bytes(data)
+            (assets / fname).chmod(0o600)
+
+        root = self.base / 'arm-installed'
+        res = subprocess.run(
+            [sys.executable, '-I', str(HERE / 'install'), 'install',
+             '--assets', str(assets), '--target', self.ARM, '--root', str(root)],
+            capture_output=True, text=True)
+        self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+        parsed = json.loads(res.stdout)
+        self.assertEqual((parsed['activated'], parsed['target'], parsed['source']), (True, self.ARM, SOURCE), parsed)
+        for rel, data in files.items():
+            self.assertEqual((root / 'current' / rel).read_bytes(), data)
+
+        bad_assets = self.base / 'arm-offered-as-x86'
+        bad_assets.mkdir(mode=0o700)
+        x86_alias = 'openwiz-x86_64-unknown-linux-gnu'
+        for fname, data in (
+            (f'{x86_alias}.sha256', f'{sha(raw)}  {x86_alias}.manifest.json\n'.encode()),
+            (f'{x86_alias}.manifest.json', raw),
+            (archive_name, archive.read_bytes()),
+        ):
+            (bad_assets / fname).write_bytes(data)
+            (bad_assets / fname).chmod(0o600)
+        bad_root = self.base / 'bad-x86-root'
+        bad = subprocess.run(
+            [sys.executable, '-I', str(HERE / 'install'), 'install',
+             '--assets', str(bad_assets), '--target', 'x86_64-unknown-linux-gnu', '--root', str(bad_root)],
+            capture_output=True, text=True)
+        self.assertEqual(bad.returncode, 5, bad.stdout + bad.stderr)
+        self.assertFalse((bad_root / 'current').exists())
+
+        for bad_target in ('armv7-unknown-linux-gnueabihf', 'aarch64-unknown-linux-musl'):
+            with self.subTest(bad_target=bad_target):
+                self.root = self.base / ('refuse-' + bad_target)
+                self.run_install(self.bundle(target=bad_target), target=bad_target, ok=False)
+                self.assertFalse((self.root / 'current').exists())
+
+    def test_install_contract_schema_and_code_agree_on_targets(self):
+        spec = importlib.util.spec_from_file_location('installer_targets', HERE / 'install.py')
+        installer = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(installer)
+        schema = json.loads((ROOT / 'contracts/install.v1.schema.json').read_text())
+        expected = ['aarch64-apple-darwin', 'x86_64-apple-darwin', 'aarch64-unknown-linux-gnu', 'x86_64-unknown-linux-gnu']
+        self.assertEqual(sorted(installer.TARGETS), sorted(expected))
+        self.assertEqual(sorted(schema['properties']['target']['enum']), sorted(expected))
+        contract = (ROOT / 'contracts/install.v1.md').read_text()
+        self.assertIn(f'`{self.ARM}`', contract)
+
+
 if __name__ == '__main__':
     unittest.main()
