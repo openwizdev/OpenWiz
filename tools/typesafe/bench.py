@@ -96,10 +96,12 @@ def main(argv):
             continue
         hit = 0
         for row in data['cases']:
-            try:
-                response = ask.system_one(row['text'], decide.questions('plan_limit'))
-            except client.TypeSafeError:
-                response = None
+            response = None
+            if not plan_limit.exact(row['text']):
+                try:
+                    response = ask.system_one(row['text'][-4000:], decide.questions('plan_limit'))
+                except client.TypeSafeError:
+                    response = None
             hit += int(plan_limit.shaped(row['text'], response) == row['expected'])
         print(f'plan-limit live: {hit}/{len(data["cases"])} matched the fixture label')
     return 0

@@ -1118,9 +1118,14 @@ impl World {
                     .ok()
                     .filter(|o| o.problems.is_empty())
                     .is_some_and(|o| {
-                        [o.output, o.error].iter().any(
-                            |f| matches!(f, Fact::Known(Some(text)) if super::typesafe::plan_limit(text)),
-                        )
+                        let texts: Vec<&str> = [&o.output, &o.error]
+                            .into_iter()
+                            .filter_map(|f| match f {
+                                Fact::Known(Some(text)) => Some(text.as_str()),
+                                _ => None,
+                            })
+                            .collect();
+                        super::typesafe::plan_limit(&texts, deadline)
                     });
             Some(BuilderSource {
                 thread: thread.clone(),

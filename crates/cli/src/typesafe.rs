@@ -4,7 +4,7 @@ const MODEL: &str = "jev-1.14.0";
 const MAX_STATE_CHARS: usize = 24_000;
 const TAIL_CHARS: usize = 4_000;
 const MAX_ANSWER_BYTES: usize = 1_048_576;
-const ANSWER_SECONDS: u64 = 20;
+const ANSWER_SECONDS: u64 = 10;
 
 pub trait Decisions {
     fn ask(&self, state: &str, questions: &Value) -> Option<Value>;
@@ -28,7 +28,9 @@ impl Decisions for Scripted {
     }
 }
 
-struct Http;
+struct Http {
+    deadline: std::time::Instant,
+}
 
 impl Decisions for Http {
     fn ask(&self, state: &str, questions: &Value) -> Option<Value> {
@@ -37,15 +39,18 @@ impl Decisions for Http {
             "state": bounded(state),
             "questions": questions,
         });
-        let output = jev_process(body.to_string().as_bytes())?;
-        if !output.status.success() || output.stdout.len() > MAX_ANSWER_BYTES {
-            return None;
-        }
-        serde_json::from_slice(&output.stdout).ok()
+        let until = answer_until(std::time::Instant::now(), self.deadline);
+        let answer = jev_process(body.to_string().as_bytes(), until)?;
+        serde_json::from_slice(&answer).ok()
     }
 }
 
-fn jev_process(request: &[u8]) -> Option<std::process::Output> {
+fn answer_until(now: std::time::Instant, deadline: std::time::Instant) -> std::time::Instant {
+    let left = deadline.saturating_duration_since(now) / 2;
+    now + left.min(std::time::Duration::from_secs(ANSWER_SECONDS))
+}
+
+fn jev_process(request: &[u8], until: std::time::Instant) -> Option<Vec<u8>> {
     let exe = std::env::current_exe().ok()?.canonicalize().ok()?;
     let target = exe.ancestors().nth(2)?;
     if target.file_name()? != "target" {
@@ -64,6 +69,15 @@ fn jev_process(request: &[u8]) -> Option<std::process::Output> {
         return None;
     }
     let key = std::env::var_os("TYPESAFE_API_KEY")?;
+    run_ask(&tool, &key, request, until)
+}
+
+fn run_ask(
+    tool: &std::path::Path,
+    key: &std::ffi::OsStr,
+    request: &[u8],
+    until: std::time::Instant,
+) -> Option<Vec<u8>> {
     let mut child = std::process::Command::new("/usr/bin/python3")
         .arg("-I")
         .arg(tool)
@@ -75,22 +89,41 @@ fn jev_process(request: &[u8]) -> Option<std::process::Output> {
         .stderr(std::process::Stdio::null())
         .spawn()
         .ok()?;
-    let sent = std::io::Write::write_all(&mut child.stdin.take()?, request);
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(ANSWER_SECONDS);
-    while child.try_wait().ok()?.is_none() {
-        if sent.is_err() || std::time::Instant::now() > deadline {
-            let _ = child.kill();
-            let _ = child.wait();
-            return None;
+    let stdout = child.stdout.take();
+    let reader = std::thread::spawn(move || {
+        let mut answer = Vec::new();
+        if let Some(out) = stdout {
+            let limit = MAX_ANSWER_BYTES as u64 + 1;
+            let _ = std::io::Read::read_to_end(&mut std::io::Read::take(out, limit), &mut answer);
         }
-        std::thread::sleep(std::time::Duration::from_millis(20));
+        answer
+    });
+    let sent = child
+        .stdin
+        .take()
+        .map(|mut input| std::io::Write::write_all(&mut input, request));
+    let finished = loop {
+        match child.try_wait() {
+            Ok(Some(status)) => break Some(status),
+            Ok(None) if matches!(sent, Some(Ok(()))) && std::time::Instant::now() < until => {
+                std::thread::sleep(std::time::Duration::from_millis(20));
+            }
+            _ => break None,
+        }
+    };
+    if finished.is_none() {
+        let _ = child.kill();
+        let _ = child.wait();
     }
-    child.wait_with_output().ok()
+    let answer = reader.join().ok()?;
+    finished
+        .filter(|status| status.success() && answer.len() <= MAX_ANSWER_BYTES)
+        .map(|_| answer)
 }
 
-pub fn env_decider() -> Box<dyn Decisions> {
+pub fn env_decider(deadline: std::time::Instant) -> Box<dyn Decisions> {
     if jev_enabled() {
-        Box::new(Http)
+        Box::new(Http { deadline })
     } else {
         Box::new(Absent)
     }
@@ -170,9 +203,13 @@ fn combined(response: &Value, config: &Value, site_name: &str) -> Option<f64> {
     }
 }
 
-pub fn plan_limit_with(text: &str, decider: &dyn Decisions) -> bool {
-    if exact_plan_limit(text) {
+pub fn plan_limit_with(texts: &[&str], decider: &dyn Decisions) -> bool {
+    if texts.iter().any(|text| exact_plan_limit(text)) {
         return true;
+    }
+    let joined = texts.join("\n");
+    if joined.trim().is_empty() {
+        return false;
     }
     let config = config();
     let Some(site) = config
@@ -184,7 +221,7 @@ pub fn plan_limit_with(text: &str, decider: &dyn Decisions) -> bool {
     let Some(questions) = site.get("questions") else {
         return false;
     };
-    let Some(response) = decider.ask(tail(text), questions) else {
+    let Some(response) = decider.ask(tail(&joined), questions) else {
         return false;
     };
     let Some(act) = site.get("act").and_then(Value::as_f64) else {
@@ -193,8 +230,8 @@ pub fn plan_limit_with(text: &str, decider: &dyn Decisions) -> bool {
     combined(&response, &config, "plan_limit").is_some_and(|value| value >= act)
 }
 
-pub fn plan_limit(text: &str) -> bool {
-    plan_limit_with(text, env_decider().as_ref())
+pub fn plan_limit(texts: &[&str], deadline: std::time::Instant) -> bool {
+    plan_limit_with(texts, env_decider(deadline).as_ref())
 }
 
 #[cfg(test)]
@@ -220,7 +257,11 @@ mod tests {
             }
         }
         assert!(plan_limit_with(
-            "Claude usage limit reached",
+            &["Claude usage limit reached"],
+            &Count(&calls)
+        ));
+        assert!(plan_limit_with(
+            &["ordinary build output", "Claude usage limit reached"],
             &Count(&calls)
         ));
         assert_eq!(calls.get(), 0);
@@ -229,21 +270,21 @@ mod tests {
     #[test]
     fn a_paraphrase_needs_a_clear_weighted_yes_and_a_miss_stays_a_miss() {
         let text = "please wait, the plan limit stopped the run";
-        assert!(!plan_limit_with(text, &Absent));
+        assert!(!plan_limit_with(&[text], &Absent));
         assert!(plan_limit_with(
-            text,
+            &[text],
             &Scripted(limit_answer(0.96, 0.04, 0.02))
         ));
         assert!(!plan_limit_with(
-            text,
+            &[text],
             &Scripted(limit_answer(0.55, 0.02, 0.02))
         ));
         assert!(!plan_limit_with(
-            text,
+            &[text],
             &Scripted(limit_answer(0.8, 0.02, 0.02))
         ));
         assert!(!plan_limit_with(
-            "not signed in",
+            &["not signed in"],
             &Scripted(limit_answer(0.12, 0.1, 0.94))
         ));
     }
@@ -285,11 +326,85 @@ mod tests {
         }
         let text = format!("{}é{}", "x".repeat(10_000), "y".repeat(TAIL_CHARS - 1));
         let seen = Seen(std::cell::RefCell::new(String::new()));
-        assert!(!plan_limit_with(&text, &seen));
+        assert!(!plan_limit_with(&[&text], &seen));
         let sent = seen.0.borrow();
         assert_eq!(sent.chars().count(), TAIL_CHARS);
         assert!(sent.starts_with('é'));
         assert_eq!(tail("short"), "short");
         assert_eq!(tail(""), "");
+    }
+
+    fn ask_script(dir: &str, body: &str) -> std::path::PathBuf {
+        let folder = std::env::temp_dir().join(format!("openwiz-jev-{dir}-{}", std::process::id()));
+        std::fs::create_dir_all(&folder).unwrap();
+        let path = folder.join("ask.py");
+        std::fs::write(&path, body).unwrap();
+        path
+    }
+
+    fn soon(millis: u64) -> std::time::Instant {
+        std::time::Instant::now() + std::time::Duration::from_millis(millis)
+    }
+
+    #[test]
+    fn a_large_answer_is_drained_while_the_helper_runs() {
+        let tool = ask_script(
+            "large",
+            "import sys\nsys.stdin.read()\nprint('{\"pad\": \"' + 'x' * 200000 + '\"}')\n",
+        );
+        let started = std::time::Instant::now();
+        let answer = run_ask(&tool, std::ffi::OsStr::new("synthetic"), b"{}", soon(5_000));
+        assert!(answer.is_some_and(|bytes| bytes.len() > 200_000));
+        assert!(started.elapsed() < std::time::Duration::from_secs(4));
+    }
+
+    #[test]
+    fn an_answer_over_the_cap_is_refused() {
+        let tool = ask_script(
+            "huge",
+            "import sys\nsys.stdin.read()\nsys.stdout.write('x' * 2000000)\n",
+        );
+        assert_eq!(
+            run_ask(&tool, std::ffi::OsStr::new("synthetic"), b"{}", soon(5_000)),
+            None
+        );
+    }
+
+    #[test]
+    fn a_slow_helper_is_stopped_at_its_deadline() {
+        let tool = ask_script("slow", "import time\ntime.sleep(30)\n");
+        let started = std::time::Instant::now();
+        assert_eq!(
+            run_ask(&tool, std::ffi::OsStr::new("synthetic"), b"{}", soon(300)),
+            None
+        );
+        assert!(started.elapsed() < std::time::Duration::from_secs(3));
+    }
+
+    #[test]
+    fn the_helper_gets_a_cleared_environment_with_the_opt_in_and_the_key() {
+        let tool = ask_script(
+            "env",
+            "import json, os, sys\nsys.stdin.read()\nprint(json.dumps(dict(os.environ)))\n",
+        );
+        let answer = run_ask(&tool, std::ffi::OsStr::new("synthetic"), b"{}", soon(5_000)).unwrap();
+        let seen: serde_json::Map<String, Value> = serde_json::from_slice(&answer).unwrap();
+        assert_eq!(seen["OPENWIZ_JEV"], "1");
+        assert_eq!(seen["TYPESAFE_API_KEY"], "synthetic");
+        for inherited in ["HOME", "PATH", "USER", "GH_TOKEN", "PYTHONPATH"] {
+            assert!(!seen.contains_key(inherited), "{inherited} leaked");
+        }
+    }
+
+    #[test]
+    fn jev_gets_at_most_half_the_remaining_budget() {
+        let now = std::time::Instant::now();
+        let secs = std::time::Duration::from_secs;
+        assert_eq!(answer_until(now, now + secs(8)), now + secs(4));
+        assert_eq!(
+            answer_until(now, now + secs(600)),
+            now + secs(ANSWER_SECONDS)
+        );
+        assert_eq!(answer_until(now, now), now);
     }
 }
