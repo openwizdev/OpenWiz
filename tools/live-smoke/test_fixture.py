@@ -128,6 +128,38 @@ class RetiredReceiptCases(unittest.TestCase):
         sheet = runpy.run_path(str(HERE / 'test_smoke.py'))['Sheet']
         self.assertTrue(callable(getattr(sheet, method)))
 
+    def test_cli_argument_forms_route_through_argparse(self):
+        script = str(Path(__file__).resolve())
+        argparse_errors = [
+            (['--cli=synthetic-cli', '--fake=synthetic-fake', '--case=ready-preview'],
+             "invalid choice: 'ready-preview'"),
+            (['--cli=synthetic-cli', '--case', 'integration'],
+             'the following arguments are required: --fake'),
+            (['--fake=synthetic-fake', '--case=integration'],
+             'the following arguments are required: --cli'),
+        ]
+        for argv, expected in argparse_errors:
+            with self.subTest(argv=argv):
+                run = subprocess.run([sys.executable, '-I', script, *argv],
+                                     capture_output=True, text=True, timeout=30)
+                self.assertEqual(run.returncode, 2)
+                self.assertIn(expected, run.stderr)
+                self.assertNotIn('unrecognized arguments', run.stderr)
+
+        with tempfile.TemporaryDirectory(prefix='live-smoke-cli-dispatch-') as tmp:
+            cli = str(Path(tmp) / 'missing-cli')
+            fake = str(Path(tmp) / 'missing-fake')
+            for argv in (
+                [f'--cli={cli}', f'--fake={fake}', '--case', 'integration'],
+                [f'--cli={cli}', f'--fake={fake}', '--case=integration'],
+            ):
+                with self.subTest(argv=argv):
+                    run = subprocess.run([sys.executable, '-I', script, *argv],
+                                         capture_output=True, text=True, timeout=30)
+                    self.assertNotEqual(run.returncode, 2, run.stderr)
+                    self.assertNotIn('unrecognized arguments', run.stderr)
+                    self.assertIn('FileNotFoundError', run.stderr)
+
 
 def main():
     args = argument_parser().parse_args()
