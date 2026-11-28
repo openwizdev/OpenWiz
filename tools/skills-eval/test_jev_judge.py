@@ -27,13 +27,15 @@ def recorded(meets, stays):
 
 
 class Billed(client.SystemOne):
-    def __init__(self, response=None, error=None):
-        self.response, self.error, self.calls = response, error, []
+    def __init__(self, response=None, error=None, usage=True):
+        self.response, self.error, self.usage, self.calls = response, error, usage, []
 
     def system_one(self, state, questions, model=client.MODEL):
-        self.calls.append({'state': state, 'questions': questions})
+        self.calls.append({'state': state, 'questions': questions, 'model': model})
         if self.error:
             raise client.TypeSafeError(self.error)
+        if not self.usage:
+            return dict(self.response)
         return dict(self.response, usage={'input_tokens': 1000, 'output_tokens': 3})
 
 
@@ -75,6 +77,7 @@ class Judge(unittest.TestCase):
     def test_no_client_keeps_the_parser(self):
         text = '{"verdict": "pass", "reason": "It meets the rule."}'
         self.assertEqual(jev_judge.parse_model_text(text)['verdict'], 'pass')
+        self.assertIsNone(jev_judge.parse_model_text('{"verdict": "pass", "verdict": "fail", "reason": "x"}'))
         self.assertIsNone(jev_judge.parse_model_text('not json'))
         self.assertIsNone(jev_judge.from_response(recorded(0.55, 0.93)))
         self.assertIsNone(jev_judge.try_jev('rule', 'reply', None))
@@ -152,11 +155,54 @@ class Spend(unittest.TestCase):
 
     def test_no_request_is_sent_past_the_cap(self):
         ask = Billed(recorded(0.94, 0.92))
-        with mock.patch.object(jev_judge, 'reserve', lambda state, questions: 100.0):
+        with mock.patch.object(jev_judge, 'reserve', lambda state, questions, frozen=None: 100.0):
             t, sent, _, _ = self.run_one(ask)
         self.assertEqual(ask.calls, [])
         self.assertEqual(len(sent), 2)
         self.assertEqual(t['jev_usage'], [])
+
+    def test_a_reply_without_usage_is_a_failed_call(self):
+        ask = Billed(recorded(0.94, 0.92), usage=False)
+        t, sent, _, _ = self.run_one(ask)
+        self.assertEqual(len(ask.calls), 1)
+        self.assertEqual(len(sent), 2)
+        self.assertEqual(t['judgment']['verdict'], 'fail')
+        self.assertGreater(t['uncertain_usd'], 0)
+
+    def test_the_frozen_config_decides_even_if_the_file_changes_mid_run(self):
+        ask = Billed(recorded(0.8, 0.8))
+        root = copy.deepcopy(decide.load())
+        root['sites']['judge']['act'] = 0.95
+        settings = settings_with_jev()
+        post, sent = actor_post('{"verdict": "fail", "reason": "It does not."}')
+        with mock.patch.object(jev_judge, 'asker', lambda s: ask), mock.patch.object(decide, 'load', lambda: root):
+            t = driver.run_case(synthetic_case(), settings, (lambda p: None, lambda p: []), post, 1, budget_usd=20)
+        self.assertEqual(t['judgment']['verdict'], 'pass')
+        self.assertEqual(len(sent), 1)
+        self.assertEqual(ask.calls[0]['model'], settings['judge_jev']['model'])
+
+    def test_a_refused_fallback_keeps_the_failed_jev_reservation(self):
+        import parallel
+        ask = Billed(error='network')
+        settings = settings_with_jev()
+        post, sent = actor_post('{"verdict": "pass", "reason": "It does."}')
+        marks = []
+
+        def checkpoint(interim):
+            marks.append(interim)
+            if interim['jev_usage']:
+                raise parallel.Cap(interim)
+        with mock.patch.object(jev_judge, 'asker', lambda s: ask):
+            try:
+                driver.run_case(synthetic_case(), settings, (lambda p: None, lambda p: []), post, 1,
+                                checkpoint=checkpoint)
+            except parallel.Cap as capped:
+                t = capped.transcript
+        held = marks[-2]['reserved_usd']
+        self.assertEqual(len(sent), 1)
+        self.assertAlmostEqual(t['uncertain_usd'], held, places=9)
+        self.assertNotIn('reserved_usd', t)
+        self.assertEqual(t['stop'], 'cap')
 
     def test_off_by_default_never_asks(self):
         settings = settings_with_jev()
