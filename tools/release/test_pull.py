@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-"""Proof for tools/release/pull.py on a fake `gh` (H5 of the 0.2.0 hot-update spec).
-
-The fake `gh` serves a synthetic repository from a JSON state file, logs every
-call, and records any release or tag deletion so a test fails on it.
-"""
 import json
 import os
 from pathlib import Path
@@ -207,8 +202,6 @@ class PullTest(unittest.TestCase):
         self.assertIn("pulled 0.2.2", result.stdout)
         return ticket
 
-    # Healthy
-
     def test_healthy_release_is_left_alone(self):
         state = self.state()
         state["runs"].append(run_(12, "success", "2035-01-11T00:00:00Z"))
@@ -235,8 +228,6 @@ class PullTest(unittest.TestCase):
         result = self.pull()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assert_untouched()
-
-    # Granted pulls
 
     def test_failing_live_check_pulls_the_release(self):
         self.change("runs", [run_(12, "failure", "2035-01-11T00:00:00Z")])
@@ -298,8 +289,6 @@ class PullTest(unittest.TestCase):
         self.assertEqual(self.state()["latest"], 3)
         self.assertEqual(self.state()["opened"], [])
 
-    # Without the grant
-
     def test_without_the_grant_nothing_is_pulled_and_the_owner_gets_one_note(self):
         for grant in ("no-grant", "patch-only", "missing-pointer", None):
             with self.subTest(grant=grant or "today's Approval rules"):
@@ -317,8 +306,6 @@ class PullTest(unittest.TestCase):
                 again = self.pull(grant)
                 self.assertEqual(again.returncode, 2, again.stderr)
                 self.assertEqual(len(self.state()["comments"]), 1, "the owner gets one note, not one per run")
-
-    # Deletion guard
 
     def test_the_fake_gh_fails_on_release_or_tag_deletion(self):
         for args in (["release", "delete", "v0.2.2", "--yes"], ["api", "-X", "DELETE", f"repos/{REPO}/releases/3"],

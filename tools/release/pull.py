@@ -1,14 +1,4 @@
 #!/usr/bin/env python3
-"""Pull a broken latest release and open a fix-forward ticket, under the recorded grant only.
-
-Reads the latest release's scheduled live checks and the regression reports
-opened since it shipped. When either crosses the owner's threshold and the
-grant reader allows pulls, it makes the previous good release latest again,
-lists the bad one in the release record's pulled list and opens one
-fix-forward ticket. Without the grant it leaves one Needs you note and pulls
-nothing. It only reads, marks a release latest, and opens issues or comments:
-it never removes a release or a tag.
-"""
 import argparse
 import json
 import os
