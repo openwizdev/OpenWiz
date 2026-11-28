@@ -128,6 +128,27 @@ class Smoke(FixtureCase):
             'gaps': [], 'data': {'sessions': []}})}
         self.report(self.invoke(), 0)
 
+    def test_completed_run_without_teardown_still_runs_inventory_preflight_on_resume(self):
+        good_ls = dict(self.replies['ls'])
+        doc = self.report(self.invoke(), 0)
+        self.assertEqual((doc['verdict'], doc['reason']), ('pass', 'none'))
+        self.replies['ls'] = {'exit': 1, 'out': '{"schema":"openwiz.cli-error.v1"}'}
+        doc = self.report(self.invoke(), 3)
+        self.assertEqual((doc['verdict'], doc['reason']), ('incomplete', 'bundle_preflight'))
+        self.assertEqual(self.call_list().count(['ls', '--json']), 2)
+        self.assertEqual(self.call_list().count(['send']), 1)
+        _, events = SMOKE.read_journal(self.state)
+        self.rewrite_journal(lambda event: event, events[:-1])
+        doc = self.report(self.invoke(), 3)
+        self.assertEqual((doc['verdict'], doc['reason']), ('incomplete', 'bundle_preflight'))
+        self.assertEqual(json.loads((self.state / 'checkpoint.json').read_text())['times']['finished'], 0)
+        self.replies['ls'] = good_ls
+        doc = self.report(self.invoke(), 0)
+        self.assertEqual((doc['verdict'], doc['reason']), ('pass', 'none'))
+        _, resumed = SMOKE.read_journal(self.state)
+        self.assertEqual([event['kind'] for event in resumed].count('finish'), 1)
+        self.assertEqual(self.call_list().count(['send']), 1)
+
     def test_dry_run_executes_nothing_and_creates_no_state(self):
         doc = self.report(self.run_tool('--dry-run'), 0)
         self.assertEqual(doc['verdict'], 'not_run')
@@ -880,6 +901,26 @@ class Teardown(FixtureCase):
         self.replies['json'] = {'exit': 9, 'out': '{}'}
         self.report(self.invoke(), 3)
         self.assertEqual(self.call_list().count(['service']), 1)
+
+    def test_a_passed_teardown_finishes_on_resume_instead_of_torn_down(self):
+        doc = self.report(self.invoke(), 0)
+        self.assertEqual((doc['verdict'], doc['reason']), ('pass', 'none'))
+        calls = self.call_list()
+        doc = self.report(self.invoke(), 0)
+        self.assertEqual((doc['verdict'], doc['reason']), ('pass', 'none'))
+        self.assertEqual(self.call_list(), calls)
+        _, events = SMOKE.read_journal(self.state)
+        self.assertEqual([event['kind'] for event in events].count('finish'), 1)
+        self.rewrite_journal(lambda event: event, events[:-1])
+        checkpoint = json.loads((self.state / 'checkpoint.json').read_text())
+        self.assertEqual(checkpoint['times']['finished'], 0)
+        self.assertTrue(all(step['state'] == 'pass' for step in checkpoint['steps']))
+        doc = self.report(self.invoke(), 0)
+        self.assertEqual((doc['verdict'], doc['reason']), ('pass', 'none'))
+        _, resumed = SMOKE.read_journal(self.state)
+        self.assertEqual(resumed[-1]['kind'], 'finish')
+        self.assertEqual([event['kind'] for event in resumed].count('finish'), 1)
+        self.assertEqual(self.call_list(), calls)
 
     def test_a_teardown_must_be_a_read_at_the_end_within_130_seconds(self):
         rows = {'a write': lambda s: s[1].update(teardown=True), 'not at the end': lambda s: s[0].update(teardown=True),
