@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 import hashlib
 import json
+import os
+from pathlib import Path
+import subprocess
 import sys
+import tempfile
 from types import SimpleNamespace
 import unittest
 
@@ -655,8 +659,203 @@ What is being built now, and what comes next.
 - None right now.
 """
 
+FAKE_GH = '''#!/usr/bin/env python3
+import json, os, subprocess, sys
+args = sys.argv[1:]
+assert args[0] == "api" and not any(x in args for x in ("--method", "-X", "-f", "-F")), args
+path = next(x for x in args if x.startswith("repos/"))
+world = json.loads(open(os.environ["ENTRY_WORLD"]).read())
+if path not in world:
+    print("unexpected fixture read: "+path, file=sys.stderr)
+    sys.exit(95)
+sys.exit(subprocess.run(["/usr/bin/jq", "-cr", args[args.index("--jq")+1]],
+                        input=json.dumps(world[path]), text=True).returncode)
+'''
+
+
+class SourceCheck(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(prefix="entry-source-")
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.repo = self.root / "source"
+        self.repo.mkdir()
+        self.world = {}
+        self.world_path = self.root / "world.json"
+        self.env = dict(os.environ, GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=os.devnull,
+                        GIT_AUTHOR_NAME="Synthetic", GIT_COMMITTER_NAME="Synthetic",
+                        GIT_AUTHOR_EMAIL="123+fixture@users.noreply.github.com",
+                        GIT_COMMITTER_EMAIL="123+fixture@users.noreply.github.com")
+        self.git("init", "-q", "-b", "main")
+        self.git("remote", "add", "origin", "https://github.com/example-owner/example-repo.git")
+        (self.repo / "changes").mkdir()
+        (self.repo / "changes/README.md").write_text("Synthetic contract.\n")
+        self.commit("base")
+        self.base = self.git("rev-parse", "HEAD").stdout.strip()
+        bindir = self.root / "bin"
+        bindir.mkdir()
+        fake = bindir / "gh"
+        fake.write_text(FAKE_GH)
+        fake.chmod(0o755)
+        self.env["PATH"] = f"{bindir}{os.pathsep}{self.env['PATH']}"
+        self.env["ENTRY_WORLD"] = str(self.world_path)
+        self.save()
+
+    def git(self, *args):
+        result = subprocess.run(["git", "-c", "core.hooksPath=/dev/null", "-C", self.repo, *args],
+                                env=self.env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return result
+
+    def commit(self, message):
+        self.git("add", "-A")
+        self.git("commit", "-qm", message)
+
+    def save(self):
+        self.world_path.write_text(json.dumps(self.world))
+
+    def issue(self, number, milestone):
+        self.world[f"repos/{{owner}}/{{repo}}/issues/{number}"] = {
+            "number": number, "body": "", "milestone": milestone, "pull_request": None,
+            "sub_issues_summary": {"total": 0}}
+        self.save()
+
+    def plant(self, number, sentence="Synthetic entry."):
+        path = self.repo / f"changes/{number}.md"
+        path.write_text(f"kind: added\n\n{sentence}\n")
+        return path
+
+    def run_check(self, *extra):
+        return subprocess.run([sys.executable, "-I", str(Path(__file__).resolve().parent / "entry.py"),
+                               "--repo", str(self.repo), "--base", self.base, *extra],
+                              env=self.env, capture_output=True, text=True)
+
+    def test_changed_line_without_a_version_milestone_fails(self):
+        self.issue(7001, None)
+        self.plant(7001)
+        self.commit("unversioned")
+        result = self.run_check("changes/")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("entry: ticket 7001 has no version milestone", result.stderr)
+        self.assertNotIn("entry: pass", result.stdout)
+
+    def test_versioned_line_passes(self):
+        self.issue(4101, {"number": 23, "title": "0.1.1"})
+        self.plant(4101, "You can check a changelog line before it merges.")
+        self.commit("versioned")
+        result = self.run_check("changes/")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.stdout.strip(), "entry: pass (1 changelog line)")
+
+    def test_infra_milestone_is_not_a_version(self):
+        self.issue(7001, {"number": 8, "title": "Infra"})
+        self.plant(7001)
+        self.commit("infra")
+        result = self.run_check("changes/")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("entry: ticket 7001 has no version milestone", result.stderr)
+
+    def test_named_path_ignores_another_unversioned_line(self):
+        self.issue(7001, None)
+        self.plant(7001)
+        self.issue(4101, {"number": 23, "title": "0.1.1"})
+        self.plant(4101, "You can check a changelog line before it merges.")
+        self.commit("both")
+        result = subprocess.run([sys.executable, "-I", str(Path(__file__).resolve().parent / "entry.py"),
+                                 "--repo", str(self.repo), "changes/4101.md"],
+                                env=self.env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.stdout.strip(), "entry: pass (1 changelog line)")
+        self.assertNotIn("7001", result.stdout + result.stderr)
+
+    def test_versioned_change_ignores_an_older_unversioned_line(self):
+        self.issue(7001, None)
+        self.plant(7001)
+        self.commit("already merged")
+        self.base = self.git("rev-parse", "HEAD").stdout.strip()
+        self.issue(4101, {"number": 23, "title": "0.1.1"})
+        self.plant(4101, "You can check a changelog line before it merges.")
+        self.commit("versioned")
+        result = self.run_check("changes/")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.stdout.strip(), "entry: pass (1 changelog line)")
+
+    def test_readme_only_diff_passes(self):
+        (self.repo / "changes/README.md").write_text("Synthetic contract, revised.\n")
+        self.commit("readme")
+        result = self.run_check("changes/")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("entry: pass (no changed changelog line)", result.stdout)
+
+    def test_directory_check_needs_a_base(self):
+        result = subprocess.run([sys.executable, "-I", str(Path(__file__).resolve().parent / "entry.py"),
+                                 "--repo", str(self.repo), "changes/"],
+                                env=self.env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("entry: checking a changes directory needs --base", result.stderr)
+
+    def test_moved_line_needs_an_exclusion_rather_than_a_milestone(self):
+        import entry as entry_mod
+        number = 121
+        raw = (Path(__file__).resolve().parents[2] / f"changes/{number}.md").read_bytes()
+        self.assertEqual(entry_mod.sha(raw), entry_mod.MOVED[number][1])
+        self.assertIsNone(entry_mod.MOVED[number][0])
+        (self.repo / f"changes/{number}.md").write_bytes(raw)
+        self.commit("moved")
+        result = self.run_check("changes/")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn(f"entry: changes/{number}.md: ClosedWiz #{number} has no OpenWiz ticket", result.stderr)
+        self.assertNotIn("no version milestone", result.stderr)
+        check = SimpleNamespace(args=SimpleNamespace(repo=str(self.repo)))
+        head = self.git("rev-parse", "HEAD").stdout.strip()
+        _paths, tickets = entry_mod.source_lines(
+            check, head, {f"changes/{number}.md": entry_mod.sha(raw)}, only=[f"changes/{number}.md"])
+        self.assertEqual(tickets, [])
+
+    def test_invalid_filename_fails(self):
+        (self.repo / "changes/not-a-ticket.md").write_text("kind: added\n\nNo ticket.\n")
+        self.commit("bad name")
+        result = self.run_check("changes/")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("entry: invalid changelog filename changes/not-a-ticket.md", result.stderr)
+
+    def test_moved_collision_rename_passes_and_tampered_or_unmapped_fails(self):
+        import entry as entry_mod
+        repo_root = Path(__file__).resolve().parents[2]
+        raw_121 = (repo_root / "changes/121.md").read_bytes()
+        self.assertEqual(entry_mod.sha(raw_121), entry_mod.MOVED[121][1])
+        self.assertIsNone(entry_mod.MOVED[121][0])
+        (self.repo / "changes/closedwiz-121.md").write_bytes(raw_121)
+        self.issue(121, {"number": 23, "title": "0.1.1"})
+        self.plant(121, "You can rename a colliding moved line.")
+        raw_2986 = (repo_root / "changes/2986.md").read_bytes()
+        self.assertEqual(entry_mod.sha(raw_2986), entry_mod.MOVED[2986][1])
+        self.assertIsNotNone(entry_mod.MOVED[2986][0])
+        (self.repo / "changes/closedwiz-2986.md").write_bytes(raw_2986)
+        self.commit("collision renames")
+        result = self.run_check("changes/")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.stdout.strip(), "entry: pass (3 changelog lines)")
+        named = subprocess.run([sys.executable, "-I", str(Path(__file__).resolve().parent / "entry.py"),
+                                "--repo", str(self.repo), "--", "changes/121.md", "changes/closedwiz-121.md"],
+                               env=self.env, capture_output=True, text=True)
+        self.assertEqual(named.returncode, 0, named.stdout + named.stderr)
+        (self.repo / "changes/closedwiz-121.md").write_text("kind: added\n\nTampered moved line.\n")
+        self.commit("tampered")
+        tampered = self.run_check("changes/")
+        self.assertEqual(tampered.returncode, 1, tampered.stdout + tampered.stderr)
+        self.assertIn("changes/closedwiz-121.md", tampered.stderr)
+        (self.repo / "changes/closedwiz-121.md").write_bytes(raw_121)
+        (self.repo / "changes/closedwiz-999999.md").write_text("kind: added\n\nUnmapped moved line.\n")
+        self.commit("unmapped")
+        unmapped = self.run_check("changes/")
+        self.assertEqual(unmapped.returncode, 1, unmapped.stdout + unmapped.stderr)
+        self.assertIn("ClosedWiz #999999 is not in the moved-number map", unmapped.stderr)
+
+
 def load_tests(loader, tests, pattern):
-    return unittest.TestSuite(EntryCheck(name) for name in EntryCheck.__dict__ if name.startswith("test_"))
+    names = lambda case: (case(name) for name in case.__dict__ if name.startswith("test_"))
+    return unittest.TestSuite([*names(EntryCheck), *names(SourceCheck)])
 
 
 if __name__ == "__main__":

@@ -63,6 +63,20 @@ The check saves both generated files under `<staging>/generated/`, a hash mismat
 
 For a combined release `entry` is a list, newest first, of `{version, spec, date, tested}`. The spec is the version's parent issue with its `## Changelog headline`; the lines are that milestone's `changes/<ticket>.md` files (moved ClosedWiz lines through `moved.json`), in ticket order, at most five. Each version's heading `## <version> · <date>` appears once, newer than every published one; range headings refuse.
 
+The same source check runs in CI before merge (#1768). A pull request passes the changelog lines from its changed-file list:
+
+```sh
+python3 -I tools/release/entry.py --repo "$CHECKOUT" -- changes/<ticket>.md
+```
+
+A merge group passes the directory and the group's base, the parent of the merge commit:
+
+```sh
+python3 -I tools/release/entry.py --repo "$CHECKOUT" --base "$BASE" changes/
+```
+
+`--base` checks each line that differs from that commit. The pull request file list is the pull request's own changes, so a line edited on the base after the branch point is not rechecked. A ticket with no version milestone fails with `entry: ticket <N> has no version milestone`. A moved line with no OpenWiz ticket, and a recorded exclusion, follow the same rules as note generation.
+
 ### Published commits
 
 `--historical COMMIT --approved-plan-sha256 SHA --public-repo CLONE` verifies a version already on public `main` instead of staging one. The plan carries `"historical": {"export_head", "changelog_heading", "entry_sha256"}` instead of `entry`, must equal that commit's tree exactly, and runs the same checks. `release publish --backfill` publishes from that report.

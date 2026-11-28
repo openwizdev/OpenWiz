@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  issues: read
   pull-requests: read
 
 concurrency:
@@ -30,6 +31,11 @@ jobs:
           sparse-checkout: |
             /.github/actions/changelog/
             /.github/workflows/changelog.yml
+            /changes/
+            /tools/release/entry.py
+            /tools/release/check.py
+            /tools/release/repository.py
+            /tools/release/moved.json
       - name: Report checkout failure
         if: ${{ failure() && steps.checkout.outcome == 'failure' }}
         run: |
@@ -54,3 +60,31 @@ jobs:
       - name: Synthetic pull requests
         run: python3 -I .github/actions/changelog/test_check.py
       - uses: ./.github/actions/changelog
+      - name: Changelog line version milestones
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          QUEUE_BASE: ${{ github.event.merge_group.base_sha }}
+        run: |
+          set -eu
+          if [ "$EVENT" = merge_group ]; then
+            BASE="$QUEUE_BASE"
+            test -n "$BASE"
+            git fetch --no-tags --depth=1 origin "$BASE"
+            python3 -I tools/release/entry.py --repo "$GITHUB_WORKSPACE" --base "$BASE" changes/
+          else
+            test "$EVENT" = pull_request
+            list=$(mktemp)
+            python3 -I .github/actions/changelog/check.py milestone-lines > "$list"
+            if [ ! -s "$list" ]; then
+              echo "entry: pass (no changed changelog line)"
+            else
+              set --
+              while IFS= read -r line; do
+                set -- "$@" "$line"
+              done < "$list"
+              python3 -I tools/release/entry.py --repo "$GITHUB_WORKSPACE" -- "$@"
+            fi
+          fi

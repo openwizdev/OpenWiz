@@ -91,7 +91,43 @@ def classify(pages, expected_count):
     return has_product, has_line
 
 
+FILE_STATUSES = {"added", "modified", "removed", "renamed", "copied", "changed"}
+
+
+def milestone_paths(pages):
+    require(isinstance(pages, list), "missing file pages")
+    seen = []
+    for page in pages:
+        require(isinstance(page, list), "invalid file page")
+        for item in page:
+            require(isinstance(item, dict), "changed file is not an object")
+            filename = path(item.get("filename"))
+            status = item.get("status")
+            require(status in FILE_STATUSES, "unknown file status")
+            if (status != "removed" and filename.startswith("changes/")
+                    and filename != "changes/README.md"
+                    and not filename.startswith("changes/notes/")
+                    and filename not in seen):
+                seen.append(filename)
+    return seen
+
+
+def milestone_lines():
+    require(os.environ.get("EVENT") == "pull_request", "unsupported event")
+    repo = os.environ.get("REPO", "")
+    number = os.environ.get("PR", "")
+    require(re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo)
+            and re.fullmatch(r"[1-9][0-9]*", number), "invalid repository or PR")
+    pages = api("--paginate", "--slurp", f"repos/{repo}/pulls/{number}/files?per_page=100")
+    for filename in milestone_paths(pages):
+        print(filename)
+
+
 def main():
+    if sys.argv[1:] == ["milestone-lines"]:
+        milestone_lines()
+        return
+    require(not sys.argv[1:], "unknown command")
     event = os.environ.get("EVENT")
     if event == "merge_group":
         print("changelog: merge group passes; PRs are checked before admission")

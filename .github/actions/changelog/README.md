@@ -22,9 +22,17 @@ old and new paths. Added or corrected `changes/<positive ticket number>.md`
 counts; a removed line, README, leading-zero name or nested file does not.
 The filename is the ticket number, not necessarily the PR number.
 
-This checks presence, not the line's content or its association to a ticket.
-The reviewer still checks format, milestone, public wording, truth and any
-exemption's reason against `changes/README.md`.
+This checks presence, not the line's wording or its association to a ticket.
+The reviewer still checks format, public wording, truth and any exemption's
+reason against `changes/README.md`.
+
+On a pull request, `check.py milestone-lines` prints the changelog lines in
+GitHub's changed-file list, and the workflow runs `tools/release/entry.py` on
+those paths. A line the pull request did not change is left to release,
+including one edited later on the base branch. On a merge group, the workflow
+runs that command with `--base` set to the group's base. A line whose ticket
+has no version milestone fails the job. The token has `issues: read` so it can
+read that milestone.
 
 GitHub's [file-list API](https://docs.github.com/en/rest/pulls/pulls#list-pull-requests-files)
 returns at most 3000 files. Larger PRs fail closed, including labelled ones.
