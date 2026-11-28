@@ -264,3 +264,21 @@ no
 
 The never-list in docs/agents/huntr.md applies in full.
 ````
+
+## Attack targets
+
+| Target | Kind | Copy | Live rate | Files to |
+| --- | --- | --- | --- | --- |
+| `name:fetcher` | surface | `tests/red-team/fetcher/` | 0 | `openwizdev/OpenWiz` |
+| `name:market-installs` | surface | `tests/red-team/market/` | 0 | `openwizdev/OpenWiz` |
+
+## Attack models
+
+| Role | Provider | Model | Effort |
+| --- | --- | --- | --- |
+| controller | `codex` | `gpt-6.1-sol` | `xhigh` |
+| attacker | `codex` | `gpt-6.1-terra` | `high` |
+
+The security-hunter exception (PS1) under Models applies: when the provider's safety filter blocks Codex, run that slice on `claude-code`, `claude-opus-5-5`, `high` and record it. No other fallback.
+
+Attack record: `openwizdev/OpenWiz#4098`
