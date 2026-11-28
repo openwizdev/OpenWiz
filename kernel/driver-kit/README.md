@@ -11,6 +11,23 @@ python3 -I kernel/driver-kit/test_hostkey.py # the key helper's own tests: every
 
 It prints one line per check, in the order version, start, wake, stop, token: `pass <check>: <what>` or `fail <check>: <why>`. Exit 0: all five pass. 1: a check failed. 2: the kit could not run; it says why on stderr, `kit.py: <why>`. The wake and stop checks run only after start passes. Once `start` has answered a run id, the kit always calls the driver's `stop` for that run before it goes on or exits, even when the start check failed; that stop is not the stop check.
 
+## Usage check
+
+Run the optional read-only `usage` command on Linux with Python 3.9 or later:
+
+```sh
+python3 -I kernel/driver-kit/usage_check.py --driver adapters/<host>/driver [--timeout 120]
+python3 -I kernel/driver-kit/test_usage_check.py
+```
+
+The check sends the synthetic account label `demo` for Claude and validates the
+response against [usage v1](../../contracts/usage.v1.md). Run fixture tests with
+fake meter tools on `PATH`. It prints one verdict: `usage: pass` or `usage: none`
+(exit 0 for a valid response or the driver's unknown-command refusal), or
+`usage: fail <why>` (exit 1). It samples the driver process tree for credentials,
+checks both output streams and cleans up surviving descendants. Short-lived
+processes can exit between samples. The five kit checks run separately.
+
 ## Effort
 
 The `start` check also checks effort ([driver v1](../driver.v1.md#effort)). For a driver that declares it (effort in `can`, or an `Effort:` line), the line ends `; effort: <what>`. A failed effort part fails `start`. `--effort` is the word the kit sends (default `medium`). The kit reads the `Effort:` line in the `README.md` beside the driver, and the table of harness and flag (or `can't (<why>)`) right after it.
