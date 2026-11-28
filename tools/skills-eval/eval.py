@@ -27,7 +27,8 @@ import score as S
 import tokens as T
 
 REPO = HERE.parent.parent
-CODE = ['contract.md', 'fakeworld.py', 'score.py', 'records.py', 'cases.py', 'driver.py', 'tokens.py', 'eval.py']
+CODE = ['contract.md', 'fakeworld.py', 'score.py', 'records.py', 'cases.py', 'driver.py', 'jev_judge.py',
+        'tokens.py', 'eval.py', '../typesafe/client.py', '../typesafe/decide.py', '../typesafe/config.json']
 
 
 def git(*args):
@@ -172,8 +173,14 @@ def _key(a, settings=None):
     return key
 
 
-def cmd_run(a):
+def run_settings():
     settings = json.loads((HERE / 'settings.json').read_text())
+    settings['judge_jev'] = driver.jev_judge.mode()
+    return settings
+
+
+def cmd_run(a):
+    settings = run_settings()
     _key(a, settings)
     snap = snapshot(a.rev)
     errs, all_cases, _ = check(*snap)

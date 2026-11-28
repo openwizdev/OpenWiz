@@ -9,7 +9,14 @@ from unittest import mock
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE.parent / 'typesafe'))
 import cases as C
+
+
+def load_tests(loader, standard_tests, pattern):
+    standard_tests.addTests(loader.loadTestsFromName('test_client'))
+    standard_tests.addTests(loader.loadTestsFromName('test_jev_judge'))
+    return standard_tests
 
 
 def setUpModule():

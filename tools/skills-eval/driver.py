@@ -15,6 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import fakeworld
+import jev_judge
 import records
 
 API = 'https://api.anthropic.com/v1/messages'
@@ -140,7 +141,10 @@ JUDGE = ('You check one reply an agent gave at the end of a task. You see only t
          '{"verdict": "pass" or "fail", "reason": "<one sentence>"}.')
 
 
-def judge(rubric, final, settings, call):
+def judge(rubric, final, settings, call, jev=None):
+    decided = jev(rubric, final) if jev else None
+    if decided is not None:
+        return decided, None
     body = {'model': settings['judge_model'], 'max_tokens': settings.get('judge_max_tokens', 1000), 'system': JUDGE,
             'messages': [{'role': 'user', 'content': f'Rule:\n{rubric}\n\nReply:\n<<<\n{final}\n>>>'}]}
     resp, stop, error = call(body)
@@ -172,7 +176,28 @@ def run_case(case, settings, snapshot, post, repeat, budget_usd=None, checkpoint
     uncertain = [0.0]
     charged = [0.0]
     provider_usage = []
+    jev_usage = []
     is_openrouter = settings.get('provider') == 'openrouter'
+
+    def interim(bound):
+        return {'case': case['id'], 'repeat': repeat, 'stop': 'error', 'final': final,
+                'events': world.events, 'usage': dict(usage), 'provider_usage': list(provider_usage),
+                'jev_usage': list(jev_usage), 'cost_usd': round(charged[0] + uncertain[0] + bound, 9),
+                'uncertain_usd': round(uncertain[0] + bound, 9), 'reserved_usd': round(bound, 9),
+                'error': 'Interrupted request: reservation retained; never automatically retried',
+                'judgment': None, 'turns': sum(m['role'] == 'assistant' for m in messages)}
+
+    def jev_settle(paid, unknown, used):
+        charged[0] += paid
+        uncertain[0] += unknown
+        jev_usage.append(used)
+
+    def jev(rubric, reply):
+        return jev_judge.try_jev(
+            rubric, reply, jev_judge.asker(settings), settings.get('judge_jev'),
+            fits=lambda bound: budget_usd is None or charged[0] + uncertain[0] + bound <= budget_usd,
+            hold=lambda bound: checkpoint(interim(bound)) if checkpoint else None,
+            settle=jev_settle)
 
     def spend(body, used=None):
         if used is not None:
@@ -188,12 +213,7 @@ def run_case(case, settings, snapshot, post, repeat, budget_usd=None, checkpoint
             if not spend(body):
                 return None, 'cap', None
             if checkpoint:
-                bound = round(charged[0] + uncertain[0] + reserve(body, settings), 9)
-                checkpoint({'case': case['id'], 'repeat': repeat, 'stop': 'error', 'final': final,
-                            'events': world.events, 'usage': dict(usage), 'provider_usage': list(provider_usage),
-                            'cost_usd': bound, 'uncertain_usd': round(uncertain[0] + reserve(body, settings), 9),
-                            'error': 'Interrupted request: reservation retained; never automatically retried',
-                            'judgment': None, 'turns': sum(m['role'] == 'assistant' for m in messages)})
+                checkpoint(interim(reserve(body, settings)))
             try:
                 resp = post(OPENROUTER_API if is_openrouter else API, body)
                 if is_openrouter:
@@ -252,12 +272,12 @@ def run_case(case, settings, snapshot, post, repeat, budget_usd=None, checkpoint
     else:
         stop = 'turn_cap'
     if stop == 'end_turn' and case.get('expect', {}).get('final'):
-        judgment, jstop = judge(case['expect']['final'], final, settings, call)
+        judgment, jstop = judge(case['expect']['final'], final, settings, call, jev)
         stop = jstop or stop
     return {'provider_usage': provider_usage,
             'tokenizer': 'DeepSeek (OpenRouter provider usage; not Claude tokens)' if is_openrouter else 'Anthropic',
             'case': case['id'], 'repeat': repeat, 'stop': stop, 'final': final,
-            'events': world.events, 'usage': usage, 'cost_usd': round(charged[0] + uncertain[0], 9),
+            'events': world.events, 'usage': usage, 'jev_usage': jev_usage, 'cost_usd': round(charged[0] + uncertain[0], 9),
             'uncertain_usd': round(uncertain[0], 9), 'error': error, 'judgment': judgment, 'turns': sum(1 for m in messages if m['role'] == 'assistant')}
 
 
@@ -809,12 +829,12 @@ def hermes_check(usage, msgs, calls_cap, allowed):
 def hermes_run_case(case, settings, snapshot, repeat, budget_usd=None, checkpoint=None):
     world = fakeworld.World(case['world'], snapshot)
     usage = {'input_tokens': 0, 'output_tokens': 0, 'cache_creation_input_tokens': 0, 'cache_read_input_tokens': 0}
-    sessions, spent, uncertain = [], [0.0], [0.0]
+    sessions, spent, uncertain, jev_usage = [], [0.0], [0.0], []
     stop, final, error, judgment, turns = None, '', None, None, 0
 
     def transcript():
         return {'provider_usage': sessions, 'tokenizer': HERMES_TOKENIZER, 'case': case['id'], 'repeat': repeat,
-                'stop': stop, 'final': final, 'events': world.events, 'usage': usage,
+                'stop': stop, 'final': final, 'events': world.events, 'usage': usage, 'jev_usage': jev_usage,
                 'cost_usd': round(spent[0] + uncertain[0], 9), 'uncertain_usd': round(uncertain[0], 9),
                 'error': error, 'judgment': judgment, 'turns': turns}
     try:
@@ -830,7 +850,7 @@ def hermes_run_case(case, settings, snapshot, repeat, budget_usd=None, checkpoin
         if checkpoint:
             snap = transcript()
             snap.update(stop='error', cost_usd=round(spent[0] + uncertain[0] + bound, 9),
-                        uncertain_usd=round(uncertain[0] + bound, 9),
+                        uncertain_usd=round(uncertain[0] + bound, 9), reserved_usd=round(bound, 9),
                         error='Interrupted Hermes session: reservation retained; never automatically retried')
             checkpoint(snap)
         with tempfile.TemporaryDirectory(prefix='skills-eval-hermes-') as folder:
@@ -887,6 +907,26 @@ def hermes_run_case(case, settings, snapshot, repeat, budget_usd=None, checkpoin
     stop = 'end_turn' if final else 'turn_cap'
     rubric = case.get('expect', {}).get('final')
     if stop == 'end_turn' and rubric:
+        def jev_hold(bound):
+            if checkpoint:
+                snap = transcript()
+                snap.update(stop='error', cost_usd=round(spent[0] + uncertain[0] + bound, 9),
+                            uncertain_usd=round(uncertain[0] + bound, 9), reserved_usd=round(bound, 9),
+                            error='Interrupted Jev request: reservation retained; never automatically retried')
+                checkpoint(snap)
+
+        def jev_settle(paid, unknown, used):
+            spent[0] += paid
+            uncertain[0] += unknown
+            jev_usage.append(used)
+
+        decided = jev_judge.try_jev(
+            rubric, final, jev_judge.asker(settings), settings.get('judge_jev'),
+            fits=lambda bound: budget_usd is None or spent[0] + uncertain[0] + bound <= budget_usd,
+            hold=jev_hold, settle=jev_settle)
+        if decided is not None:
+            judgment = decided
+            return transcript()
         got, failed = session(f'Rule:\n{rubric}\n\nReply:\n<<<\n{final}\n>>>', JUDGE, None,
                               settings.get('judge_max_tokens', 1000), h['judge_max_api_calls'], set())
         if failed:

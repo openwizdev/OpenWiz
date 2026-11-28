@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+import json
+import sys
+from pathlib import Path
+
+sys.dont_write_bytecode = True
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(HERE.parent / 'skills-eval'))
+import client
+import jev_judge
+
+FIXTURES = HERE / 'fixtures'
+
+
+def judge_case(row):
+    old = jev_judge.parse_model_text(row['old_model_text'])
+    try:
+        shaped = jev_judge.from_response(row['recorded'])
+    except client.TypeSafeError:
+        shaped = None
+    if shaped is None:
+        shaped = old
+    return old, shaped
+
+
+def score_judge(data):
+    old_hit = shaped_hit = 0
+    for row in data['cases']:
+        old, shaped = judge_case(row)
+        old_hit += int(old is not None and old['verdict'] == row['expected'])
+        shaped_hit += int(shaped is not None and shaped['verdict'] == row['expected'])
+    return len(data['cases']), old_hit, shaped_hit
+
+
+HANDLERS = {
+    'openwiz.typesafe-bench.judge.v1': ('judge', score_judge),
+}
+
+
+def report(path, data):
+    name, score = HANDLERS[data['schema']]
+    n, old_hit, shaped_hit = score(data)
+    print(f'{name}: {n} recorded cases')
+    print(f'  previous logic correct: {old_hit}/{n}')
+    print(f'  jev-shaped decision correct: {shaped_hit}/{n}')
+    print('  recorded answers are fixture input, not a live Jev call')
+    return n, old_hit, shaped_hit
+
+
+def main(argv):
+    live = '--live' in argv
+    paths = sorted(FIXTURES.glob('*.json'))
+    if not paths:
+        print('bench: no fixtures', file=sys.stderr)
+        return 1
+    for path in paths:
+        data = json.loads(path.read_text())
+        if data.get('schema') not in HANDLERS:
+            print(f'bench: unknown schema in {path.name}', file=sys.stderr)
+            return 1
+        report(path, data)
+    if not live:
+        print('live: skipped (pass --live with OPENWIZ_JEV=1 and TYPESAFE_API_KEY set)')
+        return 0
+    ask = client.from_env()
+    if ask is None:
+        print('live: OPENWIZ_JEV=1 or TYPESAFE_API_KEY is unset; no request was sent', file=sys.stderr)
+        return 2
+    for path in paths:
+        data = json.loads(path.read_text())
+        if data['schema'] != 'openwiz.typesafe-bench.judge.v1':
+            continue
+        hit = sent = 0
+        for row in data['cases']:
+            if 'rule' not in row or 'reply' not in row:
+                continue
+            sent += 1
+            decided = jev_judge.try_jev(row['rule'], row['reply'], ask)
+            hit += int(decided is not None and decided['verdict'] == row['expected'])
+        print(f'judge live: {hit}/{sent} matched the fixture label')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

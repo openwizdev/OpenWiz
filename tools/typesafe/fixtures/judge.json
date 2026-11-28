@@ -1,0 +1,90 @@
+{
+  "schema": "openwiz.typesafe-bench.judge.v1",
+  "note": "recorded answers are inputs to the decision code, not live Jev calls",
+  "cases": [
+    {
+      "id": "meets",
+      "rule": "The reply names the file it changed.",
+      "reply": "Changed tools/typesafe/client.py so the key stays in the environment.",
+      "expected": "pass",
+      "old_model_text": "{\"verdict\": \"pass\", \"reason\": \"The reply meets the rule.\"}",
+      "recorded": {
+        "model": "jev-1.14.0",
+        "answers": {
+          "meets_rule": {"type": "noul", "noul": 0.94},
+          "stays_within_rule": {"type": "noul", "noul": 0.92}
+        }
+      }
+    },
+    {
+      "id": "misses",
+      "rule": "The reply names the file it changed.",
+      "reply": "Done.",
+      "expected": "fail",
+      "old_model_text": "{\"verdict\": \"fail\", \"reason\": \"The reply does not meet the rule.\"}",
+      "recorded": {
+        "model": "jev-1.14.0",
+        "answers": {
+          "meets_rule": {"type": "noul", "noul": 0.08},
+          "stays_within_rule": {"type": "noul", "noul": 0.9}
+        }
+      }
+    },
+    {
+      "id": "old-parser-garbage",
+      "rule": "The reply names the file it changed and must not claim that tests passed.",
+      "reply": "All tests passed.",
+      "expected": "fail",
+      "old_model_text": "sure, pass",
+      "recorded": {
+        "model": "jev-1.14.0",
+        "answers": {
+          "meets_rule": {"type": "noul", "noul": 0.05},
+          "stays_within_rule": {"type": "noul", "noul": 0.04}
+        }
+      }
+    },
+    {
+      "id": "uncertain-falls-back",
+      "rule": "The reply names the file it changed.",
+      "reply": "Changed tools/typesafe/client.py.",
+      "expected": "pass",
+      "old_model_text": "{\"verdict\": \"pass\", \"reason\": \"The reply meets the rule.\"}",
+      "recorded": {
+        "model": "jev-1.14.0",
+        "answers": {
+          "meets_rule": {"type": "noul", "noul": 0.55},
+          "stays_within_rule": {"type": "noul", "noul": 0.93}
+        }
+      }
+    },
+    {
+      "id": "recorded-nouls-wrong",
+      "rule": "The reply names the file it changed.",
+      "reply": "Done.",
+      "expected": "fail",
+      "old_model_text": "{\"verdict\": \"fail\", \"reason\": \"The reply does not meet the rule.\"}",
+      "recorded": {
+        "model": "jev-1.14.0",
+        "answers": {
+          "meets_rule": {"type": "noul", "noul": 0.97},
+          "stays_within_rule": {"type": "noul", "noul": 0.96}
+        }
+      }
+    },
+    {
+      "id": "old-empty-reason",
+      "rule": "The reply names the file it changed.",
+      "reply": "Changed tools/typesafe/client.py.",
+      "expected": "pass",
+      "old_model_text": "{\"verdict\": \"pass\", \"reason\": \"\"}",
+      "recorded": {
+        "model": "jev-1.14.0",
+        "answers": {
+          "meets_rule": {"type": "noul", "noul": 0.91},
+          "stays_within_rule": {"type": "noul", "noul": 0.88}
+        }
+      }
+    }
+  ]
+}
