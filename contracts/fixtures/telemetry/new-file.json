@@ -37,7 +37,7 @@
     "t3": true,
     "sample-channel": false
   },
-  "telemetry": true,
+  "telemetry": false,
   "updates": "ask",
   "version": 1,
   "changed_at": "2026-11-28T08:00:00Z",
