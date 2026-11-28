@@ -264,3 +264,10 @@ no
 
 The never-list in docs/agents/huntr.md applies in full.
 ````
+
+## Attack targets
+
+| Target | Kind | Copy | Live rate | Files to |
+| --- | --- | --- | --- | --- |
+| `name:key-handling` | surface | `tests/red-team/keys/` | 0 | `openwizdev/OpenWiz` |
+| `name:subscriber-requests` | surface | `tests/red-team/requests/` | 0 | `openwizdev/OpenWiz` |
