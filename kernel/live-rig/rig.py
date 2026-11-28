@@ -96,11 +96,13 @@ def driver_path(host, drivers, release):
 def installed(host, drivers, release):
     path = driver_path(host, drivers, release)
     if drivers is None and release is None:
-        return host['driver'] if os.path.isfile(path) else None
+        return host['driver']
     for step in (os.path.dirname(path), path):
         try:
             mode = os.lstat(step).st_mode
         except FileNotFoundError:
+            if release is not None:
+                raise Refused('--release has no driver at its root')
             return None
         except OSError as e:
             raise Refused('cannot look up the driver for %s: %s' % (host['host'], e.strerror))
